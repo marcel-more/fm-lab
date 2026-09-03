@@ -9,6 +9,37 @@ const corsMiddleware = require('./middleware/cors');
 const createQueryParser = require('./middleware/query-normalizer');
 const debugSessionMiddleware = require('./middleware/debug-session');
 
+// Basic in-memory per-IP rate limiter. The API exposes 100+ endpoints
+// (including expensive operations like POST /results/run and GET
+// /results/aggregate) with no throttling — cap requests per client IP within
+// a rolling window and respond 429 once exceeded.
+const RATE_LIMIT_WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 60000; // 1 minute
+const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX) || 300; // requests/window/IP
+const rateLimitHits = new Map(); // ip -> { count, resetAt }
+function rateLimitMiddleware(req, res, next) {
+  const now = Date.now();
+  let entry = rateLimitHits.get(req.ip);
+  if (!entry || now > entry.resetAt) {
+    entry = { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS };
+    rateLimitHits.set(req.ip, entry);
+  }
+  entry.count += 1;
+  if (entry.count > RATE_LIMIT_MAX) {
+    res.setHeader('Retry-After', Math.ceil((entry.resetAt - now) / 1000));
+    return res.status(429).json({
+      success: false,
+      error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many requests, please try again later.' },
+    });
+  }
+  next();
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitHits) {
+    if (now > entry.resetAt) rateLimitHits.delete(key);
+  }
+}, RATE_LIMIT_WINDOW_MS).unref();
+
 /**
  * FM-Lab REST API
  * Express application setup
@@ -23,6 +54,7 @@ app.set('query parser', createQueryParser());
 // Middleware
 app.use(corsMiddleware);
 app.use(logger);
+app.use(rateLimitMiddleware);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
