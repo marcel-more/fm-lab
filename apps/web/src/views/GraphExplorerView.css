@@ -872,3 +872,216 @@ input[type="range"]#explorer-depth {
   font-size: 0.72rem;
   color: var(--color-text-muted);
 }
+
+/* ── Trace-Modus (selektiver Ablauf-Graph) ─────────────────────── */
+.explorer-trace-explainer {
+  margin: 0.25rem 0 0;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+.explorer-trace-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.explorer-trace-entries .explorer-segment {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  text-align: left;
+}
+.explorer-trace-budgets {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.explorer-trace-budget {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+.explorer-trace-budget input {
+  width: 4.2rem;
+}
+.explorer-trace-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+}
+.explorer-trace-toggles label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+/* Boundary-Ausschlüsse: ein Chip je ausgeschlossenem Knoten, Klick entfernt. */
+.explorer-trace-excluded {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.explorer-trace-excluded-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  border: 1.5px dashed #e8a33d;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.explorer-trace-excluded-chip:hover {
+  background: color-mix(in srgb, #e8a33d 18%, transparent);
+}
+.explorer-trace-excluded-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 11rem;
+}
+.explorer-trace-excluded-file {
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 7rem;
+}
+/* Vorschlags-Chips: neutral gestrichelt; Klick übernimmt in die Excludes. */
+.explorer-trace-suggestion-chip {
+  border-color: var(--color-text-secondary);
+  opacity: 0.85;
+}
+.explorer-trace-suggestion-chip:hover {
+  background: color-mix(in srgb, var(--color-text-secondary) 15%, transparent);
+  border-color: #e8a33d;
+}
+.explorer-trace-legend {
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+}
+.explorer-trace-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.explorer-trace-legend-marker {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+/* Einstiegspfad-Auswahl (Layout-Start) — Overlay im Canvas-Bereich. */
+.explorer-trace-chooser {
+  gap: 0.6rem;
+}
+.explorer-trace-chooser h3 {
+  margin: 0;
+}
+.explorer-trace-chooser-empty {
+  margin: 0;
+  color: var(--color-warning, #b45309);
+  font-size: 0.85rem;
+}
+.explorer-trace-chooser-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 320px;
+  max-width: 520px;
+}
+.explorer-trace-chooser-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  cursor: pointer;
+  text-align: left;
+}
+.explorer-trace-chooser-item:hover:not(:disabled) {
+  border-color: #646cff;
+}
+.explorer-trace-chooser-item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.explorer-trace-chooser-name {
+  font-weight: 600;
+}
+.explorer-trace-chooser-name em {
+  font-weight: 400;
+  font-style: normal;
+  color: var(--color-text-muted);
+}
+.explorer-trace-chooser-count {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+.explorer-trace-chooser-sample {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Exclude-Toggle in der Typ-Objektliste ───────────────────────
+   Zeile = <li> mit Haupt-Button + rechtsbündigem Icon-Button (Geschwister,
+   kein verschachteltes Interaktiv-Element); Boundary-Zeilen im Exclude-
+   Farbkanon (#e8a33d, gedimmt + gestrichelt) wie Canvas-Badge und Chips. */
+.explorer-typelist-items li {
+  display: flex;
+  align-items: stretch;
+  gap: 0.25rem;
+}
+.explorer-typelist-items li > .explorer-neighbor {
+  flex: 1;
+  min-width: 0;
+}
+.explorer-typelist-exclude {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+.explorer-typelist-exclude:hover,
+.explorer-typelist-exclude:focus-visible {
+  color: #e8a33d;
+  border-color: #e8a33d;
+  background: color-mix(in srgb, #e8a33d 12%, transparent);
+}
+.explorer-typelist-items li.is-excluded > .explorer-neighbor {
+  opacity: 0.55;
+  border: 1px dashed #e8a33d;
+  border-radius: 6px;
+}
+.explorer-typelist-items li.is-excluded .explorer-typelist-exclude {
+  color: #e8a33d;
+}

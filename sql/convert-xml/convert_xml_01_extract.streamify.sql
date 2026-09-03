@@ -406,9 +406,13 @@ CREATE OR REPLACE MACRO ws_restore(s) AS
 -- fasst `oxml` nie an → englischer Korpus bit-identisch UND ohne XML-Zusatzparsing.
 -- Nur für nicht-kanonische (lokalisierte) Rohtypen leitet der Macro aus locale-UNABHÄNGIGEN
 -- Signalen ab (Wrapper-ELEMENTNAMEN sind im Export IMMER englisch; nur @type ist übersetzt):
---   * @kind (numerisch) als Primärschalter — 1:1 für kind 2..7,9..18 (korpus-verifiziert);
+--   * @kind (numerisch) als Primärschalter — 1:1 für kind 2..7,9..12,14..18 (korpus-verifiziert);
 --   * kind=8 (Group vs Grouped Button): Grouped Button hat das direkte Kind
 --     /LayoutObject/GroupedButton/action, ein einfacher Group nicht;
+--   * kind=13 (Web Viewer vs Chart): beide teilen kind=13 und tragen einen
+--     <External>-Block; das Chart hat darin das Kind /LayoutObject/External/Chart
+--     (der Web Viewer stattdessen External/WebViewer). Ohne Sonde kollabierten
+--     Charts auf 'Web Viewer' (kind-13-Kollision);
 --   * kind=1 (Feld-Controls): /LayoutObject/Field/Display/@Style — 0=Edit Box, 1=Drop-down
 --     List, 2=Pop-up Menu, 3=Checkbox Set, 4=Radio Button Set, 6=Drop-down Calendar,
 --     7=Concealed Edit Box. (Das Container-FELD hat ebenfalls Style 0, kommt aber
@@ -422,7 +426,7 @@ CREATE OR REPLACE MACRO fm_canon_layout_type(raw_type, kind, oxml) AS (
             'Text', 'Edit Box', 'Grouped Button', 'Rectangle', 'Line', 'Graphic',
             'Group', 'Checkbox Set', 'Button', 'Container', 'Portal', 'Drop-down List',
             'Panel', 'Radio Button Set', 'Button Bar', 'PopoverPanel', 'Popover Button',
-            'Pop-up Menu', 'Tab Control', 'Web Viewer', 'Oval', 'Rounded Rectangle',
+            'Pop-up Menu', 'Tab Control', 'Web Viewer', 'Chart', 'Oval', 'Rounded Rectangle',
             'Concealed Edit Box', 'Slide Control', 'Drop-down Calendar'
         ) THEN raw_type
         WHEN kind = 2  THEN 'Text'
@@ -437,7 +441,8 @@ CREATE OR REPLACE MACRO fm_canon_layout_type(raw_type, kind, oxml) AS (
         WHEN kind = 10 THEN 'Button'
         WHEN kind = 11 THEN 'Tab Control'
         WHEN kind = 12 THEN 'Panel'
-        WHEN kind = 13 THEN 'Web Viewer'
+        WHEN kind = 13 THEN CASE WHEN len(xml_extract_elements(oxml, '/LayoutObject/External/Chart')) > 0
+                                 THEN 'Chart' ELSE 'Web Viewer' END
         WHEN kind = 14 THEN 'Popover Button'
         WHEN kind = 15 THEN 'PopoverPanel'
         WHEN kind = 16 THEN 'Slide Control'
@@ -4649,7 +4654,7 @@ CREATE TABLE IF NOT EXISTS DDR_Calculations (
 -- DDR_Calculations naturgemäß keine Zeile hinterlassen (kein Chunk). Trägt die
 -- Kontext-TO des Ankers (direktes TableOccurrenceReference-Kind neben der
 -- ChunkList). Konsumenten: P2 A.5.1b/A.5.1c (Feld-Auflösung gegen die
--- Kontext-TO), P4 b_disp + Display-Anreicherung (Kontext-TO, D2-Fallback),
+-- Kontext-TO), P4 b_disp + Display-Anreicherung (Kontext-TO, Fallback),
 -- P6 v_check_display_empty_chunklist. Der Join auf den Anker läuft IMMER über
 -- Calc_UUID (Anker-Name) — nie über Calc_Hash: identische Formeln teilen den
 -- Hash, aber jeder Anker trägt seine eigene Kontext-TO.

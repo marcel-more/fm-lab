@@ -8,7 +8,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import cytoscape from 'cytoscape';
-import type { GraphNode, GraphEdge, SubgraphResponse } from '../hooks/useSubgraph';
+import type { GraphNode, GraphEdge } from '../hooks/useSubgraph';
 import { subgraphToElements } from '../hooks/useSubgraph';
 import { getCommunityColor, readGraphThemeTokens } from '../lib/graphColors';
 import { useTheme } from '../hooks/useTheme';
@@ -67,8 +67,14 @@ export interface ExplorerGraphHandle {
   previewNode: (id: string | null) => void;
 }
 
+/**
+ * Minimaler Daten-Vertrag der Canvas — Subgraph- UND Trace-Antworten erfüllen
+ * ihn (die Trace-Zusatzfelder reisen als optionale Member auf Node/Edge mit).
+ */
+export type ExplorerGraphData = { nodes: GraphNode[]; edges: GraphEdge[] };
+
 interface ExplorerGraphProps {
-  data: SubgraphResponse | null;
+  data: ExplorerGraphData | null;
   /** Client-side name filter — non-matching nodes are dimmed or hidden (focus stays). */
   nameFilter: string;
   /** Client-side file filter (null = all files) — non-matching nodes dimmed/hidden. */
@@ -190,7 +196,7 @@ const FILE_GROUP_NULL_ID = '__file__::__null__';
 const FILE_GROUP_CLASS = 'file-group';
 
 /**
- * Theme-aware Stylesheet (F1): aus den `--color-graph-*`-Tokens gebaut. Cytoscape-
+ * Theme-aware Stylesheet: aus den `--color-graph-*`-Tokens gebaut. Cytoscape-
  * Stylesheets sind statische JS-Objekte und kennen keine CSS-Vars — die Tokens
  * werden hier JS-seitig (getComputedStyle) aufgelöst und das Stylesheet bei jedem
  * Theme-Wechsel via `cy.style()` neu gesetzt (ohne Re-Layout). Akzent-/State-Farben
@@ -280,6 +286,48 @@ function buildExplorerStylesheet(): cytoscape.StylesheetStyle[] {
     style: {
       'background-color': 'data(communityColor)',
       'border-color': 'data(communityColor)',
+    } as unknown as cytoscape.Css.Node,
+  },
+  // ── Trace-Modus (Knoten) — Styling nach traceRole (Daten-Attribut aus
+  // /api/graph/trace). Chain betont, Kaskade markiert, Kontext zurückgenommen;
+  // 'touched' bleibt bewusst neutral (dezent = Grundzustand). Die Regeln stehen
+  // VOR hub/focus/hover/selected, damit deren State-Ringe weiterhin gewinnen.
+  {
+    selector: 'node[traceRole = "chain_down"], node[traceRole = "chain_up"]',
+    style: {
+      'border-width': 2.5,
+      'border-color': '#646cff',
+    } as unknown as cytoscape.Css.Node,
+  },
+  {
+    selector: 'node[traceRole = "triggered"]',
+    style: {
+      'border-width': 3,
+      'border-style': 'double',
+      'border-color': '#b45ce8',
+    } as unknown as cytoscape.Css.Node,
+  },
+  {
+    selector: 'node[traceRole = "trigger_touched"]',
+    style: { 'opacity': 0.8 } as unknown as cytoscape.Css.Node,
+  },
+  {
+    selector: 'node[traceRole = "trigger_owner"]',
+    style: {
+      'opacity': 0.55,
+      'border-style': 'dashed',
+    } as unknown as cytoscape.Css.Node,
+  },
+  // Boundary-Knoten (Exclude-Liste): sichtbar, aber nicht expandiert.
+  // Steht NACH den traceRole-Regeln (Ausschluss übermalt die Rolle), aber vor
+  // hub/focus/hover/selected, damit deren State-Ringe weiterhin gewinnen.
+  {
+    selector: 'node[?traceExcluded]',
+    style: {
+      'opacity': 0.45,
+      'border-width': 2.5,
+      'border-style': 'dashed',
+      'border-color': '#e8a33d',
     } as unknown as cytoscape.Css.Node,
   },
   // Hub node — bright accent border (no longer a diamond; all nodes are circles).
@@ -401,6 +449,24 @@ function buildExplorerStylesheet(): cytoscape.StylesheetStyle[] {
       'target-arrow-color': '#9a9aa8',
     } as unknown as cytoscape.Css.Edge,
   },
+  // ── Trace-Modus (Kanten) — traceKind aus /api/graph/trace. Trigger violett,
+  // induzierte Kontext-Kanten gepunktet/blass; VOR der Cross-File-Regel, damit
+  // das Datei-Grenzen-Orange auf solchen Kanten weiterhin gewinnt.
+  {
+    selector: 'edge[traceKind = "trigger"]',
+    style: {
+      'width': 2,
+      'line-color': '#b45ce8',
+      'target-arrow-color': '#b45ce8',
+    } as unknown as cytoscape.Css.Edge,
+  },
+  {
+    selector: 'edge[traceKind = "induced"]',
+    style: {
+      'line-style': 'dotted',
+      'opacity': 0.45,
+    } as unknown as cytoscape.Css.Edge,
+  },
   // Cross-file links — orange dashed, slightly heavier.
   {
     selector: 'edge[?isCrossFile]',
@@ -410,6 +476,12 @@ function buildExplorerStylesheet(): cytoscape.StylesheetStyle[] {
       'target-arrow-color': '#ffb74d',
       'line-style': 'dashed',
     } as unknown as cytoscape.Css.Edge,
+  },
+  // Chain-Kanten (calls_script im Trace) — breit betont; steht NACH der
+  // Cross-File-Regel, damit die Breite auch dort greift (Farbe bleibt orange).
+  {
+    selector: 'edge[traceKind = "chain"]',
+    style: { 'width': 3 } as unknown as cytoscape.Css.Edge,
   },
   // Name filter, "dim" mode — non-matches stay laid out but recede (spec refinement).
   {
@@ -811,12 +883,39 @@ function runLayout(
   // grid. Falls back to the whole graph.
   const hasSubset = !!eles && eles.length > 0;
   const target = hasSubset ? eles! : cy.elements();
-  const layout = target.layout({ ...opts, boundingBox } as cytoscape.LayoutOptions);
-  layout.one('layoutstop', () => {
-    cy.resize();
-    cy.fit(hasSubset ? eles : undefined, 40);
-  });
-  layout.run();
+
+  // fcose-Falle (2.2.0): `quality: 'draft'` liest bei `randomize: false`
+  // BEDINGUNGSLOS das Spektral-Ergebnis (relocateComponent → nodeIndexes) —
+  // das läuft aber nur bei randomize:true → "Cannot read properties of
+  // undefined (reading 'nodeIndexes')", React räumt den Baum ab (weißes
+  // Fenster). Traf jeden inkrementellen Lauf (Diff-Merge, Lazy-Expand)
+  // auf Groß-Graphen ≥ LARGE_GRAPH_NODES (Draft-Profil). Draft ist nur mit
+  // randomize:true sicher → inkrementelle Läufe auf 'default' heben
+  // (headless gegen fcose 2.2.0 verifiziert).
+  const o = opts as { randomize?: boolean; quality?: string };
+  const safeOpts = o.randomize === false && o.quality === 'draft'
+    ? ({ ...opts, quality: 'default' } as unknown as cytoscape.LayoutOptions)
+    : opts;
+
+  const runOnce = (layoutOpts: cytoscape.LayoutOptions) => {
+    const layout = target.layout({ ...layoutOpts, boundingBox } as cytoscape.LayoutOptions);
+    layout.one('layoutstop', () => {
+      cy.resize();
+      cy.fit(hasSubset ? eles : undefined, 40);
+    });
+    layout.run();
+  };
+  // Gurt: ein Layout-Absturz darf die App nie abräumen. Letzter Ausweg ist der
+  // volle Neuaufbau der Positionen (randomize:true verträgt jede Qualität);
+  // schlägt auch der fehl, bleiben die Positionen stehen („Neu anordnen" als
+  // Escape-Hatch).
+  try {
+    runOnce(safeOpts);
+  } catch {
+    try {
+      runOnce({ ...safeOpts, randomize: true } as cytoscape.LayoutOptions);
+    } catch { /* Positionen unangetastet lassen */ }
+  }
 }
 
 function escapeHtml(s: string): string {
@@ -1009,7 +1108,7 @@ export const ExplorerGraph = forwardRef<ExplorerGraphHandle, ExplorerGraphProps>
       },
     }));
 
-    // F1: bei Theme-Wechsel das Stylesheet aus den neuen Tokens neu setzen (kein
+    // Bei Theme-Wechsel das Stylesheet aus den neuen Tokens neu setzen (kein
     // Re-Layout — Positionen/Zoom bleiben). Initial setzt der Mount das Stylesheet.
     useEffect(() => {
       cyRef.current?.style(buildExplorerStylesheet());
@@ -1181,16 +1280,48 @@ export const ExplorerGraph = forwardRef<ExplorerGraphHandle, ExplorerGraphProps>
       };
     }, []);
 
-    // Replace elements + re-layout whenever the subgraph data changes.
+    // Elemente aktualisieren, wenn die Daten wechseln (Diff-Merge).
+    //
+    // Dataset-Weiche: nur ein ECHTER Datensatzwechsel (anderer Fokus/Start oder
+    // Subgraph↔Trace-Moduswechsel) macht den Voll-Rebuild mit randomize:true.
+    // Innerhalb desselben Datensatzes (Exclude-Klick, Budget-/Schalter-Wechsel,
+    // Tiefe/Richtung, Server-Typ-Filter) läuft ein positions-erhaltender
+    // Diff-Merge nach dem Muster des Lazy-Expand-Pfads: entfallene Elemente
+    // raus, bestehende per data() gepatcht (Trace-Rollen verschieben sich nach
+    // einem Exclude!), neue dazu. Layout nur, wenn NEUE Knoten hinzukamen —
+    // dann mit randomize:false ab Bestandspositionen; reine Schrumpfung oder
+    // Attribut-Änderung lässt Positionen UND Viewport unangetastet (kein
+    // Auto-Fit). „Neu anordnen" bleibt der Escape-Hatch für verfahrene Fälle.
+    // Kein Subset-Kurzschluss: bei gekapptem Trace (truncated) rücken nach
+    // einem Exclude Knoten für freigewordene Deckel-Plätze nach.
+    const datasetKeyRef = useRef<string | null>(null);
     useEffect(() => {
       const cy = cyRef.current;
       if (!cy || !ready) return;
       const elements = data ? subgraphToElements(data.nodes, data.edges, edgeLabelerRef.current) : [];
-      cy.batch(() => {
+
+      // Datensatz-Identität: Modus (Trace-Daten tragen traceRole) + Fokus-/Start-
+      // Composite-ID. Ohne Fokus-Knoten (leerer Graph) gibt es keinen Datensatz.
+      const focusNode = data?.nodes.find((n) => n.isFocus) ?? null;
+      const isTraceData = data?.nodes.some((n) => n.traceRole !== undefined) ?? false;
+      const datasetKey = data && focusNode ? `${isTraceData ? 'trace' : 'subgraph'}:${focusNode.id}` : null;
+      const sameDataset =
+        datasetKey !== null && datasetKey === datasetKeyRef.current && selectRealNodes(cy).length > 0;
+      datasetKeyRef.current = datasetKey;
+
+      if (elements.length === 0) {
         cy.elements().remove();
-        if (elements.length) cy.add(elements);
-      });
-      if (elements.length) {
+        partitionRef.current = null;
+        partitionReportRef.current?.(null);
+        return;
+      }
+
+      if (!sameDataset) {
+        // Voll-Rebuild (Fokus-/Moduswechsel) — bisheriges Verhalten.
+        cy.batch(() => {
+          cy.elements().remove();
+          cy.add(elements);
+        });
         recomputeNodeVisuals(cy);
         applyColorMode(cy, colorMode);
         // Compute the stable partition + hide not-connected nodes (islands + isolated)
@@ -1202,9 +1333,48 @@ export const ExplorerGraph = forwardRef<ExplorerGraphHandle, ExplorerGraphProps>
           applyFileGrouping(cy, true, tRef.current('filter.fileGroupNone', { defaultValue: 'Ohne Datei' }) as string);
         }
         runLayout(cy, layoutFor(groupByFileRef.current, realNodeCount(cy)), layoutEles(cy));
+        return;
+      }
+
+      // ── Diff-Merge (gleicher Datensatz) ──
+      const incomingById = new Map(elements.map((el) => [el.data.id as string, el]));
+      let added = 0;
+      cy.batch(() => {
+        // (a) Entfallene Elemente entfernen — Halos und Datei-Boxen sind
+        // synthetisch (nie in den Server-Daten) und bleiben unangetastet;
+        // Kanten entfallener Knoten räumt Cytoscape mit ab.
+        cy.elements().forEach((ele) => {
+          if (ele.hasClass('focus-halo') || ele.hasClass(PREVIEW_HALO_CLASS) || ele.hasClass(FILE_GROUP_CLASS)) return;
+          if (!incomingById.has(ele.id())) ele.remove();
+        });
+        // (b) Bestehende patchen / (c) neue addieren. id/source/target sind in
+        // Cytoscape unveränderlich → aus dem data()-Patch heraushalten.
+        for (const el of elements) {
+          const existing = cy.getElementById(el.data.id as string);
+          if (existing.nonempty()) {
+            const { id: _id, source: _src, target: _tgt, ...patch } = el.data as Record<string, unknown>;
+            existing.data(patch);
+          } else {
+            cy.add(el);
+            added += 1;
+          }
+        }
+      });
+      recomputeNodeVisuals(cy);
+      applyColorMode(cy, colorMode);
+      partitionRef.current = refreshPartition(cy, showUnconnected, partitionReportRef.current);
+      if (groupByFileRef.current) {
+        // Neue Knoten in ihre Datei-Box, leer gewordene Boxen entfernen (idempotent).
+        applyFileGrouping(cy, true, tRef.current('filter.fileGroupNone', { defaultValue: 'Ohne Datei' }) as string);
+      }
+      if (added > 0) {
+        // Wachstum: inkrementelles Layout ab Bestandspositionen (Expand-Muster).
+        runLayout(cy, { ...layoutFor(groupByFileRef.current, realNodeCount(cy)), randomize: false } as cytoscape.LayoutOptions, layoutEles(cy));
       } else {
-        partitionRef.current = null;
-        partitionReportRef.current?.(null);
+        // Reine Schrumpfung/Attribut-Änderung: kein Layout, kein Fit — nur den
+        // Fokus-Halo nachziehen (läuft sonst über layoutstop) und Hüllen neu malen.
+        syncFocusHalo(cy);
+        redrawHulls();
       }
       // colorMode/showUnconnected intentionally omitted — their own effects react
       // without forcing a full element rebuild.
@@ -1372,5 +1542,8 @@ function nodeFromData(d: Record<string, unknown>): GraphNode {
     isFocus: Boolean(d.isFocus),
     community: (d.community as number | null) ?? null,
     communityName: (d.communityName as string | null) ?? null,
+    traceRole: (d.traceRole as string | undefined) ?? undefined,
+    traceDepth: (d.traceDepth as number | undefined) ?? undefined,
+    isExcluded: d.traceExcluded === true || undefined,
   };
 }

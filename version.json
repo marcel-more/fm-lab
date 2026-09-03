@@ -1,8 +1,8 @@
 {
   "manifest_schema": "1.0",
-  "version": "0.9.9",
-  "generated_at": "2026-09-02T20:08:58.334Z",
-  "source_commit": "24bd42b0",
+  "version": "0.9.10",
+  "generated_at": "2026-09-03T20:48:18.356Z",
+  "source_commit": "e0ace26a",
   "components": {
     "rest_api": {
       "scheme": "A",
@@ -126,6 +126,10 @@
     {
       "name": "fm-show",
       "version": "0.8.9"
+    },
+    {
+      "name": "fm-trace",
+      "version": "0.3.0"
     },
     {
       "name": "fm-generate-script",

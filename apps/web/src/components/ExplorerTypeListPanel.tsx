@@ -47,12 +47,19 @@ interface ExplorerTypeListPanelProps {
   onOpenDetails: (uuid: string, file?: string | null) => void;
   /** Hover-Vorschau: composite Graph-Key (node.id) bzw. null beim Verlassen. */
   onHoverItem: (graphId: string | null) => void;
+  /**
+   * Exclude-Toggle je Zeile (composite Graph-Key). Vom Parent NUR gesetzt,
+   * wenn Trace-Modus aktiv UND der Panel-Typ ausschließbar ist (EXCLUDABLE_TYPES
+   * — ein Gate pro Panel-Instanz, das Panel zeigt genau einen Typ). undefined ⇒
+   * die Liste rendert wie bisher (Subgraph-Modus / nicht-ausschließbare Typen).
+   */
+  onToggleExclude?: (graphId: string) => void;
 }
 
 const SORTS: TypeListSort[] = ['name', 'file'];
 
 export function ExplorerTypeListPanel(props: ExplorerTypeListPanelProps) {
-  const { width, type, items, sort, onSortChange, dir, dirCounts, dirInfo, focusFile, showDir, onDirChange, onClose, onOpenDetails, onHoverItem } = props;
+  const { width, type, items, sort, onSortChange, dir, dirCounts, dirInfo, focusFile, showDir, onDirChange, onClose, onOpenDetails, onHoverItem, onToggleExclude } = props;
   const { t } = useTranslation(['explorer', 'common']);
 
   const dirGlyph = (d: TypeListDir) => (d === 'in' ? '←' : d === 'out' ? '→' : '↔');
@@ -147,16 +154,24 @@ export function ExplorerTypeListPanel(props: ExplorerTypeListPanelProps) {
               const glyphTitle = info
                 ? (info.role ? `${dirLabel(info.dir)} · ${info.role}` : dirLabel(info.dir))
                 : undefined;
+              const excluded = n.isExcluded === true;
               return (
-                <li key={n.id}>
+                // Haupt-Button + optionaler Exclude-Icon-Button als GESCHWISTER
+                // im <li> (ein Toggle IM Detail-Button wäre verschachteltes
+                // Interaktiv-Element). Hover-/Fokus-Vorschau auf <li>-Ebene, damit
+                // beide Elemente die Canvas-Hervorhebung tragen (Focus/Blur bubbeln).
+                <li
+                  key={n.id}
+                  className={excluded ? 'is-excluded' : undefined}
+                  onMouseEnter={() => onHoverItem(n.id)}
+                  onFocus={() => onHoverItem(n.id)}
+                  onBlur={() => onHoverItem(null)}
+                >
                   <button
                     type="button"
                     className={`explorer-neighbor${n.isFocus ? ' is-focus' : ''}`}
                     aria-current={n.isFocus ? 'true' : undefined}
                     onClick={() => onOpenDetails(n.uuid, n.file ?? null)}
-                    onMouseEnter={() => onHoverItem(n.id)}
-                    onFocus={() => onHoverItem(n.id)}
-                    onBlur={() => onHoverItem(null)}
                     title={n.label}
                   >
                     <span className="explorer-type-dot" style={{ background: getTypeColor(n.type) }} />
@@ -175,6 +190,20 @@ export function ExplorerTypeListPanel(props: ExplorerTypeListPanelProps) {
                       <span className="explorer-neighbor-dir" title={glyphTitle}>{dirGlyph(info.dir)}</span>
                     ) : null}
                   </button>
+                  {/* Nie für den Fokus/Start (Server-Guard existiert, UI konsistent
+                      zum InspectPanel); bestehende trace.*-Keys, keine neuen Locales. */}
+                  {onToggleExclude && !n.isFocus && (
+                    <button
+                      type="button"
+                      className="explorer-typelist-exclude"
+                      aria-pressed={excluded}
+                      aria-label={t(excluded ? 'trace.includeAction' : 'trace.excludeAction') as string}
+                      title={t(excluded ? 'trace.removeExcludeHint' : 'trace.excludeHint') as string}
+                      onClick={() => onToggleExclude(n.id)}
+                    >
+                      <span aria-hidden="true">{excluded ? '⊕' : '⊘'}</span>
+                    </button>
+                  )}
                 </li>
               );
             })}

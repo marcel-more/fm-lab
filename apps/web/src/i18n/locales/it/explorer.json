@@ -121,5 +121,67 @@
   "edge": {
     "represents": "rappresenta",
     "buttonAction": "Azione pulsante"
+  },
+  "trace": {
+    "exit": "Vicinato",
+    "exitHint": "Uscire dal trace e aprire la vista di vicinato dell'oggetto di partenza",
+    "explainer": "Grafo di flusso selettivo — la catena di chiamate su/giù, gli oggetti effettivamente toccati e i trigger di script dei layout visitati.",
+    "entryLabel": "Percorso di ingresso",
+    "entries": {
+      "layout_runtime": "Runtime",
+      "layout_inbound": "In entrata",
+      "layout_full": "Entrambi"
+    },
+    "entryHints": {
+      "layout_runtime": "Trigger del layout e dei suoi oggetti + script dei pulsanti come punti di partenza",
+      "layout_inbound": "Script che navigano verso questo layout",
+      "layout_full": "Runtime e navigazione in entrata combinati"
+    },
+    "budgets": "Budget",
+    "upDepth": "Verso l'alto",
+    "upDepthHint": "Quanti livelli di chiamanti vengono seguiti verso l'alto",
+    "downDepth": "Verso il basso",
+    "downDepthHint": "Quanti livelli di sottoscript vengono seguiti verso il basso",
+    "triggerDepth": "Cascata di trigger",
+    "triggerDepthHint": "Quante fasi di cascata possono attivare i trigger di layout (0 = disattivato)",
+    "options": "Opzioni",
+    "localVars": "Variabili $ locali",
+    "localVarsHint": "Mostrare anche le variabili $ locali degli script della catena",
+    "buttons": "Pulsanti",
+    "buttonsHint": "Includere gli script dei pulsanti dei layout visitati come possibile interazione",
+    "interactionTriggers": "Trigger di interazione",
+    "interactionTriggersHint": "Consentire anche agli eventi di interazione (tastiera, gesti, pulsanti del dispositivo) di attivarsi nella cascata — normalmente non si attivano durante l'esecuzione di uno script",
+    "expandUp": "Espandere i chiamanti",
+    "expandUpHint": "Raccogliere anche gli oggetti toccati dalla catena dei chiamanti",
+    "legend": "Legenda",
+    "roles": {
+      "chain": "Catena di chiamate",
+      "touched": "Toccato",
+      "triggered": "Attivato (cascata)",
+      "triggerTouched": "Toccato dalla cascata",
+      "owner": "Contesto del trigger",
+      "excluded": "Escluso (confine)",
+      "induced": "Arco di contesto"
+    },
+    "entryTitle": "Scegli il percorso di ingresso",
+    "entryDefault": "Predefinito",
+    "seedCount": "{{count}} script di partenza",
+    "seedCount_other": "{{count}} script di partenza",
+    "emptyEntry": "Il preset scelto non produce script di partenza — scegliere un altro percorso di ingresso.",
+    "truncated": "{{kept}} di {{total}} nodi del trace caricati — ridurre i budget per mettere a fuoco l'estratto.",
+    "dynamicCalls": "{{count}} chiamata di script dinamica (per nome) senza arco statico — il trace è un'approssimazione statica.",
+    "dynamicCalls_other": "{{count}} chiamate di script dinamiche (per nome) senza arco statico — il trace è un'approssimazione statica.",
+    "actionHint": "Aprire il grafo di flusso (trace) da questo oggetto",
+    "excludeAction": "Escludi dal trace",
+    "includeAction": "Includi di nuovo",
+    "excludeHint": "Il nodo resta visibile ma non viene più espanso (chiamate, oggetti toccati, cascata di trigger)",
+    "excludedLabel": "Esclusi",
+    "clearExcludes": "Rimuovi tutti",
+    "clearExcludesHint": "Rimuovere tutte le esclusioni ed espandere di nuovo completamente il trace",
+    "removeExcludeHint": "Rimuovere questa esclusione — il nodo verrà espanso di nuovo",
+    "suggestionsLabel": "Suggerimenti",
+    "applyAllSuggestions": "Smorza tutti",
+    "applyAllSuggestionsHint": "Aggiungere tutti i nodi hub suggeriti alla lista di esclusione",
+    "suggestionHint": "Hub sospetto — fan-in di trigger {{trig}}, chiamanti {{calls}}, campi toccati {{touch}}. Clic per escludere il nodo dal trace."
   }
 }

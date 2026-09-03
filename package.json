@@ -1,6 +1,6 @@
 {
   "name": "fm-lab",
-  "version": "0.9.9",
+  "version": "0.9.10",
   "description": "FM-Lab - Open Source framework for agentic FileMaker development",
   "private": true,
   "workspaces": [

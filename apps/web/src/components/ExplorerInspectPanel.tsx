@@ -4,6 +4,7 @@ import { formatObjectDisplayName } from '../lib/objectName';
 import { useTriggerEventFormat } from '../lib/triggerEvents';
 import { triggerSubroleLabel } from '../lib/graphEdgeLabels';
 import type { GraphNode } from '../hooks/useSubgraph';
+import { EXCLUDABLE_TYPES } from '../hooks/useTrace';
 
 /**
  * Inspect panel for the selected graph node.
@@ -37,10 +38,26 @@ interface ExplorerInspectPanelProps {
   /** Hub-Collapse: composite Graph-Key (node.id), reine Cytoscape-Operation. */
   onCollapse: (graphId: string) => void;
   onSelectNeighbor: (node: GraphNode) => void;
+  /**
+   * Trace-Modus öffnen (selektiver Ablauf-Graph ab diesem Knoten). Optional —
+   * v1 nur für Script/Layout sinnvoll; der Button erscheint nur bei diesen Typen.
+   */
+  onTrace?: (uuid: string, file?: string | null) => void;
+  /**
+   * Knoten im aktiven Trace ausschließen/wieder einschließen (Composite-
+   * Graph-Key node.id). Nur im Trace-Modus gesetzt; Button nur für Script/Layout
+   * (die einzigen Typen mit Expansionswirkung) und nie für den Start.
+   */
+  onToggleExclude?: (graphId: string) => void;
+  /** true = der Knoten steht aktuell auf der Exclude-Liste (URL-Wahrheit). */
+  nodeExcluded?: boolean;
 }
 
+/** v1-Startobjekte des Trace (Feld/Variable/CF folgen in v2). */
+const TRACEABLE_TYPES = new Set(['Script', 'Layout']);
+
 export function ExplorerInspectPanel(props: ExplorerInspectPanelProps) {
-  const { width, node, neighbors, expanding, onClose, onOpenDetails, onSetFocus, onExpand, onCollapse, onSelectNeighbor } = props;
+  const { width, node, neighbors, expanding, onClose, onOpenDetails, onSetFocus, onExpand, onCollapse, onSelectNeighbor, onTrace, onToggleExclude, nodeExcluded = false } = props;
   const { t } = useTranslation(['explorer', 'common', 'types']);
   const formatTriggerEvent = useTriggerEventFormat();
 
@@ -91,6 +108,27 @@ export function ExplorerInspectPanel(props: ExplorerInspectPanelProps) {
         {node.isHub && (
           <button type="button" className="explorer-inspect-action" onClick={() => onCollapse(node.id)}>
             {t('inspect.collapseHub')}
+          </button>
+        )}
+        {onTrace && TRACEABLE_TYPES.has(node.type) && (
+          <button
+            type="button"
+            className="explorer-inspect-action"
+            onClick={() => onTrace(node.uuid, node.file ?? null)}
+            title={t('trace.actionHint') as string}
+          >
+            {/* Eigenname „Trace" bewusst unübersetzt. */}
+            Trace
+          </button>
+        )}
+        {onToggleExclude && EXCLUDABLE_TYPES.has(node.type) && !node.isFocus && (
+          <button
+            type="button"
+            className="explorer-inspect-action"
+            onClick={() => onToggleExclude(node.id)}
+            title={t('trace.excludeHint') as string}
+          >
+            {nodeExcluded ? t('trace.includeAction') : t('trace.excludeAction')}
           </button>
         )}
         <button type="button" className="explorer-inspect-action" onClick={() => onOpenDetails(node.uuid, node.file ?? null)}>

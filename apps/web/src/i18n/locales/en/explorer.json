@@ -129,5 +129,67 @@
   "edge": {
     "represents": "represents",
     "buttonAction": "Button action"
+  },
+  "trace": {
+    "exit": "Neighborhood",
+    "exitHint": "Leave the trace and open the neighborhood view of the start object",
+    "explainer": "Selective flow graph — the call chain up/down, the objects it actually touches, and the script triggers of entered layouts.",
+    "entryLabel": "Entry path",
+    "entries": {
+      "layout_runtime": "Runtime",
+      "layout_inbound": "Inbound",
+      "layout_full": "Both"
+    },
+    "entryHints": {
+      "layout_runtime": "Triggers of the layout and its objects + button scripts as starting points",
+      "layout_inbound": "Scripts navigating to this layout",
+      "layout_full": "Runtime and inbound navigation combined"
+    },
+    "budgets": "Budgets",
+    "upDepth": "Upstream",
+    "upDepthHint": "How many caller levels the chain is followed upward",
+    "downDepth": "Downstream",
+    "downDepthHint": "How many subscript levels the chain is followed downward",
+    "triggerDepth": "Trigger cascade",
+    "triggerDepthHint": "How many cascade stages layout triggers may fire (0 = off)",
+    "options": "Options",
+    "localVars": "Local $ variables",
+    "localVarsHint": "Also show local $ variables of the chain scripts",
+    "buttons": "Buttons",
+    "buttonsHint": "Include button scripts of entered layouts as possible interactions",
+    "interactionTriggers": "Interaction triggers",
+    "interactionTriggersHint": "Also let interaction events (keyboard, gestures, device buttons) fire in the cascade — they normally never fire during a script run",
+    "expandUp": "Expand callers",
+    "expandUpHint": "Also collect the objects touched by the caller chain",
+    "legend": "Legend",
+    "roles": {
+      "chain": "Call chain",
+      "touched": "Touched",
+      "triggered": "Triggered (cascade)",
+      "triggerTouched": "Touched by cascade",
+      "owner": "Trigger context",
+      "excluded": "Excluded (boundary)",
+      "induced": "Context edge"
+    },
+    "entryTitle": "Choose an entry path",
+    "entryDefault": "Default",
+    "seedCount": "{{count}} seed script",
+    "seedCount_other": "{{count}} seed scripts",
+    "emptyEntry": "The chosen preset yields no seed scripts — please pick another entry path.",
+    "truncated": "{{kept}} of {{total}} trace nodes loaded — reduce the budgets to focus the excerpt.",
+    "dynamicCalls": "{{count}} dynamic script call (by name) without a static edge — the trace is a static approximation.",
+    "dynamicCalls_other": "{{count}} dynamic script calls (by name) without a static edge — the trace is a static approximation.",
+    "actionHint": "Open the flow graph (trace) from this object",
+    "excludeAction": "Exclude from trace",
+    "includeAction": "Include again",
+    "excludeHint": "Keep the node visible but stop expanding through it (calls, touches, trigger cascade)",
+    "excludedLabel": "Excluded",
+    "clearExcludes": "Clear all",
+    "clearExcludesHint": "Remove all exclusions and fully re-expand the trace",
+    "removeExcludeHint": "Remove this exclusion — the node will be expanded again",
+    "suggestionsLabel": "Suggestions",
+    "applyAllSuggestions": "Damp all",
+    "applyAllSuggestionsHint": "Add all suggested hub nodes to the exclusion list",
+    "suggestionHint": "Suspected hub — trigger fan-in {{trig}}, callers {{calls}}, field touches {{touch}}. Click to exclude the node from the trace."
   }
 }

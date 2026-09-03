@@ -114,7 +114,7 @@ object_styles AS (
       WHEN lo.Object_Type IN ('Edit Box', 'Drop-down List', 'Pop-up Menu',
                                'Radio Button Set', 'Checkbox Set', 'Drop-down Calendar')
         THEN '#cce5ff'
-      WHEN lo.Object_Type IN ('Text', 'Graphic', 'Container', 'Web Viewer')
+      WHEN lo.Object_Type IN ('Text', 'Graphic', 'Container', 'Web Viewer', 'Chart')
         THEN '#e2e3e5'
       WHEN lo.Object_Type IN ('Button', 'Grouped Button', 'Button Bar', 'Popover Button')
         THEN '#d4edda'
@@ -129,7 +129,7 @@ object_styles AS (
       WHEN lo.Object_Type IN ('Edit Box', 'Drop-down List', 'Pop-up Menu',
                                'Radio Button Set', 'Checkbox Set', 'Drop-down Calendar')
         THEN '#004085'
-      WHEN lo.Object_Type IN ('Text', 'Graphic', 'Container', 'Web Viewer')
+      WHEN lo.Object_Type IN ('Text', 'Graphic', 'Container', 'Web Viewer', 'Chart')
         THEN '#383d41'
       WHEN lo.Object_Type IN ('Button', 'Grouped Button', 'Button Bar', 'Popover Button')
         THEN '#155724'

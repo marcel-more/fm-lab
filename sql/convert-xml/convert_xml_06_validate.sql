@@ -298,7 +298,7 @@ WHERE ovl.Source_Type = 'External'
         AND ol.Link_Role = 'source_valuelist'
   );
 
--- §F-3: Submenu-Ziel-Auflösung — ein Submenu-Item (isSubMenuItem="True") referenziert
+-- Submenu-Ziel-Auflösung — ein Submenu-Item (isSubMenuItem="True") referenziert
 -- sein Ziel-Menü nur per @id (ohne UUID); P4 löst es per (File_Name, Menu_ID) zu einem
 -- opens_menu-Link auf. Items ohne Link haben eine nicht auflösbare Ziel-ID (kein Custom-
 -- Menu-Katalog-Treffer — z.B. Verweis auf ein Built-in-Menü) und dürfen nicht still
@@ -536,7 +536,7 @@ WHERE Object_Type IS NOT NULL
       'Text', 'Edit Box', 'Grouped Button', 'Rectangle', 'Line', 'Graphic',
       'Group', 'Checkbox Set', 'Button', 'Container', 'Portal', 'Drop-down List',
       'Panel', 'Radio Button Set', 'Button Bar', 'PopoverPanel', 'Popover Button',
-      'Pop-up Menu', 'Tab Control', 'Web Viewer', 'Oval', 'Rounded Rectangle',
+      'Pop-up Menu', 'Tab Control', 'Web Viewer', 'Chart', 'Oval', 'Rounded Rectangle',
       'Concealed Edit Box', 'Slide Control', 'Drop-down Calendar'
   )
 GROUP BY Object_Type
@@ -588,7 +588,8 @@ WHERE Owner_Type <> 'unresolved'
     'record_access',
     'hide', 'tooltip', 'placeholder', 'conditional_format', 'portal_filter',
     'web_viewer_url', 'button_label', 'button_action', 'panel_title', 'popover_title',
-    'display_calculation', 'chart_series',
+    'display_calculation',
+    'chart_series', 'chart_title', 'chart_xaxis_title', 'chart_yaxis_title',
     'script_trigger_parameter',
     'menu_install', 'menu_title', 'menu_item_install', 'menu_item_name',
     'menu_item_parameter'

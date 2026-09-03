@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SubNav } from '../components/SubNav';
@@ -8,8 +8,11 @@ import {
   GraphExplorer,
   type GraphExplorerHandle,
   type GraphExplorerStats,
+  type TraceParamsProp,
 } from '../components/GraphExplorer';
+import type { TraceControlValues } from '../components/ExplorerTracePanel';
 import type { SubgraphDirection } from '../hooks/useSubgraph';
+import { TRACE_DEFAULTS, type TraceEntryKey } from '../hooks/useTrace';
 import { useEscapeStack } from '../hooks/useEscapeStack';
 import { buildObjectPath, buildBreadcrumb } from '../lib/navigation';
 import './GraphExplorerView.css';
@@ -36,6 +39,23 @@ function parseDirection(raw: string | null): SubgraphDirection {
   return raw === 'out' || raw === 'in' || raw === 'both' ? raw : 'both';
 }
 
+/** Trace-Budget aus dem Deep-Link (geklemmt); Fallback = Default des Params. */
+function clampTraceBudget(raw: string | null, fallback: number, max: number): number {
+  const n = Number(raw);
+  if (raw === null || !Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(0, Math.round(n)));
+}
+
+const TRACE_ENTRIES: TraceEntryKey[] = ['script', 'layout_runtime', 'layout_inbound', 'layout_full'];
+
+function parseTraceEntry(raw: string | null): TraceEntryKey | null {
+  return TRACE_ENTRIES.includes(raw as TraceEntryKey) ? (raw as TraceEntryKey) : null;
+}
+
+/** Alle Trace-Deep-Link-Params — gemeinsam gelöscht beim Moduswechsel. */
+const TRACE_PARAM_KEYS = ['trace', 'trace_file', 'entry', 'up', 'down', 'tdepth', 'vars', 'buttons', 'itrig', 'expup', 'exclude'] as const;
+const nullPatch = (keys: readonly string[]) => Object.fromEntries(keys.map((k) => [k, null]));
+
 export function GraphExplorerView() {
   const { t } = useTranslation(['explorer', 'common', 'nav']);
   const navigate = useNavigate();
@@ -52,6 +72,27 @@ export function GraphExplorerView() {
   // Datei-Gruppierung als Deep-Link-Param (`?group=file`) → ein gruppierter Graph ist teilbar.
   const groupByFile = searchParams.get('group') === 'file';
 
+  // Trace-Modus (`?trace=…`) — schließt `focus` aus; `trace` gewinnt (Normalisierung
+  // unten). Deep-Link-Kurzformen up/down/tdepth/vars/buttons/expup ↔ API-Params
+  // (Übersetzung in useTrace, Muster wie dir ↔ direction).
+  const traceStart = searchParams.get('trace');
+  const trace: TraceParamsProp | null = traceStart
+    ? {
+        start: traceStart,
+        startFile: searchParams.get('trace_file'),
+        entry: parseTraceEntry(searchParams.get('entry')),
+        upDepth: clampTraceBudget(searchParams.get('up'), TRACE_DEFAULTS.upDepth, GRAPH_MAX_DEPTH),
+        downDepth: clampTraceBudget(searchParams.get('down'), TRACE_DEFAULTS.downDepth, GRAPH_MAX_DEPTH),
+        triggerDepth: clampTraceBudget(searchParams.get('tdepth'), TRACE_DEFAULTS.triggerDepth, 3),
+        expandUp: searchParams.get('expup') === '1',
+        includeLocalVars: searchParams.get('vars') === '1',
+        includeButtons: searchParams.get('buttons') === '1',
+        includeInteractionTriggers: searchParams.get('itrig') === '1',
+        // Boundary-Ausschlüsse (Composite-IDs, kommasepariert).
+        exclude: (searchParams.get('exclude') ?? '').split(',').filter((s) => s !== ''),
+      }
+    : null;
+
   // Patch a subset of the deep-link params, preserving the rest.
   const patchParams = useCallback(
     (patch: Record<string, string | null>) => {
@@ -65,10 +106,62 @@ export function GraphExplorerView() {
     [searchParams, setSearchParams],
   );
 
+  // URL-Normalisierung: `trace` und `focus` schließen sich aus — `trace` gewinnt.
+  useEffect(() => {
+    if (traceStart && (searchParams.get('focus') || searchParams.get('depth') || searchParams.get('dir'))) {
+      patchParams({ focus: null, focus_file: null, depth: null, dir: null });
+    }
+  }, [traceStart, searchParams, patchParams]);
+
   // Re-Focus bleibt im Graphen, schreibt aber focus_file mit, damit der Backend-
-  // Fokus eine geteilte Klon-UUID eindeutig auflöst (sonst 409).
+  // Fokus eine geteilte Klon-UUID eindeutig auflöst (sonst 409). Verlässt einen
+  // aktiven Trace-Modus (Nachbarschafts-Sicht auf das Objekt).
   const handleSetFocus = useCallback(
-    (uuid: string, file?: string | null) => patchParams({ focus: uuid, focus_file: file ?? null }),
+    (uuid: string, file?: string | null) =>
+      patchParams({ focus: uuid, focus_file: file ?? null, ...nullPatch(TRACE_PARAM_KEYS) }),
+    [patchParams],
+  );
+
+  // Trace ab einem Objekt öffnen (Inspect-Panel-Aktion) — frische Defaults,
+  // Fokus-Familie raus. Default-Budgets bleiben aus der URL weggelassen.
+  const handleOpenTrace = useCallback(
+    (uuid: string, file?: string | null) =>
+      patchParams({
+        ...nullPatch(TRACE_PARAM_KEYS),
+        trace: uuid,
+        trace_file: file ?? null,
+        focus: null,
+        focus_file: null,
+        depth: null,
+        dir: null,
+      }),
+    [patchParams],
+  );
+
+  // Budgets/Schalter/Preset patchen; Default-Werte verschwinden aus der URL
+  // (kurze, deterministische Deep-Links — Parität zum Skill /fm-trace).
+  const handleTraceParamsChange = useCallback(
+    (patch: Partial<TraceControlValues> & { entry?: TraceEntryKey; exclude?: string[] }) => {
+      const urlPatch: Record<string, string | null> = {};
+      if (patch.entry !== undefined) urlPatch.entry = patch.entry;
+      if (patch.exclude !== undefined) {
+        urlPatch.exclude = patch.exclude.length > 0 ? patch.exclude.join(',') : null;
+      }
+      if (patch.upDepth !== undefined) {
+        urlPatch.up = patch.upDepth === TRACE_DEFAULTS.upDepth ? null : String(patch.upDepth);
+      }
+      if (patch.downDepth !== undefined) {
+        urlPatch.down = patch.downDepth === TRACE_DEFAULTS.downDepth ? null : String(patch.downDepth);
+      }
+      if (patch.triggerDepth !== undefined) {
+        urlPatch.tdepth = patch.triggerDepth === TRACE_DEFAULTS.triggerDepth ? null : String(patch.triggerDepth);
+      }
+      if (patch.expandUp !== undefined) urlPatch.expup = patch.expandUp ? '1' : null;
+      if (patch.includeLocalVars !== undefined) urlPatch.vars = patch.includeLocalVars ? '1' : null;
+      if (patch.includeButtons !== undefined) urlPatch.buttons = patch.includeButtons ? '1' : null;
+      if (patch.includeInteractionTriggers !== undefined) urlPatch.itrig = patch.includeInteractionTriggers ? '1' : null;
+      patchParams(urlPatch);
+    },
     [patchParams],
   );
   const handleOpenDetails = useCallback(
@@ -104,7 +197,7 @@ export function GraphExplorerView() {
     <div className="graph-explorer-view">
       <SubNav
         breadcrumbs={
-          focus && stats?.focusLabel
+          (focus || traceStart) && stats?.focusLabel
             ? buildBreadcrumb({ kind: 'graphNode', nodeName: stats.focusLabel }, t)
             : buildBreadcrumb({ kind: 'graph' }, t)
         }
@@ -136,7 +229,7 @@ export function GraphExplorerView() {
 
       <GraphExplorer
         ref={engineRef}
-        focus={focus}
+        focus={trace ? null : focus}
         focusFile={focusFile}
         depth={depth}
         direction={direction}
@@ -148,6 +241,9 @@ export function GraphExplorerView() {
         enableCommunityLens
         groupByFile={groupByFile}
         onGroupByFileChange={(v) => patchParams({ group: v ? 'file' : null })}
+        trace={trace}
+        onTraceParamsChange={handleTraceParamsChange}
+        onOpenTrace={handleOpenTrace}
       />
     </div>
   );

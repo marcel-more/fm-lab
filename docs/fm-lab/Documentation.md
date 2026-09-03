@@ -1,6 +1,7 @@
 # FM-Lab
 
 ## Background
+
 - [Introduction](Wiki/Introduction.md)
 - [Vision](Wiki/Vision.md)
 - [How it works](Wiki/How%20it%20works.md)
@@ -12,6 +13,7 @@
 - [Components](Wiki/Components.md)
 
 ## Using FM-Lab
+
 - [Installation](Wiki/Installation.md)
 - [Quickstart](Wiki/Quickstart.md)
 - First steps
@@ -26,16 +28,19 @@
 - [Troubleshooting](Wiki/Troubleshooting.md)
 
 ## AI Agents
+
 - Code analysis
 - Code generation
 - System prompt
 - Skills
 
 ## Integrations
+
 - MBS Plugin
 - fmIDE
 
 ## Specs
+
 - [Folder structure](Wiki/Folder%20structure.md)
 - [XML](xml/XML.md)
 - [Schema](schema/Schema.md)
@@ -47,11 +52,11 @@
 - [Dependencies](Wiki/Dependencies.md)
 
 ## References
+
 - DuckDB
 - Claris FileMaker
 - MBS Plugin
 - [Other projects](Wiki/Other%20projects.md)
 
-
 **Note:** This documentation is a work in progress and will evolve alongside future releases.
-(last edit: 2026-09-02)
+(last edit: 2026-09-03)

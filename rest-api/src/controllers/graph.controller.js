@@ -64,6 +64,79 @@ async function getNeighbors(req, res, next) {
   }
 }
 
+/**
+ * GET /api/graph/trace — selektiver Ablauf-Graph.
+ * Fehlerpfade: 404/409 wie Subgraph (assertFocusResolvable auf start/start_file),
+ * 422 TRACE_UNSUPPORTED_START (v1 kennt nur Script + Layout), 422 TRACE_EMPTY_ENTRY
+ * (gewähltes Preset ohne Seeds — details tragen die Preset-Liste mit Zählern).
+ */
+async function getTrace(req, res, next) {
+  try {
+    const { format, meta, debug } = req.query;
+
+    await assertFocusResolvable(req.solutionContext, req.query.start, req.query.start_file);
+
+    const startType = await graphService.objectTypeOf(
+      req.solutionContext, req.query.start, req.query.start_file
+    );
+    if (startType !== 'Script' && startType !== 'Layout') {
+      throw createError(
+        'TRACE_UNSUPPORTED_START',
+        `Trace v1 supports Script and Layout starts; '${req.query.start}' is a ${startType}`,
+        { start: req.query.start, type: startType, supported: ['Script', 'Layout'] }
+      );
+    }
+
+    const { payload, sql } = await graphService.getTrace(
+      req.solutionContext, req.query, startType
+    );
+    if (payload.trace.seeds.length === 0) {
+      // Leeres Preset ehrlich ablehnen statt einen leeren Graph zu rendern;
+      // die verfügbaren Presets (mit Zählern) wandern in den Fehler-Payload.
+      const { payload: entriesPayload } = await graphService.getTraceEntries(
+        req.solutionContext, { start: req.query.start, start_file: req.query.start_file }
+      );
+      throw createError(
+        'TRACE_EMPTY_ENTRY',
+        `Entry preset '${payload.trace.entry}' yields no seed scripts for this start object`,
+        { start: req.query.start, entry: payload.trace.entry, entries: entriesPayload.entries }
+      );
+    }
+
+    const metaInfo = meta
+      ? { start: payload.start, entry: payload.trace.entry, ...payload.stats, truncated: payload.truncated }
+      : null;
+    return sendFormatted(res, payload, format, metaInfo, debug ? sql : null);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/** GET /api/graph/trace/entries — Einstiegspfad-Presets mit Seed-Zählern */
+async function getTraceEntries(req, res, next) {
+  try {
+    const { format, meta, debug } = req.query;
+
+    await assertFocusResolvable(req.solutionContext, req.query.start, req.query.start_file);
+
+    const { payload, sql } = await graphService.getTraceEntries(req.solutionContext, req.query);
+    if (payload.entries.length === 0) {
+      const startType = await graphService.objectTypeOf(
+        req.solutionContext, req.query.start, req.query.start_file
+      );
+      throw createError(
+        'TRACE_UNSUPPORTED_START',
+        `Trace v1 supports Script and Layout starts; '${req.query.start}' is a ${startType}`,
+        { start: req.query.start, type: startType, supported: ['Script', 'Layout'] }
+      );
+    }
+    const metaInfo = meta ? { start: payload.start, count: payload.entries.length } : null;
+    return sendFormatted(res, payload, format, metaInfo, debug ? sql : null);
+  } catch (error) {
+    next(error);
+  }
+}
+
 /** GET /api/graph/overview — Graph-Atlas Top-Down-Einstieg (Treemap + Meta-Graph) */
 async function getOverview(req, res, next) {
   try {
@@ -130,7 +203,7 @@ async function search(req, res, next) {
 
 /**
  * POST /api/graph/recluster — der Rebuild-Button. Spawnt cluster.sh
- * (Roh-Repartition + Sync + Reload → R3-Restore) und streamt SSE: start · log
+ * (Roh-Repartition + Sync + Reload → Namens-Restore) und streamt SSE: start · log
  * (cluster.sh-stdout, inkl. „cache: restored …/node-reuse") · done {ok}.
  * Concurrency: 409 bei laufendem Import (Lock) oder aktivem Re-Cluster.
  */
@@ -190,6 +263,8 @@ async function recluster(req, res, next) {
 module.exports = {
   getSubgraph,
   getNeighbors,
+  getTrace,
+  getTraceEntries,
   getOverview,
   getCommunityStats,
   getCommunities,

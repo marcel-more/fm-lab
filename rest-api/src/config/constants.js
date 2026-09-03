@@ -169,6 +169,12 @@ const ERROR_CODES = {
   CODEGEN_NOT_AVAILABLE: { code: "CODEGEN_NOT_AVAILABLE", status: 503 },
   CODEGEN_TIMEOUT: { code: "CODEGEN_TIMEOUT", status: 504 },
   CODEGEN_ERROR: { code: "CODEGEN_ERROR", status: 500 },
+  // Graph-Trace (v1): Startobjekt-Typ ohne Trace-Semantik (nur Script/Layout) —
+  // 422, nicht 404: das Objekt existiert, der Trace ist fuer den Typ (noch) nicht
+  // definiert. EMPTY_ENTRY = gewaehltes Einstiegspfad-Preset liefert 0 Seed-Scripts;
+  // details tragen die verfuegbaren Presets mit Zaehlern (statt leerem Graph).
+  TRACE_UNSUPPORTED_START: { code: "TRACE_UNSUPPORTED_START", status: 422 },
+  TRACE_EMPTY_ENTRY: { code: "TRACE_EMPTY_ENTRY", status: 422 },
 };
 
 /**

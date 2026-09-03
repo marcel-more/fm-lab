@@ -15,6 +15,7 @@ The repository is organized into separate sections for the different components 
 Refer to [Folder structure](Folder%20structure.md) for a detailed map.
 
 ---
+
 ## Ingestion pipeline
 
 This part converts your solution's XML description into a generic object model inside a DuckDB database. Refer to [katana-engine](katana-engine.md) for a more detailed breakdown of the ingestion process.
@@ -42,6 +43,7 @@ This is the main ingestion logic and is executed by the DuckDB CLI, which must b
 A separate catalog is populated for each solution during XML conversion.
 
 ---
+
 ## FileMaker Reference
 
 Reference tables for FileMaker script steps, calculation functions and script-trigger events. They include machine-readable syntax and grammar definitions for linting during code generation, plus an additional mapping layer from script step names to distinct tokens and to emitter templates in multiple output formats. They also support up to 11 locales for translations into human language.
@@ -54,6 +56,7 @@ Refer to detailed description of [fm-spec](fm-spec.md) content and schema.
 The reference table also maps to optional [doc sets](#docs) with links to the official documentation of FileMaker and supported plugins.
 
 ---
+
 ## REST API
 
 Core module that allows external consumers to query structured information from the DuckDB object catalog. It also provides different service endpoints to the stack's base functions, and emits information aligned to the internal schema model in different pre-defined [output formats](../rest-api/REST%20API%20Output%20Formats.md).
@@ -70,6 +73,7 @@ Refer to detailed [REST API Overview](../rest-api/REST%20API%20Overview.md).
 - `rest-api/templates/tests-custom/` — User-defined test sets (user space, not overwritten by updates).
 
 ---
+
 ## Web Client
 
 Rich browser-based interface for application-level functions and for [Interactive exploration](4%20Code%20Analysis%20Approaches.md#1-interactive-exploration) of the solution's object catalog. Most of FM-Lab's features are fully supported in the web interface (except agentic workflows).
@@ -79,6 +83,7 @@ Besides the object browser, dashboards and Graph Explorer, the web client includ
 `apps/web/` — React/Vite frontend
 
 ---
+
 ## Tools
 
 - `tools/` — Utility scripts for various tasks.
@@ -92,6 +97,7 @@ Besides the object browser, dashboards and Graph Explorer, the web client includ
 - `tools/stop-servers.sh` — Stops the included HTTP servers.
 
 ---
+
 ## Docs
 
 Central storage for internal and external documentation. Some doc sets are provided with the installation. Others can be downloaded on demand as a cached memory layer for fast lookups by agents and humans.
@@ -109,6 +115,7 @@ Installing the basic documentation set is highly recommended. It provides inline
 Some documentation packages include their own databases for fast indexed queries. The Claris and MBS documentation also provides dynamic context by mapping documentation entries to scripts and calculations in your solutions. These references are available for drill-down navigation and cross-referencing through the web frontend.
 
 ---
+
 ## Agent framework
 
 ### Claude System Prompt
@@ -141,6 +148,7 @@ Some documentation packages include their own databases for fast indexed queries
 **Agentic analysis**
 
 - `.claude/skills/fm-show` — Shows details or references for a given object in the web frontend.
+- `.claude/skills/fm-trace` — Opens the selective flow graph (trace mode of the Graph Explorer) for a script or layout: call chain, touched objects, and triggers.
 - `.claude/skills/fm-open` — Opens a given object directly in your FileMaker Solution through the fmIDE `Name that Thing API`.
 
 - `.claude/skills/fm-summarize` — Creates a concise technical briefing for a given object.
@@ -164,6 +172,7 @@ Some documentation packages include their own databases for fast indexed queries
 `scripts/` — Reserved for generated FileMaker scripts produced by agentic coding workflows.
 
 ---
+
 ## Settings
 
 ### Plugin registry

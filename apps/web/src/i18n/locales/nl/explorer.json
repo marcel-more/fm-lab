@@ -121,5 +121,67 @@
   "edge": {
     "represents": "representeert",
     "buttonAction": "Knopactie"
+  },
+  "trace": {
+    "exit": "Omgeving",
+    "exitHint": "Trace verlaten en de omgevingsweergave van het startobject openen",
+    "explainer": "Selectieve stroomgraaf — de aanroepketen omhoog/omlaag, de daadwerkelijk geraakte objecten en de scripttriggers van bezochte lay-outs.",
+    "entryLabel": "Instappad",
+    "entries": {
+      "layout_runtime": "Runtime",
+      "layout_inbound": "Inkomend",
+      "layout_full": "Beide"
+    },
+    "entryHints": {
+      "layout_runtime": "Triggers van de lay-out en zijn objecten + knopscripts als startpunten",
+      "layout_inbound": "Scripts die naar deze lay-out navigeren",
+      "layout_full": "Runtime en inkomende navigatie gecombineerd"
+    },
+    "budgets": "Budgetten",
+    "upDepth": "Omhoog",
+    "upDepthHint": "Hoeveel aanroeperniveaus de keten omhoog wordt gevolgd",
+    "downDepth": "Omlaag",
+    "downDepthHint": "Hoeveel subscriptniveaus de keten omlaag wordt gevolgd",
+    "triggerDepth": "Triggercascade",
+    "triggerDepthHint": "Hoeveel cascadetrappen lay-outtriggers mogen afvuren (0 = uit)",
+    "options": "Opties",
+    "localVars": "Lokale $-variabelen",
+    "localVarsHint": "Ook lokale $-variabelen van de ketenscripts tonen",
+    "buttons": "Knoppen",
+    "buttonsHint": "Knopscripts van bezochte lay-outs als mogelijke interactie meenemen",
+    "interactionTriggers": "Interactietriggers",
+    "interactionTriggersHint": "Ook interactie-events (toetsenbord, gebaren, apparaatknoppen) in de cascade laten afvuren — die vuren normaal nooit tijdens een scriptrun",
+    "expandUp": "Aanroepers uitbreiden",
+    "expandUpHint": "Ook de door de aanroeperketen geraakte objecten verzamelen",
+    "legend": "Legenda",
+    "roles": {
+      "chain": "Aanroepketen",
+      "touched": "Geraakt",
+      "triggered": "Getriggerd (cascade)",
+      "triggerTouched": "Geraakt door cascade",
+      "owner": "Triggercontext",
+      "excluded": "Uitgesloten (grens)",
+      "induced": "Contextrand"
+    },
+    "entryTitle": "Instappad kiezen",
+    "entryDefault": "Standaard",
+    "seedCount": "{{count}} startscript",
+    "seedCount_other": "{{count}} startscripts",
+    "emptyEntry": "De gekozen preset levert geen startscripts op — kies een ander instappad.",
+    "truncated": "{{kept}} van {{total}} trace-knopen geladen — verlaag de budgetten om het fragment te focussen.",
+    "dynamicCalls": "{{count}} dynamische scriptaanroep (op naam) zonder statische rand — de trace is een statische benadering.",
+    "dynamicCalls_other": "{{count}} dynamische scriptaanroepen (op naam) zonder statische rand — de trace is een statische benadering.",
+    "actionHint": "De stroomgraaf (trace) vanaf dit object openen",
+    "excludeAction": "Uitsluiten van trace",
+    "includeAction": "Weer opnemen",
+    "excludeHint": "De knoop blijft zichtbaar, maar wordt niet verder uitgebreid (aanroepen, touches, triggercascade)",
+    "excludedLabel": "Uitgesloten",
+    "clearExcludes": "Alles opheffen",
+    "clearExcludesHint": "Alle uitsluitingen opheffen en de trace weer volledig uitbreiden",
+    "removeExcludeHint": "Uitsluiting opheffen — de knoop wordt weer uitgebreid",
+    "suggestionsLabel": "Suggesties",
+    "applyAllSuggestions": "Alles dempen",
+    "applyAllSuggestionsHint": "Alle voorgestelde hubknopen aan de uitsluitingslijst toevoegen",
+    "suggestionHint": "Vermoedelijke hub — trigger-fan-in {{trig}}, aanroepers {{calls}}, veld-touches {{touch}}. Klik om de knoop uit te sluiten van de trace."
   }
 }

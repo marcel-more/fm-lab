@@ -121,5 +121,67 @@
   "edge": {
     "represents": "representerar",
     "buttonAction": "Knappåtgärd"
+  },
+  "trace": {
+    "exit": "Grannskap",
+    "exitHint": "Lämna trace och öppna grannskapsvyn för startobjektet",
+    "explainer": "Selektiv flödesgraf — anropskedjan uppåt/nedåt, de objekt som faktiskt berörs och skripttriggrarna för besökta layouter.",
+    "entryLabel": "Ingångsväg",
+    "entries": {
+      "layout_runtime": "Runtime",
+      "layout_inbound": "Inkommande",
+      "layout_full": "Båda"
+    },
+    "entryHints": {
+      "layout_runtime": "Layoutens och dess objekts triggrar + knappskript som startpunkter",
+      "layout_inbound": "Skript som navigerar till denna layout",
+      "layout_full": "Runtime och inkommande navigering kombinerat"
+    },
+    "budgets": "Budgetar",
+    "upDepth": "Uppåt",
+    "upDepthHint": "Hur många anroparnivåer kedjan följs uppåt",
+    "downDepth": "Nedåt",
+    "downDepthHint": "Hur många underskriptnivåer kedjan följs nedåt",
+    "triggerDepth": "Triggerkaskad",
+    "triggerDepthHint": "Hur många kaskadsteg layouttriggrar får utlösa (0 = av)",
+    "options": "Alternativ",
+    "localVars": "Lokala $-variabler",
+    "localVarsHint": "Visa även kedjeskriptens lokala $-variabler",
+    "buttons": "Knappar",
+    "buttonsHint": "Ta med knappskript för besökta layouter som möjlig interaktion",
+    "interactionTriggers": "Interaktionstriggrar",
+    "interactionTriggersHint": "Låt även interaktionshändelser (tangentbord, gester, enhetsknappar) utlösas i kaskaden — de utlöses normalt aldrig under en skriptkörning",
+    "expandUp": "Expandera anropare",
+    "expandUpHint": "Samla även de objekt som anroparkedjan berör",
+    "legend": "Teckenförklaring",
+    "roles": {
+      "chain": "Anropskedja",
+      "touched": "Berörd",
+      "triggered": "Utlöst (kaskad)",
+      "triggerTouched": "Berörd av kaskad",
+      "owner": "Triggerkontext",
+      "excluded": "Exkluderad (gräns)",
+      "induced": "Kontextkant"
+    },
+    "entryTitle": "Välj ingångsväg",
+    "entryDefault": "Standard",
+    "seedCount": "{{count}} startskript",
+    "seedCount_other": "{{count}} startskript",
+    "emptyEntry": "Vald förinställning ger inga startskript — välj en annan ingångsväg.",
+    "truncated": "{{kept}} av {{total}} trace-noder laddade — minska budgetarna för att fokusera utsnittet.",
+    "dynamicCalls": "{{count}} dynamiskt skriptanrop (via namn) utan statisk kant — trace är en statisk approximation.",
+    "dynamicCalls_other": "{{count}} dynamiska skriptanrop (via namn) utan statisk kant — trace är en statisk approximation.",
+    "actionHint": "Öppna flödesgrafen (trace) från detta objekt",
+    "excludeAction": "Exkludera från trace",
+    "includeAction": "Inkludera igen",
+    "excludeHint": "Noden förblir synlig men expanderas inte vidare (anrop, berörda objekt, triggerkaskad)",
+    "excludedLabel": "Exkluderade",
+    "clearExcludes": "Ta bort alla",
+    "clearExcludesHint": "Ta bort alla exkluderingar och expandera tracen helt igen",
+    "removeExcludeHint": "Ta bort exkluderingen — noden expanderas igen",
+    "suggestionsLabel": "Förslag",
+    "applyAllSuggestions": "Dämpa alla",
+    "applyAllSuggestionsHint": "Lägg till alla föreslagna hubbnoder i exkluderingslistan",
+    "suggestionHint": "Misstänkt hubb — trigger-fan-in {{trig}}, anropare {{calls}}, fältberöringar {{touch}}. Klicka för att exkludera noden från trace."
   }
 }

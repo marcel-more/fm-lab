@@ -14,6 +14,13 @@ router.get('/graph/subgraph', validate('graphSubgraph'), controller.getSubgraph)
 // GET /api/graph/neighbors?focus=…&direction=…&mode=…  — 1-Hop-Expansion
 router.get('/graph/neighbors', validate('graphNeighbors'), controller.getNeighbors);
 
+// GET /api/graph/trace?start=…&up_depth=…&down_depth=…&trigger_depth=…  — selektiver
+// Ablauf-Graph (Chain + Touch + Kontext-Trigger), Antwort im Subgraph-Format + Trace-Felder
+router.get('/graph/trace', validate('graphTrace'), controller.getTrace);
+
+// GET /api/graph/trace/entries?start=…  — Einstiegspfad-Presets mit Seed-Zählern
+router.get('/graph/trace/entries', validate('graphTraceEntries'), controller.getTraceEntries);
+
 // GET /api/graph/overview?view=…&level=…&segment_by=…&weight=…  — Graph-Atlas Top-Down-Einstieg
 router.get('/graph/overview', validate('graphOverview'), controller.getOverview);
 
@@ -30,7 +37,7 @@ router.get('/graph/depth-profile', validate('graphDepthProfile'), controller.get
 router.get('/graph/search', validate('graphSearch'), controller.search);
 
 // POST /api/graph/recluster  — Rebuild-Button: cluster.sh (Roh-Repartition + Sync
-// + Reload → R3-Restore), SSE-Stream (start · log · done). Concurrency: 409.
+// + Reload → Namens-Restore), SSE-Stream (start · log · done). Concurrency: 409.
 router.post('/graph/recluster', controller.recluster);
 
 module.exports = router;

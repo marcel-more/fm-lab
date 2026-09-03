@@ -245,6 +245,52 @@ const schemas = {
     debug: Joi.boolean().default(false),
   }),
 
+  // GET /api/graph/trace - Selektiver Ablauf-Graph (Trace-Modus des Explorers).
+  // Budgets getrennt nach Richtung (up/down) + Trigger-Kaskade (trigger_depth);
+  // Schalter sind bewusst Opt-in. ACHTUNG: der Trace-Cache-Key wird
+  // in graph.service.js AUS DIESEM SCHEMA generiert — jeder neue fachliche
+  // Parameter wandert automatisch in den Key (format/meta/debug ausgenommen).
+  graphTrace: Joi.object({
+    start: Joi.string().required(),
+    start_file: Joi.string().optional(), // Clone-Disambiguierung des Startobjekts
+    entry: Joi.string().lowercase()
+      .valid('script', 'layout_runtime', 'layout_inbound', 'layout_full')
+      .optional(), // Einstiegspfad-Preset (nur Nicht-Script-Starts; Default typabhängig)
+    up_depth: Joi.number().integer().min(0).max(environment.duckdb.graphMaxDepth).default(3),
+    down_depth: Joi.number().integer().min(0).max(environment.duckdb.graphMaxDepth).default(6),
+    trigger_depth: Joi.number().integer().min(0).max(3).default(1),
+    expand_up: Joi.boolean().default(false),
+    include_local_vars: Joi.boolean().default(false),
+    include_buttons: Joi.boolean().default(false),
+    include_builtins: Joi.boolean().default(false),
+    // Interaktions-Events (Keystroke/GestureTap/ObjectModify/
+    // ExternalCommand) zünden per Default keine Kaskade — sie feuern während
+    // eines Script-Ablaufs nicht. TRUE nimmt sie wieder hinein.
+    include_interaction_triggers: Joi.boolean().default(false),
+    node_limit: Joi.number().integer().min(1).max(environment.api.maxLimit).default(1000),
+    hub_degree: Joi.number().integer().min(1).default(100),
+    // Boundary-Ausschlussliste — kommaseparierte Composite-IDs
+    // `uuid::file` (File-Teil optional; UUID-Teil 8-64 Hex-/Bindestrich-Zeichen,
+    // deckt Katalog-UUIDs und md5-basierte Variablen-UUIDs). Ausgeschlossene
+    // Knoten bleiben als Boundary sichtbar, werden aber nicht expandiert und
+    // zünden keine Kaskade. Dateinamen mit Komma sind nicht adressierbar (v1).
+    exclude: Joi.string().max(4096)
+      .pattern(/^[0-9A-Fa-f][0-9A-Fa-f-]{7,63}(::[^,]+)?(,[0-9A-Fa-f][0-9A-Fa-f-]{7,63}(::[^,]+)?)*$/)
+      .optional(),
+    format: Joi.string().lowercase().valid(...Object.values(OUTPUT_FORMATS)).default('json'),
+    meta: Joi.boolean().default(false),
+    debug: Joi.boolean().default(false),
+  }),
+
+  // GET /api/graph/trace/entries - Einstiegspfad-Vorschau (Presets + Seed-Zähler)
+  graphTraceEntries: Joi.object({
+    start: Joi.string().required(),
+    start_file: Joi.string().optional(),
+    format: Joi.string().lowercase().valid(...Object.values(OUTPUT_FORMATS)).default('json'),
+    meta: Joi.boolean().default(false),
+    debug: Joi.boolean().default(false),
+  }),
+
   // GET /api/graph/overview - Graph-Atlas Top-Down-Einstieg (Treemap + Meta-Graph)
   // Achse A (segment_by) × Achse B (view). level steuert den Treemap-Trichter.
   // parent_* = Drill-Kontext (Ebene 1/2). Schema-kanonisch composite (uuid::file).

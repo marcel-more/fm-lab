@@ -67,6 +67,15 @@ export const ObjectGraphPanel = forwardRef<ObjectGraphPanelHandle, { object: FMO
     navigate(`/graph?${q.toString()}`);
   }, [navigate, focus, depth, direction, object.File_Name]);
 
+  // Trace-Modus des Standalone-Explorers öffnen (Deep-Link-Parität zu /fm-trace).
+  const handleOpenTrace = useCallback((uuid: string, file?: string | null) => {
+    const q = new URLSearchParams({ trace: uuid });
+    if (file) q.set('trace_file', file);
+    navigate(`/graph?${q.toString()}`);
+  }, [navigate]);
+  // v1-Startobjekte des Trace: Script + Layout.
+  const traceable = object.Object_Type === 'Script' || object.Object_Type === 'Layout';
+
   return (
     <div className="detail-graph-panel">
       <div className="detail-graph-toolbar">
@@ -84,6 +93,17 @@ export const ObjectGraphPanel = forwardRef<ObjectGraphPanelHandle, { object: FMO
         >
           {t('explorer:toolbar.fullscreen')}
         </button>
+        {traceable && (
+          <button
+            type="button"
+            className="detail-graph-fullscreen"
+            onClick={() => handleOpenTrace(focus, object.File_Name ?? null)}
+            title={t('explorer:trace.actionHint') as string}
+          >
+            {/* Eigenname „Trace" bewusst unübersetzt. */}
+            Trace
+          </button>
+        )}
         <span className="detail-graph-stats" aria-live="polite">
           {stats && (
             <>
@@ -107,6 +127,7 @@ export const ObjectGraphPanel = forwardRef<ObjectGraphPanelHandle, { object: FMO
         onStats={setStats}
         groupByFile={groupByFile}
         onGroupByFileChange={setGroupByFile}
+        onOpenTrace={handleOpenTrace}
       />
     </div>
   );

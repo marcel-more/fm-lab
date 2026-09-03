@@ -1,11 +1,26 @@
 -- @title: Logical Links View (Graph Explorer)
 -- @description: Operationale Referenz-Kanten mit Sub-Objekten auf ihren Container hochgezogen
--- @version: 1.4.0
+-- @version: 1.5.0
 -- @author: Marcel / Claude
 -- @tags: graph, subgraph, logical-view
 -- @note: Ab v1.1.0 wird diese View regulär in convert-xml Phase 5 angelegt
 --        (sql/convert-xml/convert_xml_05_homes.sql) — diese Datei bleibt die
 --        KANONISCHE Definition; bei Änderung beide Stellen synchron halten.
+--        v1.5.0 (Spezialtypen, Converter 2.22.0): Chart und Web Viewer werden
+--        NICHT mehr aufs Layout gehoisted — sie sind logisch eigenständige
+--        Rechen-Objekte. Ihre Feld-/Variablen-Bezüge stammen aus EIGENEN
+--        Calc-Slots (Chart-Titel/Achsen/Serien, web_viewer_url) und sind
+--        unsichtbare Datenquellen von OBJEKT-Eigenschaften — kategorial anders
+--        als bei Feld-Controls, deren displays_field eine sichtbare Platzierung
+--        auf der Maske ist („Layout zeigt Feld" ist dort eine wahre Aussage).
+--        Das pauschale Hoisting attribuierte sie falsch („Layout liest Feld").
+--        Kriterium ist die KURATIERTE TYP-LISTE, nicht die Kanten-Rolle. Ins
+--        Layout führt die eigene parent_layout-Kante des Objekts, die dafür im
+--        Rollen-Filter wieder zugelassen wird ⇒ Tiefen-Semantik am Layout-Fokus:
+--        Objekt auf d1, seine Felder/Variablen auf d2 (Präzedenz: v1.4.0 legt
+--        das Script eines feld-gebundenen Fokus ebenso auf d2). Das Rausch-
+--        Argument des v1-Hoistings (s. ZWECK) trifft diese Klasse nicht:
+--        0,04 % aller LayoutObjects, und die Kanten sind gehaltvoll.
 --        v1.4.0 (Feld-Verankerung, Converter 2.18.0): Objekt-Trigger-Spiegel
 --        (triggers_script von LayoutObject-Quellen, Subrole ≠ button_action)
 --        werden aufs ANGEZEIGTE FELD des Owners umgelenkt statt aufs Layout —
@@ -37,7 +52,7 @@
 -- ============================================================================
 -- DATENBEFUND (gemessen auf db/fm_catalog.duckdb, 2026-06-23)
 -- ============================================================================
--- Anders als das einleitende Plan-Beispiel ("ScriptStep --calls_script--> Script")
+-- Anders als das naheliegende Beispiel ("ScriptStep --calls_script--> Script")
 -- nahelegt, ist das Hochziehen auf der Quell-Seite NUR für LayoutObject nötig:
 --
 --   • ScriptStep taucht NIE als operationale Quelle auf — Skript-Referenzen
@@ -68,7 +83,7 @@
 --   3. Selbst-Schleifen (a=b), die durch das Hochziehen entstehen (z.B. zwei
 --      LayoutObjects desselben Layouts), werden verworfen.
 --   4. DISTINCT dedupliziert: 12 LayoutObjects, die dasselbe Feld zeigen,
---      werden zu EINER Layout→Field-Kante (vermeidet Doppelzählung, R3).
+--      werden zu EINER Layout→Field-Kante (vermeidet Doppelzählung).
 --   5. STUFE C: lokale Variablen ($x) werden als Endpunkt ausgeschlossen. Ihr
 --      Scope_Anchor ist das Script (per-Script gekeyt) → Degree-1-Pendant, das nie
 --      eine Brücke sein kann (33,9 % aller Cluster-Knoten, reiner Clutter). GLOBALE
@@ -108,6 +123,20 @@ WITH container AS (
   FROM ObjectLinks
   WHERE Link_Role IN ('parent_layout', 'parent_script')
 ),
+standalone AS (
+  -- Spezialtypen (s. Kopf-Note v1.5.0): logisch eigenständige Rechen-Objekte.
+  -- KURATIERTE Typ-Liste, bewusst KEIN Rollen-Kriterium (reads_field tragen auch
+  -- Feld-Controls aus Hide-/Tooltip-Calcs; dort bleibt das Layout der Sprecher).
+  -- Winzige Menge (Großkorpus: 0,04 % aller LayoutObjects) → billige Hash-Build-
+  -- Seite im LEFT JOIN, kein Doppel-Scan-Risiko.
+  -- INVARIANTE: Spezialtypen tragen kein displays_field (keine sichtbare Feld-
+  -- Repräsentation ist genau das Abgrenzungs-Kriterium der Klasse) → der Feld-
+  -- Anker-Zweig unten kollidiert nicht. Der Vorrang im CASE ist trotzdem gesetzt,
+  -- damit ein künftiger Gegenbeispiel-Datensatz kein (a, a_file)-Mischtupel baut.
+  SELECT Object_UUID, File_Name
+  FROM LayoutObjects
+  WHERE Object_Type IN ('Chart', 'Web Viewer')
+),
 field_anchor AS (
   -- Feld-Anker der Objekt-Trigger-Spiegel (s. Kopf-Note v1.4.0): das vom Owner
   -- angezeigte Feld; genau 1 je Trigger-Owner (korpusverifiziert), min()/arg_min()
@@ -134,7 +163,8 @@ hoisted AS (
   -- feld-gebundenen Owners wandern aufs FELD, button_action bleibt Layout,
   -- alles andere hoisted wie bisher auf den Container.
   SELECT
-    CASE WHEN ol.Link_Role = 'triggers_script'
+    CASE WHEN sa.Object_UUID IS NOT NULL THEN ol.Source_UUID
+         WHEN ol.Link_Role = 'triggers_script'
           AND ol.Link_Subrole IS DISTINCT FROM 'button_action'
           AND fa.fld IS NOT NULL
          THEN fa.fld
@@ -144,7 +174,8 @@ hoisted AS (
     -- Objekt → a_file = ol.Source_File (analog b_file). Der FELD-Anker kann dagegen in
     -- einer ANDEREN Datei liegen (Related-Field-Platzierung) → a_file/Is_Cross_File
     -- werden für diesen Zweig neu bestimmt.
-    CASE WHEN ol.Link_Role = 'triggers_script'
+    CASE WHEN sa.Object_UUID IS NOT NULL THEN ol.Source_File
+         WHEN ol.Link_Role = 'triggers_script'
           AND ol.Link_Subrole IS DISTINCT FROM 'button_action'
           AND fa.fld IS NOT NULL
          THEN fa.fld_file
@@ -154,7 +185,8 @@ hoisted AS (
     ol.Link_Role,
     ol.Link_Subrole,
     ol.Link_Type,
-    CASE WHEN ol.Link_Role = 'triggers_script'
+    CASE WHEN sa.Object_UUID IS NOT NULL THEN ol.Is_Cross_File
+         WHEN ol.Link_Role = 'triggers_script'
           AND ol.Link_Subrole IS DISTINCT FROM 'button_action'
           AND fa.fld IS NOT NULL
          THEN (fa.fld_file IS DISTINCT FROM ol.Target_File)
@@ -162,15 +194,23 @@ hoisted AS (
   FROM ObjectLinks ol
   LEFT JOIN container cs ON cs.child = ol.Source_UUID
   LEFT JOIN container ct ON ct.child = ol.Target_UUID
+  LEFT JOIN standalone   sa ON sa.Object_UUID = ol.Source_UUID AND sa.File_Name = ol.Source_File
   LEFT JOIN field_anchor fa ON fa.owner = ol.Source_UUID AND fa.owner_file = ol.Source_File
   WHERE ol.Link_Type = 'operational'
     -- Containment-Gerüst raus (parent_table bleibt: echte Field→BaseTable-Referenz).
     -- trigger_script raus (Graph-Policy, s. Kopf-Note v1.3.0): Owner↔Script-
     -- Affinität tragen die triggers_script-Spiegel; Trigger-Knoten sind sonst
     -- reine Satelliten ihres Scripts (trigger_owner ist structural).
-    AND ol.Link_Role NOT IN
+    AND (ol.Link_Role NOT IN
         ('parent_layout', 'parent_script', 'parent_object', 'parent_folder',
          'trigger_script')
+         -- AUSNAHME Spezialtypen (v1.5.0): ihre eigene parent_layout-Kante ist die
+         -- Verbindungs-Kante Objekt→Layout, die den un-gehoisteten Knoten im Graphen
+         -- anschlussfähig hält (Layout → Objekt d1 → Felder/Variablen d2). Sie ist
+         -- operational (LayoutObject→Layout; nur LayoutPart→Layout ist structural)
+         -- und passiert den Link_Type-Filter oben. Jedes LayoutObject traegt genau
+         -- eine solche Kante, auch verschachtelte (s. DATENBEFUND).
+         OR (ol.Link_Role = 'parent_layout' AND sa.Object_UUID IS NOT NULL))
     -- dito trigger-verankerte OnWindowTransaction-Namens-Kandidaten (Block 18c):
     -- spekulatives Late-Binding, hielte den Trigger-Knoten als Satellit im Graph
     AND NOT (ol.Link_Role = 'reads_field'

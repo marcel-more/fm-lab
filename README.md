@@ -30,7 +30,7 @@ The first release focuses on this core: reliable **XML conversion**, a comprehen
 
 ## Analysis workflows
 
-FM-Lab supports [four complementary approaches](/docs/fm-lab/Wiki/4 Code Analysis Approaches.md) to analyzing a FileMaker solution:
+FM-Lab supports [four complementary approaches](/docs/fm-lab/Wiki/4%20Code%20Analysis%20Approaches.md) to analyzing a FileMaker solution:
 
 - **Interactive exploration** - browse the solution through a web frontend with rich navigation, visualizations, and drill-down views
 - **Static code analysis** - detect known patterns, issues, and structural signals through targeted catalog queries

@@ -19,6 +19,15 @@ import {
   type GraphNode,
   type SubgraphDirection,
 } from '../hooks/useSubgraph';
+import {
+  useTrace,
+  useTraceEntries,
+  EXCLUDABLE_TYPES,
+  type TraceEntryKey,
+  type TraceExcludedItem,
+  type TraceSuggestion,
+} from '../hooks/useTrace';
+import { ExplorerTracePanel, ExplorerTraceEntryChooser, type TraceControlValues } from './ExplorerTracePanel';
 import { useDepthProfile } from '../hooks/useDepthProfile';
 import { usePanelResize } from '../hooks/usePanelResize';
 import { getCommunityColor } from '../lib/graphColors';
@@ -106,6 +115,26 @@ interface GraphExplorerProps {
    */
   groupByFile?: boolean;
   onGroupByFileChange?: (v: boolean) => void;
+  /**
+   * Trace-Modus (selektiver Ablauf-Graph, GET /api/graph/trace) — gesetzt statt
+   * `focus`. Die Engine lädt dann über useTrace, ersetzt Tiefe/Richtung im
+   * Filter-Panel durch die Trace-Kontrollen und stylt nach traceRole/traceKind;
+   * alle Client-Lenses und Panels bleiben unverändert.
+   */
+  trace?: TraceParamsProp | null;
+  /** Trace-Parameter-Patch (Budgets/Schalter/Preset/Excludes) — der Host persistiert (URL). */
+  onTraceParamsChange?: (patch: Partial<TraceControlValues> & { entry?: TraceEntryKey; exclude?: string[] }) => void;
+  /** Trace ab einem Knoten öffnen (Inspect-Panel-Aktion; v1 nur Script/Layout). */
+  onOpenTrace?: (uuid: string, file?: string | null) => void;
+}
+
+export interface TraceParamsProp extends TraceControlValues {
+  start: string;
+  startFile?: string | null;
+  /** Gewähltes Einstiegs-Preset; null = noch keins gewählt (Layout → Chooser). */
+  entry: TraceEntryKey | null;
+  /** Boundary-Ausschlüsse (Composite-Node-IDs); URL ist die Quelle. */
+  exclude: string[];
 }
 
 export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>(
@@ -117,7 +146,11 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
       enableCommunityLens = false,
       groupByFile = false,
       onGroupByFileChange,
+      trace = null,
+      onTraceParamsChange,
+      onOpenTrace,
     } = props;
+    const traceActive = trace !== null;
     // The graph always uses the "logical" view (container-hoisted operational
     // links). The "raw" granularity exposed only isolated, non-navigable
     // ScriptStep nodes, so its GUI control was removed; the backend param stays
@@ -181,15 +214,98 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
     // nennt die Anzahl und erlaubt das Einblenden.
     const [showUnconnected, setShowUnconnected] = useState(false);
     // Jeder neu fokussierte Graph startet mit dem Default (nicht-verbundene ausgeblendet).
-    useEffect(() => { setShowUnconnected(false); }, [focus, focusFile]);
+    useEffect(() => { setShowUnconnected(false); }, [focus, focusFile, trace?.start, trace?.startFile]);
 
     // serverTypes geht als `types` an den Subgraph-Fetch (Refetch + Re-Layout).
-    const { data, loading, error } = useSubgraph({ focus, focusFile, depth, direction, mode, types: serverTypes });
+    // Im Trace-Modus ist der Subgraph-Fetch deaktiviert (focus=null) — die Daten
+    // kommen dann aus useTrace; beide Antworten teilen die nodes/edges-Grundform.
+    const subgraphResult = useSubgraph({
+      focus: traceActive ? null : focus,
+      focusFile, depth, direction, mode, types: serverTypes,
+    });
+
+    // Trace-Modus: erst die Einstiegspfad-Presets laden (Chooser-Entscheid),
+    // dann den Trace selbst — ein Layout-Start ohne gewähltes Preset zeigt den
+    // Chooser VOR dem ersten Trace-Fetch.
+    const { entries: traceEntries, error: traceEntriesError } = useTraceEntries(
+      traceActive ? trace.start : null,
+      trace?.startFile ?? null,
+    );
+    const isLayoutStart = (traceEntries ?? []).some((e) => e.entry !== 'script');
+    const needsEntryChoice = traceActive && isLayoutStart && !trace?.entry;
+    const traceResult = useTrace(
+      trace && traceEntries !== null && !needsEntryChoice
+        ? {
+            start: trace.start,
+            startFile: trace.startFile ?? null,
+            entry: trace.entry,
+            upDepth: trace.upDepth,
+            downDepth: trace.downDepth,
+            triggerDepth: trace.triggerDepth,
+            expandUp: trace.expandUp,
+            includeLocalVars: trace.includeLocalVars,
+            includeButtons: trace.includeButtons,
+            includeInteractionTriggers: trace.includeInteractionTriggers,
+            exclude: trace.exclude,
+          }
+        : null,
+    );
+    const data = traceActive ? traceResult.data : subgraphResult.data;
+    const loading = traceActive ? traceResult.loading : subgraphResult.loading;
+    const error = traceActive ? (traceResult.error ?? traceEntriesError) : subgraphResult.error;
+    // Typisierter Zugriff auf die Trace-Zusatzfelder (dynamicCalls-Banner).
+    const traceData = traceActive ? traceResult.data : null;
+    // Chooser auch nach einem leeren Preset (422 TRACE_EMPTY_ENTRY) zeigen.
+    const traceChooser = traceActive && (needsEntryChoice || traceResult.emptyEntries !== null);
+
+    // Exclude-Chips: WELCHE Ausschlüsse gelten sagt die URL (trace.exclude); die
+    // Server-Antwort reichert nur Label/Typ an. So bleibt ein Chip auch dann
+    // entfernbar, wenn der gedämpfte Trace ihn nicht mehr erreicht oder die
+    // Antwort noch lädt.
+    const traceExcludedChips: TraceExcludedItem[] = (trace?.exclude ?? []).map((id) => {
+      const resolved = traceData?.trace.excluded.find((x) => x.id === id);
+      if (resolved) return resolved;
+      const sep = id.indexOf('::');
+      return {
+        id,
+        uuid: sep === -1 ? id : id.slice(0, sep),
+        file: sep === -1 ? null : id.slice(sep + 2),
+        label: null,
+        type: null,
+      };
+    });
+
+    // Exclude-Toggle (Inspect-Panel) — patcht die Liste, Host persistiert (URL).
+    const handleToggleExclude = useCallback(
+      (graphId: string) => {
+        if (!trace) return;
+        const next = trace.exclude.includes(graphId)
+          ? trace.exclude.filter((x) => x !== graphId)
+          : [...trace.exclude, graphId];
+        onTraceParamsChange?.({ exclude: next });
+      },
+      [trace, onTraceParamsChange],
+    );
+
+    // Vorschläge: bereits ausgeschlossene Kandidaten client-seitig filtern
+    // (die URL ist die Quelle; nach dem Klick verschwindet der Chip sofort).
+    const traceSuggestionChips: TraceSuggestion[] = (traceData?.trace.suggestions ?? [])
+      .filter((s) => !trace?.exclude.includes(s.id));
+    const handleApplyAllSuggestions = useCallback(() => {
+      if (!trace || !traceData) return;
+      const add = traceData.trace.suggestions
+        .map((s) => s.id)
+        .filter((id) => !trace.exclude.includes(id));
+      if (add.length > 0) onTraceParamsChange?.({ exclude: [...trace.exclude, ...add] });
+    }, [trace, traceData, onTraceParamsChange]);
 
     // Tiefen-Profil (max. erreichbare Tiefe + per-Tiefe-Last), richtungsabhängig.
     // serverTypes MUSS mitgehen, damit die Last-/Clipping-Anzeige dieselbe (typgefilterte)
-    // erreichbare Menge zählt wie der Subgraph (sonst 2933 statt 1916).
-    const { profile: depthProfile } = useDepthProfile(focus, focusFile ?? null, direction, mode, serverTypes);
+    // erreichbare Menge zählt wie der Subgraph (sonst 2933 statt 1916). Im
+    // Trace-Modus deaktiviert (der Regler ist durch die Budgets ersetzt).
+    const { profile: depthProfile } = useDepthProfile(
+      traceActive ? null : focus, focusFile ?? null, direction, mode, serverTypes,
+    );
 
     // Read the latest name filter from a ref so the imperative handle (mount-only)
     // can clear it without being re-created on every keystroke.
@@ -557,6 +673,30 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
           onToggleType={handleToggleType}
           onShowAllTypes={handleShowAllTypes}
           onApplyServerTypes={handleApplyServerTypes}
+          traceControls={trace ? (
+            <ExplorerTracePanel
+              values={{
+                upDepth: trace.upDepth,
+                downDepth: trace.downDepth,
+                triggerDepth: trace.triggerDepth,
+                expandUp: trace.expandUp,
+                includeLocalVars: trace.includeLocalVars,
+                includeButtons: trace.includeButtons,
+            includeInteractionTriggers: trace.includeInteractionTriggers,
+              }}
+              entry={trace.entry ?? traceData?.trace.entry ?? null}
+              entries={traceEntries}
+              excluded={traceExcludedChips}
+              suggestions={traceSuggestionChips}
+              onChange={(patch) => onTraceParamsChange?.(patch)}
+              onEntryChange={(e) => onTraceParamsChange?.({ entry: e })}
+              onRemoveExclude={handleToggleExclude}
+              onClearExcludes={() => onTraceParamsChange?.({ exclude: [] })}
+              onApplySuggestion={handleToggleExclude}
+              onApplyAllSuggestions={handleApplyAllSuggestions}
+              onExitTrace={() => onSetFocus(trace.start, trace.startFile ?? null)}
+            />
+          ) : undefined}
         />
 
         <div
@@ -578,7 +718,9 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
                   schon auf 1) — dann nur den weiterhin wirksamen Typ-Filter empfehlen. Die
                   gehaltenen Knoten sind serverseitig die grad-stärksten je Tiefe. */}
               <span>
-                {t(depth <= 1 ? 'explorer:truncatedMinDepth' : 'explorer:truncated', {
+                {t(traceActive
+                  ? 'explorer:trace.truncated'
+                  : depth <= 1 ? 'explorer:truncatedMinDepth' : 'explorer:truncated', {
                   kept: data.stats.nodeCount,
                   total: data.stats.totalReachable,
                 })}
@@ -586,21 +728,39 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
             </div>
           )}
 
-          {!focus && (
+          {/* Blind-Spot-Ausweis des Trace: dynamische Calls (by name) haben keine
+              Kante — der Graph ist eine statische Approximation. */}
+          {traceData && traceData.stats.dynamicCalls > 0 && (
+            <div className="graph-explorer-banner" role="status">
+              <span>{t('explorer:trace.dynamicCalls', { count: traceData.stats.dynamicCalls })}</span>
+            </div>
+          )}
+
+          {!focus && !traceActive && (
             <div className="graph-explorer-placeholder">
               <p>{t('explorer:emptyFocus')}</p>
             </div>
           )}
 
-          {focus && error && (
+          {(focus || traceActive) && error && (
             <div className="graph-explorer-error">{t('common:loadError', { message: error })}</div>
           )}
 
-          {focus && !error && loading && !data && (
+          {/* Layout-Start ohne gewähltes Preset (oder Preset ohne Seeds) —
+              Einstiegspfad-Auswahl statt Graph. */}
+          {traceChooser && !error && (
+            <ExplorerTraceEntryChooser
+              entries={traceResult.emptyEntries ?? traceEntries ?? []}
+              emptyEntry={traceResult.emptyEntries !== null}
+              onChoose={(e) => onTraceParamsChange?.({ entry: e })}
+            />
+          )}
+
+          {(focus || traceActive) && !error && !traceChooser && loading && !data && (
             <div className="graph-explorer-placeholder">{t('explorer:loading')}</div>
           )}
 
-          {focus && !error && (
+          {(focus || traceActive) && !error && !traceChooser && (
             <ExplorerGraph
               ref={graphRef}
               data={data}
@@ -682,6 +842,13 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
             }}
             onOpenDetails={onOpenDetails}
             onHoverItem={handleHoverItem}
+            // Exclude-Toggle je Listenzeile — Gate am Panel (ein Typ pro
+            // Instanz): nur im Trace-Modus und nur für ausschließbare Typen.
+            onToggleExclude={
+              traceActive && EXCLUDABLE_TYPES.has(typeListType)
+                ? handleToggleExclude
+                : undefined
+            }
           />
         ) : selectedNode ? (
           <ExplorerInspectPanel
@@ -698,6 +865,9 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
             onExpand={handleExpand}
             onCollapse={handleCollapse}
             onSelectNeighbor={handleSelectNeighbor}
+            onTrace={onOpenTrace}
+            onToggleExclude={traceActive ? handleToggleExclude : undefined}
+            nodeExcluded={trace?.exclude.includes(selectedNode.id) ?? false}
           />
         ) : null}
       </div>

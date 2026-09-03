@@ -121,5 +121,67 @@
   "edge": {
     "represents": "表す",
     "buttonAction": "ボタンアクション"
+  },
+  "trace": {
+    "exit": "近傍表示",
+    "exitHint": "Trace を終了して開始オブジェクトの近傍ビューを開く",
+    "explainer": "選択的なフローグラフ — 呼び出しチェーンの上流/下流、実際に触れるオブジェクト、訪れたレイアウトのスクリプトトリガーを表示します。",
+    "entryLabel": "エントリーパス",
+    "entries": {
+      "layout_runtime": "ランタイム",
+      "layout_inbound": "流入",
+      "layout_full": "両方"
+    },
+    "entryHints": {
+      "layout_runtime": "レイアウトとそのオブジェクトのトリガー + ボタンスクリプトを起点にする",
+      "layout_inbound": "このレイアウトへ移動するスクリプト",
+      "layout_full": "ランタイムと流入ナビゲーションの組み合わせ"
+    },
+    "budgets": "バジェット",
+    "upDepth": "上流",
+    "upDepthHint": "呼び出しチェーンを上流方向に何段階たどるか",
+    "downDepth": "下流",
+    "downDepthHint": "呼び出しチェーンを下流方向に何段階たどるか",
+    "triggerDepth": "トリガーカスケード",
+    "triggerDepthHint": "レイアウトトリガーが発火できるカスケード段数（0 = 無効）",
+    "options": "オプション",
+    "localVars": "ローカル $ 変数",
+    "localVarsHint": "チェーンスクリプトのローカル $ 変数も表示する",
+    "buttons": "ボタン",
+    "buttonsHint": "訪れたレイアウトのボタンスクリプトを可能な操作として含める",
+    "interactionTriggers": "インタラクショントリガー",
+    "interactionTriggersHint": "インタラクションイベント（キーボード、ジェスチャ、デバイスボタン）もカスケードで発火させる — 通常はスクリプト実行中に発火しません",
+    "expandUp": "呼び出し元を展開",
+    "expandUpHint": "呼び出し元チェーンが触れるオブジェクトも収集する",
+    "legend": "凡例",
+    "roles": {
+      "chain": "呼び出しチェーン",
+      "touched": "接触",
+      "triggered": "トリガー起動（カスケード）",
+      "triggerTouched": "カスケードによる接触",
+      "owner": "トリガーコンテキスト",
+      "excluded": "除外（境界）",
+      "induced": "コンテキストエッジ"
+    },
+    "entryTitle": "エントリーパスを選択",
+    "entryDefault": "デフォルト",
+    "seedCount": "{{count}} 個の開始スクリプト",
+    "seedCount_other": "{{count}} 個の開始スクリプト",
+    "emptyEntry": "選択したプリセットには開始スクリプトがありません — 別のエントリーパスを選んでください。",
+    "truncated": "{{total}} 個中 {{kept}} 個の Trace ノードを読み込みました — バジェットを減らして範囲を絞ってください。",
+    "dynamicCalls": "静的エッジのない動的スクリプト呼び出し（名前指定）が {{count}} 件あります — Trace は静的な近似です。",
+    "dynamicCalls_other": "静的エッジのない動的スクリプト呼び出し（名前指定）が {{count}} 件あります — Trace は静的な近似です。",
+    "actionHint": "このオブジェクトからフローグラフ（Trace）を開く",
+    "excludeAction": "Trace から除外",
+    "includeAction": "再び含める",
+    "excludeHint": "ノードは表示されたまま、それ以上展開されません（呼び出し・タッチ・トリガーカスケード）",
+    "excludedLabel": "除外中",
+    "clearExcludes": "すべて解除",
+    "clearExcludesHint": "すべての除外を解除して Trace を完全に再展開します",
+    "removeExcludeHint": "この除外を解除 — ノードは再び展開されます",
+    "suggestionsLabel": "候補",
+    "applyAllSuggestions": "すべて抑制",
+    "applyAllSuggestionsHint": "提案されたハブノードをすべて除外リストに追加します",
+    "suggestionHint": "ハブの疑い — トリガー流入 {{trig}}、呼び出し元 {{calls}}、フィールドタッチ {{touch}}。クリックでノードを Trace から除外します。"
   }
 }

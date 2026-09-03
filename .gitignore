@@ -19,11 +19,14 @@ logs/*
 *.duckdb.wal
 db/*
 !db/.gitkeep
-# Reference DB is shipped with the repo (FileMaker function and script step reference)
-# — the *.duckdb glob above would otherwise drop it, so allow it back in explicitly.
-# SOURCES.md (attribution, sibling of the DB)
+# Reference DBs are shipped with the repo (FileMaker function/script step reference
+# and the curated plugin platform reference) — the *.duckdb glob above would
+# otherwise drop them, so allow each one back in explicitly.
+# SOURCES.md (attribution, sibling of the DBs)
 !reference/fm_spec.duckdb
 !reference/fm_spec.meta.json
+!reference/plugin_spec.duckdb
+!reference/plugin_spec.meta.json
 !reference/SOURCES.md
 
 # XML inbox of the default solution (multi-solution layout). Ship the empty inbox

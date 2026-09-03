@@ -193,6 +193,26 @@ export LC_NUMERIC=C
 # on the next --changed-only run, a full re-conversion is triggered. Bump it as soon
 # as the CONVERSION RESULT can change (new columns, changed
 # extraction/normalization) — independent of the header or @SCHEMA_VERSION.
+#   2.22.0 — LogicalLinks 1.5.0 — special types (view-only, no DDL,
+#           @SCHEMA_VERSION stays 1.27.0): Chart and Web Viewer layout objects
+#           are no longer hoisted onto their layout in the logical graph view.
+#           Their field/variable references come from their OWN calc slots
+#           (chart title/axes/series, web_viewer_url) and are invisible data
+#           sources of OBJECT properties — unlike a field control's visible
+#           placement, for which "layout shows field" holds. Criterion is the
+#           curated type list, not the edge role. Their own parent_layout edge
+#           is re-admitted in the role filter and carries the node into the
+#           layout (layout -> object d1 -> fields/variables d2). Bumped because
+#           the view travels with the DB sync; ObjectLinks/import are untouched.
+#   2.21.0 — chart curation (no DDL, @SCHEMA_VERSION stays 1.27.0): (a) kind=13
+#           disambiguation — Chart layout objects share kind=13 with Web Viewer
+#           and were cataloged as 'Web Viewer'; fm_canon_layout_type now probes
+#           the locale-independent /LayoutObject/External/Chart wrapper (canonical
+#           EN raw type 'Chart' passes through) → new LayoutObjects/ObjectCatalog
+#           Object_Type 'Chart'. (b) chart head calc slots curated: LayoutObject
+#           anchors Title/XAxisList_Title/YAxisList_Title → chart_title/
+#           chart_xaxis_title/chart_yaxis_title (previously lower(raw) fallback,
+#           v_check_calc_roles signal); YSeriesList_<n>_Title stays chart_series.
 #   2.20.0 — display-calculation recovery refinements (no DDL, @SCHEMA_VERSION
 #           stays 1.27.0; fixture-driven, layout "Fixtures"): (a) %X:-prefixed
 #           VariableReference chunks whose remainder starts with '$' are REAL
@@ -212,7 +232,7 @@ export LC_NUMERIC=C
 #           rejects '$' and '{'. (d) The empty-ChunkList variable recovery is
 #           mirrored slot-scoped into XMLCalcReferences (P2 A.6.10b, Subrole =
 #           DisplayCalculations_<i>) — symmetry with the chunk-based variable
-#           rows of intact slots; feeds the API's synthetic D2 tokenization.
+#           rows of intact slots; feeds the API's synthetic tokenization.
 #   2.19.0 — display-calculation gaps of the merge family (@SCHEMA_VERSION
 #           1.27.0): new P1 table DDR_ChunkListContexts (context TO +
 #           chunk count per DDR ChunkList anchor, INCLUDING empty ChunkLists;
@@ -350,7 +370,7 @@ export LC_NUMERIC=C
 #           duplicates (same UUID, distinct object ids) separately from FileMaker's
 #           double serialization; the catmerge a2 dup report is persisted into the
 #           new MergeAbsorptions table (best-effort, s. convert_turbo.sh).
-CONVERTER_VERSION="2.20.0"
+CONVERTER_VERSION="2.22.0"
 PROJECT_ROOT="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || (cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd))"
 
 # fm-lab release provenance for the log headers: bug reports quote the RELEASE
@@ -1002,7 +1022,7 @@ STREAMIFY_SQL="$PROJECT_ROOT/sql/convert-xml/convert_xml_01_extract.streamify.sq
 # Preconditions of the SAX/streamify path: renamer + awk present, generate present
 # AND fresh. Returns 0 = ready, 1 = not ready (reason in $_STREAMIFY_PRECOND_MSG).
 # Pure read-check — the freshness gate regenerates only into mktemp, writes nothing.
-# _STREAMIFY_PRECOND_CLASS distinguishes the failure class (policy-lock E4):
+# _STREAMIFY_PRECOND_CLASS distinguishes the failure class (policy lock):
 #   not_ready = genuine state (assets missing, generate stale rc 2, pattern
 #               drift rc 3) → DOM fallback stays correct;
 #   infra     = the gate itself failed (rc 4 = mktemp/cmp, or any unexpected
@@ -1048,7 +1068,7 @@ _streamify_preconditions_ok() {
 # SAX→DOM at runtime if #98 turns out missing.
 if ! $MODE_EXPLICIT && ! $TEST_MODE; then
     TURBO_MODE=true; SPLIT_MODE=true; AUTO_MODE=true
-    # Policy decision, three-valued (policy-lock E2/E3). Priority order:
+    # Policy decision, three-valued (policy lock). Priority order:
     # explicit flag (FM_FORCE_DOM) > clean probe/gate verdict (true OR false)
     # > sticky state (only on error/infra) > conservative default. A SAX
     # default needs #98 (functional identity) AND #109 (CR text fidelity) AND
@@ -1117,7 +1137,7 @@ fi
 # --turbo or the adaptive default), regardless of argument order.
 $NO_AUTO && AUTO_MODE=false
 
-# Policy source for explicit user choices (E3: flags outrank probe and sticky).
+# Policy source for explicit user choices (flags outrank probe and sticky).
 # An explicit mode flag (incl. --streamify) or FM_FORCE_DOM pins the policy by
 # intent — the adaptive block above never ran, or its verdict is overridden.
 $MODE_EXPLICIT && POLICY_SOURCE=flag
@@ -1611,7 +1631,7 @@ if [ -f "$MANIFEST_DB" ]; then
             POLICY_CHANGE_DIAG="policy changed ${_prev_pol}/sentinel=$([ "$_prev_ws" = "true" ] && echo ON || echo OFF) → ${_RUN_POLICY}/sentinel=$([ "$WS_SENTINEL_ON" = "true" ] && echo ON || echo OFF) (source=$POLICY_SOURCE) — content hashes are policy-stamped; expect a one-time reload of the affected catalogs instead of a skip"
             # Console line right after the Strategy line; in quiet mode via
             # emit_log (NDJSON purity — reaches the web import log without any
-            # server change). Re-surfaced as a post-check finding in P6 (E5).
+            # server change). Re-surfaced as a post-check finding in P6.
             emit_log "Policy change: $POLICY_CHANGE_DIAG"
         fi
     fi
@@ -2033,12 +2053,12 @@ prune_solution_logs() {
 }
 
 # ============================================================================
-# Phase 7 — auto clustering (raw) · R1 cluster.json reuse
+# Phase 7 — auto clustering (raw) · cluster.json reuse
 # ============================================================================
 
 # read_cluster_json — echoes "engine|resolution|seed" for Auto-P7 / Re-Cluster.
 # Source order: solutions/<id>/state/cluster.json (last /fm-graph-cluster sweep
-# winner, R1; pre-migration fallback .fmlab/cluster.json) → CLUSTER_* env
+# winner; pre-migration fallback .fmlab/cluster.json) → CLUSTER_* env
 # overrides → cluster.sh defaults (auto|1.0|42). A stored 'leiden'
 # engine is downgraded to 'auto' so a host without python3+igraph does not hard-
 # abort cluster.sh (engine fallback); resolution/seed are preserved.
@@ -4512,7 +4532,7 @@ if [[ "$MODE" == "batch" ]]; then
     else
         emit_done true "Successful: $SUCCESS_COUNT, Skipped: $SKIPPED_COUNT"
     fi
-    # Policy-lock E7: persist the successfully used policy as the sticky
+    # Policy lock: persist the successfully used policy as the sticky
     # fallback state — written ONLY at the end of successful runs, so a
     # sticky-adopted policy never perpetuates itself while runs fail.
     # (No-op in test mode unless FM_POLICY_STATE_FILE is set.)
@@ -4752,7 +4772,7 @@ elif [[ "$MODE" == "single" ]]; then
         else
             emit_done true "Single-file import successful"
         fi
-        # Policy-lock E7: sticky state only after a fully successful run
+        # Policy lock: sticky state only after a fully successful run
         # (same contract as the batch writer above).
         _policy_state_write "$_RUN_POLICY" "$WS_SENTINEL_ON"
         stamp_last_run true 0 1 1

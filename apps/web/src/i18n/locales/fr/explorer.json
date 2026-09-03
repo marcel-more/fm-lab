@@ -121,5 +121,67 @@
   "edge": {
     "represents": "représente",
     "buttonAction": "Action de bouton"
+  },
+  "trace": {
+    "exit": "Voisinage",
+    "exitHint": "Quitter le trace et ouvrir la vue de voisinage de l'objet de départ",
+    "explainer": "Graphe de flux sélectif — la chaîne d'appels montante/descendante, les objets réellement touchés et les déclencheurs de script des layouts visités.",
+    "entryLabel": "Chemin d'entrée",
+    "entries": {
+      "layout_runtime": "Runtime",
+      "layout_inbound": "Entrant",
+      "layout_full": "Les deux"
+    },
+    "entryHints": {
+      "layout_runtime": "Déclencheurs du layout et de ses objets + scripts de boutons comme points de départ",
+      "layout_inbound": "Scripts qui naviguent vers ce layout",
+      "layout_full": "Runtime et navigation entrante combinés"
+    },
+    "budgets": "Budgets",
+    "upDepth": "Vers le haut",
+    "upDepthHint": "Nombre de niveaux d'appelants suivis vers le haut",
+    "downDepth": "Vers le bas",
+    "downDepthHint": "Nombre de niveaux de sous-scripts suivis vers le bas",
+    "triggerDepth": "Cascade de déclencheurs",
+    "triggerDepthHint": "Nombre d'étages de cascade que les déclencheurs de layout peuvent allumer (0 = désactivé)",
+    "options": "Options",
+    "localVars": "Variables $ locales",
+    "localVarsHint": "Afficher aussi les variables $ locales des scripts de la chaîne",
+    "buttons": "Boutons",
+    "buttonsHint": "Inclure les scripts de boutons des layouts visités comme interaction possible",
+    "interactionTriggers": "Déclencheurs d'interaction",
+    "interactionTriggersHint": "Laisser les événements d'interaction (clavier, gestes, boutons de l'appareil) se déclencher aussi dans la cascade — ils ne se déclenchent normalement pas pendant l'exécution d'un script",
+    "expandUp": "Étendre les appelants",
+    "expandUpHint": "Collecter aussi les objets touchés par la chaîne des appelants",
+    "legend": "Légende",
+    "roles": {
+      "chain": "Chaîne d'appels",
+      "touched": "Touché",
+      "triggered": "Déclenché (cascade)",
+      "triggerTouched": "Touché par la cascade",
+      "owner": "Contexte du déclencheur",
+      "excluded": "Exclu (frontière)",
+      "induced": "Arête de contexte"
+    },
+    "entryTitle": "Choisir le chemin d'entrée",
+    "entryDefault": "Par défaut",
+    "seedCount": "{{count}} script de départ",
+    "seedCount_other": "{{count}} scripts de départ",
+    "emptyEntry": "Le préréglage choisi ne produit aucun script de départ — veuillez choisir un autre chemin d'entrée.",
+    "truncated": "{{kept}} des {{total}} nœuds du trace chargés — réduisez les budgets pour resserrer l'extrait.",
+    "dynamicCalls": "{{count}} appel de script dynamique (par nom) sans arête statique — le trace est une approximation statique.",
+    "dynamicCalls_other": "{{count}} appels de script dynamiques (par nom) sans arête statique — le trace est une approximation statique.",
+    "actionHint": "Ouvrir le graphe de flux (trace) à partir de cet objet",
+    "excludeAction": "Exclure du trace",
+    "includeAction": "Réinclure",
+    "excludeHint": "Le nœud reste visible mais n'est plus développé (appels, objets touchés, cascade de déclencheurs)",
+    "excludedLabel": "Exclus",
+    "clearExcludes": "Tout retirer",
+    "clearExcludesHint": "Retirer toutes les exclusions et re-développer entièrement le trace",
+    "removeExcludeHint": "Retirer cette exclusion — le nœud sera de nouveau développé",
+    "suggestionsLabel": "Suggestions",
+    "applyAllSuggestions": "Tout amortir",
+    "applyAllSuggestionsHint": "Ajouter tous les nœuds concentrateurs suggérés à la liste d'exclusion",
+    "suggestionHint": "Concentrateur présumé — fan-in de déclencheurs {{trig}}, appelants {{calls}}, champs touchés {{touch}}. Cliquer pour exclure le nœud du trace."
   }
 }

@@ -121,5 +121,67 @@
   "edge": {
     "represents": "代表",
     "buttonAction": "按钮动作"
+  },
+  "trace": {
+    "exit": "邻域视图",
+    "exitHint": "退出 Trace 并打开起始对象的邻域视图",
+    "explainer": "选择性流程图 — 显示调用链的上游/下游、实际触及的对象，以及所进入布局的脚本触发器。",
+    "entryLabel": "入口路径",
+    "entries": {
+      "layout_runtime": "运行时",
+      "layout_inbound": "流入",
+      "layout_full": "两者"
+    },
+    "entryHints": {
+      "layout_runtime": "以布局及其对象的触发器 + 按钮脚本作为起点",
+      "layout_inbound": "导航到此布局的脚本",
+      "layout_full": "运行时与流入导航的组合"
+    },
+    "budgets": "预算",
+    "upDepth": "上游",
+    "upDepthHint": "调用链向上游追踪的层数",
+    "downDepth": "下游",
+    "downDepthHint": "调用链向下游追踪的层数",
+    "triggerDepth": "触发器级联",
+    "triggerDepthHint": "布局触发器可点燃的级联层数（0 = 关闭）",
+    "options": "选项",
+    "localVars": "局部 $ 变量",
+    "localVarsHint": "同时显示链上脚本的局部 $ 变量",
+    "buttons": "按钮",
+    "buttonsHint": "将所进入布局的按钮脚本作为可能的交互纳入",
+    "interactionTriggers": "交互触发器",
+    "interactionTriggersHint": "允许交互事件（键盘、手势、设备按键）也在级联中触发 — 它们通常不会在脚本运行期间触发",
+    "expandUp": "展开调用者",
+    "expandUpHint": "同时收集调用者链触及的对象",
+    "legend": "图例",
+    "roles": {
+      "chain": "调用链",
+      "touched": "被触及",
+      "triggered": "被触发（级联）",
+      "triggerTouched": "被级联触及",
+      "owner": "触发器上下文",
+      "excluded": "已排除（边界）",
+      "induced": "上下文边"
+    },
+    "entryTitle": "选择入口路径",
+    "entryDefault": "默认",
+    "seedCount": "{{count}} 个起始脚本",
+    "seedCount_other": "{{count}} 个起始脚本",
+    "emptyEntry": "所选预设没有起始脚本 — 请选择其他入口路径。",
+    "truncated": "已加载 {{total}} 个 Trace 节点中的 {{kept}} 个 — 请减小预算以聚焦范围。",
+    "dynamicCalls": "有 {{count}} 个按名称的动态脚本调用没有静态边 — Trace 是静态近似。",
+    "dynamicCalls_other": "有 {{count}} 个按名称的动态脚本调用没有静态边 — Trace 是静态近似。",
+    "actionHint": "从此对象打开流程图（Trace）",
+    "excludeAction": "从 Trace 中排除",
+    "includeAction": "重新包含",
+    "excludeHint": "节点保持可见，但不再继续展开（调用、触及对象、触发器级联）",
+    "excludedLabel": "已排除",
+    "clearExcludes": "全部取消",
+    "clearExcludesHint": "取消所有排除并重新完全展开 Trace",
+    "removeExcludeHint": "取消此排除 — 该节点将重新展开",
+    "suggestionsLabel": "建议",
+    "applyAllSuggestions": "全部抑制",
+    "applyAllSuggestionsHint": "将所有建议的枢纽节点加入排除列表",
+    "suggestionHint": "疑似枢纽 — 触发器入度 {{trig}}、调用者 {{calls}}、字段触及 {{touch}}。点击可将该节点从 Trace 中排除。"
   }
 }

@@ -12,6 +12,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 ---
 
+## [0.9.10] — 2026-09-03
+
+A new **Trace** view for following a script or layout's actual flow, plus a round of fixes.
+
+- **Trace — selective flow graph** — follow what a script or layout actually does, not just its immediate neighbors
+  - **Trace mode in the Graph Explorer** and a new **`fm-trace` skill** — starting from a Script or Layout, see the call chain up and down, the objects the flow actually touches, and the script triggers of the layouts it enters
+  - **Exclude from trace** — prune noise nodes from a trace, with a suggestion list of good candidates to hide
+- **New object type: Chart** — FileMaker chart objects are now imported into the catalog and surface in the layout views and type filter
+- **Fixes** — a trace redraw glitch in the Graph Explorer, and a publish / version-manifest fix
+
+---
+
 ## [0.9.9] — 2026-09-02
 
 A large release on two fronts: script triggers and layout-object formulas become a fully catalogued, navigable analysis surface, and the pipeline gets more correct and robust — more precise script generation, a hardened XML import, and a performance fix.
@@ -821,7 +833,8 @@ Initial release: XML conversion pipeline, core database structure, and first AI 
 <!-- Link references. compare-ranges span adjacent tagged releases; documentation-only
      versions that were never tagged (e.g. 0.8.7, 0.8.1, 0.8.0, 0.7.5–0.7.7, …) are
      intentionally left unlinked and render as plain text. Add a line here per new tag. -->
-[Unreleased]: https://github.com/marcel-more/fm-lab/compare/v0.9.9...HEAD
+[Unreleased]: https://github.com/marcel-more/fm-lab/compare/v0.9.10...HEAD
+[0.9.10]: https://github.com/marcel-more/fm-lab/compare/v0.9.9...v0.9.10
 [0.9.9]: https://github.com/marcel-more/fm-lab/compare/v0.9.8...v0.9.9
 [0.9.8]: https://github.com/marcel-more/fm-lab/compare/v0.9.7...v0.9.8
 [0.9.7]: https://github.com/marcel-more/fm-lab/compare/v0.9.6...v0.9.7

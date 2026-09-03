@@ -168,7 +168,7 @@ CREATE INDEX IF NOT EXISTS idx_tor_file    ON TableOccurrenceResolution(File_Nam
 -- (CREATE VIEW ginge dort nicht); P5 ist der ohnehin schreibende Lauf. Die Views
 -- werden vom convert-xml-Sync automatisch in die READ_ONLY-API-Kopie gespiegelt.
 --
--- KANONISCHE QUELLE: rest-api/templates/sql/graph_logical_links.sql (v1.4.0).
+-- KANONISCHE QUELLE: rest-api/templates/sql/graph_logical_links.sql (v1.5.0).
 -- Diese LogicalLinks-Definition MUSS mit jener Datei deckungsgleich bleiben;
 -- bei Änderung beide Stellen synchron halten (Drift bricht die Cluster-Färbung).
 
@@ -187,12 +187,36 @@ CREATE INDEX IF NOT EXISTS idx_tor_file    ON TableOccurrenceResolution(File_Nam
 -- Variablen-Signal bleibt erhalten: die Skills (fm-analyze/fm-graph-cluster) lesen
 -- Variablennamen aus VariableUsages/VariablesCatalog (per Script), nicht aus dem
 -- Graph. raw-Sicht + Basistabellen bleiben unberührt.
+--
+-- SPEZIALTYPEN (v1.5.0, Converter 2.22.0): Chart und Web Viewer werden NICHT
+-- gehoisted. Ihre Feld-/Variablen-Bezüge kommen aus EIGENEN Calc-Slots (Chart-
+-- Titel/Achsen/Serien, web_viewer_url) und sind unsichtbare Datenquellen von
+-- OBJEKT-Eigenschaften — anders als die sichtbare Platzierung eines Feld-
+-- Controls, für die „Layout zeigt Feld" wahr ist. Das pauschale Hoisting sagte
+-- hier „Layout liest Feld" und attribuierte damit falsch. Kriterium ist die
+-- kuratierte Typ-Liste (standalone-CTE), NICHT die Kanten-Rolle. Die eigene
+-- parent_layout-Kante wird für diese Klasse im Rollen-Filter wieder zugelassen
+-- und trägt den Knoten ins Layout (Layout → Objekt d1 → Felder/Variablen d2).
 CREATE OR REPLACE VIEW LogicalLinks AS
 WITH container AS (
   -- Sub-Objekt-UUID → Top-Level-Container-UUID (ein direkter Hop, keine Rekursion)
   SELECT Source_UUID AS child, Target_UUID AS parent
   FROM ObjectLinks
   WHERE Link_Role IN ('parent_layout', 'parent_script')
+),
+standalone AS (
+  -- Spezialtypen (s. Kopf-Note v1.5.0): logisch eigenständige Rechen-Objekte.
+  -- KURATIERTE Typ-Liste, bewusst KEIN Rollen-Kriterium (reads_field tragen auch
+  -- Feld-Controls aus Hide-/Tooltip-Calcs; dort bleibt das Layout der Sprecher).
+  -- Winzige Menge (Großkorpus: 0,04 % aller LayoutObjects) → billige Hash-Build-
+  -- Seite im LEFT JOIN, kein Doppel-Scan-Risiko.
+  -- INVARIANTE: Spezialtypen tragen kein displays_field (keine sichtbare Feld-
+  -- Repräsentation ist genau das Abgrenzungs-Kriterium der Klasse) → der Feld-
+  -- Anker-Zweig unten kollidiert nicht. Der Vorrang im CASE ist trotzdem gesetzt,
+  -- damit ein künftiger Gegenbeispiel-Datensatz kein (a, a_file)-Mischtupel baut.
+  SELECT Object_UUID, File_Name
+  FROM LayoutObjects
+  WHERE Object_Type IN ('Chart', 'Web Viewer')
 ),
 field_anchor AS (
   -- Semantischer Anker der Objekt-Trigger-Spiegel (Converter 2.18.0): das vom
@@ -227,7 +251,8 @@ hoisted AS (
   -- button_action bleibt layout-verankert (Aktion = UI-Angebot der Maske,
   -- kein Datenanker), alles andere hoisted wie bisher auf den Container.
   SELECT
-    CASE WHEN ol.Link_Role = 'triggers_script'
+    CASE WHEN sa.Object_UUID IS NOT NULL THEN ol.Source_UUID
+         WHEN ol.Link_Role = 'triggers_script'
           AND ol.Link_Subrole IS DISTINCT FROM 'button_action'
           AND fa.fld IS NOT NULL
          THEN fa.fld
@@ -237,7 +262,8 @@ hoisted AS (
     -- Datei wie das Sub-Objekt → a_file = ol.Source_File (analog b_file). Der
     -- FELD-Anker dagegen kann in einer ANDEREN Datei liegen (Related-Field-
     -- Platzierung) → a_file/Is_Cross_File werden für diesen Zweig neu bestimmt.
-    CASE WHEN ol.Link_Role = 'triggers_script'
+    CASE WHEN sa.Object_UUID IS NOT NULL THEN ol.Source_File
+         WHEN ol.Link_Role = 'triggers_script'
           AND ol.Link_Subrole IS DISTINCT FROM 'button_action'
           AND fa.fld IS NOT NULL
          THEN fa.fld_file
@@ -247,7 +273,8 @@ hoisted AS (
     ol.Link_Role,
     ol.Link_Subrole,
     ol.Link_Type,
-    CASE WHEN ol.Link_Role = 'triggers_script'
+    CASE WHEN sa.Object_UUID IS NOT NULL THEN ol.Is_Cross_File
+         WHEN ol.Link_Role = 'triggers_script'
           AND ol.Link_Subrole IS DISTINCT FROM 'button_action'
           AND fa.fld IS NOT NULL
          THEN (fa.fld_file IS DISTINCT FROM ol.Target_File)
@@ -255,6 +282,7 @@ hoisted AS (
   FROM ObjectLinks ol
   LEFT JOIN container cs ON cs.child = ol.Source_UUID
   LEFT JOIN container ct ON ct.child = ol.Target_UUID
+  LEFT JOIN standalone   sa ON sa.Object_UUID = ol.Source_UUID AND sa.File_Name = ol.Source_File
   LEFT JOIN field_anchor fa ON fa.owner = ol.Source_UUID AND fa.owner_file = ol.Source_File
   WHERE ol.Link_Type = 'operational'
     -- Containment-Gerüst raus (parent_table bleibt: echte Field→BaseTable-Referenz).
@@ -271,9 +299,16 @@ hoisted AS (
     -- P4 Block 18c) sind spekulative Late-Binding-Kandidaten — als Cluster-Affinität
     -- Trigger↔Feld wertlos und sie hielten den Trigger-Knoten sonst als Satellit im
     -- Graph. In ObjectLinks/Referenzlisten bleiben sie unberührt.
-    AND ol.Link_Role NOT IN
+    AND (ol.Link_Role NOT IN
         ('parent_layout', 'parent_script', 'parent_object', 'parent_folder',
          'trigger_script')
+         -- AUSNAHME Spezialtypen (v1.5.0): ihre eigene parent_layout-Kante ist die
+         -- Verbindungs-Kante Objekt→Layout, die den un-gehoisteten Knoten im Graphen
+         -- anschlussfähig hält (Layout → Objekt d1 → Felder/Variablen d2). Sie ist
+         -- operational (LayoutObject→Layout; nur LayoutPart→Layout ist structural)
+         -- und passiert den Link_Type-Filter oben. Jedes LayoutObject traegt genau
+         -- eine solche Kante, auch verschachtelte (s. DATENBEFUND).
+         OR (ol.Link_Role = 'parent_layout' AND sa.Object_UUID IS NOT NULL))
     AND NOT (ol.Link_Role = 'reads_field'
              AND ol.Link_Subrole = 'transaction_parameter_field')
     -- Waisen raus: beide Endpunkte müssen katalogisiert sein
@@ -314,8 +349,8 @@ WHERE a <> b   -- durch Hochziehen entstandene Selbst-Schleifen verwerfen
 -- UUID in verschiedenen Dateien bleiben getrennte Cluster-Knoten (vorher zu EINEM
 -- kollabiert ⇒ verschmolzene Kanten = potenziell falsche Module). Auf klon-freien
 -- Lösungen ist jede UUID datei-eindeutig ⇒ `uuid::file` ist reine Knoten-Umbenennung
--- (strukturell identische Partition). Der God-Node-Test bleibt UUID-aggregiert
--- (R2): ein generischer MBS-Helper ist in JEDER Datei querschneidend; auf UUID-Ebene
+-- (strukturell identische Partition). Der God-Node-Test bleibt UUID-aggregiert:
+-- ein generischer MBS-Helper ist in JEDER Datei querschneidend; auf UUID-Ebene
 -- erkannt, auf (uuid,file) zurück-ausgeschlossen — verifiziert god-node-set-identisch
 -- zur UUID-only-Variante auf klon-freien wie geklonten Korpora.
 
@@ -352,7 +387,7 @@ SELECT Source_UUID, Source_File, Target_UUID, Target_File FROM ClusterEdgesBaseM
 -- "eigene Datei" ⇒ 0). Eigene View (statt inline) → der Ausschluss ist queryfähig
 -- (Report kann ihn ehrlich ausweisen). Schwellen 8 / 0.4 aus der Verifikation.
 --
--- KLON-ROBUSTHEIT (R2): die Erkennung aggregiert auf UUID-Ebene (GROUP BY a), NICHT
+-- KLON-ROBUSTHEIT: die Erkennung aggregiert auf UUID-Ebene (GROUP BY a), NICHT
 -- auf (uuid,file). Begründung: ein generischer Helper ist datei-übergreifend ein
 -- God-Node; auf (uuid,file) zerfiele er in N datei-lokal-harmlose Knoten. Datei kommt
 -- jetzt DIREKT von der Kante (a_file/b_file) statt aus einem ObjectCatalog-Join — das
@@ -378,7 +413,7 @@ HAVING COUNT(DISTINCT b_file) >= 8
 -- ClusterEdges — finaler Cluster-Kantensatz: Base minus God-Nodes. EXAKT die
 -- Engine-Eingabe (edges.csv) und die "logische Grad"-Definition der Skill-Hub-Analyse.
 -- Führt Source_File/Target_File mit (composite Knoten-Key im Export). Der God-Node-
--- Ausschluss ist per UUID (s. R2 oben).
+-- Ausschluss ist per UUID (s. Klon-Robustheit oben).
 CREATE OR REPLACE VIEW ClusterEdges AS
 SELECT DISTINCT Source_UUID, Source_File, Target_UUID, Target_File
 FROM ClusterEdgesBase

@@ -1285,7 +1285,7 @@ b_trig AS (
 ),
 -- (B5) Record-Access-Calcs ohne DDR-Anker. Anti-Join auf OWNER-Ebene (nicht
 -- per Hash): PrivilegeSetRecordAccess.DDR_Hash kann trotz DDR-Info leer sein
--- (ooe-verifiziert) — ein Hash-Anti-Join ließe dann dieselben Calcs doppelt
+-- (am Test-Set verifiziert) — ein Hash-Anti-Join ließe dann dieselben Calcs doppelt
 -- entstehen (einmal als Anker-Zeile 131_2, einmal strukturell). Hat ein Set
 -- IRGENDEINEN DDR-Anker, deckt die DDR seine Record-Access-Calcs vollständig
 -- ab → B5 liefert nur für anker-lose Sets (Dateien ohne DDR-Info).
@@ -1416,6 +1416,19 @@ classified AS (
                 WHEN cand.Owner_Type = 'CustomMenuItem' AND cand.Calc_Kind_Raw = 'Name'    THEN 'menu_item_name'
                 WHEN cand.Calc_Kind_Raw = 'Series_Value'
                   OR cand.Calc_Kind_Raw LIKE 'YSeriesList\_%' ESCAPE '\'     THEN 'chart_series'
+                -- Chart-Kopf-Slots (Suffixe aus dem SaXML-Chart-Block
+                -- External/Chart): 'Title' ist generisch und
+                -- kollidiert mit CustomMenu+Title → auf LayoutObject scopen.
+                -- Achsen-Titel getrennt kuratiert (die Achse ist analytisch
+                -- relevant); YSeriesList_<n>_Title bleibt bewusst bei
+                -- chart_series (Label + Wert einer Serie teilen die Rolle,
+                -- Calc_Kind_Raw hält sie unterscheidbar).
+                WHEN cand.Owner_Type = 'LayoutObject'
+                     AND cand.Calc_Kind_Raw = 'Title'           THEN 'chart_title'
+                WHEN cand.Owner_Type = 'LayoutObject'
+                     AND cand.Calc_Kind_Raw = 'XAxisList_Title' THEN 'chart_xaxis_title'
+                WHEN cand.Owner_Type = 'LayoutObject'
+                     AND cand.Calc_Kind_Raw = 'YAxisList_Title' THEN 'chart_yaxis_title'
                 ELSE COALESCE(NULLIF(lower(cand.Calc_Kind_Raw), ''), 'unknown')
             END
         ) AS Calc_Role,
@@ -1606,6 +1619,9 @@ SELECT
                WHEN 'menu_item_parameter'      THEN 'Item Parameter'
                WHEN 'display_calculation'      THEN 'Display Calculation'
                WHEN 'chart_series'             THEN 'Chart Series'
+               WHEN 'chart_title'              THEN 'Chart Title'
+               WHEN 'chart_xaxis_title'        THEN 'X-Axis Title'
+               WHEN 'chart_yaxis_title'        THEN 'Y-Axis Title'
                ELSE c.Calc_Role
            END
         || CASE WHEN COUNT(*) OVER (PARTITION BY c.File_Name, c.Owner_UUID, c.Calc_Role) > 1

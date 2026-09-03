@@ -6,6 +6,21 @@
 -- @author: Marcel / Claude
 -- @tags: graph, subgraph, explorer
 -- @note: Core-Endpoint /api/graph/subgraph.
+--        SPEZIALTYPEN (geerbt aus LogicalLinks 1.5.0, Converter 2.22.0 —
+--        KEINE Logik-Änderung in diesem Template): Chart/Web Viewer werden in
+--        der logischen Basis nicht mehr aufs Layout gehoisted. Folgen hier:
+--        (a) am LAYOUT-Fokus liegt das Objekt auf d1 und seine Felder/Variablen
+--        auf d2 — die Kette läuft über die operationale parent_layout-Kante des
+--        Objekts; Tiefen- und total_reachable-Werte verschieben sich planmäßig.
+--        (b) am OBJEKT-Fokus werden die Zeilen der Fokus-Selbst-Enklave (1.7.0)
+--        zu Duplikaten der logischen Basis und falten per UNION/DISTINCT weg —
+--        kein Typ-Filter nötig, das Doppel-Sprechen (roh + gehoistet) entfällt.
+--        (c) diese parent_layout-Kante ist OPERATIONAL (nur LayoutPart→Layout
+--        ist structural) — sie fällt damit nicht unter die Richtungs-
+--        Unabhängigkeit der edges-CTE, sondern zählt regulär als out-Kante des
+--        Objekts. Am Layout-Fokus ist sie folglich eine in-Kante: der reine
+--        „Verwendet"-Modus zeigt die Spezialtyp-Ketten dort nicht (bewusster
+--        v1-Trade-off; Default „Beides" ist unbetroffen).
 --        1.9.0 (Anker-Durchgriff): ein feld-gebundener LayoutObject-Fokus erreicht
 --        die Trigger-Ziele seines Anker-Felds schon bei depth 1 — als SYNTHETISCHE
 --        Walk-Kante (Fokus → Trigger-Ziel), komponiert aus displays_field (roh,

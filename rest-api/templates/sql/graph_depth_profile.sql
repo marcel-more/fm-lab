@@ -6,6 +6,13 @@
 -- @author: Marcel / Claude
 -- @tags: graph, explorer, depth
 -- @note: Endpoint /api/graph/depth-profile. Spiegelt die CTEs 1–7 von graph_subgraph.sql
+--        SPEZIALTYPEN (geerbt aus LogicalLinks 1.5.0, gespiegelt aus
+--        graph_subgraph.sql — KEINE Logik-Änderung in diesem Template):
+--        Chart/Web Viewer bleiben un-gehoistet, am Layout-Fokus rücken ihre
+--        Felder/Variablen von d1 auf d2 (Kette über die operationale
+--        parent_layout-Kante) und der Objekt-Knoten kommt auf d1 hinzu. Die
+--        Tiefen-Verschiebung ist gewollt — sie muss mit graph_subgraph.sql
+--        kumulativ deckungsgleich bleiben (Zähl-Konsistenz des Tiefen-Sliders).
 --        1.6.0 (Anker-Durchgriff, gespiegelt aus graph_subgraph.sql v1.9.0):
 --        synthetische Walk-Kante Fokus → Trigger-Ziele des Anker-Felds
 --        (nur out/both) — hält die Tiefen-Slider-Zählung konsistent.

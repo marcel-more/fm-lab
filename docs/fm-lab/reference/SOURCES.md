@@ -29,29 +29,29 @@ database points at this file through its `reference_meta.attribution` key.
 
 - **"Canonical XML Format for FileMaker Script Steps"** — Andrew Kear, Clockwork
   Creative Technology  
-  github.com/andykear/FileMaker-XMLsnippet-Claude-Skill  
+  https://github.com/andykear/FileMaker-XMLsnippet-Claude-Skill  
   Licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).  
   Used for roundtrip-verified fmxmlsnippet skeletons, paste/silent-failure semantics and save constraints.
 
 ## MIT
 
 - **fmCheckMate-XSLT** — Russell Watson  
-  github.com/mrwatson-de/fmCheckMate-XSLT  
+  https://github.com/mrwatson-de/fmCheckMate-XSLT  
   Full-surface test corpus used as primary structural evidence
   for the step grammar and options.
 - **fm-xml-export-exploder** — Malte Bastian  
-  github.com/bc-m/fm-xml-export-exploder  
+  https://github.com/bc-m/fm-xml-export-exploder  
   Used to validate the SaXML parameter-type classification.
-- **ooe-fm** ("One Of Everything") — Mislav Kos, Soliant Consulting
-  github.com/mislavkos/ooe-fm
+- **ooe-fm** ("One Of Everything") — Mislav Kos, Soliant Consulting  
+  https://github.com/mislavkos/ooe-fm  
   Used for SaXML version diffs.
 - **fmIDE** — Russell Watson  
-  github.com/fmIDE/fmIDE  
+  https://github.com/fmIDE/fmIDE  
   Source of action layer (`action_catalog`, `step_action_map`):
   the fmIDE ActionScript vocabulary, its step mappings
   and execution metadata.
 - **fmJAML** — Russell Watson  
-  github.com/fmIDE/fmJAML  
+  https://github.com/fmIDE/fmJAML  
   Authoring notation targeted by the ActionScript emitter;
   no data imported into reference tables.
 

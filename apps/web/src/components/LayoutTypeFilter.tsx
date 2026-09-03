@@ -44,7 +44,7 @@ const CATEGORIES: Category[] = [
     ],
   },
   { label: 'Display',  types: ['Text', 'Graphic'] },
-  { label: 'Viewer',   types: ['Container', 'Web Viewer'] },
+  { label: 'Viewer',   types: ['Container', 'Web Viewer', 'Chart'] },
   { label: 'Action',   types: ['Button', 'Grouped Button', 'Button Bar', 'Popover Button'] },
   { label: 'Controls', types: ['Portal', 'Panel', 'Slide Control', 'Tab Control'] },
   { label: 'Groups',   types: ['Group'] },

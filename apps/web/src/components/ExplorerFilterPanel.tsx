@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getTypeColor } from '../lib/graphColors';
 import type { FilterMode, ColorMode, GraphPartition } from './ExplorerGraph';
@@ -99,6 +99,12 @@ export interface ExplorerFilterPanelProps {
   onShowAllTypes: () => void;
   /** Lade-Umfang „Nur gewählte Typen": aktuelle Auswahl server-seitig laden (lädt neu). */
   onApplyServerTypes: () => void;
+  /**
+   * Trace-Modus: ersetzt die Traversierungs-Steuerung (Tiefe + Richtung) durch
+   * die Trace-Kontrollen (Budgets, Schalter, Legende). Die Client-Lenses
+   * (Name, Datei, Typ, dim/hide, Färbung) bleiben unverändert aktiv.
+   */
+  traceControls?: ReactNode;
 }
 
 const DIRECTIONS: SubgraphDirection[] = ['out', 'in', 'both'];
@@ -117,6 +123,7 @@ export function ExplorerFilterPanel(props: ExplorerFilterPanelProps) {
     onNameFilterChange, onSelectedFileChange, onGroupByFileChange, onFilterModeChange, onColorModeChange,
     onSelectCommunity, onHoverCommunity,
     onDepthChange, onExtendDepthChange, onDirectionChange, onToggleType, onShowAllTypes, onApplyServerTypes,
+    traceControls,
   } = props;
   const { t } = useTranslation(['explorer']);
 
@@ -258,6 +265,8 @@ export function ExplorerFilterPanel(props: ExplorerFilterPanelProps) {
         </div>
       )}
 
+      {/* Trace-Modus: Budgets/Schalter/Legende ersetzen Tiefe + Richtung. */}
+      {traceControls ?? (<>
       {/* Depth — slider + reachable max + opt-in extension + load/clipping hint */}
       <div className="explorer-filter-section">
         <label className="explorer-filter-label" htmlFor="explorer-depth">
@@ -341,6 +350,7 @@ export function ExplorerFilterPanel(props: ExplorerFilterPanelProps) {
           ))}
         </div>
       </div>
+      </>)}
 
       {/* Color lens — Type ↔ Community recolor + community legend. */}
       {showColorMode && (

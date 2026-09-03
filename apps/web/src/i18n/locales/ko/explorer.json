@@ -121,5 +121,67 @@
   "edge": {
     "represents": "나타냄",
     "buttonAction": "버튼 동작"
+  },
+  "trace": {
+    "exit": "이웃 보기",
+    "exitHint": "Trace를 종료하고 시작 개체의 이웃 보기를 엽니다",
+    "explainer": "선택적 흐름 그래프 — 호출 체인의 상류/하류, 실제로 접촉하는 개체, 방문한 레이아웃의 스크립트 트리거를 표시합니다.",
+    "entryLabel": "진입 경로",
+    "entries": {
+      "layout_runtime": "런타임",
+      "layout_inbound": "유입",
+      "layout_full": "둘 다"
+    },
+    "entryHints": {
+      "layout_runtime": "레이아웃과 그 개체의 트리거 + 버튼 스크립트를 시작점으로 사용",
+      "layout_inbound": "이 레이아웃으로 이동하는 스크립트",
+      "layout_full": "런타임과 유입 내비게이션 결합"
+    },
+    "budgets": "예산",
+    "upDepth": "상류",
+    "upDepthHint": "호출 체인을 상류 방향으로 몇 단계 따라갈지",
+    "downDepth": "하류",
+    "downDepthHint": "호출 체인을 하류 방향으로 몇 단계 따라갈지",
+    "triggerDepth": "트리거 캐스케이드",
+    "triggerDepthHint": "레이아웃 트리거가 발동할 수 있는 캐스케이드 단계 수(0 = 끔)",
+    "options": "옵션",
+    "localVars": "로컬 $ 변수",
+    "localVarsHint": "체인 스크립트의 로컬 $ 변수도 표시",
+    "buttons": "버튼",
+    "buttonsHint": "방문한 레이아웃의 버튼 스크립트를 가능한 상호작용으로 포함",
+    "interactionTriggers": "상호작용 트리거",
+    "interactionTriggersHint": "상호작용 이벤트(키보드, 제스처, 기기 버튼)도 캐스케이드에서 발동하도록 허용 — 일반적으로 스크립트 실행 중에는 발동하지 않습니다",
+    "expandUp": "호출자 확장",
+    "expandUpHint": "호출자 체인이 접촉하는 개체도 수집",
+    "legend": "범례",
+    "roles": {
+      "chain": "호출 체인",
+      "touched": "접촉됨",
+      "triggered": "트리거됨(캐스케이드)",
+      "triggerTouched": "캐스케이드로 접촉됨",
+      "owner": "트리거 컨텍스트",
+      "excluded": "제외됨(경계)",
+      "induced": "컨텍스트 에지"
+    },
+    "entryTitle": "진입 경로 선택",
+    "entryDefault": "기본값",
+    "seedCount": "시작 스크립트 {{count}}개",
+    "seedCount_other": "시작 스크립트 {{count}}개",
+    "emptyEntry": "선택한 프리셋에는 시작 스크립트가 없습니다 — 다른 진입 경로를 선택하세요.",
+    "truncated": "Trace 노드 {{total}}개 중 {{kept}}개를 불러왔습니다 — 예산을 줄여 범위를 좁히세요.",
+    "dynamicCalls": "정적 에지가 없는 동적 스크립트 호출(이름 지정)이 {{count}}건 있습니다 — Trace는 정적 근사입니다.",
+    "dynamicCalls_other": "정적 에지가 없는 동적 스크립트 호출(이름 지정)이 {{count}}건 있습니다 — Trace는 정적 근사입니다.",
+    "actionHint": "이 개체에서 흐름 그래프(Trace) 열기",
+    "excludeAction": "Trace에서 제외",
+    "includeAction": "다시 포함",
+    "excludeHint": "노드는 계속 표시되지만 더 이상 확장되지 않습니다(호출·터치·트리거 캐스케이드)",
+    "excludedLabel": "제외됨",
+    "clearExcludes": "모두 해제",
+    "clearExcludesHint": "모든 제외를 해제하고 Trace를 완전히 다시 확장합니다",
+    "removeExcludeHint": "이 제외를 해제 — 노드가 다시 확장됩니다",
+    "suggestionsLabel": "제안",
+    "applyAllSuggestions": "모두 억제",
+    "applyAllSuggestionsHint": "제안된 허브 노드를 모두 제외 목록에 추가합니다",
+    "suggestionHint": "허브 의심 — 트리거 유입 {{trig}}, 호출자 {{calls}}, 필드 터치 {{touch}}. 클릭하면 노드가 Trace에서 제외됩니다."
   }
 }

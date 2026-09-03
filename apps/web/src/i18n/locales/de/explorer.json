@@ -129,5 +129,67 @@
   "edge": {
     "represents": "repräsentiert",
     "buttonAction": "Button-Aktion"
+  },
+  "trace": {
+    "exit": "Nachbarschaft",
+    "exitHint": "Trace verlassen und die Nachbarschafts-Sicht auf das Startobjekt öffnen",
+    "explainer": "Selektiver Ablauf-Graph — Aufrufkette auf-/abwärts, die tatsächlich berührten Objekte und die Script-Trigger betretener Layouts.",
+    "entryLabel": "Einstiegspfad",
+    "entries": {
+      "layout_runtime": "Runtime",
+      "layout_inbound": "Eingehend",
+      "layout_full": "Beides"
+    },
+    "entryHints": {
+      "layout_runtime": "Trigger des Layouts und seiner Objekte + Button-Scripts als Ausgangspunkte",
+      "layout_inbound": "Scripts, die auf dieses Layout navigieren",
+      "layout_full": "Runtime und eingehende Navigation kombiniert"
+    },
+    "budgets": "Budgets",
+    "upDepth": "Aufwärts",
+    "upDepthHint": "Wie viele Aufrufer-Ebenen die Kette aufwärts verfolgt wird",
+    "downDepth": "Abwärts",
+    "downDepthHint": "Wie viele Unterscript-Ebenen die Kette abwärts verfolgt wird",
+    "triggerDepth": "Trigger-Kaskade",
+    "triggerDepthHint": "Wie viele Kaskadenstufen Layout-Trigger zünden dürfen (0 = aus)",
+    "options": "Optionen",
+    "localVars": "Lokale $-Variablen",
+    "localVarsHint": "Auch lokale $-Variablen der Chain-Scripts einblenden",
+    "buttons": "Buttons",
+    "buttonsHint": "Button-Scripts betretener Layouts als mögliche Interaktion einbeziehen",
+    "interactionTriggers": "Interaktions-Trigger",
+    "interactionTriggersHint": "Auch Interaktions-Events (Tastatur, Gesten, Gerätetasten) in der Kaskade zünden lassen — sie feuern während eines Script-Ablaufs normalerweise nicht",
+    "expandUp": "Aufrufer expandieren",
+    "expandUpHint": "Auch die berührten Objekte der Aufrufer-Kette einsammeln",
+    "legend": "Legende",
+    "roles": {
+      "chain": "Aufrufkette",
+      "touched": "Berührt",
+      "triggered": "Getriggert (Kaskade)",
+      "triggerTouched": "Von Kaskade berührt",
+      "owner": "Trigger-Kontext",
+      "excluded": "Ausgeschlossen (Boundary)",
+      "induced": "Kontext-Kante"
+    },
+    "entryTitle": "Einstiegspfad wählen",
+    "entryDefault": "Standard",
+    "seedCount": "{{count}} Start-Script",
+    "seedCount_other": "{{count}} Start-Scripts",
+    "emptyEntry": "Das gewählte Preset liefert keine Start-Scripts — bitte einen anderen Einstiegspfad wählen.",
+    "truncated": "{{kept}} von {{total}} Trace-Knoten geladen — Budgets verringern, um den Ausschnitt zu fokussieren.",
+    "dynamicCalls": "{{count}} dynamischer Script-Aufruf (per Name) ohne statische Kante — der Trace ist eine statische Annäherung.",
+    "dynamicCalls_other": "{{count}} dynamische Script-Aufrufe (per Name) ohne statische Kante — der Trace ist eine statische Annäherung.",
+    "actionHint": "Ablauf-Graph (Trace) ab diesem Objekt öffnen",
+    "excludeAction": "Vom Trace ausschließen",
+    "includeAction": "Wieder einschließen",
+    "excludeHint": "Knoten bleibt sichtbar, wird aber nicht weiter expandiert (Aufrufe, Touches, Trigger-Kaskade)",
+    "excludedLabel": "Ausgeschlossen",
+    "clearExcludes": "Alle aufheben",
+    "clearExcludesHint": "Alle Ausschlüsse aufheben und den Trace wieder voll expandieren",
+    "removeExcludeHint": "Ausschluss aufheben — der Knoten wird wieder expandiert",
+    "suggestionsLabel": "Vorschläge",
+    "applyAllSuggestions": "Alle dämpfen",
+    "applyAllSuggestionsHint": "Alle vorgeschlagenen Hub-Knoten in die Ausschlussliste übernehmen",
+    "suggestionHint": "Hub-Verdacht — Trigger-Fan-in {{trig}}, Aufrufer {{calls}}, Feld-Touches {{touch}}. Klick schließt den Knoten vom Trace aus."
   }
 }

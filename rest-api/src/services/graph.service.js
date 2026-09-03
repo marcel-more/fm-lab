@@ -192,7 +192,7 @@ async function enrichCommunities(ctx, nodes) {
   const byKey = new Map(result.rows.map((r) => [keyOf(r.uuid, r.file), r]));
 
   // Namens-Priorität 4-stufig: User_Name (Sidecar) > Semantic_Name (Copy,
-  // live) > SemanticNameRestore (Sidecar, R3 — greift nach Force-Rebuild) >
+  // live) > SemanticNameRestore (Sidecar — greift nach Force-Rebuild) >
   // Heuristic_Name (Copy). User-Namen überschreiben alles in der Legende.
   const commMap = await annotations.getCommunityAnnotationMap(ctx);
   const restoreMap = await annotations.getSemanticRestoreMap(ctx);
@@ -353,6 +353,282 @@ async function getSubgraph(ctx, p) {
  */
 async function getNeighbors(ctx, p) {
   return getSubgraph(ctx, { ...p, depth: 1 });
+}
+
+/**
+ * Trace (selektiver Ablauf-Graph) — /api/graph/trace + /trace/entries.
+ *
+ * Gleiche Antwort-Grundform wie der Subgraph (nodes/edges/stats/truncated),
+ * zusätzlich traceRole/traceDepth pro Knoten, traceKind pro Kante und der
+ * data.trace-Block (Start, Einstiegspfad, Seeds, dynamicCalls-Blind-Spot).
+ *
+ * Cache-Key wird AUS DEM VALIDATOR-SCHEMA generiert (nicht von Hand gepflegt):
+ * jeder fachliche Parameter des graphTrace-Schemas wandert automatisch in den
+ * Key — ein beim Schema ergänzter Parameter kann nie mehr im Key fehlen.
+ */
+const traceCache = new LRUCache({ max: 200, ttl: 1000 * 60 * 5 });
+const traceEntriesCache = new LRUCache({ max: 200, ttl: 1000 * 60 * 5 });
+
+const TRACE_KEY_FIELDS = (() => {
+  const { schemas } = require('../middleware/validator');
+  return Object.keys(schemas.graphTrace.describe().keys)
+    .filter((k) => !['format', 'meta', 'debug'].includes(k))
+    .sort();
+})();
+
+function traceCacheKey(ctx, p) {
+  return [ctx?.solution ?? '', ...TRACE_KEY_FIELDS.map((k) => String(p[k] ?? ''))].join('|');
+}
+
+/** Object_Type des Startobjekts (v1-Typ-Weiche im Controller: Script/Layout). */
+async function objectTypeOf(ctx, uuid, file) {
+  const where = file
+    ? `Object_UUID = '${escapeLiteral(uuid)}' AND File_Name = '${escapeLiteral(file)}'`
+    : `Object_UUID = '${escapeLiteral(uuid)}'`;
+  const result = await db.executeQuery(
+    ctx,
+    `SELECT Object_Type FROM ObjectCatalog WHERE ${where} LIMIT 1`
+  );
+  return result.rows[0]?.Object_Type ?? null;
+}
+
+/** Validierte Query-Params → graph_trace.sql-Parameter. */
+function toTraceParams(p) {
+  return {
+    start: p.start,
+    start_file: p.start_file ?? null,
+    entry: p.entry ?? null,
+    up_depth: p.up_depth,
+    down_depth: p.down_depth,
+    trigger_depth: p.trigger_depth,
+    expand_up: p.expand_up,
+    include_local_vars: p.include_local_vars,
+    include_buttons: p.include_buttons,
+    include_builtins: p.include_builtins,
+    include_interaction_triggers: p.include_interaction_triggers,
+    node_limit: p.node_limit,
+    hub_degree: p.hub_degree,
+    exclude: p.exclude ?? null,
+  };
+}
+
+/** Exclude-Items ('uuid' oder 'uuid::file') parsen — Reihenfolge-erhaltend. */
+function parseExcludeItems(exclude) {
+  if (!exclude) return [];
+  return exclude
+    .split(',')
+    .filter((s) => s.trim() !== '')
+    .map((item) => {
+      const sep = item.indexOf('::');
+      return sep === -1
+        ? { id: item, uuid: item, file: null }
+        : { id: item, uuid: item.slice(0, sep), file: item.slice(sep + 2) };
+    });
+}
+
+/**
+ * data.trace.excluded[] — katalog-aufgelöste Ausschlussliste. Bewusst
+ * unabhängig vom Knoten-Set aufgelöst: ein Ausschluss, den der gedämpfte Trace
+ * gar nicht mehr erreicht, muss als Chip sichtbar (und entfernbar) bleiben.
+ * Unbekannte UUIDs bleiben mit label/type = null in der Liste (wirkungslos, kein Fehler).
+ */
+async function resolveExcluded(ctx, exclude) {
+  const items = parseExcludeItems(exclude);
+  if (items.length === 0) return [];
+  const uuidList = [...new Set(items.map((i) => i.uuid))]
+    .map((u) => `'${escapeLiteral(u)}'`)
+    .join(', ');
+  const result = await db.executeQuery(
+    ctx,
+    `SELECT Object_UUID, Object_Name, Object_Type, File_Name
+     FROM ObjectCatalog WHERE Object_UUID IN (${uuidList})`
+  );
+  return items.map((i) => {
+    const row = result.rows.find(
+      (r) => r.Object_UUID === i.uuid
+        && (i.file === null || (r.File_Name ?? '') === i.file)
+    );
+    return {
+      id: i.id,
+      uuid: i.uuid,
+      file: i.file ?? row?.File_Name ?? null,
+      label: row?.Object_Name ?? null,
+      type: row?.Object_Type ?? null,
+    };
+  });
+}
+
+/**
+ * Trace-Berechnung. `startType` kommt vom Controller (bereits für die
+ * v1-Typ-Weiche aufgelöst) und bestimmt das effektive Einstiegs-Preset —
+ * deckungsgleich mit der entry_sel-Logik im Template.
+ * @returns {Promise<{payload: Object, sql: string}>}
+ */
+async function getTrace(ctx, p, startType) {
+  const cacheKey = traceCacheKey(ctx, p);
+  const cached = traceCache.get(cacheKey);
+  if (cached) {
+    return { payload: cached.payload, sql: cached.sql, cached: true };
+  }
+
+  const result = await templateService.executeTemplate(
+    ctx,
+    'graph_trace',
+    toTraceParams(p),
+    'report'
+  );
+
+  const nodes = [];
+  const edges = [];
+  const seeds = [];
+  const suggestions = []; // Hub-Score-Kandidaten (Node-Zeilen mit sugg_reason)
+  let totalReachable = 0;
+  let maxDepthReached = 0;
+  let dynamicCalls = 0;
+
+  // Getaggte Union partitionieren (row_kind = 'node' | 'edge' | 'seed').
+  for (const r of result.data) {
+    if (r.row_kind === 'node') {
+      totalReachable = Number(r.total_reachable ?? 0); // auf jeder Knoten-Zeile identisch
+      dynamicCalls = Number(r.dynamic_calls ?? 0);     // dito (Blind-Spot-Ausweis)
+      const traceDepth = Number(r.trace_depth ?? 0);
+      if (Math.abs(traceDepth) > maxDepthReached) maxDepthReached = Math.abs(traceDepth);
+      nodes.push({
+        id: r.id,
+        uuid: r.uuid,
+        label: r.label,
+        type: r.type,
+        file: r.file,
+        depth: Number(r.depth ?? 0), // |traceDepth| — Subgraph-kompatibel
+        degree: Number(r.degree ?? 0),
+        isHub: r.is_hub === true,
+        isFocus: r.is_focus === true,
+        community: null,      // P5-Naht — via enrichCommunities() gesetzt
+        communityName: null,
+        traceRole: r.trace_role,
+        traceDepth,
+        isExcluded: r.is_excluded === true, // Boundary-Knoten
+      });
+      if (r.sugg_reason) {
+        suggestions.push({
+          id: r.id,
+          uuid: r.uuid,
+          file: r.file,
+          label: r.label,
+          type: r.type,
+          trigIn: Number(r.sugg_trig_in ?? 0),
+          fanIn: Number(r.sugg_fan_in ?? 0),
+          touchOut: Number(r.sugg_touch_out ?? 0),
+          score: Number(r.sugg_score ?? 0),
+          reason: r.sugg_reason,
+        });
+      }
+    } else if (r.row_kind === 'edge') {
+      edges.push({
+        id: r.id,
+        source: r.source,
+        target: r.target,
+        role: r.role,
+        subrole: r.subrole,
+        linkType: r.link_type,
+        crossFile: r.cross_file === true,
+        traceKind: r.trace_kind,
+      });
+    } else if (r.row_kind === 'seed') {
+      seeds.push({ uuid: r.uuid, label: r.label, type: r.type, file: r.file });
+    }
+  }
+
+  // P5-Naht: Community-Daten nachreichen (no-op ohne Cluster-Tabellen).
+  await enrichCommunities(ctx, nodes);
+
+  // Ausschlussliste katalog-aufgelöst (auch nicht mehr erreichte Einträge).
+  const excluded = await resolveExcluded(ctx, p.exclude);
+
+  const entry = startType === 'Script' ? 'script' : (p.entry ?? 'layout_runtime');
+  const payload = {
+    start: p.start,
+    params: {
+      entry,
+      upDepth: p.up_depth,
+      downDepth: p.down_depth,
+      triggerDepth: p.trigger_depth,
+      expandUp: p.expand_up,
+      includeLocalVars: p.include_local_vars,
+      includeButtons: p.include_buttons,
+      includeBuiltins: p.include_builtins,
+      includeInteractionTriggers: p.include_interaction_triggers,
+      nodeLimit: p.node_limit,
+      hubDegree: p.hub_degree,
+      exclude: p.exclude ?? null,
+    },
+    trace: {
+      start: { uuid: p.start, file: p.start_file ?? null, type: startType ?? null },
+      entry,
+      seeds,
+      excluded,
+      // Score-absteigend — die Reihenfolge ist die Anzeige-Reihenfolge der Chips.
+      suggestions: suggestions.sort((a, b) => b.score - a.score),
+      stats: { dynamicCalls },
+    },
+    truncated: totalReachable > p.node_limit, // "no silent caps"
+    stats: {
+      nodeCount: nodes.length,
+      edgeCount: edges.length,
+      totalReachable,
+      maxDepthReached,
+      dynamicCalls,
+    },
+    nodes,
+    edges,
+  };
+
+  traceCache.set(cacheKey, { payload, sql: result.sql });
+  return { payload, sql: result.sql, cached: false };
+}
+
+/** Anzeige-Labels der Einstiegspfad-Presets (Frontend lokalisiert über den Key). */
+const TRACE_ENTRY_LABELS = {
+  script: 'Script start',
+  layout_runtime: 'Runtime (layout/object triggers + buttons)',
+  layout_inbound: 'Inbound (scripts navigating here)',
+  layout_full: 'Runtime + inbound',
+};
+
+/**
+ * Einstiegspfad-Vorschau — eine Zeile je verfügbarem Preset mit Seed-Zähler und
+ * Namens-Stichprobe. Leere Liste = Startobjekt-Typ ohne v1-Trace (Controller → 422).
+ * @returns {Promise<{payload: Object, sql: string}>}
+ */
+async function getTraceEntries(ctx, p) {
+  const cacheKey = [ctx?.solution ?? '', p.start, p.start_file ?? ''].join('|');
+  const cached = traceEntriesCache.get(cacheKey);
+  if (cached) return { payload: cached.payload, sql: cached.sql, cached: true };
+
+  const result = await templateService.executeTemplate(
+    ctx,
+    'graph_trace_entries',
+    { start: p.start, start_file: p.start_file ?? null },
+    'report'
+  );
+
+  const entries = result.data.map((r) => {
+    let sample = [];
+    try {
+      sample = JSON.parse(r.seeds_sample ?? '[]');
+    } catch { /* defensiv — leere Stichprobe */ }
+    return {
+      entry: r.entry,
+      label: TRACE_ENTRY_LABELS[r.entry] ?? r.entry,
+      isDefault: r.is_default === true,
+      seedCount: numOf(r.seed_count),
+      seedsSample: sample,
+    };
+  });
+
+  const payload = { start: p.start, entries };
+  traceEntriesCache.set(cacheKey, { payload, sql: result.sql });
+  return { payload, sql: result.sql, cached: false };
 }
 
 /**
@@ -877,8 +1153,8 @@ async function executeOverview(ctx, p, cacheKey, dbg, enqueuedMs) {
 }
 
 /**
- * Community-Namen-Status (F5) für die Atlas-Statusleiste + Cluster-Verfügbarkeit
- * (F6-Failover). Mitglieder-gewichtete Abdeckung der semantischen Namen plus
+ * Community-Namen-Status für die Atlas-Statusleiste + Cluster-Verfügbarkeit
+ * (Failover). Mitglieder-gewichtete Abdeckung der semantischen Namen plus
  * Zähler (semantisch / benutzer-definiert). Liest CommunityNames (aktive
  * Partition) + CommunityAnnotation (Sidecar).
  *
@@ -999,7 +1275,7 @@ async function getCommunityStats(ctx) {
     named_communities: semantic,
     semantic_count: semantic,
     user_defined_count: userDefined,
-    // E1: mitglieder-gewichtet; null, wenn (noch) keine semantischen Namen.
+    // Mitglieder-gewichtet; null, wenn (noch) keine semantischen Namen.
     coverage_pct: semantic > 0 && memberAll > 0 ? memberNamed / memberAll : null,
     // ── Additiv: persistierte Run-Metriken + letzter Run ──
     // modularity/edges/seed/resolution kommen aus cluster_run.json (live nicht
@@ -1014,7 +1290,7 @@ async function getCommunityStats(ctx) {
 /**
  * Vollständige Community-Liste der aktiven Engine — node-
  * gewichtet sortiert (Member_Count DESC). Merge aus Copy (CommunityNames, READ_
- * ONLY) + Sidecar-Overlays (User-Annotation, R3-Restore), Muster wie
+ * ONLY) + Sidecar-Overlays (User-Annotation, Namens-Restore), Muster wie
  * `enrichCommunities`/`overlayAnnotations`.
  *
  * Namens-/Beschreibungs-Priorität (4-stufig):
@@ -1103,6 +1379,8 @@ function clearCache() {
   subgraphCache.clear();
   overviewCache.clear();
   depthProfileCache.clear();
+  traceCache.clear();
+  traceEntriesCache.clear();
   _communityTablesPresent.clear(); // nach Reload neu erkennen (P5-Tabellen könnten neu sein)
   _activeEngine.clear();           // aktive Engine nach Reload neu bestimmen
 }
@@ -1110,8 +1388,11 @@ function clearCache() {
 module.exports = {
   objectExists,
   objectFocusStatus,
+  objectTypeOf,
   getSubgraph,
   getNeighbors,
+  getTrace,
+  getTraceEntries,
   getOverview,
   getDepthProfile,
   getCommunityStats,
