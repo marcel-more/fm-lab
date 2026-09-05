@@ -118,6 +118,8 @@ export interface TestRunMemberResult {
   runStatus: TestRunStatus;
   resultState?: TestResultState;
   skipReason?: string;
+  /** Human-readable reason for a skip (server-side, English). */
+  skipMessage?: string;
   severity?: string | null;
   defaultResult?: TestRunDefaultResult;
   findings?: { truncated: boolean; rows: TestRunFinding[] };

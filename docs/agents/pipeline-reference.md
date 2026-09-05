@@ -5,7 +5,7 @@
 
 ## Pipeline phases
 
-The catalog is built by six numbered SQL phases (`sql/convert-xml/convert_xml_0N_<phase>.sql`),
+The catalog is built by six numbered SQL phases (`ingestion/sql/convert_xml_0N_<phase>.sql`),
 orchestrated by the `convert-xml` skill. Only **Phase 1 reads the XML** — all later
 phases work purely on the DuckDB tables (no `read_xml`), which keeps the parse load
 and memory peak low. After the six catalog phases the full run adds two batch-wide,
@@ -15,14 +15,15 @@ is unchanged*: XML is touched once in P1, everything downstream is pure DuckDB.
 
 | Phase | File | Reads | Produces |
 |---|---|---|---|
-| **P1 Extract** | `sql/convert-xml/convert_xml_01_extract.sql` | XML (`read_xml`) | Raw catalogs + raw-XML columns (`Step_XML`, `Object_XML`, `Parameters_XML`, …); UUID healing of intra-file duplicates (deterministic replacement UUIDs, census mapping); since schema 1.27.0 also `DDR_ChunkListContexts` (context TO + chunk count per DDR ChunkList anchor, including empty ChunkLists) |
-| **P1b Heal cascade** | `sql/convert-xml/convert_xml_01b_heal_cascade.sql` | tables only | Census-driven propagation of healed UUIDs into dependent foreign-UUID columns (`StepsForScripts.Script_UUID`, `ScriptTriggers.Script_UUID`, TO/BT/Field/VL carriers). Runs at the start of `run_phase2()` — after every P1 merge (multi-fed tables need the full picture), before any P2 statement; fail-hard; no-op without healed census rows |
-| **P2 Resolve** | `sql/convert-xml/convert_xml_02_resolve.sql` | tables only | Reference tables (XMLStep/Layout/Calc-Refs, MBS/GetSub, PluginUsages) |
-| **P3 Details** | `sql/convert-xml/convert_xml_03_details.sql` | tables only | Variable analysis (VariableUsages, VariablesCatalog); StepCalculations (every positioned calculation slot of a step); derived step/layout columns (`Opens_Window`, `L_Theme_Resolved_*`); since schema 1.25.0 also `LayoutObjectConditions` (one row per conditional-formatting rule, depth-anchored from `Object_XML` — the `Calculation_UUID` FK is filled in P4); since schema 1.27.0 also `LayoutObjectSymbols` (`{{…}}` symbol inventory from `Text_Content`, no where-used edges by design) |
-| **P3.5 Plugin Subname Recovery** | `sql/convert-xml/convert_xml_03b_plugin_subname_recovery.sql` | tables only | Completes `MBS_SubnameMap` from the calc **plain text**: FileMaker's DDR export drops NoRef chunks carrying the first string argument of container-plugin calls in some constellations (comment adjacent to the call, nested `MBS(…, MBS(…))`), so chunk-proximity pairing alone cannot resolve them. A string/comment-aware SQL lexer pairs the k-th `MBS` ref chunk with the k-th lexed `MBS` call (guard: chunk count must equal lexed count, otherwise NULL — never mispaired). Requalifies `PluginFunctionUsages` (`'MBS'` → `'MBS:<Sub>'`) and rebuilds affected `XMLCalcReferences` MBS rows. Runs after P3 (needs `StepCalculations`), before P4 (catalog reads the map). Remaining `'MBS'` rows = genuinely dynamic first arguments (`MBS($var; …)`) |
-| **P4 Catalog** | `sql/convert-xml/convert_xml_04_catalog.sql` | tables only | ObjectCatalog + ObjectLinks; since schema 1.22.0 also `CalculationsCatalog` (one row per calculation instance — union of DDR anchors and structural slots; registered as `Object_Type='Calculation'`, containment via `has_calculation`) and the derived view `v_calculation_links` (Calculation → target from the canonical owner edges, variant A) |
-| **P5 Homes** | `sql/convert-xml/convert_xml_05_homes.sql` | tables only | Cross-file resolution (ObjectHomes, TableOccurrenceResolution) + graph views (`LogicalLinks`, `ClusterEdges`) |
-| **P6 Validate** | `sql/convert-xml/convert_xml_06_validate.sql` | tables only | Plausibility/consistency check views (`v_check_*`), queried by the post-processor |
+| **P1 Extract** | `ingestion/sql/convert_xml_01_extract.sql` | XML (`read_xml`) | Raw catalogs + raw-XML columns (`Step_XML`, `Object_XML`, `Parameters_XML`, …); UUID healing of intra-file duplicates (deterministic replacement UUIDs, census mapping); since schema 1.27.0 also `DDR_ChunkListContexts` (context TO + chunk count per DDR ChunkList anchor, including empty ChunkLists) |
+| **P1b Heal cascade** | `ingestion/sql/convert_xml_01b_heal_cascade.sql` | tables only | Census-driven propagation of healed UUIDs into dependent foreign-UUID columns (`StepsForScripts.Script_UUID`, `ScriptTriggers.Script_UUID`, TO/BT/Field/VL carriers). Runs at the start of `run_phase2()` — after every P1 merge (multi-fed tables need the full picture), before any P2 statement; fail-hard; no-op without healed census rows |
+| **P1c Design-function retype** | `ingestion/sql/convert_xml_01c_design_function_retype.sql` | tables only | Re-types FileMaker **design functions** (`WindowNames`, `DatabaseNames`, `LayoutIDs`, `ValueListItems`, …) in `DDR_Calculations` from `PluginFunctionRef` to `FunctionRef`: the SaXML export tags them like plug-in calls, in the authoring client's language (`Fensternamen`, `WindowNames`), so they surfaced as synthetic `PluginFunction` objects. Positive name match only, against `DesignFunctionNames` — created in the same DuckDB session by the generated seed `ingestion/sql/generated/design_functions_seed.sql` (derived from `reference/fm_spec.duckdb` by `ingestion/gen_design_functions.sh`, all reference languages; `--check` = freshness gate, regenerated by `tools/fm-reference/pull-reference.sh`). Runs in `run_phase2()` right after the heal cascade, before any P2 statement; idempotent; soft-fail (missing seed / failed step → WARNING, design functions stay classified as plug-ins). Downstream unchanged: P2 `XMLCalcReferences` (`function`), P4 `BuiltinFunction` + `calls_function`, cluster projection excludes built-ins. P6 `v_check_design_function_retype` + import-report line |
+| **P2 Resolve** | `ingestion/sql/convert_xml_02_resolve.sql` | tables only | Reference tables (XMLStep/Layout/Calc-Refs, MBS/GetSub, PluginUsages) |
+| **P3 Details** | `ingestion/sql/convert_xml_03_details.sql` | tables only | Variable analysis (VariableUsages, VariablesCatalog); StepCalculations (every positioned calculation slot of a step); derived step/layout columns (`Opens_Window`, `L_Theme_Resolved_*`); since schema 1.25.0 also `LayoutObjectConditions` (one row per conditional-formatting rule, depth-anchored from `Object_XML` — the `Calculation_UUID` FK is filled in P4); since schema 1.27.0 also `LayoutObjectSymbols` (`{{…}}` symbol inventory from `Text_Content`, no where-used edges by design) |
+| **P3.5 Plugin Subname Recovery** | `ingestion/sql/convert_xml_03b_plugin_subname_recovery.sql` | tables only | Completes `MBS_SubnameMap` from the calc **plain text**: FileMaker's DDR export drops NoRef chunks carrying the first string argument of container-plugin calls in some constellations (comment adjacent to the call, nested `MBS(…, MBS(…))`), so chunk-proximity pairing alone cannot resolve them. A string/comment-aware SQL lexer pairs the k-th `MBS` ref chunk with the k-th lexed `MBS` call (guard: chunk count must equal lexed count, otherwise NULL — never mispaired). Requalifies `PluginFunctionUsages` (`'MBS'` → `'MBS:<Sub>'`) and rebuilds affected `XMLCalcReferences` MBS rows. Runs after P3 (needs `StepCalculations`), before P4 (catalog reads the map). Remaining `'MBS'` rows = genuinely dynamic first arguments (`MBS($var; …)`) |
+| **P4 Catalog** | `ingestion/sql/convert_xml_04_catalog.sql` | tables only | ObjectCatalog + ObjectLinks; since schema 1.22.0 also `CalculationsCatalog` (one row per calculation instance — union of DDR anchors and structural slots; registered as `Object_Type='Calculation'`, containment via `has_calculation`) and the derived view `v_calculation_links` (Calculation → target from the canonical owner edges, variant A) |
+| **P5 Homes** | `ingestion/sql/convert_xml_05_homes.sql` | tables only | Cross-file resolution (ObjectHomes, TableOccurrenceResolution) + graph views (`LogicalLinks`, `ClusterEdges`) |
+| **P6 Validate** | `ingestion/sql/convert_xml_06_validate.sql` | tables only | Plausibility/consistency check views (`v_check_*`), queried by the post-processor |
 
 P1 runs once per file; P2–P6 run once after all files are imported (batch-wide). The full
 runtime order is then **P1…P6 → Analysis Views → P7 Clustering → DB sync** (see the two
@@ -53,7 +54,7 @@ ALTER/UPDATE on source tables in P2 (breaks all slices); derived columns belong 
 
 ## Analysis views (static code analysis)
 
-After P6, a separate **batch-wide, table-only** phase runs `sql/create_analysis_views.sql`
+After P6, a separate **batch-wide, table-only** phase runs `ingestion/sql/create_analysis_views.sql`
 (hooked into the orchestrator analogous to P5/P6, in both the batch and single-file paths).
 It builds the foundation for the PMD-inspired rule bundles and is rebuilt on **every**
 convert-xml run (volatile, like the universal catalogs — never put it in P2). It produces:
@@ -150,12 +151,12 @@ in `READ_ONLY` mode against a *different* file, the master DB remains freely wri
 
 ```bash
 # Per file: Phase 1 (extract). Then once, batch-wide: Phases 2–6.
-duckdb db/fm_catalog.duckdb < sql/convert-xml/convert_xml_01_extract.sql   # P1, per file (set fm_xml)
-duckdb db/fm_catalog.duckdb < sql/convert-xml/convert_xml_02_resolve.sql   # P2
-duckdb db/fm_catalog.duckdb < sql/convert-xml/convert_xml_03_details.sql   # P3
-duckdb db/fm_catalog.duckdb < sql/convert-xml/convert_xml_04_catalog.sql   # P4
-duckdb db/fm_catalog.duckdb < sql/convert-xml/convert_xml_05_homes.sql     # P5
-duckdb db/fm_catalog.duckdb < sql/convert-xml/convert_xml_06_validate.sql  # P6
+duckdb db/fm_catalog.duckdb < ingestion/sql/convert_xml_01_extract.sql   # P1, per file (set fm_xml)
+duckdb db/fm_catalog.duckdb < ingestion/sql/convert_xml_02_resolve.sql   # P2
+duckdb db/fm_catalog.duckdb < ingestion/sql/convert_xml_03_details.sql   # P3
+duckdb db/fm_catalog.duckdb < ingestion/sql/convert_xml_04_catalog.sql   # P4
+duckdb db/fm_catalog.duckdb < ingestion/sql/convert_xml_05_homes.sql     # P5
+duckdb db/fm_catalog.duckdb < ingestion/sql/convert_xml_06_validate.sql  # P6
 ```
 
 ## Web frontend variant

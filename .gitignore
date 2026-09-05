@@ -21,12 +21,12 @@ db/*
 !db/.gitkeep
 # Reference DBs are shipped with the repo (FileMaker function/script step reference
 # and the curated plugin platform reference) — the *.duckdb glob above would
-# otherwise drop them, so allow each one back in explicitly.
+# otherwise drop them, so allow each one back in explicitly. fm_spec carries a
+# version sidecar; plugin_spec embeds its version (reference_meta) and has none.
 # SOURCES.md (attribution, sibling of the DBs)
 !reference/fm_spec.duckdb
 !reference/fm_spec.meta.json
 !reference/plugin_spec.duckdb
-!reference/plugin_spec.meta.json
 !reference/SOURCES.md
 
 # XML inbox of the default solution (multi-solution layout). Ship the empty inbox

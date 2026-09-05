@@ -10,7 +10,7 @@ const environment = require('../config/environment');
 /**
  * XML-Convert Bridge
  *
- * Spawnt `tools/convert_fm_xml.sh --batch --quiet` und parst dessen NDJSON-Output
+ * Spawnt `ingestion/convert_fm_xml.sh --batch --quiet` und parst dessen NDJSON-Output
  * Zeile für Zeile zu Events. Wird von `POST /api/xml/convert` (SSE) genutzt.
  * Verwaltet außerdem den persistierten Run-Record
  * (solutions/<id>/state/last_xml_run.json) und liefert den Status der
@@ -24,7 +24,7 @@ const environment = require('../config/environment');
 const solutions = require('../config/solutions');
 
 const REPO_ROOT = settingsStore.resolveRepoRoot();
-const SCRIPT_PATH = path.join(REPO_ROOT, 'tools', 'convert_fm_xml.sh');
+const SCRIPT_PATH = path.join(REPO_ROOT, 'ingestion', 'convert_fm_xml.sh');
 // Pfade PER LÖSUNG: jede Funktion nimmt die Ziel-Lösung explizit
 // entgegen; ohne Argument gilt die aktive Lösung (Server-Default). Bewusst
 // Funktionen statt Konstanten, damit ein Lösungswechsel ohne Neustart greift.

@@ -33,8 +33,8 @@ DuckDB was chosen for its combination of XML parsing, powerful analytical SQL, i
 
 The [katana-engine](katana-engine.md) converter is deliberately thin on dependencies:
 
-- **Bash** shell scripts (`tools/convert_fm_xml.sh` and helpers) orchestrate the conversion phases; they are written to run on the stock macOS bash 3.2 as well as Linux
-- **DuckDB SQL templates** (`sql/convert-xml/`) contain the actual extraction and resolution logic, executed by the DuckDB CLI with the webbed extension loaded
+- **Bash** shell scripts (`ingestion/convert_fm_xml.sh` and helpers) orchestrate the conversion phases; they are written to run on the stock macOS bash 3.2 as well as Linux
+- **DuckDB SQL templates** (`ingestion/sql/`) contain the actual extraction and resolution logic, executed by the DuckDB CLI with the webbed extension loaded
 
 This keeps the pipeline portable: any machine with a shell and the DuckDB CLI can convert XML exports.
 

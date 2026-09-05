@@ -34,7 +34,8 @@ The table names mirror the XML branches of the corresponding object types:
 - **PrivilegeSetFieldAccess** — Custom Record Privileges, field level (per Privilege Set × table × field; per-field access mode, only for tables with `Fields access="Custom"`)
 - **PrivilegeSetObjectAccess** — Custom Privileges for Layouts/ValueLists/Scripts (per Privilege Set × object; per-object access mode, Layout records-access, class create flag)
 - **DDR_ScriptSteps** — Human-readable script steps (optional, only when DDR-Info is available)
-- **DDR_Calculations** — Formula chunks for dependency analysis (optional, only when DDR-Info is available)
+- **DDR_Calculations** — Formula chunks for dependency analysis (optional, only when DDR-Info is available). `Chunk_Type` is canonicalized once after extraction (phase 1c): FileMaker's **design functions** (`WindowNames`/`Fensternamen`, `DatabaseNames`, `LayoutIDs`, `ValueListItems`, …) arrive as `PluginFunctionRef` — the chunk type otherwise used for plug-in calls — and are re-typed to `FunctionRef` by a positive name match against `DesignFunctionNames` (the `type` attribute inside `Chunk_Content` is rewritten too, the token text stays as exported); every other chunk keeps its exported type
+- **DesignFunctionNames** — Solution-independent name list of FileMaker's design functions in every reference language (`Function_ID`, `Canonical_Name`, `Language`, `Name`, `Name_XML` = the `&#xHH;` char-ref form of non-ASCII names as the DOM chunk path serializes them; NULL when identical). Rebuilt on every import by the generated seed `ingestion/sql/generated/design_functions_seed.sql` (derived from `reference/fm_spec.duckdb` by `ingestion/gen_design_functions.sh`). The positive match list of the phase-1c chunk retype and of `v_check_design_function_retype`; not an object catalog — never joins into ObjectCatalog/ObjectLinks
 - **DDR_ChunkListContexts** — One row per ChunkList anchor of the DDR_INFO part (schema 1.27.0), **including empty ChunkLists** (`Chunk_Count = 0` — those leave no row in DDR_Calculations because they have no chunks; FileMaker writes them for typed layout calculations with an expression, losing all references). Carries the anchor's context TO (`Context_TO_ID/Name/UUID` — the direct `TableOccurrenceReference` child next to the `ChunkList`). Join anchors ALWAYS via `Calc_UUID` (anchor name `_<Owner-UUID>_<Slot>`), never via `Calc_Hash`: identical formulas share the hash but each anchor carries its own context TO. Consumers: field-name resolution against the context TO (P2), display-calculation enrichment + empty-ChunkList fallback instances (P4), `v_check_display_empty_chunklist` (P6)
 - **PasteIndexList** — List of object IDs for copy/paste operations
 - **BaseDirectoryCatalog** — Base directory of the FileMaker file
@@ -259,7 +260,7 @@ GROUP BY cf.CF_Name;
 
 **Supported object types:**
 - BaseTable, TableOccurrence, Field, Relationship
-- Script, ScriptStep, Layout, LayoutObject (22 subtypes)
+- Script, ScriptStep, Layout, LayoutObject (26 subtypes)
 - CustomFunction, ValueList, Account, PrivilegeSet
 - Theme, CustomMenu, ExtendedPrivilege, ScriptTrigger
 - ExternalDataSource, BaseDirectory, LayoutPart
@@ -333,15 +334,16 @@ Authoritative list incl. semantics: **`LinkRoleRegistry` table** — query it wh
 - File → Account (auto_login_account) — auto-login account from the file options (security-relevant; unresolved when the referenced account does not exist)
 - Owner → Calculation (has_calculation, structural/containment) — every calculation instance hangs on its owner (Field/ScriptStep/LayoutObject/Layout/File/CustomFunction/CustomMenu[Item]/PrivilegeSet); Link_Subrole = `Calc_Role[:Calc_Index]`. **Never counts as usage** (variant A: the usage semantics stay on the owner-projected edges; Calculation → target is only the derived view `v_calculation_links`); being structural it also never enters LogicalLinks/ClusterEdges
 - Layout/File → Field/CustomFunction/BuiltinFunction/PluginFunction (reads_field, calls_customfunction, calls_function, calls_pluginfunction) — layout-/file-level **script-trigger parameter** calcs (schema 1.22.0, harvested from `ScriptTriggers.Trigger_XML`); Link_Subrole = `ScriptTrigger_<id>`. Closes the where-used gap for objects referenced only in a layout-/file-trigger parameter
-- PluginFunction naming: qualified as `MBS:<Sub>::<Sub>` (e.g. `MBS:List.Sort::List.Sort`); PluginComponents aggregate as `MBS::<Component>` via `groups_into`. SubNames resolve in **two stages**: chunk-proximity pairing in P2 (`MBS_SubnameMap`) plus a plain-text recovery pass in P3.5 (FileMaker's DDR export drops the argument NoRef chunk when a comment sits next to the call or calls nest — the lexer recovers those from the calc CDATA). A `PluginFunctionUsages.Plugin_Function_Name` still reading bare `'MBS'` therefore means a **genuinely dynamic first argument** (`MBS($var; …)`) — such calls have no catalog object and stay unlinked by design
+- PluginFunction naming: qualified as `MBS:<Sub>::<Sub>` (e.g. `MBS:List.Sort::List.Sort`); PluginComponents aggregate as `MBS::<Component>` via `groups_into`. SubNames resolve in **two stages**: chunk-proximity pairing in P2 (`MBS_SubnameMap`) plus a plain-text recovery pass in P3.5 (FileMaker's DDR export drops the argument NoRef chunk when a comment sits next to the call or calls nest — the lexer recovers those from the calc CDATA). A `PluginFunctionUsages.Plugin_Function_Name` still reading bare `'MBS'` therefore means a **genuinely dynamic first argument** (`MBS($var; …)`) — such calls have no catalog object and stay unlinked by design. **Design functions are never PluginFunctions:** the SaXML export tags `WindowNames`, `DatabaseNames`, `LayoutIDs`, `ValueListItems`, … as `PluginFunctionRef` in the authoring client's language (`Fensternamen`); phase 1c re-types those chunks, so they register as `BuiltinFunction` (raw token, canonicalized at query time like the localized Get parameters) with `calls_function` edges. The chunk type also covers plug-ins without a namespace and unresolvable identifiers (deleted custom functions) — those stay PluginFunction
 
 ## Reference attachments (`ref` / `plugref`) — platform & OS tables
 
 Not part of the solution catalog: two solution-independent reference DBs the
 REST-API attaches read-only (`ref` = `reference/fm_spec.duckdb`, `plugref` =
 `reference/plugin_spec.duckdb`; the fm-test direct path attaches them itself).
-Full schema: fm-spec repo `db/schema.md` (fm_spec) and
-`tools/plugin-spec/derive_mbs.py` (plugin_spec). The platform/OS layer in
+Full schema: fm-spec repo `db/schema.md` (fm_spec) and the schema page
+`docs/fm-lab/schema/plugin-spec.md` (plugin_spec — bundled with every release,
+provenance in its `reference_meta` table). The platform/OS layer in
 brief:
 
 - **`ref.step_compat`** — Claris runtime tri-state per step (NULL = Partial,

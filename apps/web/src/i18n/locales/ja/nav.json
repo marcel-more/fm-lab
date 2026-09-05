@@ -145,6 +145,7 @@
     "noMatch": "現在のフィルターに一致するテストはありません。",
     "typeFilterAria": "テストタイプで絞り込む",
     "memberSkipped": "スキップ",
+    "memberSkippedObjectType": "対象外",
     "findingsFiltered": "{{total}} 件中 {{shown}} 件の検出結果が検索に一致します。",
     "rerun": "再実行",
     "profileLabel": "プロファイル",

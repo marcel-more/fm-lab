@@ -1,7 +1,7 @@
 # Query Cookbook — SQL Patterns & DuckDB Idioms
 
 > Referenced from CLAUDE.md §8. Canonical query patterns for the object catalog
-> plus DuckDB-specific syntax hints. More prepared queries: `sql/sample_queries.sql`.
+> plus DuckDB-specific syntax hints. More prepared queries: `docs/agents/sql/sample_queries.sql`.
 
 ## DuckDB commands for this project
 
@@ -10,7 +10,7 @@
 duckdb db/fm_catalog.duckdb -c "SELECT * FROM ScriptCatalog"
 
 # Execute a prepared query file
-duckdb db/fm_catalog.duckdb < sql/list_all_scripts.sql
+duckdb db/fm_catalog.duckdb < docs/agents/sql/sample_queries.sql
 ```
 
 Reminder (rule from CLAUDE.md §2): one plain command per call — no subshells,

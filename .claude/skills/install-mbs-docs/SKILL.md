@@ -42,10 +42,11 @@ When invoked, the skill performs these steps:
 5. **Extract** - Unzip and validate the docset structure
 6. **Install** - Copy documentation files to `docs/mbs/` directory
 7. **Parse Components** - Analyze MBS functions and create exceptions table
-8. **Derive Plugin Platform Map** - Regenerate `reference/plugin_spec.duckdb`
-   from the fresh mirror (`tools/plugin-spec/derive_mbs.py`) — feeds the
-   plug-in platform test members and the PluginFunction platform badge;
-   non-fatal if unavailable (members then report `skipped`)
+8. **Plugin Platform Map** - `reference/plugin_spec.duckdb` ships bundled with
+   every fm-lab release and is kept as is; it feeds the plug-in platform test
+   members and the PluginFunction platform badge (members report `skipped`
+   when the file is missing). Only a maintainer checkout with the deriver
+   tooling present re-derives it from the fresh mirror — non-fatal either way
 9. **Version Marker** - Store version information for future comparisons
 10. **Cleanup** - Remove all temporary files automatically
 11. **Report** - Provide clear success or error message
@@ -64,11 +65,11 @@ This skill uses bundled scripts that handle all operations:
     primary component plus the full list)
   - Creates `reference/mbs_component_exceptions.csv`
   - Called automatically by installation script
-- **Plugin-Spec Deriver**: `tools/plugin-spec/derive_mbs.py` (project tool)
+- **Plugin-Spec Deriver** (maintainer tooling, not part of the release)
   - Parses the per-function platform tables, old names and deprecation
     markers into `reference/plugin_spec.duckdb` (ATTACH alias `plugref`)
-  - Called automatically by the installation script after each install/update;
-    can be re-run manually at any time
+  - The installation script runs it only where it is present; a public
+    install keeps the bundled database from the release
 
 ## Working Process
 

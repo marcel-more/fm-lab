@@ -63,7 +63,10 @@ duckdb db/fm_catalog.duckdb \
 - Solution scope: set NO variables (unset `getvariable` → NULL → predicates
   collapse; behavior identical to the dashboard).
 - Object scope: `scope_uuids = '<uuid>'` **plus** `file` (identity is
-  (UUID, File_Name) — clones!).
+  (UUID, File_Name) — clones!). Run only the members whose declared
+  `objectTypes` / `@object_types` include the object's type; report the
+  others as `skipped` / `object-type` (never as 0 = passed). Members without
+  a declared list are universal.
 - Object-list scope: CSV in `scope_uuids`; set `file` only when all objects
   come from one file.
 - The `limit` variable stays unset (SQL default 500) unless the user asks.

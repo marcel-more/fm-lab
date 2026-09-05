@@ -22,6 +22,11 @@ Knobs (env):
 | `FMLAB_CLUSTER_ENGINE`     | `auto`  | `auto` \| `louvain` \| `leiden`                                |
 | `FMLAB_CLUSTER_RESOLUTION` | `1.0`   | Louvain/Leiden resolution (higher → more, smaller communities) |
 | `FMLAB_CLUSTER_SEED`       | `42`    | PRNG seed — fixed so colors are reproducible between runs      |
+
+The three defaults above apply only when the solution has **no persisted sweep winner**:
+`cluster.sh` reads `solutions/<id>/state/cluster.json` (written by `fm-graph-cluster`) first —
+the same reader (`tools/lib/cluster_config.sh`) the pipeline's Phase 7 uses — so a bare run
+re-partitions at the granularity that was actually chosen; the env knobs override it.
 | `FMLAB_CLUSTER_NO_SYNC`    | –       | set `1` to skip the rest-api copy + `/api/admin/reload`        |
 
 Engine selection (`auto`): **Leiden** when `python3` + `igraph` are importable,
@@ -56,12 +61,12 @@ builtins + orphans removed) — so cluster colors match the shown topology.
 ### Logical edge source — the `ClusterEdges` view (`graph_export_logical.sql` ≥ 2.0.0)
 
 The cleaned edge set is a **DuckDB view**, not inline SQL. `convert-xml` Phase 5
-([sql/convert-xml/convert_xml_05_homes.sql](../../sql/convert-xml/convert_xml_05_homes.sql))
+([ingestion/sql/convert_xml_05_homes.sql](../../ingestion/sql/convert_xml_05_homes.sql))
 creates two views as a single source of truth:
 
 - **`LogicalLinks`** — operational links, sub-objects hoisted to their container,
   containment scaffold + orphans removed, `(source,target)`-deduped. **With** builtins.
-  Canonical definition: [rest-api/templates/sql/graph_logical_links.sql](../../rest-api/templates/sql/graph_logical_links.sql).
+  Canonical definition: [ingestion/sql/convert_xml_05_homes.sql](../../ingestion/sql/convert_xml_05_homes.sql) (P5; the API template graph_logical_links.sql is a read-only consumer stub).
 - **`ClusterEdges`** — `LogicalLinks` minus `BuiltinFunction` endpoints. This is
   the exact engine input and the canonical **logical degree** definition the
   `fm-graph-cluster` skill uses for its hub analysis.
@@ -79,13 +84,14 @@ CommunityNames(Community, Engine, Member_Count, Dominant_Type, Dominant_File,
                Top_Member_UUID, Top_Member_Label, Sample_Labels[],
                Heuristic_Name,        -- always (deterministic, no LLM)
                Semantic_Name,         -- optional naming step, nullable
-               Semantic_Description)  -- optional, nullable (deep-research only)
+               Semantic_Description)  -- optional, nullable (fm-deep-research)
 ```
 
 Heuristic name = `Dominant_File · Top_Member_Label (+N)`. Display in the Explorer
 is `COALESCE(Semantic_Name, Heuristic_Name)`. The optional semantic-naming step
-(reads the hint columns, fills `Semantic_Name` — and `Semantic_Description` in
-deep-research mode) is not required — the explorer works fully on heuristic names.
+(`fm-graph-cluster` reads the hint columns and fills `Semantic_Name`; `fm-deep-research`
+adds `Semantic_Description` for the segments it scans) is not required — the explorer
+works fully on heuristic names.
 
 ## Semantic naming via `fm-graph-cluster`
 

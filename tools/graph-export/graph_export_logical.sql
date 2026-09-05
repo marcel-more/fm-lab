@@ -39,8 +39,8 @@
 -- 2.0.0 — View-Read statt Inline-CTE
 -- ============================================================================
 -- Der Kantensatz ist ab v2 als VIEW ClusterEdges materialisiert (in convert-xml
--- Phase 5, sql/convert-xml/convert_xml_05_homes.sql). ClusterEdges =
--- LogicalLinks (kanonisch, graph_logical_links.sql) minus Builtins, (a,b)-dedupl.
+-- Phase 5, ingestion/sql/convert_xml_05_homes.sql — dort auch die kanonische
+-- LogicalLinks-Definition). ClusterEdges = LogicalLinks minus Builtins, (a,b)-dedupl.
 -- Dieselbe View speist auch die Skill-Grad-/Hub-Analyse und perspektivisch den
 -- Explorer — EINE Single Source of Truth, keine 3-fach inline duplizierte Logik.
 --

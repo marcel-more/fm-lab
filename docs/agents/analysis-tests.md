@@ -81,8 +81,11 @@ determinacy, the M5a/M5b textual checks):
 
 ## Consistency rules (checked at load, reported as `validation`)
 
-M1 member resolves · M2 member has analysis/@default_result · M3
-test.objectTypes ⊆ every member's objectTypes · M4 outputs covered (warning) ·
+M1 member resolves · M2 member has analysis/@default_result · M3 every
+`test.objectTypes` entry is supported by at least one member (the union — a
+test may span scripts, layouts and calculations; in object scope the runner
+skips the members that do not declare the object's type, `skipReason:
+"object-type"`) · M4 outputs covered (warning) ·
 M5/M5a/M5b scope declarations vs. SQL text (warnings) · M6 defaultResult
 dataset exists. Errors make a test non-runnable (still listed with
 `validation.status: "errors"`); warnings only badge it.
@@ -96,6 +99,12 @@ GET /api/tests/:id/run                ?uuid=&file=&uuids=&cluster=&object_type=
                                       &include=findings&findingsLimit=20
 GET /api/tests/:id/run/:memberIndex   single member
 ```
+
+`object_type` is optional in object scope — the server resolves it from
+`ObjectCatalog` when omitted. Members whose declared object types do not
+include it come back as `runStatus: "skipped"` with `skipReason:
+"object-type"` (single-member runs included); never read such a skip as a
+pass.
 
 `include=findings` adds severity-sorted (`error`→`warning`→`info`), capped
 findings rows per member with value > 0 — the agentic mode: the default result

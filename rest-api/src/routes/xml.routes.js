@@ -7,7 +7,7 @@ const xmlController = require('../controllers/xml.controller');
  *
  * Diese Routen steuern den XML→DuckDB-Konvertierungs-Prozess aus dem Web-
  * Frontend heraus (Sub-Dashboard "xml_convert"). Die eigentliche Logik bleibt
- * im Bash-Skript tools/convert_fm_xml.sh; der Service spawnt es im
+ * im Bash-Skript ingestion/convert_fm_xml.sh; der Service spawnt es im
  * `--quiet`-Modus und streamt dessen NDJSON-Events als SSE durch.
  */
 

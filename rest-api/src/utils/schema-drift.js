@@ -38,7 +38,7 @@ function currentSchemaVersion() {
   // zeigen und wird daher nur als Fallback herangezogen).
   const projectRoot = path.resolve(REST_API_ROOT, '..');
   const candidates = [
-    path.join(projectRoot, 'sql', 'convert-xml', 'convert_xml_01_extract.sql'),
+    path.join(projectRoot, 'ingestion', 'sql', 'convert_xml_01_extract.sql'),
     path.resolve(REST_API_ROOT, environment.xml.convertScript),
   ];
   for (const sqlPath of candidates) {

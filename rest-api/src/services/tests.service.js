@@ -232,6 +232,7 @@ function checkScopeSql(sqlText, anchor, label, validation) {
 async function validateTest(test) {
   const validation = { status: 'ok', errors: [], warnings: [] };
   const memberObjectTypeSets = [];
+  let universalMembers = 0; // members without a declared type list
   const memberOutputTypes = new Set();
 
   for (let i = 0; i < test.members.length; i++) {
@@ -250,6 +251,8 @@ async function validateTest(test) {
       }
       if (Array.isArray(analysis.objectTypes) && analysis.objectTypes.length) {
         memberObjectTypeSets.push(new Set(analysis.objectTypes));
+      } else {
+        universalMembers += 1;
       }
       for (const t of analysis.outputTypes || []) memberOutputTypes.add(t);
       // M6 — defaultResult.dataset must exist in the manifest's datasets
@@ -292,6 +295,8 @@ async function validateTest(test) {
       }
       if (Array.isArray(meta.object_types) && meta.object_types.length) {
         memberObjectTypeSets.push(new Set(meta.object_types));
+      } else {
+        universalMembers += 1;
       }
       for (const t of meta.output_types || []) memberOutputTypes.add(t);
       const scopes = meta.scope || [];
@@ -301,14 +306,19 @@ async function validateTest(test) {
     }
   }
 
-  // M3 — test.objectTypes ⊆ ∩ member.objectTypes (members without a declared
-  // list are universal and constrain nothing).
-  if (test.objectTypes.length && memberObjectTypeSets.length) {
+  // M3 — test.objectTypes ⊆ ∪ member.objectTypes: every declared type needs at
+  // least ONE member that supports it. The intersection is deliberately NOT
+  // required — a test may bundle members with disjoint type sets (a marker
+  // family across scripts, layouts and calculations); in object scope the
+  // runner skips the members that do not declare the object's type
+  // (memberObjectTypeSkip, skipReason 'object-type'). Members without a
+  // declared list are universal: they support every type.
+  if (test.objectTypes.length && memberObjectTypeSets.length && universalMembers === 0) {
     for (const t of test.objectTypes) {
-      const inAll = memberObjectTypeSets.every(s => s.has(t));
-      if (!inAll) {
+      const inAny = memberObjectTypeSets.some(s => s.has(t));
+      if (!inAny) {
         pushIssue(validation, 'error', 'M3',
-          `test.objectTypes contains "${t}" but not every member supports it`);
+          `test.objectTypes contains "${t}" but no member supports it`);
       }
     }
   }
@@ -746,7 +756,14 @@ async function normalizeScope(ctx, query = {}) {
     context.scope = 'solution';
   }
   if (file) context.file = file;
-  if (query.object_type) context.object_type = String(query.object_type);
+  if (query.object_type) {
+    context.object_type = String(query.object_type);
+  } else if (context.scope === 'object' && ctx) {
+    // Object scope without a declared type: resolve it from the catalog so the
+    // object-type skip (runMember) works for every client, not only the tab.
+    const resolved = await lookupObjectType(ctx, uuid, file);
+    if (resolved) context.object_type = resolved;
+  }
   return { context, params };
 }
 
@@ -809,6 +826,60 @@ function findingsRowAction(layout) {
 // (Result Envelope v1) — re-exported below so existing consumers keep working.
 const { deriveResultState, catalogMeta } = resultsService;
 
+/**
+ * Object-scope applicability of one member — the runtime half of the M3
+ * union rule. A member that declares object types (`analysis.objectTypes`
+ * resp. `@object_types`) is not applicable to an object of another type: its
+ * SQL would run against that UUID and return a meaningless 0, which the tab
+ * renders as "passed". Returns null when the member applies or the object's
+ * type is unknown, otherwise the skip payload. Members without a declared
+ * list are universal.
+ */
+function memberObjectTypeSkip(declaredTypes, objectType) {
+  if (!objectType) return null;
+  const types = Array.isArray(declaredTypes) ? declaredTypes.filter(Boolean) : [];
+  if (types.length === 0 || types.includes(objectType)) return null;
+  return {
+    skipReason: 'object-type',
+    skipMessage: `Not applicable to a ${objectType} — this member checks ${types.join(', ')} objects.`,
+  };
+}
+
+/** Declared object types of a member (manifest / SQL frontmatter); [] = universal. */
+async function resolveMemberObjectTypes(member, bundle) {
+  try {
+    if (member.kind === 'dashboard') {
+      const b = bundle || await dashboardService.getBundle(member.ref);
+      return (b.manifest.analysis && b.manifest.analysis.objectTypes) || [];
+    }
+    const meta = await templateService.getTemplateMeta(member.ref, 'query');
+    return (meta && meta.object_types) || [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Catalog type of one object. The tests tab sends `object_type` along with
+ * the UUID; the skill/CLI path sends only the UUID — resolve it so the
+ * object-type skip works for every client. Best effort: an unknown UUID (or
+ * a catalog without the row) yields null → no member is skipped.
+ */
+async function lookupObjectType(ctx, uuid, file) {
+  const esc = s => String(s).replace(/'/g, "''");
+  const fileFilter = file ? ` AND File_Name = '${esc(file)}'` : '';
+  try {
+    const r = await db.executeQuery(
+      ctx,
+      `SELECT Object_Type FROM ObjectCatalog WHERE Object_UUID = '${esc(uuid)}'${fileFilter} LIMIT 1`,
+    );
+    const row = r && r.rows && r.rows[0];
+    return row && row.Object_Type ? String(row.Object_Type) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Best-effort member title for run/skipped rows (bundle caches make this cheap). */
 async function resolveMemberTitle(member) {
   try {
@@ -852,7 +923,7 @@ async function runMember(ctx, member, scopeParams, options) {
           status: 'skipped',
           runStatus: 'skipped',
           skipReason: 'missing-plugin-spec',
-          skipMessage: 'Plugin platform map not available — install the MBS docs mirror (install-mbs-docs) to derive reference/plugin_spec.duckdb.',
+          skipMessage: 'Plugin platform map not available — reference/plugin_spec.duckdb is missing. It ships with every fm-lab release; restore the file from the release checkout.',
           resultState: 'skipped',
         };
       }
@@ -871,6 +942,24 @@ async function runMember(ctx, member, scopeParams, options) {
         };
       }
     } catch { /* bundle resolution problems surface in runOne below */ }
+  }
+  // Object scope: a member declaring other object types than the target's is
+  // not applicable — skip it (reason 'object-type') instead of reporting a
+  // meaningless 0. The M3 union rule admits such members on purpose (a test
+  // may span scripts, layouts and calculations); this is its runtime half and
+  // applies to single-member runs as well.
+  if (options.objectType) {
+    const skip = memberObjectTypeSkip(await resolveMemberObjectTypes(member, bundle), options.objectType);
+    if (skip) {
+      return {
+        ...base,
+        title: (bundle && bundle.manifest.title) || await resolveMemberTitle(member),
+        status: 'skipped',
+        runStatus: 'skipped',
+        ...skip,
+        resultState: 'skipped',
+      };
+    }
   }
   const envelope = await resultsService.runOne(ctx, { kind: member.kind, id: member.ref }, {
     params,
@@ -933,6 +1022,8 @@ async function runTest(ctx, test, query = {}, memberIndex = null) {
     // Only unscoped (solution) runs represent the same truth as the dashboard
     // overview chips — those write through into the shared results cache.
     cacheable: context.scope === 'solution',
+    // Object scope only: drives the per-member object-type skip (runMember).
+    objectType: context.scope === 'object' ? (context.object_type || null) : null,
   };
   // Optional bundle profile narrows the member set. Unknown ids are a
   // hard error, never a silent fallback to "all". Members outside the profile
@@ -1086,6 +1177,7 @@ module.exports = {
   // exported for tests
   normalizeScope,
   validateTest,
+  memberObjectTypeSkip,
   findingsRowAction,
   deriveResultState,
 };

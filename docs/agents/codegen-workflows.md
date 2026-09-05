@@ -83,7 +83,7 @@ Generate the artifact directly, under these ground rules:
    `step_repeat_groups` (container, per-item template, derived counts) —
    the `step_xml_map` main template shows a single-instance exemplar only.
    The canonical script text notation is **v0.2** (rules T1–T9 incl. the
-   repeat-group form, `project/fm-spec/4-standard/script-text-notation.md`);
+   repeat-group form, as documented in the `fm-generate-script` skill);
    drafts written in the pre-v0.2 flat form are still accepted by
    `fm-generate-script`, canonical output uses the group form.
 3. **Verify references:** every script, layout, field, TO or value list the artifact
@@ -132,7 +132,9 @@ Constraints for dashboard SQL (REST API layer):
 ## B2. Custom queries & analysis SQL (converter, datasets, tools)
 
 - DuckDB syntax; verify uncertain functions/syntax via `duckdb-skills:duckdb-docs`
-  instead of guessing. Reusable queries live in `sql/` (see `query-cookbook.md`).
+  instead of guessing. Reusable queries: promote into
+  `rest-api/templates/sql-custom/`; the cookbook lives at
+  `docs/agents/sql/sample_queries.sql` (see `query-cookbook.md`).
 - Locale independence: never gate on `Step_Name`/`Step/@name` literals — use `Step_ID`
   (`ScriptStepRoleMap`, `step_metadata`).
 - Pipeline placement rules: P1 is the only XML reader; no schema changes/UPDATEs on

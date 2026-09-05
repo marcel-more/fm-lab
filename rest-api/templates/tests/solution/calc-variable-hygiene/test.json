@@ -1,6 +1,6 @@
 {
   "id": "calc-variable-hygiene",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "title": "Calculation and Variable Hygiene",
   "description": "Checks on the calculation and variable layer: formulas that consist entirely of a comment and therefore never evaluate, comment markers that cannot nest, variables written but never read, variables read but never written, and variable names containing spaces. Covers field calculations, auto-enter and validation formulas, custom functions and script-step calculations.",
   "keywords": [
@@ -11,7 +11,9 @@
   ],
   "testType": "error-check",
   "objectTypes": [
-    "Script"
+    "Script",
+    "CustomFunction",
+    "Field"
   ],
   "scopes": [
     "solution",

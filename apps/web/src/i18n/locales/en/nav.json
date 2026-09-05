@@ -159,6 +159,7 @@
     "noMatch": "No tests match the current filter.",
     "typeFilterAria": "Filter by test type",
     "memberSkipped": "Skipped",
+    "memberSkippedObjectType": "Not applicable",
     "findingsFiltered": "{{shown}} of {{total}} findings match the search.",
     "rerun": "Re-run",
     "profileLabel": "Profile",

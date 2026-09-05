@@ -3,7 +3,7 @@
 Part of the [FM-Lab schema](../Schema.md) · Layouts · `db/fm_catalog.duckdb` (solution catalog)
 **XML source:** [XML LayoutCatalog](../../xml/catalogs/XML%20LayoutCatalog.md)
 
-Every object on every layout — all 22 object types, from edit boxes and buttons to portals, tab controls and web viewers — with the real container hierarchy: `Parent_Object_ID` and `Nesting_Level` reproduce the nesting of tab panels, slide panels, groups and popovers (nesting depth 5 occurs in practice). Position (`Bounds_*`), stacking order (`Z_Order`) and the frequently needed formula texts (hide condition, tooltip, button label, trigger parameter) are extracted into columns.
+Every object on every layout — all 26 object types, from edit boxes and buttons to portals, tab controls and web viewers — with the real container hierarchy: `Parent_Object_ID` and `Nesting_Level` reproduce the nesting of tab panels, slide panels, groups and popovers (nesting depth 5 occurs in practice). Position (`Bounds_*`), stacking order (`Z_Order`) and the frequently needed formula texts (hide condition, tooltip, button label, trigger parameter) are extracted into columns.
 
 ## Columns
 

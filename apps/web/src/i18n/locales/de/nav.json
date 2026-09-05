@@ -159,6 +159,7 @@
     "noMatch": "Keine Tests passen zum aktuellen Filter.",
     "typeFilterAria": "Nach Test-Typ filtern",
     "memberSkipped": "Übersprungen",
+    "memberSkippedObjectType": "Nicht anwendbar",
     "findingsFiltered": "{{shown}} von {{total}} Findings passen zur Suche.",
     "rerun": "Erneut ausführen",
     "profileLabel": "Profil",

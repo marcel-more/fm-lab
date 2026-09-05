@@ -145,6 +145,7 @@
     "noMatch": "没有符合当前筛选条件的测试。",
     "typeFilterAria": "按测试类型筛选",
     "memberSkipped": "已跳过",
+    "memberSkippedObjectType": "不适用",
     "findingsFiltered": "{{total}} 条发现中有 {{shown}} 条与搜索匹配。",
     "rerun": "重新运行",
     "profileLabel": "配置",

@@ -174,7 +174,7 @@ cmd_create() {
     mkdir -p "$SOLUTIONS_ROOT/$id/xml" "$SOLUTIONS_ROOT/$id/db" "$SOLUTIONS_ROOT/$id/state/logs"
     write_manifest "$id" "$display"
     echo "Created $SOLUTIONS_ROOT/$id/ (uuid=$(manifest_get "$SOLUTIONS_ROOT/$id/solution.json" uuid))"
-    echo "XML inbox: $SOLUTIONS_ROOT/$id/xml/ — import with: tools/convert_fm_xml.sh --batch --solution $id"
+    echo "XML inbox: $SOLUTIONS_ROOT/$id/xml/ — import with: ingestion/convert_fm_xml.sh --batch --solution $id"
 }
 
 cmd_rename() { # bundle rename (folder/id) — the manifest UUID keeps the identity

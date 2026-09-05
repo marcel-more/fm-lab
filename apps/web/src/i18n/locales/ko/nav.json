@@ -145,6 +145,7 @@
     "noMatch": "현재 필터와 일치하는 테스트가 없습니다.",
     "typeFilterAria": "테스트 유형으로 필터링",
     "memberSkipped": "건너뜀",
+    "memberSkippedObjectType": "해당 없음",
     "findingsFiltered": "{{total}}개 중 {{shown}}개의 발견 항목이 검색과 일치합니다.",
     "rerun": "다시 실행",
     "profileLabel": "프로필",

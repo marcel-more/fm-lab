@@ -32,7 +32,7 @@
 - Code analysis
 - Code generation
 - System prompt
-- Skills
+- [Skills](skills/Skills.md)
 
 ## Integrations
 
@@ -59,4 +59,4 @@
 - [Other projects](Wiki/Other%20projects.md)
 
 **Note:** This documentation is a work in progress and will evolve alongside future releases.
-(last edit: 2026-09-03)
+(last edit: 2026-09-04)

@@ -310,7 +310,7 @@ async function attachPluginSpecDb(entry) {
   const specPath = path.resolve(__dirname, '../../', environment.pluginSpec.duckdbPath);
   if (!fs.existsSync(specPath)) {
     pluginSpecAttached = false;
-    console.warn(`Plugin-Spec-DB not found at ${specPath} — plugin platform members will be skipped (install-mbs-docs regenerates it).`);
+    console.warn(`Plugin-Spec-DB not found at ${specPath} — plugin platform members will be skipped (the file ships with every fm-lab release; restore it from the release checkout).`);
     return false;
   }
   const escaped = specPath.replace(/'/g, "''");
@@ -340,8 +340,8 @@ function classifyPluginSpecMissing(err) {
   if (!/\bplugref\b/.test(message) || !/does not exist/i.test(message)) return null;
   const e = new Error(
     'PLUGSPEC_MISSING: the plugin reference database (reference/plugin_spec.duckdb) is not installed — ' +
-    'plugin platform and deprecation data is unavailable. It ships with fm-lab releases; ' +
-    'restore the file or regenerate it via the install-mbs-docs skill.'
+    'plugin platform and deprecation data is unavailable. It ships with every fm-lab release; ' +
+    'restore the file from the release checkout.'
   );
   e.code = 'PLUGSPEC_NOT_ATTACHED';
   return e;

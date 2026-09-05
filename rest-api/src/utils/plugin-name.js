@@ -3,7 +3,7 @@
  *
  * PluginFunctions tragen im ObjectCatalog einen bewusst redundanten
  * Object_Name, aus dem sich die synthetische UUID ableitet
- * (vgl. sql/convert-xml/convert_xml_04_catalog.sql):
+ * (vgl. ingestion/sql/convert_xml_04_catalog.sql):
  *
  *   Container-Plugin (MBS):  `<Plugin>:<Sub>::<Sub>`   z.B. `MBS:FM.InsertRecord::FM.InsertRecord`
  *   Non-Container-Plugin:    `<Name>`                  (kein `::`)

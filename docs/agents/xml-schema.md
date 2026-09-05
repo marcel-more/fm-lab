@@ -50,7 +50,7 @@ This is the high-level structure of the XML export produced from a FileMaker fil
 | `FileAccessCatalog` | Inter-file authorizations (`UUID` entries with a file reference) | `FileAccessAuthorizations` |
 | `Library` | Library entries (binary blobs; only metadata retained) | `LibraryReferences` |
 | `Metadata/AddAction` | File options: `PageSetup`, `Encryption`, `Minimum`, `Login` (type=1 + `AccountName` = auto-login!), `ShowSignInFields`, `Spelling`, `Hide*Sharing`, `Defaults/LayoutReference` (start layout), file-global `ScriptTriggers` | `FileOptionsCatalog`, `ScriptTriggers` |
-| `DDR_INFO/Calculation` | Formula chunks per calc anchor `_<UUID>_<kind>` (hash → `DDRREF` joins) | `DDR_Calculations` |
+| `DDR_INFO/Calculation` | Formula chunks per calc anchor `_<UUID>_<kind>` (hash → `DDRREF` joins); chunk types `NoRef`, `FieldRef`, `VariableReference`, `FunctionRef`, `CustomFunctionRef`, `PluginFunctionRef`, `Comment`. **`PluginFunctionRef` means "external or unresolvable", not "plug-in":** besides plug-in calls it carries FileMaker's design functions (`WindowNames`/`Fensternamen`, `DatabaseNames`, `LayoutIDs`, …, in the authoring client's language — every other built-in is normalized to English as `FunctionRef`) and unresolvable identifiers such as deleted custom functions; the importer re-types the design functions to `FunctionRef` in phase 1c | `DDR_Calculations` |
 | `DDR_INFO/Script` | Human-readable script-step texts | `DDR_ScriptSteps` |
 | `PrivilegeSet/access/Records/Custom` | Custom Record Privileges (table × operation, calcs, field level) | `PrivilegeSetRecordAccess`, `PrivilegeSetFieldAccess` |
 | `PrivilegeSet/access/{Layouts,ValueLists,Scripts}/Custom` | Object-level Custom Privileges | `PrivilegeSetObjectAccess` |

@@ -235,7 +235,11 @@ const MemberRow: React.FC<{ member: TestRunMemberResult; query: string; flatCont
             {t('nav:testsPanel.memberError')}
           </span>
         ) : member.runStatus === 'skipped' ? (
-          <span className="tests-member-value tests-state-skipped">{t('nav:testsPanel.memberSkipped')}</span>
+          <span className="tests-member-value tests-state-skipped" title={member.skipMessage || undefined}>
+            {member.skipReason === 'object-type'
+              ? t('nav:testsPanel.memberSkippedObjectType')
+              : t('nav:testsPanel.memberSkipped')}
+          </span>
         ) : (
           <span
             className={`tests-member-value ${Number(value) > 0 ? severityClass(member.severity) : 'tests-sev-ok'}`}

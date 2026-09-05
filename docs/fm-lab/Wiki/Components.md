@@ -28,11 +28,11 @@ The folder can contain multiple files belonging to the same solution.
 
 ### Katana XML engine
 
-`tools/convert_fm_xml.sh` — Runs XML batch conversion and accepts CLI options.
+`ingestion/convert_fm_xml.sh` — Runs XML batch conversion and accepts CLI options.
 
 ### SQL Templates
 
-`sql/convert-xml/` — Conversion and [parser templates](../templates/Ingestion%20Pipeline%20%28XML%20Import%29.md) for universal catalogs.
+`ingestion/sql/` — Conversion and [parser templates](../templates/Ingestion%20Pipeline%20%28XML%20Import%29.md) for universal catalogs.
 
 This is the main ingestion logic and is executed by the DuckDB CLI, which must be installed beforehand.
 
@@ -126,6 +126,8 @@ Some documentation packages include their own databases for fast indexed queries
 
 `.claude/skills/` contains Claude Code skills and slash commands for installation, conversion, lookup, analysis, and code generation.
 
+Each bundled skill has its own reference page with invocation, options and prerequisites — see [Skills](../skills/Skills.md).
+
 **Setup**
 
 - `.claude/skills/install-claris-docs` — Installs the Claris FileMaker documentation.
@@ -153,7 +155,8 @@ Some documentation packages include their own databases for fast indexed queries
 
 - `.claude/skills/fm-summarize` — Creates a concise technical briefing for a given object.
 - `.claude/skills/fm-analyze` — Runs an in-depth object analysis using semantic signals and recursive graph traversal up to five levels deep. It gathers context about dependencies, structure, logic, technical rules, and semantic meaning. This helps the agent explain functionality and business rules within the solution.
-- `.claude/skills/fm-graph-cluster` — Segments the FileMaker object graph into functional clusters (communities) using [Graph analysis](4%20Code%20Analysis%20Approaches.md#3-graph-analysis) algorithms. When run in `--deep-research` mode, the LLM recursively follows the graph structure of top-level clusters and builds a comprehensive architectural analysis based on technical structure and semantic signals. The output is genrated in Markdown format at `output/graph_cluster_report_<timestamp>.md`.
+- `.claude/skills/fm-graph-cluster` — Segments the FileMaker object graph into functional clusters (communities) using [Graph analysis](4%20Code%20Analysis%20Approaches.md#3-graph-analysis) algorithms.
+- `.claude/skills/fm-deep-research` — Writes a solution-level research report (executive summary, business context, architecture, technical description, findings, recommendations, segment appendix) from the clustered graph and the member objects of its largest segments, rendered from a Markdown template.
 - `.claude/skills/fm-test` — Runs curated [Analysis Tests](Analysis%20Tests.md) (static-code-analysis rules and custom checks with a compact result model) in solution, file, object or cluster scope; `--find` discovers matching tests without running them.
 
 - `.claude/skills/create-custom-dashboard` — Helps you build a new custom dashboard for [Static code analysis](4%20Code%20Analysis%20Approaches.md#2-static-code-analysis) by describing its goals in plain language.

@@ -9,6 +9,7 @@ fm-lab/
 ├── apps/                       Frontend / application code
 ├── db/                         DuckDB databases (symlinks to active solution)
 ├── docs/                       Project documentation and optional references
+├── ingestion/                  Katana XML import engine (orchestrator, awk, phase SQL)
 ├── logs/                       Log files
 ├── packages/                   Shared packages and modules
 ├── reference/                  fm-spec database (syntax and grammar definitions)
@@ -18,7 +19,6 @@ fm-lab/
 ├── solutions/<id>/xml/         FileMaker XML exports (input data)
 ├── solutions/<id>/db/          DuckDB object catalog (output data)
 ├── solutions/<id>/state/       Solution metadata (status, logs)
-├── sql/                        SQL templates (convert-xml, samples, …)
 ├── tools/                      XML Importer and CLI utilities
 │
 ├── .gitignore                  Git ignore rules

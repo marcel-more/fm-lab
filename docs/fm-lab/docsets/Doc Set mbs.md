@@ -40,12 +40,11 @@ The CSV is consumed wherever functions are grouped into components:
 
 - the **ingestion pipeline**, when building `PluginComponent` catalog entries and enriching `PluginFunction` objects during XML import,
 - the **REST API**, for component/category enrichment on plugin-function aggregations,
-- the **doc-set browser**, to fill the component pages under `/docs/mbs/<Component>` — the doc-set index itself stores only names and file paths, no component. Secondary members are listed there in their own section below the primary ones,
-- the CLI report `sql/list_all_mbs_functions_by_component.sql`.
+- the **doc-set browser**, to fill the component pages under `/docs/mbs/<Component>` — the doc-set index itself stores only names and file paths, no component. Secondary members are listed there in their own section below the primary ones.
 
 If the CSV is absent (MBS docs not installed), pipeline and doc-set browser fall back to the plain prefix heuristic — imports still work, only the exception mappings are missed. Installing the MBS docs therefore improves catalog quality even if you never read a page.
 
-The installer also derives the **plug-in platform map** from the mirror: `reference/plugin_spec.duckdb` records for every MBS function on which operating systems and under which runtimes it is available (verbatim vendor flags plus a curated interpretation layer — see [plugin-spec](../schema/plugin-spec.md)). This map powers the plug-in members of the [platform tests](../Wiki/Analysis%20Tests.md#platform-tests) and the platform badge on PluginFunction detail views; without the mirror those members simply report *skipped*.
+The mirror is also the source of the **plug-in platform map**: `reference/plugin_spec.duckdb` records for every MBS function on which operating systems and under which runtimes it is available (verbatim vendor flags plus a curated interpretation layer — see [plugin-spec](../schema/plugin-spec.md)). The map is derived by the maintainer and bundled with every fm-lab release; installing or updating the mirror does not regenerate it. It powers the plug-in members of the [platform tests](../Wiki/Analysis%20Tests.md#platform-tests) and the platform badge on PluginFunction detail views; without the bundled database those members simply report *skipped*.
 
 ## Installation
 

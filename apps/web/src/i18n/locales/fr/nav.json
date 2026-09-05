@@ -145,6 +145,7 @@
     "noMatch": "Aucun test ne correspond au filtre actuel.",
     "typeFilterAria": "Filtrer par type de test",
     "memberSkipped": "Ignoré",
+    "memberSkippedObjectType": "Non applicable",
     "findingsFiltered": "{{shown}} sur {{total}} résultats correspondent à la recherche.",
     "rerun": "Relancer",
     "profileLabel": "Profil",

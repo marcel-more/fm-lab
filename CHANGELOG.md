@@ -12,6 +12,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 ---
 
+## [0.9.11] — 2026-09-05
+
+<!-- components:auto --> *Components: schema 1.27.0 · xml-import 5.1.0 (converter 2.23.0) · fm-spec 1.18.0 · plugin-spec 1.2.0*
+
+A release focused on the analysis and agent skills — a new solution-level research report and leaner clustering — plus test-set fixes, a refreshed plugin reference, and pipeline maintainability.
+
+- **Solution research & clustering**
+  - **New `fm-deep-research` skill** — a solution-level research report rendered from a Markdown template (executive summary, business context, architecture, technical description, findings, recommendations, and a segment appendix); it checks for a usable graph partition first and offers to run `fm-graph-cluster` when the segmentation is missing; the result is only a short summary with a link to a comprehensive report.
+  - **`fm-graph-cluster` slimmed down** — the `--deep-research` report moved to the new skill; the default run now writes a compact run protocol, names scaffolding communities by rule before the model reads the remaining hints.
+  - **Clustering granularity honoured everywhere** — a bare `cluster.sh` run now reads the persisted sweep winner as its default (as the pipeline and the Rebuild button already did) instead of silently re-partitioning at resolution 1.0, and naming hints are ranked by the logical cluster degree — the exact edge set that was clustered.
+- **Analysis Tests — test sets across object types** — a test set may now bundle members for different object types, so the `unfinished-work` family (script comments, layout texts, calculation comments) that previously refused to run now works; in object scope, members that don't match the object's type report `skipped` instead of a meaningless pass, the object type is resolved from the catalog when omitted. `calc-variable-hygiene` again runs from Field and Custom Function detail views.
+- **Refreshed plugin reference** — the bundled MBS plugin metadata (`plugin_spec.duckdb`) updated to the 2026-07-20 release, keeping the platform-compatibility and plug-in-maintenance checks current
+- **Skills documentation** — a new section in the fm-lab doc-set with a dedicated page for each delivered skill
+- **XML Pipeline refactoring**
+  - **Ingestion engine consolidated** — the XML-import engine files move into a dedicated `ingestion/` directory with thin `tools/` wrappers; a behavior-neutral refactoring for easier future updates
+  - **Design functions no longer counted as plug-ins** — FileMaker's XML export tags the design functions (`WindowNames`, `DatabaseNames`, `LayoutIDs`, `ValueListItems`, …) like plug-in calls, in the language of the client that wrote the formula (`Fensternamen`); they showed up as plug-in functions in the plug-in statistics, the plug-in dashboards and the cluster god-node list. A new import step (phase 1c, converter 2.23.0) re-types them, so they resolve as built-in functions with `calls_function` links; the name list is generated from the bundled reference database (`ingestion/gen_design_functions.sh`) and the import report counts the correction. Existing catalogs report a content-hash drift until they are re-imported (`--force-rebuild`)
+  - **Version manifest** — the internal converter engine version is exposed (`engine_version`) and shown in the web client's version line
+
+
+---
+
 ## [0.9.10] — 2026-09-03
 
 A new **Trace** view for following a script or layout's actual flow, plus a round of fixes.
@@ -19,7 +40,7 @@ A new **Trace** view for following a script or layout's actual flow, plus a roun
 - **Trace — selective flow graph** — follow what a script or layout actually does, not just its immediate neighbors
   - **Trace mode in the Graph Explorer** and a new **`fm-trace` skill** — starting from a Script or Layout, see the call chain up and down, the objects the flow actually touches, and the script triggers of the layouts it enters
   - **Exclude from trace** — prune noise nodes from a trace, with a suggestion list of good candidates to hide
-- **New object type: Chart** — FileMaker chart objects are now imported into the catalog and surface in the layout views and type filter
+- **New layout-object type: Chart** — FileMaker chart objects are now imported into the catalog (`LayoutObjects.Object_Type = 'Chart'`; the `ObjectCatalog` keeps the generic `LayoutObject` type) and surface in the layout views and type filter
 - **Fixes** — a trace redraw glitch in the Graph Explorer, and a publish / version-manifest fix
 
 ---
@@ -33,10 +54,10 @@ A large release on two fronts: script triggers and layout-object formulas become
   - **Script triggers fully catalogued** — activation modes (Browse / Find / Preview), parameter formulas extracted even from exports without DDR-Info, and their file-, layout-, and object-level owners; a dedicated script-trigger detail page with navigation, event names localized to the interface language, and Browse/Find/Preview badges in the layout panel
   - **Layout formulas & merge content** — conditional formatting, hide conditions, tooltips, merge fields, and layout variables/calculations are captured, with new inventory queries and richer layout-object detail views (object groups and button bars included)
   - **Graph & references** — trigger edges and structural-containment direction corrected, reference subroles surfaced, and variable-reference highlighting in the detail views
-- **Code generation & the FileMaker reference** (`fm-generate-script`, fm-spec 1.17.1)
+- **Code generation & the FileMaker reference** (`fm-generate-script`, fm-spec 1.18.0)
   - **Data-driven step model** — script-step specifics (parameter groups, repetition groups, fixed-slot groups, boolean slots) are now encoded in the fm-spec schema and checked during generation, replacing hardcoded hints; malformed step parameters that previously slipped through are caught
   - **fm-spec schema browser** extended in the web client, with refreshed schema documentation
-- **XML import — robustness, correctness & performance** (converter 2.12.0)
+- **XML import — robustness, correctness & performance** (converter 2.20.0)
   - **Single-file mode fails loudly** — a reference-resolution failure now aborts before the dependent catalog phases (non-zero exit, clear banner) instead of publishing a stale catalog, the served copies keep their last consistent state, and a heal run after a mid-run abort now actually publishes its rebuilt catalog
   - **64-bit numeric slots** — values that overflowed a 32-bit `INTEGER` are widened to `BIGINT` and the "unlimited" sentinel is stored as "no limit", each with a drift guard and regression test
   - **Faster catalog build** — a performance-critical join in the catalog phase optimized
@@ -833,7 +854,8 @@ Initial release: XML conversion pipeline, core database structure, and first AI 
 <!-- Link references. compare-ranges span adjacent tagged releases; documentation-only
      versions that were never tagged (e.g. 0.8.7, 0.8.1, 0.8.0, 0.7.5–0.7.7, …) are
      intentionally left unlinked and render as plain text. Add a line here per new tag. -->
-[Unreleased]: https://github.com/marcel-more/fm-lab/compare/v0.9.10...HEAD
+[Unreleased]: https://github.com/marcel-more/fm-lab/compare/v0.9.11...HEAD
+[0.9.11]: https://github.com/marcel-more/fm-lab/compare/v0.9.10...v0.9.11
 [0.9.10]: https://github.com/marcel-more/fm-lab/compare/v0.9.9...v0.9.10
 [0.9.9]: https://github.com/marcel-more/fm-lab/compare/v0.9.8...v0.9.9
 [0.9.8]: https://github.com/marcel-more/fm-lab/compare/v0.9.7...v0.9.8

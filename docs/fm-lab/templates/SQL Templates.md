@@ -14,8 +14,7 @@ the system, and has its own page:
 | [Custom Query Templates](Custom%20Query%20Templates.md) | `rest-api/templates/sql-custom/` | Your own named queries; appear in the *Custom Queries* dashboard. |
 | [Detail View Templates](Detail%20View%20Templates.md) | `rest-api/templates/sql-custom-details/` | Internal detail-view SQL loaded by UI hooks; not listed publicly. |
 | [Dashboard Datasets](Dashboard%20Datasets.md) | `rest-api/templates/dashboards/` · `dashboards-custom/` | Per-tile datasets inside dashboard bundles. |
-| [CLI Analysis Scripts](CLI%20Analysis%20Scripts.md) | `sql/` | Hand-run analysis queries via the `duckdb` CLI — **not** via REST. |
-| [Ingestion Pipeline (XML Import)](Ingestion%20Pipeline%20%28XML%20Import%29.md) | `sql/convert-xml/` | The build SQL (P1–P6) that produces the catalog — **not** via REST. |
+| [Ingestion Pipeline (XML Import)](Ingestion%20Pipeline%20%28XML%20Import%29.md) | `ingestion/sql/` | The build SQL (P1–P6) that produces the catalog — **not** via REST. |
 
 The rest of this page explains what the tiers share: how a template works, the
 metadata header, parameters, and worked examples.

@@ -49,6 +49,11 @@ findings stays with you (offer `fm-analyze` for the "why").
      members outside the profile come back as `runStatus: skipped` — report
      them as skipped, not as passed. Unknown profile ids are a 400, not a
      silent full run.
+   - Object scope: members whose declared object types do not include the
+     target's type come back as `runStatus: skipped` / `skipReason:
+     object-type` — a test may span several types (`unfinished-work`: scripts,
+     layouts, calculations). Report them as "not applicable", never as passed.
+     `object_type` is optional; the server resolves it from the catalog.
    - Result model: each member carries `runStatus` (ran|failed|skipped) and
      `resultState` (error|warning|neutral|ok); the response's `summary` block
      aggregates them — use it for the report header instead of re-counting.
@@ -62,7 +67,7 @@ findings stays with you (offer `fm-analyze` for the "why").
 |---|---|
 | nothing | solution scope — no params |
 | file name | `file=<name>` |
-| object name/UUID | resolve via `ObjectCatalog` (like fm-summarize; on ambiguity ask, identity is **(UUID, File_Name)**) → `uuid=<uuid>&file=<file>` |
+| object name/UUID | resolve via `ObjectCatalog` (like fm-summarize; on ambiguity ask, identity is **(UUID, File_Name)**) → `uuid=<uuid>&file=<file>` (+ optional `object_type=<Type>`; the server resolves it when omitted) |
 | object list | resolve each → `uuids=<csv>` (+ `file` only if all from one file) |
 | cluster name/id | API path: `cluster=<ref>` (server expands). Direct path: expand via `ObjectClusters`/`CommunityNames` (see references), cap 5000 UUIDs |
 

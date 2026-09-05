@@ -145,6 +145,7 @@
     "noMatch": "Geen tests komen overeen met het huidige filter.",
     "typeFilterAria": "Filteren op testtype",
     "memberSkipped": "Overgeslagen",
+    "memberSkippedObjectType": "Niet van toepassing",
     "findingsFiltered": "{{shown}} van {{total}} bevindingen komen overeen met de zoekopdracht.",
     "rerun": "Opnieuw uitvoeren",
     "profileLabel": "Profiel",

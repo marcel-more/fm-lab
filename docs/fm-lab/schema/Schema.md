@@ -61,6 +61,7 @@ The [XML export](../xml/XML.md) represents each object type as its own dictionar
 | [CalculationsCatalog](catalog-tables/CalculationsCatalog.md) | Every calculation instance (owner × role × index) as an addressable object |
 | [DDR_Calculations](catalog-tables/DDR_Calculations.md) | Tokenized formula chunks for dependency analysis (requires DDR-Info) |
 | [DDR_ChunkListContexts](catalog-tables/DDR_ChunkListContexts.md) | Context TO and chunk count per ChunkList anchor — records empty ChunkLists too (requires DDR-Info) |
+| [DesignFunctionNames](catalog-tables/DesignFunctionNames.md) | FileMaker design-function names in every reference language — positive match list of the phase-1c chunk retype (generated from the reference database, not from the export) |
 | [VariablesCatalog](catalog-tables/VariablesCatalog.md) | Aggregated view per variable: scope, counts, reliability |
 | [VariableUsages](catalog-tables/VariableUsages.md) | Every single variable set/read with its context |
 | [PluginFunctionUsages](catalog-tables/PluginFunctionUsages.md) | Plugin function calls (e.g. MBS) found in calculations |

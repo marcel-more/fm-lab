@@ -9,7 +9,7 @@
 
 The **Katana engine** 🔪 is the high-performance XML processing core of the FM-Lab [Ingestion Pipeline](How%20it%20works.md#ingestion-pipeline). It sits between the raw FileMaker SaXML export and the DuckDB-powered [Object Catalog](Architecture.md#duckdb-powered-object-catalog) and solves one central problem: **FileMaker exports can be huge** — hundreds of megabytes up to gigabytes of XML per file — while a naive DOM parse inflates to roughly **60–73× the file size in RAM**. Katana cuts these documents into well-planned chunks, processes them in parallel and merges the results back together **bit-identically**, so even multi-gigabyte solutions convert quickly on ordinary developer machines.
 
-The engine lives in `tools/katana-xml/` and is driven by `tools/convert_fm_xml.sh` (see [Components](Components.md#katana-xml-engine)).
+The engine lives in `ingestion/` and is driven by `ingestion/convert_fm_xml.sh` (see [Components](Components.md#katana-xml-engine)).
 
 ---
 
@@ -22,7 +22,7 @@ Katana has four jobs:
 3. **Plan & dispatch** — record every chunk in a **chunk map** (its catalog, record count, size, parser policy) and feed the chunks to a pool of parallel workers.
 4. **Track & skip** — maintain a persistent **import manifest** so that unchanged files — and even unchanged *catalogs inside changed files* — are skipped entirely on the next run.
 
-All of this happens **before and around** the SQL conversion phases. The SQL templates in `sql/convert-xml/` stay agnostic: they read whatever XML they are given, whether that is a whole document or a 25-record sub-chunk.
+All of this happens **before and around** the SQL conversion phases. The SQL templates in `ingestion/sql/` stay agnostic: they read whatever XML they are given, whether that is a whole document or a 25-record sub-chunk.
 
 ### How it works, in one sentence
 
@@ -47,7 +47,7 @@ A FileMaker SaXML document is a set of top-level **catalogs** (branches) — scr
 Two bookkeeping structures make this safe and fast:
 
 - **Chunk map** (transient, rebuilt per run) — one row per chunk with its source file, catalog, split number, record count, byte size, content hash, parser policy (`dom` or `sax`) and a dispatch status. It is the work queue of the run: the dispatcher pulls pending chunks from it, and the memory backoff writes retry attempts back into it.
-- **Import manifest** (persistent, survives runs) — one row per source XML (mtime, size and an authoritative SHA-256 content hash, plus converter and schema version stamps and the parser-policy fingerprint of the run that wrote the hashes) and one row per *file × catalog* (a hash over the ordered chunk hashes of that catalog). Converter, schema or policy drift invalidates the manifest and forces a clean rebuild — so a skip can never hide a stale format.
+- **Import manifest** (persistent, survives runs) — one row per source XML (mtime, size and an authoritative SHA-256 content hash — computed with `sha256sum`, `shasum` or `openssl`, whichever the host provides; without any of them the run warns once and writes no catalog rows, so nothing is ever skipped by mistake — plus converter and schema version stamps and the parser-policy fingerprint of the run that wrote the hashes) and one row per *file × catalog* (a hash over the ordered chunk hashes of that catalog). Converter, schema or policy drift invalidates the manifest and forces a clean rebuild — so a skip can never hide a stale format.
 
 ---
 
@@ -76,7 +76,7 @@ Katana knows two parser policies per chunk:
 - **DOM** — the default: text-faithful in every corner case, but the whole chunk lives in memory (which is fine, because chunks are small).
 - **SAX streaming** — reads records as a stream with a fraction of the memory, enabled by the webbed extension. Streaming needs unique record anchors, so Katana's renamer pass gives repeating elements branch-unique names (e.g. `Layout` inside `LayoutCatalog` becomes `LC_Layout`) — surgical renames of structural tags only, never content.
 
-Which policy wins is not hardcoded. A **capability registry** (`tools/katana-xml/version_check.json`) describes known webbed fixes together with behavioral probes; at startup the driver probes the actually loaded extension and enables SAX as the default only when the probes confirm it is fully text-faithful. Older extensions transparently stay on the DOM path — correctness always outranks speed.
+Which policy wins is not hardcoded. A **capability registry** (`ingestion/version_check.json`) describes known webbed fixes together with behavioral probes; at startup the driver probes the actually loaded extension and enables SAX as the default only when the probes confirm it is fully text-faithful. Older extensions transparently stay on the DOM path — correctness always outranks speed.
 
 A confirmed policy is also **sticky** across runs, so a transient probe failure never flips it. And because the stored content hashes are policy-stamped, an actual policy change — typically after a webbed update — triggers a one-time full reload of the affected catalogs instead of manifest skips.
 

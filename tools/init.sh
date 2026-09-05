@@ -68,10 +68,10 @@ FMLAB_VERSION=$(read_fmlab_version)
 
 # ─── DuckDB baseline (stable, tested setup) ───────────────────
 # The recommended floor lives data-driven in the webbed capability registry
-# (tools/katana-xml/version_check.json → .tested_baseline). We only WARN when the
+# (ingestion/version_check.json → .tested_baseline). We only WARN when the
 # installed DuckDB CLI is older — never abort, never block init. webbed itself is a
 # runtime extension; the convert pipeline probes it separately (.capabilities[]).
-VERSION_MANIFEST="$SCRIPT_DIR/katana-xml/version_check.json"
+VERSION_MANIFEST="$SCRIPT_DIR/../ingestion/version_check.json"
 
 # Compare two dotted numeric versions; echoes -1 / 0 / 1 for a<b / a==b / a>b.
 # bash-3.2-safe (macOS): pure string/array ops, no `sort -V` (unavailable on BSD sort).
@@ -418,7 +418,7 @@ if [ "$XML_FILES" -eq 0 ]; then
     echo "  → Open http://localhost:5173 — the guided empty-state walks you through"
     echo "    exporting your FileMaker solution and converting it (one click, live progress)."
     echo ""
-    echo "  CLI alternative: drop .xml file(s) into solutions/default/xml/ and run  bash tools/convert_fm_xml.sh --batch"
+    echo "  CLI alternative: drop .xml file(s) into solutions/default/xml/ and run  bash ingestion/convert_fm_xml.sh --batch"
     echo ""
     exit 0
   fi
@@ -429,7 +429,7 @@ if [ "$XML_FILES" -eq 0 ]; then
   echo "  Next step:"
   echo "  1. Export your FileMaker solution via 'Tools > Save a Copy As XML' + Option 'Include details for analysis tools'"
   echo "  2. Place the .xml file in solutions/default/xml/"
-  echo "  3. Run:  bash tools/convert_fm_xml.sh --batch"
+  echo "  3. Run:  bash ingestion/convert_fm_xml.sh --batch"
   echo "           (adaptive: chunked streaming + OOM-backoff automatically; even large solutions on tight RAM)"
   echo "  4. Then: bash tools/start-servers.sh"
   echo ""
@@ -450,7 +450,7 @@ summary_add "servers started   http://localhost:3003  |  http://localhost:5173"
 # --batch picks the adaptive default itself (Turbo + --auto OOM-backoff, plus SAX
 # streaming when the patched webbed is present) — no manual mode flag needed; it
 # never hard-aborts on tight RAM. FM_FORCE_DOM=1 keeps turbo+auto but on DOM.
-CURRENT_STEP="converting XML (bash tools/convert_fm_xml.sh --batch)"
+CURRENT_STEP="converting XML (bash ingestion/convert_fm_xml.sh --batch)"
 header "FileMaker XML conversion"
 CONVERT_ARGS=(--batch)
 info "Found $XML_FILES XML file(s) — starting conversion (adaptive mode)"

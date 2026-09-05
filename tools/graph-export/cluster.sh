@@ -14,9 +14,11 @@
 #   4. (opt) sync master → rest-api/db + /api/admin/reload
 #
 # Env knobs:
-#   FMLAB_CLUSTER_ENGINE      auto | leiden | louvain     (default auto)
-#   FMLAB_CLUSTER_RESOLUTION  Louvain/Leiden resolution   (default 1.0)
-#   FMLAB_CLUSTER_SEED        PRNG seed (reproducible)     (default 42)
+#   FMLAB_CLUSTER_ENGINE      auto | leiden | louvain     (default: cluster.json, else auto)
+#   FMLAB_CLUSTER_RESOLUTION  Louvain/Leiden resolution   (default: cluster.json, else 1.0)
+#   FMLAB_CLUSTER_SEED        PRNG seed (reproducible)     (default: cluster.json, else 42)
+#   Defaults come from solutions/<id>/state/cluster.json — the persisted
+#   fm-graph-cluster sweep winner (tools/lib/cluster_config.sh).
 #   FMLAB_CLUSTER_NO_SYNC     set to 1 to skip rest-api sync/reload
 #   REST_API_RELOAD_URL       reload endpoint              (default localhost:3003)
 #
@@ -47,8 +49,8 @@ LOAD_SQL="$SCRIPT_DIR/cluster_load.sql"
 CACHE_SAVE_SQL="$SCRIPT_DIR/cache_save.sql"
 CACHE_APPLY_SQL="$SCRIPT_DIR/cache_apply.sql"
 
-RESOLUTION="${FMLAB_CLUSTER_RESOLUTION:-1.0}"
-SEED="${FMLAB_CLUSTER_SEED:-42}"
+# RESOLUTION / SEED / engine default are set below, after the duckdb binary is
+# located: the defaults come from the persisted sweep winner (cluster.json).
 # rest-api sync paths/URL live in sync_db.sh (step 5 delegates to it).
 
 # ── Semantic-Name cache knobs ──────────────────────────────────────────────
@@ -77,8 +79,27 @@ if [ ! -f "$DB_FILE" ]; then
   exit 4
 fi
 
+# ── Granularity defaults: solutions/<id>/state/cluster.json (sweep winner) ──
+# Same reader as the pipeline's Phase 7 (tools/lib/cluster_config.sh). Env knobs
+# FMLAB_CLUSTER_* still override; without the file the classic defaults apply
+# (auto|1.0|42). Previously a bare cluster.sh run always used 1.0 and silently
+# re-partitioned at a different granularity than the sweep — invalidating names.
+. "$PROJECT_ROOT/tools/lib/cluster_config.sh"
+_CFG_DIR="$PROJECT_ROOT/solutions/$SOLUTION/state"
+[ -d "$PROJECT_ROOT/solutions/$SOLUTION" ] || _CFG_DIR="$PROJECT_ROOT/.fmlab"
+_CFG=$(fmlab_read_cluster_config "$_CFG_DIR" "$DUCKDB")
+CFG_ENGINE="${_CFG%%|*}"; _CFG_REST="${_CFG#*|}"
+CFG_RESOLUTION="${_CFG_REST%%|*}"; CFG_SEED="${_CFG_REST##*|}"
+RESOLUTION="${FMLAB_CLUSTER_RESOLUTION:-$CFG_RESOLUTION}"
+SEED="${FMLAB_CLUSTER_SEED:-$CFG_SEED}"
+if [ -f "$_CFG_DIR/cluster.json" ]; then
+  echo "granularity: cluster.json → engine=$CFG_ENGINE resolution=$CFG_RESOLUTION seed=$CFG_SEED (env overrides win)"
+else
+  echo "granularity: no cluster.json — defaults (run /fm-graph-cluster for a sweep)"
+fi
+
 # ── Engine detection / dispatch ─────────────────────────────────────────────
-ENGINE="${FMLAB_CLUSTER_ENGINE:-auto}"
+ENGINE="${FMLAB_CLUSTER_ENGINE:-$CFG_ENGINE}"
 if [ "$ENGINE" = "auto" ]; then
   if command -v python3 >/dev/null 2>&1 && python3 -c "import igraph" >/dev/null 2>&1; then
     ENGINE="leiden"

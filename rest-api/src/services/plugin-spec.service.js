@@ -4,8 +4,9 @@ const db = require('../config/database');
  * Plugin-Spec Service
  *
  * Read access to reference/plugin_spec.duckdb (ATTACHed as 'plugref' in
- * config/database.js) — the platform map for plug-in functions derived from
- * the vendor documentation mirror (tools/plugin-spec/derive_mbs.py).
+ * config/database.js) — the platform map for plug-in functions. The database
+ * is bundled with each fm-lab release (maintainer-derived from the vendor
+ * documentation mirror); a public install never regenerates it.
  * The platform flags are VERBATIM vendor values (MBS: binary, per-axis) —
  * they never share semantics with the Claris tri-state step_compat table.
  */
@@ -13,7 +14,7 @@ const db = require('../config/database');
 function assertAttached() {
   if (!db.isPluginSpecAttached()) {
     const err = new Error(
-      'Plugin-Spec-DB not attached. Install the MBS docs mirror (install-mbs-docs) to derive reference/plugin_spec.duckdb.'
+      'Plugin-Spec-DB not attached: reference/plugin_spec.duckdb is missing. It ships with every fm-lab release — restore the file from the release checkout.'
     );
     err.code = 'PLUGSPEC_NOT_ATTACHED';
     throw err;

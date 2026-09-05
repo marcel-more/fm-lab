@@ -145,6 +145,7 @@
     "noMatch": "Inga tester matchar det aktuella filtret.",
     "typeFilterAria": "Filtrera efter testtyp",
     "memberSkipped": "Överhoppad",
+    "memberSkippedObjectType": "Ej tillämplig",
     "findingsFiltered": "{{shown}} av {{total}} fynd matchar sökningen.",
     "rerun": "Kör igen",
     "profileLabel": "Profil",

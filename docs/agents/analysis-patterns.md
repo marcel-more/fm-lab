@@ -189,8 +189,8 @@ the server?", "what is the iOS share of this solution?"
   environment's compat check — "built for another platform", not broken.
 
 **Third signal source — plug-in function calls** (`reference/plugin_spec.duckdb`,
-ATTACH alias `plugref`, derived from the MBS docs mirror by
-`tools/plugin-spec/derive_mbs.py`; requires `install-mbs-docs`):
+ATTACH alias `plugref`, bundled with every fm-lab release — maintainer-derived
+from the MBS docs mirror; members skip when the file is missing):
 - **Axis a:** MBS functions with `Server=No` fail wherever scripts run under
   the FileMaker Server script engine — members `platform_compat_plugins_<env>`
   of the server/webdirect/dataapi/cwp sets (curated `plugin_runtime_map`,

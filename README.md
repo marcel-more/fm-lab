@@ -180,9 +180,9 @@ Export **each file** of your solution via `Tools > Save a Copy As XML` (SaXML) i
 **Convert** — click **XML conversion** in the web client (live progress, persistent log, no terminal), use the `/convert-xml` skill, or the CLI:
 
 ```bash
-bash tools/convert_fm_xml.sh --turbo  # streaming; only changed catalogs
-bash tools/convert_fm_xml.sh --batch  # standard; all files in the active solution's inbox (solutions/default/xml/)
-bash tools/convert_fm_xml.sh "MyDatabase.xml"  # a single file
+bash ingestion/convert_fm_xml.sh --turbo  # streaming; only changed catalogs
+bash ingestion/convert_fm_xml.sh --batch  # standard; all files in the active solution's inbox (solutions/default/xml/)
+bash ingestion/convert_fm_xml.sh "MyDatabase.xml"  # a single file
 ```
 
 **Servers**

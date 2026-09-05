@@ -24,7 +24,7 @@ The current public setup supports the following features:
 
 - **Graph Explorer** — interactive navigation of the full object graph, with automatic community detection that reveals named clusters across the solution and turns thousands of objects and links into a navigable graph map 🕸️
 
-- **Claude Skills** — slash commands for agentic analysis workflows in Claude Code, supported by helpers for XML conversion and documentation setup, enabling deep, solution-aware inspection beyond scripted analysis 🤖
+- **Claude Skills** — slash commands for agentic analysis workflows in Claude Code, supported by helpers for XML conversion and documentation setup, enabling deep, solution-aware inspection beyond scripted analysis (see [details](../skills/Skills.md)) 🤖
 
 - **Comprehensive Docs** — easy-to-install documentation for FileMaker Pro and MBS plugin functions 📚
 

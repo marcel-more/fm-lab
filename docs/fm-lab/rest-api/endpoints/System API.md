@@ -60,6 +60,8 @@ Errors: `400 INVALID_SETTINGS` (body has no `settings` object), `400 CLIENT_ONLY
 
 Serves the module-granular `version.json` manifest of the installation (global version plus per-module versions). Read fresh from disk on every request, so a regenerated manifest is visible without a server restart.
 
+`components.xml_import` carries two numbers: `version` is the display version of the XML converter, `engine_version` the internal engine version (`CONVERTER_VERSION` in the converter script) that the changelog's *Components* line and the import log cite. The web client's version line shows both.
+
 Errors: `404 VERSION_MANIFEST_NOT_FOUND` when the manifest file is missing.
 
 Deliberately separate from `/api/version`: `/version` is health + features, `/version-manifest` is the fine-grained module inventory.

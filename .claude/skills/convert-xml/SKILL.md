@@ -89,7 +89,7 @@ pointer → `default`):
 ## Schema versioning & auto-heal
 
 Before each import, the script compares the `@SCHEMA_VERSION` from
-[sql/convert-xml/convert_xml_01_extract.sql](../../../sql/convert-xml/convert_xml_01_extract.sql) with the version
+[ingestion/sql/convert_xml_01_extract.sql](../../../ingestion/sql/convert_xml_01_extract.sql) with the version
 persisted in the DB table `SchemaInfo`. Possible outcomes:
 
 | Detection action | Default behavior                                                        | With `--force-rebuild` | With `--no-auto-heal`     |
@@ -145,7 +145,7 @@ When invoked with `--batch`, the skill performs these steps:
 
 This skill uses a shell script (maintained under `tools/`) that handles all operations:
 
-- **Script**: `tools/convert_fm_xml.sh`
+- **Script**: `ingestion/convert_fm_xml.sh`
 - **Usage**: Execute the script with the XML filename as argument
 
 ## Working Process
@@ -159,7 +159,7 @@ When the user asks to convert a FileMaker XML file, extract the filename.
 Run the automation script:
 
 ```bash
-bash tools/convert_fm_xml.sh "filename.xml"
+bash ingestion/convert_fm_xml.sh "filename.xml"
 ```
 
 ### Step 3: Report Results
@@ -287,7 +287,7 @@ Note: Universal catalogs were created for successfully imported files.
 
 - All temporary files are automatically cleaned up
 - Original XML files are never modified
-- The SQL pipeline templates (`sql/convert-xml/convert_xml_0N_*.sql`) remain unchanged
+- The SQL pipeline templates (`ingestion/sql/convert_xml_0N_*.sql`) remain unchanged
 - No UTF-8 conversion files are left in the xml/ directory
 
 ### Single-File Mode

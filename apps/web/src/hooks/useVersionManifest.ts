@@ -15,6 +15,9 @@ import { API_BASE } from '../config/apiBase';
 export type VersionComponent = {
   scheme: string;
   version: string | null;
+  /** Internal engine version next to the display version (xml_import:
+   *  CONVERTER_VERSION) — present since manifests carry engine_source. */
+  engine_version?: string | null;
   source: string;
   on_change: string;
   filemaker_coverage?: string | null;

@@ -23,7 +23,8 @@ database points at this file through its `reference_meta.attribution` key.
   This project is not affiliated with, authorized, or endorsed by MonkeyBread
   Software. The curated runtime interpretation (`plugin_runtime_map`,
   `plugin_generic_rules`) is fm-lab curation with per-row provenance
-  (`tools/plugin-spec/curated/`).
+  (curated in the maintainer repository; the release ships the derived
+  database only).
 
 ## CC BY 4.0 (attribution required)
 

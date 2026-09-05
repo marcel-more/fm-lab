@@ -21,6 +21,7 @@ You support the developer in typical analysis steps on their FileMaker applicati
 | "Describe script/field/layout X" (technical: structure, flow, dependencies) — incl. which fields a script sets/reads, which scripts it calls, which layouts/variables it touches (grouped by Link_Role) | **`fm-summarize`** (`--short` for 1–2 paragraphs) |
 | "What is X *for*? What business logic is behind X?" (semantic: call chain, triggers, naming, comments of linked objects) | **`fm-analyze`** (`--short` available) |
 | "Which modules does this solution consist of?" / community & hub analysis | **`fm-graph-cluster`** |
+| "Describe this solution as a whole" — purpose, architecture, technical build, findings, recommendations (onboarding, takeover, technical-debt review) | **`fm-deep-research`** (report to `output/`; asks to run `fm-graph-cluster` first when no swept partition exists) |
 | "Is something wrong with this script/object?" — and symptom entries: *hangs · slow · wrong results · unexpected behavior · escalating calls* | **`fm-test`** (curated Analysis Tests: bundled SCA rules & queries, findings-based result; `--find` for discovery) |
 | "How does this hang together?" — call chains, reachability, window lifecycle, platform context | **analysis patterns** → `analysis-patterns.md` (documented procedures with canonical SQL; not executable tests) |
 | "Show me X in FileMaker" | **`fm-open`** |
@@ -36,7 +37,7 @@ reproducible, curated checks; `fm-analyze`/`fm-summarize` deliver free interpret
 
 1. **Analyze the question** — which FileMaker object types are relevant?
 2. **Identify the matching table(s)** — start from `ObjectCatalog`/`ObjectLinks` for existence & linkage, drill into the type tables for detail (see `schema-reference.md`)
-3. **Build the query** — DuckDB SQL; patterns in `query-cookbook.md`, templates in `sql/sample_queries.sql`
+3. **Build the query** — DuckDB SQL; patterns in `query-cookbook.md`, templates in `docs/agents/sql/sample_queries.sql`
 4. **Run it** against `db/fm_catalog.duckdb` (master — never the REST-API copy)
 5. **Present the result** — understandable prose/tables; Mermaid for relationship visualizations
 
@@ -81,8 +82,9 @@ reproducible, curated checks; `fm-analyze`/`fm-summarize` deliver free interpret
 
 - `LogicalLinks` — cleaned operational graph (Explorer/where-used view)
 - `ClusterEdges` — clustering edge set (single source of truth for community detection)
-- `fm-graph-cluster` sweeps resolutions, names communities semantically (`CommunityNames.Semantic_Name`), writes a report to `output/` and syncs the partition to the Graph Explorer
-- After `convert-xml --force-rebuild` the cluster layer is wiped → re-run `fm-graph-cluster`
+- `fm-graph-cluster` sweeps resolutions, names communities semantically (`CommunityNames.Semantic_Name`), writes a run protocol to `output/`, persists the granularity (`solutions/<id>/state/cluster.json`) and syncs the partition to the Graph Explorer
+- `fm-deep-research` reads the members of the largest communities and writes the solution report (`Semantic_Description` for scanned segments); it needs a partition at the sweep granularity — the shared `.claude/skills/_shared/scripts/cluster_state.sh` reports the readiness level (L0 none / L1 raw or drifted / L2 swept)
+- After `convert-xml --force-rebuild` the cluster layer is wiped → re-run `fm-graph-cluster`; a bare `cluster.sh` run now re-uses `cluster.json`, so the granularity survives
 
 ## Consistency & quality checks
 

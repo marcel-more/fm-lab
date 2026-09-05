@@ -4,7 +4,7 @@ Part of the [FileMaker object types](FileMaker%20Object%20Types.md) · semantic 
 
 A **layout object** is anything placed on a [layout](Layout.md): field controls, text blocks, buttons, portals, tab and slide controls, web viewers, charts, shapes. It is the catalog's heaviest *reference carrier* — a single object can display a field, use a value list, perform a script, sort a portal and hide itself by calculation all at once, and container objects (tab panels, slide panels, groups, popovers, portals) nest further objects recursively. Buttons may either reference a script or embed a **single script step** directly.
 
-LayoutObject is an **exported** type: each `<LayoutObject>` element becomes a row in [LayoutObjects](../catalog-tables/LayoutObjects.md) and in [ObjectCatalog](../object-catalog/ObjectCatalog.md). The 22 subtypes are refined in the `Object_Type` column of [LayoutObjects](../catalog-tables/LayoutObjects.md) — the raw XML type attribute is localized, so the import canonicalizes it to English names; the full subtype list with its five groups (Input, Display, Action, Container, Shape) is enumerated on [Object Types](../object-catalog/Object%20Types.md). In the frontend, layout objects are **hoisted** into the layout detail view: the wireframe draws them at their real coordinates, and each object additionally has a dedicated detail view of its own.
+LayoutObject is an **exported** type: each `<LayoutObject>` element becomes a row in [LayoutObjects](../catalog-tables/LayoutObjects.md) and in [ObjectCatalog](../object-catalog/ObjectCatalog.md). The 26 subtypes are refined in the `Object_Type` column of [LayoutObjects](../catalog-tables/LayoutObjects.md) — the raw XML type attribute is localized, so the import canonicalizes it to English names; the full subtype list with its five groups (Input, Display, Action, Container, Shape) is enumerated on [Object Types](../object-catalog/Object%20Types.md). In the frontend, layout objects are **hoisted** into the layout detail view: the wireframe draws them at their real coordinates, and each object additionally has a dedicated detail view of its own.
 
 ## Properties
 
@@ -91,7 +91,7 @@ For calculation-carried roles the `Link_Subrole` names the **calc slot** that co
 
 | Property | Values |
 |---|---|
-| `Object_Type` (subtypes) | 22 subtypes in five groups — Input (`Edit Box`, `Drop-down List`, `Checkbox Set`, …), Display (`Text`, `Graphic`, `Web Viewer`, `Chart`, …), Action (`Button`, `Button Bar`, `Popover Button`, …), Container (`Portal`, `Group`, `Tab Control`, `Slide Control`, `Panel`, `PopoverPanel`), Shape (`Rectangle`, `Rounded Rectangle`, `Oval`, `Line`) — authoritative grouped table on [Object Types](../object-catalog/Object%20Types.md); unknown raw types are kept as-is and reported by the P6 checks |
+| `Object_Type` (subtypes) | 26 subtypes in five groups — Input (`Edit Box`, `Drop-down List`, `Checkbox Set`, …), Display (`Text`, `Graphic`, `Web Viewer`, `Chart`, …), Action (`Button`, `Button Bar`, `Popover Button`, …), Container (`Portal`, `Group`, `Tab Control`, `Slide Control`, `Panel`, `PopoverPanel`), Shape (`Rectangle`, `Rounded Rectangle`, `Oval`, `Line`) — authoritative grouped table on [Object Types](../object-catalog/Object%20Types.md); unknown raw types are kept as-is and reported by the P6 checks |
 
 ## Schema & tooling
 

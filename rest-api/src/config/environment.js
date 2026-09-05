@@ -122,8 +122,8 @@ const environment = {
   // XML Import Configuration
   xml: {
     dir: process.env.XML_DIR || '../xml',
-    convertScript: process.env.CONVERT_XML_SCRIPT || '../sql/convert-xml/convert_xml_01_extract.sql',
-    catalogsScript: process.env.CREATE_CATALOGS_SCRIPT || '../sql/convert-xml/convert_xml_04_catalog.sql',
+    convertScript: process.env.CONVERT_XML_SCRIPT || '../ingestion/sql/convert_xml_01_extract.sql',
+    catalogsScript: process.env.CREATE_CATALOGS_SCRIPT || '../ingestion/sql/convert_xml_04_catalog.sql',
   },
 
   // Obsidian Documentation
@@ -152,8 +152,8 @@ const environment = {
     defaultLang:   process.env.REFERENCE_DEFAULT_LANG || 'en',
   },
 
-  // Plugin-Spec-DB (Plattform-Map für Plugin-Funktionen, aus dem MBS-Doku-Mirror
-  // abgeleitet via tools/plugin-spec/derive_mbs.py). ATTACH-Alias 'plugref'.
+  // Plugin-Spec-DB (Plattform-Map für Plugin-Funktionen; wird mit jedem fm-lab-
+  // Release gebündelt ausgeliefert, kein lokaler Ableitungsweg). ATTACH-Alias 'plugref'.
   pluginSpec: {
     duckdbPath: process.env.PLUGIN_SPEC_DUCKDB_PATH || '../reference/plugin_spec.duckdb',
   },

@@ -31,6 +31,9 @@ CNContact.MailingAddress,Contacts,Contacts
 CNContact.Name,Contacts,Contacts
 CNContactPicker.Close,Contacts,Contacts
 CNContactPicker.Current,Contacts,Contacts
+CNContactPicker.CurrentProperties,Contacts,Contacts
+CNContactPicker.GetDisplayedKeys,Contacts,Contacts
+CNContactPicker.SetDisplayedKeys,Contacts,Contacts
 CNContactPicker.SetTrigger,Contacts,Contacts
 CNContactPicker.Show,Contacts,Contacts
 CNContact.SetValue,Contacts,Contacts
@@ -137,6 +140,7 @@ FM.ExecuteFileSQLValue,FM,"FM, FMSQL"
 FM.ExecuteSQL,FM,"FM, FMSQL"
 FM.ExecuteSQL.LastError,FM,"FM, FMSQL"
 FM.ExecuteSQL.LastErrorMessage,FM,"FM, FMSQL"
+FM.ExecuteSQL.LastParameters,FM,"FM, FMSQL"
 FM.ExecuteSQL.LastSQL,FM,"FM, FMSQL"
 FM.ExecuteSQLOnIdle,FM,"FM, FMSQL"
 FM.GetSQLBatchMode,FM,"FM, FMSQL"
@@ -163,6 +167,7 @@ FM.SQL.Execute,FM,"FM, FMSQL"
 FM.SQL.Field,FM,"FM, FMSQL"
 FM.SQL.FieldCount,FM,"FM, FMSQL"
 FM.SQL.FieldType,FM,"FM, FMSQL"
+FM.SQL.InsertOrUpdateRecords,FM,"FM, FMSQL"
 FM.SQL.InsertRecords,FM,"FM, FMSQL"
 FM.SQL.InsertRecordsToSQL,FM,"FM, FMSQL, SQL"
 FM.SQL.JSONColumn,FM,"FM, FMSQL, JSON"
@@ -220,6 +225,7 @@ GMImage.AddPathSmoothCurvetoRel,GraphicsMagick,GraphicsMagick
 GMImage.AddPathSmoothQuadraticCurvetoAbs,GraphicsMagick,GraphicsMagick
 GMImage.AddPathSmoothQuadraticCurvetoRel,GraphicsMagick,GraphicsMagick
 GMImage.Affine,GraphicsMagick,GraphicsMagick
+GMImage.AffineTransform,GraphicsMagick,GraphicsMagick
 GMImage.Annotate,GraphicsMagick,GraphicsMagick
 GMImage.AutoOrient,GraphicsMagick,GraphicsMagick
 GMImage.AveragePixelValue,GraphicsMagick,GraphicsMagick
@@ -413,6 +419,7 @@ GMImage.Opaque,GraphicsMagick,GraphicsMagick
 GMImage.Ping,GraphicsMagick,GraphicsMagick
 GMImage.PingContainer,GraphicsMagick,GraphicsMagick
 GMImage.PopClipPath,GraphicsMagick,GraphicsMagick
+GMImage.Profiles,GraphicsMagick,GraphicsMagick
 GMImage.PurgeTemporaryFiles,GraphicsMagick,GraphicsMagick
 GMImage.PushClipPath,GraphicsMagick,GraphicsMagick
 GMImage.Quantize,GraphicsMagick,GraphicsMagick

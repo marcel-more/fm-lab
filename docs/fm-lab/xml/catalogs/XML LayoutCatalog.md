@@ -60,7 +60,7 @@ The layouts with everything on them — the largest and deepest branch of the ex
 
 ## Notes
 
-- 22 layout-object types occur; the type-specific payload sits in a child element named after the type (`<Field>`, `<Text>`, `<Portal>`, `<TabControl>`, `<GroupedButton>`, `<WebViewer>`, …).
+- 26 layout-object types occur; the type-specific payload sits in a child element named after the type (`<Field>`, `<Text>`, `<Portal>`, `<TabControl>`, `<GroupedButton>`, `<WebViewer>`, …).
 - Buttons can either call a script (`<ScriptReference>`) or embed a **single script step** (`Button/action/Step`) — the importer extracts both reference kinds.
 - Hide conditions, tooltips and placeholders are calculations inside the object payload; their `DDRREF` hashes join to [XML DDR_INFO](XML%20DDR_INFO.md). Conditional formatting is the structured `<Conditions><Formatting>` block shown above — one `<Condition>` per rule (`@type` `0` = formula, `1`–`13` = value operator with `<Range>` operands; the `<Options>` bitmask carries the enable bit, `<LocalCSS>` the applied format) — extracted rule-exact into [LayoutObjectConditions](../../schema/catalog-tables/LayoutObjectConditions.md).
 - The `<Data>` runs of a text object carry the **merge family**: merge fields (`<<::field>>`), merge variables (`<<$$var>>`), layout calculations (`<<ƒ:%X:formula>>` — the `%X:` prefix declares the result type) and text symbols (`{{CurrentDate}}`, …). The importer resolves them into `displays_field` / `displays_variable` edges, `display_calculation` instances and the [LayoutObjectSymbols](../../schema/catalog-tables/LayoutObjectSymbols.md) inventory.

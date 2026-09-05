@@ -31,7 +31,7 @@ These types mirror an XML catalog of the [FileMaker export](../../xml/XML.md) on
 | [ExternalDataSource](ExternalDataSource.md) | Reference to another FileMaker file or ODBC source | TBD (generic) |
 | [Field](Field.md) | Field of a base table — the richest object definition in the export | ✓ |
 | [Layout](Layout.md) | Layout: context, theme, menu set, parts and objects | ✓ |
-| [LayoutObject](LayoutObject.md) | Object on a layout (22 subtypes, arbitrarily nested) | hoisted into the layout view |
+| [LayoutObject](LayoutObject.md) | Object on a layout (26 subtypes, arbitrarily nested) | hoisted into the layout view |
 | [LayoutPart](LayoutPart.md) | Part (band) of a layout | hoisted into the layout view |
 | [PrivilegeSet](PrivilegeSet.md) | Privilege set with class-level and custom privileges | ✓ |
 | [Relationship](Relationship.md) | Relationship between two table occurrences | ✓ |

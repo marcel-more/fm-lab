@@ -145,6 +145,7 @@
     "noMatch": "Ninguna prueba coincide con el filtro actual.",
     "typeFilterAria": "Filtrar por tipo de prueba",
     "memberSkipped": "Omitido",
+    "memberSkippedObjectType": "No aplicable",
     "findingsFiltered": "{{shown}} de {{total}} hallazgos coinciden con la búsqueda.",
     "rerun": "Volver a ejecutar",
     "profileLabel": "Perfil",
