@@ -23,6 +23,7 @@ Repeat groups (lists) per script step: for every step whose XML carries a variab
 | `default_item_template` | `VARCHAR` |
 | `evidence` | `VARCHAR` |
 | `verified_version` | `VARCHAR` |
+| `coverage` | `VARCHAR` |
 
 ## Notes
 
@@ -32,4 +33,6 @@ Repeat groups (lists) per script step: for every step whose XML carries a variab
 - 15 rows across 9 steps (22, 28, 39, 87, 126, 127, 131, 214, 220), all `paired` at 22.0.6.
 - The consumer build ships **without** the curation `notes` column — prose rationale stays in the fm-spec working copy.
 
-**See also:** [step_xml_map](step_xml_map.md) · [step_options](step_options.md)
+- `coverage` (since fm-spec 2.0.0) marks a row as the standard shape (`*`) or as an override/addition of one FileMaker coverage (`26`); a consumer resolving a target coverage prefers the row of that coverage with the same key and falls back to `*` — rule and keys on [Coverage resolution](../Coverage%20resolution.md).
+
+**See also:** [Coverage resolution](../Coverage%20resolution.md) · [step_xml_map](step_xml_map.md) · [step_options](step_options.md)

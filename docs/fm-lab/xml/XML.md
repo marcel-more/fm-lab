@@ -2,7 +2,7 @@
 
 **Save a Copy as XML** (SaXML) is FileMaker's structural export: the complete definition of a FileMaker file — tables, fields, relationships, scripts, layouts, value lists, custom functions, menus, security — as one XML document, *without any record data*. This export is FM-Lab's single input format: everything the [object catalog](../schema/Schema.md) knows about a solution originates here.
 
-This reference describes **SaXML v2.2.x as written by FileMaker 22** (root attribute `version="2.2.x.x"`), the format FM-Lab currently targets. FileMaker 26 introduces SaXML v2.3.0.0 with structural changes (see [version notes](#version-notes-v22-and-the-upcoming-v26)); a dedicated section for v26 will follow shortly.
+The structure pages of this reference describe **SaXML v2.2.x as written by FileMaker 22** (root attribute `version="2.2.x.x"`). FM-Lab reads that form and the **v2.3.0.0** form written by FileMaker 26, each under its own import profile; what changed between them is listed in the [version notes](#version-notes-saxml-v22-and-v23) below and, per catalog, on the catalog page itself.
 
 ## Document structure
 
@@ -107,8 +107,60 @@ The practical consequence for every consumer: **after import, the XML is done.**
 | [XML Metadata](catalogs/XML%20Metadata.md) | File options, start layout, file-level triggers | `FileOptionsCatalog`, `ScriptTriggers` |
 | [XML DDR_INFO](catalogs/XML%20DDR_INFO.md) | Tokenized calculations & readable script texts | `DDR_Calculations`, `DDR_ChunkListContexts`, `DDR_ScriptSteps` (+ the DDR side of `CalculationsCatalog`) |
 
-## Version notes: v22 and the upcoming v26
+## Version notes: SaXML v2.2 and v2.3
 
-FM-Lab imports SaXML **v2.1.0.0 and newer** (FileMaker 19+, root element `FMSaveAsXML`); the old v2.0.0.0 format (`FMDynamicTemplate`) is skipped with a warning. All structure pages here describe the v2.2.x form produced by FileMaker 22.
+FM-Lab imports SaXML **v2.1.0.0 and newer** (root element `FMSaveAsXML`); the old v2.0.0.0 format (`FMDynamicTemplate`, FileMaker 18) is skipped with a warning. The importer reads the root attribute `version` of every export and imports the file under one of two **profiles**:
 
-FileMaker 26 writes **SaXML v2.3.0.0**. The known structural change so far: the separate [CalcsForCustomFunctions](catalogs/XML%20CalcsForCustomFunctions.md) branch is gone — each custom function embeds its `<Calculation>` directly (with the chunk list reachable only via the `DDRREF` hash). The importer already handles both forms through structure-tolerant extraction. A dedicated **v26 section** of this reference, documenting the v2.3 differences per catalog, will be added alongside FileMaker 26 coverage.
+| `version` | Profile | FileMaker | Encoding of the export |
+|---|---|---|---|
+| 2.1.0.0 – 2.2.x | `saxml22` | 19 – 22 | UTF-16 (converted by the pre-processor) |
+| 2.3.0.0 and later | `saxml23` | 26 and later | UTF-8 |
+
+The profile is a property of the **file**, not of the catalog: one solution may mix exports of both profiles, and the decision is made per file. It is recorded in [FilesCatalog](../schema/object-catalog/FilesCatalog.md) (`SaXML_Version`, `SaXML_Profile`) and [XMLMetadata](../schema/catalog-tables/XMLMetadata.md) (`SaXML_Profile`), and the import summary prints the tally. Extractions that exist in only one form run only under their profile — an explicit version switch, not structure tolerance.
+
+> **Do not import the FileMaker 22 and the FileMaker 26 export of the *same* file into one catalog.** They share every object UUID, so the two exports collide instead of replacing one another — see [Troubleshooting](../Wiki/Troubleshooting.md#filemaker-22-and-26-exports-of-the-same-file).
+
+### What changed in v2.3.0.0
+
+Where a catalog is affected, its page carries a **Version difference** note. The complete list:
+
+**Document structure**
+
+| | v2.2.x (`saxml22`) | v2.3.0.0 (`saxml23`) |
+|---|---|---|
+| Root element | `version Source File UUID locale Has_DDR_INFO` | additionally `binary_under_lo`, `split_catalogs` |
+| `<Structure>` children | `AddAction` and others | `AddAction` only |
+| Value-list options | top-level [XML OptionsForValueLists](catalogs/XML%20OptionsForValueLists.md) branch | embedded in [XML ValueListCatalog](catalogs/XML%20ValueListCatalog.md) (`Source`, `Field`, `CustomValues`, `External`) |
+| Custom-function formulas | top-level [XML CalcsForCustomFunctions](catalogs/XML%20CalcsForCustomFunctions.md) branch | `<Calculation>` embedded in each `<CustomFunction>`, no `<ChunkList>` |
+
+**Fields** (see [XML FieldsForTables](catalogs/XML%20FieldsForTables.md))
+
+| | v2.2.x | v2.3.0.0 |
+|---|---|---|
+| `Field/Annotation/Text` | — | new: the field annotation (DDL comment) |
+| `Field/DisplayNames` | — | new: `enable` flag plus a `Calculation` for customized display names; the formula anchors in `DDR_INFO` as `_<Field-UUID>_5` |
+| Disabled definitions | not exported at all | `enable="False"` on a disabled auto-enter, lookup or validation definition — formula, DDR anchor and chunks are still written |
+| Validation calc anchor | `_<Field-UUID>_2` | `_<Field-UUID>_4_2` (the message calc stays `_4`) |
+
+**Layouts** (see [XML LayoutCatalog](catalogs/XML%20LayoutCatalog.md))
+
+| | v2.2.x | v2.3.0.0 |
+|---|---|---|
+| Table-view columns | — | new: `TableView/ObjectList/TableViewLayoutObject` with `hidden`, `id`, `name`, `width` and a `FieldReference` per column |
+| `DisplayCalculations@membercount` | the number of `<<ƒ:…>>` tokens in the text | always 12 — the surplus anchors repeat the first slot's hash or carry foreign chunks |
+| `Part@type` of `Part@kind="5"` | `Trailing Grand Summary` (a Claris mislabel — the real trailing grand summary is kind 6) | `Trailing Sub-summary` |
+| Field entry formula | the state bits only | the `by_calculation` formula as well |
+
+**Script steps** (see [XML StepsForScripts](catalogs/XML%20StepsForScripts.md))
+
+| | v2.2.x | v2.3.0.0 |
+|---|---|---|
+| The FileMaker 26 steps (`id` 238, 240–246: Configure Persistent Data, Insert Image Caption(s), Print/Create/Append/Close/Open PDF) | exported bare — `id`, `name`, `Options`, DDR anchor, but **no `ParameterValues`** | full parameters |
+| `Save Records as PDF` (144) booleans | `Append …`, `With dialog` | `With dialog`, `Append …`, plus `Create folders` and `SaveResult`; saving into a container uses a `Target` field reference instead of the legacy path form |
+| `Export Records` (36) XSLT | the `DataSourceReference/XSL` calculation is not exported | exported |
+| `Re-Login` (138) | no `DataSourceReference` | always present (`id="0"` = current file; an external file with `id`, `name`, `UUID`) |
+| `Show Custom Dialog` (87) | — | `height`, `width`, `top`, `left` calculations (dialog geometry) |
+| `Save a Copy as Add-on Package` (96) | no `ParameterValues` | boolean "Replace UUIDs" and the package path calculation |
+| LLM steps (215, 218, 219) | — | `LLMParameters`; for 219 additionally `RAGTokensPerTextChunk`, `RAGAddDataResponse` and a `Target`/`Variable` |
+
+**Read transparently** (additive, no structural consequence): `ExternalDataSourceCatalog/SortOrder`, `SortSpecification@blanksLast`, `ImportField/Options@keepOriginalData`, `SQL@HasODBCAuthCalc`, `LocalCSS@type`, `UseDefaultFields@enable`, `LibraryCatalog` ahead of `LayoutCatalog`, and the new step parameter types of the FileMaker 26 steps.

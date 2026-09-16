@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Compatibilité des déclencheurs : FileMaker WebDirect",
+    "analysis.defaultResult.meaning": "Déclencheurs de script du périmètre dont l’événement ne se produit pas ou seulement partiellement dans FileMaker WebDirect"
+  },
+  "layout": {}
+}

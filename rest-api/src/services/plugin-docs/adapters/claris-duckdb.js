@@ -316,6 +316,11 @@ async function getEntry(ctx, { functionId, lang = 'en' } = {}) {
   return {
     id: functionId,
     title: row.display_name,
+    // Counterpart in the fm-spec browser (`/fm-spec/<kind>/<id>`). The row was
+    // just read from ref.script_steps / ref.functions — the same tables the
+    // fm-spec routes serve — so the target exists whenever this entry does.
+    // Topic pages have no counterpart and carry no spec_ref.
+    spec_ref: { kind: prefix === 'ss' ? 'step' : 'function', id: numId },
     // Embed-HTML wird bereits sanitized + link-rewritten ausgeliefert. Bleibt
     // null, wenn der Mirror nichts hatte — DocsEntryView fällt dann auf
     // content_url zurück (Legacy-Pfad).

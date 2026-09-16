@@ -39,6 +39,10 @@ const sources = {
     // dieselbe Quelle, die auch Import-Pipeline und Objekt-Filter benutzen.
     componentMapFile: resolveAbsolute('../reference/mbs_component_exceptions.csv'),
     externalUrl: (fnName) => `https://www.mbsplugins.eu/${fnToSlug(fnName)}.shtml`,
+    // Rubrikseite einer Komponente. Gleiche Regel wie oben, nur mit dem
+    // `component_`-Präfix des Doku-Index (`component_Archive.html`) — im
+    // Spiegel selbst als Hersteller-URL belegt (component_*.shtml).
+    externalCategoryUrl: (catName) => `https://www.mbsplugins.eu/component_${catName}.shtml`,
     // Lazy require: Adapter erst zur Laufzeit laden, sonst Zirkularimport
     // mit dem gemeinsamen html-extractor.
     get adapter() {

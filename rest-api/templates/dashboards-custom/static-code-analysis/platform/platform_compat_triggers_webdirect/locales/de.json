@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Trigger-Kompatibilität: FileMaker WebDirect",
+    "analysis.defaultResult.meaning": "Script-Trigger im Prüfumfang, deren Ereignis in FileMaker WebDirect nicht oder nur teilweise feuert"
+  },
+  "layout": {}
+}

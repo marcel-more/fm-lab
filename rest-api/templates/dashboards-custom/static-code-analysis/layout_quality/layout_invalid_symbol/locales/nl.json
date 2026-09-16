@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "Ongeldig layoutsymbool",
+    "description": "Layoutkwaliteitsregel — een tekstobject bevat een {{Symbool}} dat geen Get-parameter is. Een symbool is de waarde van Get(<Symbool>) op het moment van weergave; een onbekend symbool wordt niet weggelaten maar LETTERLIJK weergegeven in blader- en voorbeeldmodus, zodat de layout de ruwe {{Tekst}} toont. De geldigheid wordt bepaald door de standaardreferentie (function_name_lookup, chunk_role \"getparameter\") over alle talen die zij dekt: FileMaker accepteert ook de gelokaliseerde parameternaam, een gelokaliseerd symbool is dus geen defect. Twee beperkingen houden dit een waarschuwing: de gelokaliseerde dekking van de referentie is ongelijk (Spaanse en Portugese namen ontbreken volledig, Duits is maar deels gedekt) en haakjesvormen zoals {{Get(FoundCount)}} komen helemaal niet in de symboolinventaris terecht — daarvoor is de regel blind.",
+    "messages.unknown-symbol": "Het symbool is geen bekende Get-parameter — het wordt letterlijk weergegeven"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Bevindingen",
+    "summary_kpi.props.items[1].label": "Unieke symbolen",
+    "summary_kpi.props.items[2].label": "Betrokken layouts",
+    "summary_kpi.props.items[3].label": "Betrokken bestanden",
+    "findings_card.props.title": "Ongeldig layoutsymbool",
+    "findings_table.props.searchPlaceholder": "Zoek bestand, layout, object of symbool…",
+    "findings_table.props.empty.message": "Geen ongeldige layoutsymbolen gevonden.",
+    "findings_table.props.columns[0].label": "Bestand",
+    "findings_table.props.columns[1].label": "Layout",
+    "findings_table.props.columns[2].label": "Object",
+    "findings_table.props.columns[3].label": "Symbool",
+    "findings_table.props.columns[4].label": "Voorkomens",
+    "findings_table.props.columns[7].label": "Breedte",
+    "findings_table.props.columns[8].label": "Hoogte"
+  }
+}

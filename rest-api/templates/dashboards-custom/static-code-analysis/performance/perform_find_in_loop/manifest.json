@@ -1,6 +1,6 @@
 {
   "id": "perform_find_in_loop",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "title": "Perform Find inside Loop",
   "description": "Performance rule — Perform Find steps executed inside a Loop. Every iteration triggers a full find.",
   "author": "fm-lab rules",

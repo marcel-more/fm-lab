@@ -1,10 +1,11 @@
 {
   "manifest": {
     "title": "Cálculo de Layout comentado",
-    "description": "Regla de calidad de Layout — un cálculo de ocultar, información (tooltip) o etiqueta de un objeto de Layout consiste íntegramente en un comentario. La fórmula nunca se evalúa; el comportamiento previsto queda desactivado en silencio.\n\nBasado en la comprobación de fmCheckMate «Broken Calculation /*Commented Out*/» — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+    "description": "Regla de calidad de Layout — un cálculo de ocultar, entrada de campo, información (tooltip) o etiqueta de un objeto de Layout consiste íntegramente en un comentario. La fórmula nunca se evalúa; el comportamiento previsto queda desactivado en silencio.\n\nBasado en la comprobación de fmCheckMate «Broken Calculation /*Commented Out*/» — https://github.com/mrwatson-de/fmCheckMate-XSLT",
     "messages.hide": "El cálculo de ocultar está completamente comentado",
     "messages.tooltip": "El cálculo del tooltip está completamente comentado",
-    "messages.label": "El cálculo de la etiqueta está completamente comentado"
+    "messages.label": "El cálculo de la etiqueta está completamente comentado",
+    "messages.entry": "El cálculo de entrada de campo está completamente comentado"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Hallazgos",
@@ -22,6 +23,7 @@
     "calc_slot_filter.props.options[1].label": "ocultar",
     "calc_slot_filter.props.options[2].label": "tooltip",
     "calc_slot_filter.props.options[3].label": "etiqueta",
+    "calc_slot_filter.props.options[4].label": "entrada de campo",
     "object_type_select.props.label": "Tipo de objeto",
     "object_type_select.props.emptyOptionLabel": "todos los tipos de objeto",
     "findings_table.props.columns[7].label": "Ancho",

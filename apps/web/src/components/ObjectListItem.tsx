@@ -84,11 +84,23 @@ export const ObjectListItem: React.FC<ObjectListItemProps> = ({ object, style, o
   const hasUsage = typeof aggObject.usage_count === 'number';
   const hasCategory = aggObject.category != null && aggObject.category !== '';
   const isScriptStep = object.Object_Type === 'ScriptStep' && typeof object.Step_Text === 'string' && object.Step_Text.length > 0;
-  // ValueList-Treffer über hinterlegte Custom-Values: die passenden Werte werden
-  // unter dem Werteliste-Namen angezeigt (analog zum Step-Text bei ScriptSteps).
-  const matchedValues = object.Object_Type === 'ValueList'
+  // Treffer, der NICHT über den Objektnamen kam, wird unter dem Namen
+  // ausgewiesen (analog zum Step-Text bei ScriptSteps):
+  //   • ValueList      — die passenden hinterlegten Custom-Values
+  //   • BuiltinFunction — die lokalisierte Schreibweise, über die gefunden
+  //     wurde. Ein Built-in steht im Katalog unter seinem kanonischen
+  //     englischen Namen; wer 'Seitennummer' sucht, landet auf
+  //     'Get(PageNumber)' und soll sehen, warum.
+  const matchedValues = (object.Object_Type === 'ValueList' || object.Object_Type === 'BuiltinFunction')
     && typeof object.Matched_Values === 'string' && object.Matched_Values.length > 0
     ? object.Matched_Values
+    : null;
+  // Lokalisierte Namensfassung eines Built-ins (nur mit ?lang= und nur, wenn
+  // sie vom kanonischen Namen abweicht). Der kanonische Name bleibt der Titel —
+  // er ist die Identität des Objekts.
+  const localizedName = object.Object_Type === 'BuiltinFunction'
+    && typeof object.Localized_Name === 'string' && object.Localized_Name.length > 0
+    ? object.Localized_Name
     : null;
 
   return (
@@ -110,8 +122,16 @@ export const ObjectListItem: React.FC<ObjectListItemProps> = ({ object, style, o
               {highlightMatch(object.Step_Text as string, searchTerm)}
             </code>
           ) : (
-            <strong className="object-name" title={object.Object_Name || undefined}>
+            <strong
+              className="object-name"
+              title={localizedName
+                ? `${object.Object_Name} · ${localizedName}`
+                : (object.Object_Name || undefined)}
+            >
               {formatObjectDisplayName(object.Object_Type, object.Object_Name) || noName}
+              {localizedName && (
+                <span className="object-name-localized"> · {localizedName}</span>
+              )}
             </strong>
           )}
           {hasCategory && (
@@ -221,7 +241,9 @@ export const ObjectListItem: React.FC<ObjectListItemProps> = ({ object, style, o
               {matchedValues && (
                 <small className="object-value-match" title={matchedValues}>
                   <span className="value-match-label">
-                    {t('detail:objectListItem.valueListMatch')}:
+                    {object.Object_Type === 'BuiltinFunction'
+                      ? t('detail:objectListItem.spellingMatch', { defaultValue: 'Spelling' })
+                      : t('detail:objectListItem.valueListMatch')}:
                   </span>{' '}
                   {highlightMatch(matchedValues, searchTerm)}
                 </small>

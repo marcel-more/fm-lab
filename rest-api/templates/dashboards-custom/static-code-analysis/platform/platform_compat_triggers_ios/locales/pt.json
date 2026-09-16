@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Compatibilidade de acionadores: FileMaker Go (iOS)",
+    "analysis.defaultResult.meaning": "Acionadores de script no escopo cujo evento não dispara ou dispara apenas parcialmente no FileMaker Go (iOS)"
+  },
+  "layout": {}
+}

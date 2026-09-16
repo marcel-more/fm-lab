@@ -1,6 +1,6 @@
 {
   "id": "export_records_in_loop",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "title": "Export Records inside Loop",
   "description": "Performance rule — Export Records inside a Loop writes a file on every iteration.",
   "author": "fm-lab rules",

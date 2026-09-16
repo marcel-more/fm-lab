@@ -1,6 +1,6 @@
 {
   "id": "go_to_layout_in_loop",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "title": "Go to Layout inside Loop",
   "description": "Performance rule — Go to Layout inside a Loop forces a context switch on every iteration.",
   "author": "fm-lab rules",

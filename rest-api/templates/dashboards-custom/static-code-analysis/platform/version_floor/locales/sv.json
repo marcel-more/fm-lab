@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Effektiv lägsta FileMaker-version",
+    "analysis.defaultResult.meaning": "Element i omfattningen som kräver en nyare FileMaker-version än filen anger"
+  },
+  "layout": {}
+}

@@ -1,0 +1,81 @@
+{
+  "id": "error_code_unknown_literal",
+  "version": "1.0.0",
+  "title": "Unknown error-code literal",
+  "description": "Numeric literals compared with Get(LastError) that the FileMaker error-code table does not list (fm_spec error_codes, fm-spec 2.8.0+; ranges such as 1552-1559 and 5000-5499 count as covered). Every spelling of Get(LastError) the reference knows is matched (11 locales); Case/Choose forms and reversed comparisons are out of scope by design.",
+  "author": "fm-lab rules",
+  "icon": "bug",
+  "category": "error_prone",
+  "tags": [
+    "rule",
+    "error_prone"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "warning",
+    "category": "error_prone",
+    "rationale": "A comparison against an undocumented code never matches a FileMaker error - the branch is dead unless a plug-in or a custom Revert Transaction code delivers it.",
+    "remediation": "Check the code against the FileMaker error-code reference (fm-spec error_codes / Claris help); custom codes belong in 5000-5499, plug-in codes in 1552-1559."
+  },
+  "analysis": {
+    "objectTypes": [
+      "Script"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
+    },
+    "requires": [
+      "fm-spec-diagnostics"
+    ],
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Comparisons of Get(LastError) with a code the FileMaker error-code table does not list"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql"
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "limit",
+      "type": "number",
+      "required": false,
+      "description": "Maximum number of findings returned (default 500)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

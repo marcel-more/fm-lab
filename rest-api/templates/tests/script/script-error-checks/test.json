@@ -1,8 +1,8 @@
 {
   "id": "script-error-checks",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "title": "Script Error Checks",
-  "description": "Bundles all error-prone checks relevant for a single script: window lifecycle, dead code, empty and unbalanced branches, loop exits, dialog/GTRR misuse and self-recursion.",
+  "description": "Bundles all error-prone checks relevant for a single script: window lifecycle, dead code, empty and unbalanced branches, loop exits, dialog/GTRR misuse and self-recursion. Since fm-spec 2.8.0 the full check also reads the error-code literals compared with Get(LastError): codes the FileMaker error-code table does not list (warning), web-only codes (info) and the neutral inventory of every compared code.",
   "keywords": [
     "error",
     "robustness",
@@ -10,7 +10,9 @@
     "window",
     "loop",
     "dead-code",
-    "hang"
+    "hang",
+    "error-code",
+    "lasterror"
   ],
   "testType": "error-check",
   "objectTypes": [
@@ -25,7 +27,8 @@
   ],
   "outputs": [
     "count",
-    "findings-table"
+    "findings-table",
+    "inventory-table"
   ],
   "members": [
     {
@@ -75,6 +78,18 @@
     {
       "kind": "dashboard",
       "ref": "self_recursive_script"
+    },
+    {
+      "kind": "dashboard",
+      "ref": "error_code_unknown_literal"
+    },
+    {
+      "kind": "dashboard",
+      "ref": "error_code_web_only"
+    },
+    {
+      "kind": "query",
+      "ref": "error_code_inventory"
     }
   ],
   "profiles": [
@@ -98,70 +113,70 @@
   "locales": {
     "de": {
       "title": "Script-Fehlerprüfungen",
-      "description": "Bündelt alle fehleranfälligen Prüfungen, die für ein einzelnes Script relevant sind: Fenster-Lebenszyklus, toter Code, leere und unausgeglichene Verzweigungen, Schleifenausstiege, Fehlgebrauch von Dialogen/GTRR und Selbstrekursion.",
+      "description": "Bündelt alle fehleranfälligen Prüfungen, die für ein einzelnes Script relevant sind: Fenster-Lebenszyklus, toter Code, leere und unausgeglichene Verzweigungen, Schleifenausstiege, Fehlgebrauch von Dialogen/GTRR und Selbstrekursion. Seit fm-spec 2.8.0 liest der volle Check auch die Fehlercode-Literale in Vergleichen mit Get(LastError): Codes, die die FileMaker-Fehlercode-Tabelle nicht führt (Warnung), reine Web-Codes (Info) und das neutrale Inventar aller verglichenen Codes.",
       "profiles.quick.title": "Schnellprüfung",
       "profiles.quick.description": "Nur die schärfsten Hänger-/Robustheitsregeln: Fenster-Lebenszyklus, Schleifenausstiege, Selbstrekursion.",
       "profiles.full.title": "Vollprüfung"
     },
     "es": {
       "title": "Comprobaciones de errores de scripts",
-      "description": "Agrupa todas las comprobaciones propensas a error relevantes para un único script: ciclo de vida de ventanas, código muerto, ramas vacías y desequilibradas, salidas de bucle, uso indebido de diálogos/GTRR y autorrecursión.",
+      "description": "Agrupa todas las comprobaciones propensas a error relevantes para un único script: ciclo de vida de ventanas, código muerto, ramas vacías y desequilibradas, salidas de bucle, uso indebido de diálogos/GTRR y autorrecursión. Desde fm-spec 2.8.0 la comprobación completa lee también los literales de código de error comparados con Get(LastError): códigos que la tabla de códigos de error de FileMaker no incluye (advertencia), códigos solo web (info) y el inventario neutral de todos los códigos comparados.",
       "profiles.quick.title": "Comprobación rápida",
       "profiles.quick.description": "Solo las reglas más incisivas sobre bloqueos y robustez: ciclo de vida de ventanas, salidas de bucle, autorrecursión.",
       "profiles.full.title": "Comprobación completa"
     },
     "fr": {
       "title": "Vérifications d'erreurs des scripts",
-      "description": "Regroupe toutes les vérifications sujettes aux erreurs pertinentes pour un script isolé : cycle de vie des fenêtres, code mort, branches vides et déséquilibrées, sorties de boucle, mauvais usage des boîtes de dialogue/GTRR et auto-récursion.",
+      "description": "Regroupe toutes les vérifications sujettes aux erreurs pertinentes pour un script isolé : cycle de vie des fenêtres, code mort, branches vides et déséquilibrées, sorties de boucle, mauvais usage des boîtes de dialogue/GTRR et auto-récursion. Depuis fm-spec 2.8.0, la vérification complète lit aussi les littéraux de codes d'erreur comparés à Get(LastError) : codes absents de la table des codes d'erreur FileMaker (avertissement), codes Web uniquement (info) et l'inventaire neutre de tous les codes comparés.",
       "profiles.quick.title": "Vérification rapide",
       "profiles.quick.description": "Uniquement les règles les plus tranchantes sur les blocages et la robustesse : cycle de vie des fenêtres, sorties de boucle, auto-récursion.",
       "profiles.full.title": "Vérification complète"
     },
     "it": {
       "title": "Controlli degli errori degli script",
-      "description": "Raggruppa tutti i controlli soggetti a errore rilevanti per un singolo script: ciclo di vita delle finestre, codice morto, rami vuoti e sbilanciati, uscite dai cicli, uso improprio di finestre di dialogo/GTRR e auto-ricorsione.",
+      "description": "Raggruppa tutti i controlli soggetti a errore rilevanti per un singolo script: ciclo di vita delle finestre, codice morto, rami vuoti e sbilanciati, uscite dai cicli, uso improprio di finestre di dialogo/GTRR e auto-ricorsione. Da fm-spec 2.8.0 il controllo completo legge anche i letterali di codice di errore confrontati con Get(LastError): codici non presenti nella tabella dei codici di errore FileMaker (avviso), codici solo web (info) e l'inventario neutrale di tutti i codici confrontati.",
       "profiles.quick.title": "Controllo rapido",
       "profiles.quick.description": "Solo le regole più incisive su blocchi e robustezza: ciclo di vita delle finestre, uscite dai cicli, auto-ricorsione.",
       "profiles.full.title": "Controllo completo"
     },
     "ja": {
       "title": "スクリプトのエラー検査",
-      "description": "単一スクリプトに関係するエラーを招きやすい検査をまとめたものです：ウィンドウのライフサイクル、デッドコード、空および不均衡な分岐、ループの脱出、ダイアログ／GTRR の誤用、自己再帰。",
+      "description": "単一スクリプトに関係するエラーを招きやすい検査をまとめたものです：ウィンドウのライフサイクル、デッドコード、空および不均衡な分岐、ループの脱出、ダイアログ／GTRR の誤用、自己再帰。 fm-spec 2.8.0 以降、フルチェックは Get(LastError) と比較されるエラーコードリテラルも読み取ります。FileMaker エラーコード表にないコード（警告）、Web 専用コード（情報）、および比較されたすべてのコードの中立的なインベントリです。",
       "profiles.quick.title": "クイックチェック",
       "profiles.quick.description": "ハングと堅牢性に関する最も鋭い規則のみ：ウィンドウのライフサイクル、ループの脱出、自己再帰。",
       "profiles.full.title": "フルチェック"
     },
     "ko": {
       "title": "스크립트 오류 검사",
-      "description": "단일 스크립트와 관련된 오류 유발 검사를 한데 묶습니다: 창 수명 주기, 죽은 코드, 비어 있거나 균형이 맞지 않는 분기, 루프 탈출, 대화상자/GTRR 오용, 자기 재귀.",
+      "description": "단일 스크립트와 관련된 오류 유발 검사를 한데 묶습니다: 창 수명 주기, 죽은 코드, 비어 있거나 균형이 맞지 않는 분기, 루프 탈출, 대화상자/GTRR 오용, 자기 재귀. fm-spec 2.8.0부터 전체 검사는 Get(LastError)와 비교되는 오류 코드 리터럴도 읽습니다. FileMaker 오류 코드 표에 없는 코드(경고), 웹 전용 코드(정보), 비교된 모든 코드의 중립적 인벤토리입니다.",
       "profiles.quick.title": "빠른 검사",
       "profiles.quick.description": "멈춤과 견고성에 관한 가장 날카로운 규칙만: 창 수명 주기, 루프 탈출, 자기 재귀.",
       "profiles.full.title": "전체 검사"
     },
     "nl": {
       "title": "Foutcontroles van scripts",
-      "description": "Bundelt alle foutgevoelige controles die relevant zijn voor één script: venster-levenscyclus, dode code, lege en niet-uitgebalanceerde vertakkingen, lusuitgangen, verkeerd gebruik van dialoogvensters/GTRR en zelfrecursie.",
+      "description": "Bundelt alle foutgevoelige controles die relevant zijn voor één script: venster-levenscyclus, dode code, lege en niet-uitgebalanceerde vertakkingen, lusuitgangen, verkeerd gebruik van dialoogvensters/GTRR en zelfrecursie. Sinds fm-spec 2.8.0 leest de volledige controle ook de foutcode-literals die met Get(LastError) worden vergeleken: codes die de FileMaker-foutcodetabel niet vermeldt (waarschuwing), codes alleen voor web (info) en de neutrale inventaris van alle vergeleken codes.",
       "profiles.quick.title": "Snelle controle",
       "profiles.quick.description": "Alleen de scherpste regels rond vastlopen en robuustheid: venster-levenscyclus, lusuitgangen, zelfrecursie.",
       "profiles.full.title": "Volledige controle"
     },
     "pt": {
       "title": "Verificações de erros dos scripts",
-      "description": "Reúne todas as verificações propensas a erro relevantes para um único script: ciclo de vida de janelas, código morto, ramificações vazias e desequilibradas, saídas de laço, uso indevido de diálogos/GTRR e autorrecursão.",
+      "description": "Reúne todas as verificações propensas a erro relevantes para um único script: ciclo de vida de janelas, código morto, ramificações vazias e desequilibradas, saídas de laço, uso indevido de diálogos/GTRR e autorrecursão. Desde o fm-spec 2.8.0 a verificação completa lê também os literais de código de erro comparados com Get(LastError): códigos que a tabela de códigos de erro do FileMaker não lista (aviso), códigos somente web (info) e o inventário neutro de todos os códigos comparados.",
       "profiles.quick.title": "Verificação rápida",
       "profiles.quick.description": "Apenas as regras mais incisivas sobre travamentos e robustez: ciclo de vida de janelas, saídas de laço, autorrecursão.",
       "profiles.full.title": "Verificação completa"
     },
     "sv": {
       "title": "Felkontroller för skript",
-      "description": "Samlar alla felbenägna kontroller som är relevanta för ett enskilt skript: fönstrens livscykel, död kod, tomma och obalanserade grenar, looputgångar, felaktig användning av dialoger/GTRR och självrekursion.",
+      "description": "Samlar alla felbenägna kontroller som är relevanta för ett enskilt skript: fönstrens livscykel, död kod, tomma och obalanserade grenar, looputgångar, felaktig användning av dialoger/GTRR och självrekursion. Sedan fm-spec 2.8.0 läser den fullständiga kontrollen även felkodsliteralerna som jämförs med Get(LastError): koder som FileMakers felkodstabell inte tar upp (varning), koder endast för webb (info) och den neutrala inventeringen av alla jämförda koder.",
       "profiles.quick.title": "Snabbkontroll",
       "profiles.quick.description": "Endast de skarpaste reglerna om hängningar och robusthet: fönstrens livscykel, looputgångar, självrekursion.",
       "profiles.full.title": "Fullständig kontroll"
     },
     "zh-Hans": {
       "title": "脚本错误检查",
-      "description": "汇集与单个脚本相关的各项易错检查：窗口生命周期、死代码、空分支与不平衡分支、循环退出、对话框/GTRR 的误用以及自递归。",
+      "description": "汇集与单个脚本相关的各项易错检查：窗口生命周期、死代码、空分支与不平衡分支、循环退出、对话框/GTRR 的误用以及自递归。 自 fm-spec 2.8.0 起，完整检查还会读取与 Get(LastError) 进行比较的错误代码字面量：FileMaker 错误代码表中未列出的代码（警告）、仅 Web 代码（信息）以及所有被比较代码的中立清单。",
       "profiles.quick.title": "快速检查",
       "profiles.quick.description": "仅保留关于卡死与健壮性的最关键规则：窗口生命周期、循环退出、自递归。",
       "profiles.full.title": "完整检查"

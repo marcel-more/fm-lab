@@ -7,12 +7,14 @@
   "help": {
     "open": "도움말"
   },
+  "clarisHelp": "Claris 도움말 →",
   "search": {
     "placeholder": "필터…",
     "platformAll": "모든 플랫폼",
     "platformLabel": "플랫폼",
     "platformStepHint": "이 플랫폼에서 실행되는 스텝 표시(부분 지원 포함)",
-    "platformFnHint": "이 플랫폼용으로 만들어진 함수 표시(플랫폼 결합)"
+    "platformFnHint": "이 플랫폼용으로 만들어진 함수 표시(플랫폼 결합)",
+    "platformTriggerHint": "이 플랫폼에서 발생하는 트리거 이벤트 표시(부분 지원 포함)"
   },
   "list": {
     "count": "{{shown}} / {{total}}"
@@ -20,11 +22,14 @@
   "tabs": {
     "steps": "ScriptSteps",
     "functions": "함수",
-    "locales": "언어"
+    "locales": "언어",
+    "triggers": "트리거",
+    "errorCodes": "오류 코드"
   },
   "header": {
     "schemaVersion": "스키마",
-    "coverage": "FM 버전",
+    "coverage": "FM 버전(셰이프)",
+    "docCoverage": "FM 버전(문서)",
     "built": "빌드 시각",
     "steps": "ScriptSteps",
     "functions": "함수",
@@ -32,7 +37,9 @@
     "localesValue": "{{steps}} / {{functions}}",
     "grammar": "문법 커버리지",
     "grammarValue": "{{covered}}/{{total}} 단계",
-    "attribution": "문서 콘텐츠 © Claris International Inc. FileMaker 및 Claris는 Claris International Inc.의 상표입니다. 이 프로젝트는 Claris와 제휴하거나 승인받지 않았습니다. 전체 출처 표시는 SOURCES를 참조하십시오."
+    "attribution": "문서 콘텐츠 © Claris International Inc. FileMaker 및 Claris는 Claris International Inc.의 상표입니다. 이 프로젝트는 Claris와 제휴하거나 승인받지 않았습니다. 전체 출처 표시는 SOURCES를 참조하십시오.",
+    "triggers": "트리거",
+    "errorCodes": "오류 코드"
   },
   "steps": {
     "col": {
@@ -52,7 +59,8 @@
       "name": "이름",
       "category": "카테고리",
       "returnType": "반환 유형",
-      "originVersion": "최초 버전"
+      "originVersion": "최초 버전",
+      "removedInVersion": "제거된 버전"
     },
     "detail": {
       "returnType": "반환 유형",
@@ -120,8 +128,22 @@
         "evidence": "근거",
         "values": "값",
         "invertedHint": "레이블 의미가 XML 상태와 반전되어 있습니다 — true_text/false_text에 텍스트→XML 매핑이 완전히 포함되어 있으므로 추가로 반전하지 마십시오.",
-        "docOnly": "Claris 문서에 기재되어 있지만 라운드트립 검증은 되지 않았습니다 — 붙여넣기 후 동작을 확인하십시오."
-      }
+        "docOnly": "Claris 문서에 기재되어 있지만 라운드트립 검증은 되지 않았습니다 — 붙여넣기 후 동작을 확인하십시오.",
+        "slotKind": "슬롯",
+        "xmlDomain": "XML 도메인",
+        "slot_field_only": "필드만",
+        "slot_field_or_var": "필드 또는 변수",
+        "slot_variable_only": "변수만",
+        "pasteDropped": "붙여넣기 시 삭제됨",
+        "pasteDroppedHint": "FileMaker는 붙여넣기 시 값에 관계없이 이 옵션을 삭제합니다 — 생성기는 이를 생략하고, 참조는 읽기를 위해 자리 표시자를 유지합니다."
+      },
+      "coverage": "셰이프 커버리지",
+      "coverageHint": "이 셰이프가 짝지어진 내보내기 및 클립보드 증거에 대해 검증된 FileMaker 버전입니다. 버전이 표시된 행은 해당 커버리지의 오버라이드이며 같은 키의 표준 행을 대체합니다.",
+      "coverageBase": "기본",
+      "overrideBadge": "FM {{coverage}}",
+      "overrideHint": "커버리지 {{coverage}}의 오버라이드 행 — 같은 키의 표준 행을 대체합니다.",
+      "noOverrides": "이 커버리지에는 오버라이드 행이 없습니다 — 표준 셰이프가 적용됩니다.",
+      "targetSlotKind": "대상 슬롯 종류"
     },
     "saxml": {
       "paramTypes": "매개변수 유형 시퀀스",
@@ -133,7 +155,8 @@
     "compat": {
       "label": "플랫폼 호환성",
       "partial": "부분 지원",
-      "partialHint": "부분 지원 — 조건부 지원. 스텝의 Claris 도움말 페이지 참조"
+      "partialHint": "부분 지원 — 조건부 지원. 스텝의 Claris 도움말 페이지 참조",
+      "none": "플랫폼 없음 — Claris는 이 이벤트를 어디에서도 지원으로 표시하지 않습니다"
     }
   },
   "osAffinity": {
@@ -146,5 +169,56 @@
     "hint_unsupported": "Claris는 이 OS를 명시적으로 지원되지 않는다고 밝힙니다(원문에 충실한 역방향 진술)",
     "hint_variant": "어디서나 실행되지만 동작이나 결과는 OS에 따라 다릅니다",
     "hint_os_probe": "런타임에 플랫폼/OS를 반환합니다 — 가드 이디엄이며 바인딩이 아닙니다"
+  },
+  "triggers": {
+    "col": {
+      "id": "슬롯 ID",
+      "event": "이벤트",
+      "label": "레이블",
+      "level": "수준",
+      "since": "도입 버전",
+      "parameter": "매개변수",
+      "platforms": "플랫폼"
+    },
+    "level": {
+      "object": "개체",
+      "layout": "레이아웃",
+      "file": "파일"
+    },
+    "paramYes": "예",
+    "paramNo": "아니요",
+    "unavailable": "이 참조에는 스크립트 트리거 테이블이 없습니다(fm-spec < 1.18.0)."
+  },
+  "errorCodes": {
+    "col": {
+      "code": "코드",
+      "message": "메시지",
+      "scope": "범위"
+    },
+    "scope": {
+      "core": "코어",
+      "web": "웹"
+    },
+    "scopeHint": {
+      "core": "FileMaker 클라이언트 및 호스트가 반환",
+      "web": "웹 게시 엔진 또는 FileMaker REST API가 반환(Claris에서 (*)로 표시)"
+    },
+    "search": {
+      "hint": "숫자는 해당 코드 또는 코드가 속한 범위를 찾습니다(5123 → 5000-5499). 텍스트는 메시지를 검색합니다"
+    },
+    "unavailable": "이 참조에는 오류 코드 테이블이 없습니다(fm-spec < 2.8.0)."
+  },
+  "trigger": {
+    "section": {
+      "labels": "현지화된 레이블",
+      "platforms": "플랫폼 호환성"
+    },
+    "localized": {
+      "label": "대화 상자 레이블"
+    },
+    "parameterField": "매개변수 필드 속성 있음",
+    "compat": {
+      "unavailable": "공개된 호환성 정보 없음 — 참조가 fm-spec 2.8.0보다 오래됨"
+    }
   }
 }

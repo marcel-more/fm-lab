@@ -38,6 +38,7 @@ function clearCaches() {
   functionAffinityMapCache = null;
   scriptTriggerEventMapCache = null;
   scriptTriggerEventLabelsCache.clear();
+  triggerCompatMapCache = null;
 }
 
 function isStepLang(lang) {
@@ -514,6 +515,7 @@ async function getStepDetail(ctx, idOrSlug, lang) {
     } : null,
     helpUrl:      lang_row.url || null,
     localHelpUrl: buildLocalHelpUrl('steps', language, base.url_slug),
+    docsEntry:    buildDocsEntryRef('step', base.category_id, base.step_id, base.url_slug),
   };
 }
 
@@ -529,9 +531,12 @@ async function listFunctions(ctx, lang) {
   const cacheKey = `functions-list:${language}`;
   if (metaCache.has(cacheKey)) return metaCache.get(cacheKey);
 
+  // retirement column (fm_spec >= 2.2.0); NULL on older builds
+  const removedSel = (await refColumnExists(ctx, 'functions', 'removed_in_version'))
+    ? 'f.removed_in_version' : 'NULL AS removed_in_version';
   const r = await db.executeQuery(ctx, `
     SELECT f.function_id, f.opcode, f.canonical_name, f.return_type,
-           f.origin_version, f.is_get_function, f.url_slug, f.category_id,
+           f.origin_version, ${removedSel}, f.is_get_function, f.url_slug, f.category_id,
            fl.display_name, fl.signature, fl.purpose, fl.url
     FROM ref.functions f
     LEFT JOIN ref.functions_lang fl
@@ -547,6 +552,7 @@ async function listFunctions(ctx, lang) {
     opcode:        row.opcode,
     returnType:    row.return_type,
     originVersion: row.origin_version,
+    removedInVersion: row.removed_in_version ?? null,
     isGetFunction: Number(row.is_get_function) === 1,
     urlSlug:       row.url_slug,
     displayName:   row.display_name || row.canonical_name,
@@ -564,17 +570,19 @@ async function listFunctions(ctx, lang) {
 async function findFunctionByNameOrId(ctx, nameOrId) {
   assertAttached();
   const isNumeric = /^\d+$/.test(String(nameOrId));
+  const removedSel = (await refColumnExists(ctx, 'functions', 'removed_in_version'))
+    ? 'removed_in_version' : 'NULL AS removed_in_version';
   let row;
   if (isNumeric) {
     const r = await db.executeQuery(ctx,
-      `SELECT function_id, canonical_name, opcode, category_id, return_type, origin_version, is_get_function, url_slug
+      `SELECT function_id, canonical_name, opcode, category_id, return_type, origin_version, ${removedSel}, is_get_function, url_slug
        FROM ref.functions WHERE function_id = ?`,
       [parseInt(nameOrId, 10)]
     );
     row = r.rows[0];
   } else {
     const r = await db.executeQuery(ctx,
-      `SELECT function_id, canonical_name, opcode, category_id, return_type, origin_version, is_get_function, url_slug
+      `SELECT function_id, canonical_name, opcode, category_id, return_type, origin_version, ${removedSel}, is_get_function, url_slug
        FROM ref.functions
        WHERE canonical_name = ? OR url_slug = ?`,
       [String(nameOrId), String(nameOrId)]
@@ -653,6 +661,7 @@ async function getFunctionDetail(ctx, nameOrId, lang) {
     returnType:    base.return_type,
     returnTypeDisplay: lang_row.return_type_display || null,
     originVersion: base.origin_version,
+    removedInVersion: base.removed_in_version ?? null,
     isGetFunction: Number(base.is_get_function) === 1,
     urlSlug:       base.url_slug,
     displayName:   lang_row.display_name || base.canonical_name,
@@ -673,6 +682,7 @@ async function getFunctionDetail(ctx, nameOrId, lang) {
     osAffinity: await getOsAffinity(ctx, 'function_os_affinity', 'function_id', base.function_id),
     helpUrl:      lang_row.url || null,
     localHelpUrl: buildLocalHelpUrl('functions', language, base.url_slug),
+    docsEntry:    buildDocsEntryRef('function', base.category_id, base.function_id, base.url_slug),
   };
 }
 
@@ -874,6 +884,13 @@ async function enrichFunctionTokens(ctx, tokens, lang) {
     t.functionId       = Number(row.function_id);
     t.functionCanonical = canonical;
     if (subParameter)  t.functionSubParameter = subParameter;
+    // Der UNGETEILTE kanonische Name — für einen Get-Parameter also
+    // `Get(PageNumber)`, nicht das nackte `Get` aus der Aufspaltung oben.
+    // Genau dieser Name ist die Katalog-Identität des Built-ins (ObjectCatalog
+    // .Object_Name seit Schema 1.32.0), und nur er ist als „kanonisch: …"-Angabe
+    // brauchbar: `Get` allein benennt keine Funktion und war für den Leser
+    // schlicht falsch.
+    t.functionCanonicalFull = subParameter ? `Get(${subParameter})` : canonical;
     t.functionDisplayName = row.display_name || row.canonical_name;
     t.functionSignature   = row.signature || null;
     // Purpose-Kaskade: bei Get-Waisen ist `purpose` oft NULL und der Kurztext
@@ -1018,6 +1035,32 @@ function buildLocalHelpUrl(domain, lang, slug) {
 }
 
 /**
+ * Cross-navigation target into the Claris docs page of a step/function
+ * (`/docs/claris-help/<category>/<entry>` in the SPA). Language-independent:
+ * the docs page resolves the display language itself. Returns null unless the
+ * counterpart really exists — the `claris-help` doc-set is installed AND the
+ * help mirror holds the slug in at least one language (an installed doc-set
+ * with a missing page would render an empty docs view).
+ *
+ * `kind` = 'step' | 'function'; the id prefixes mirror the claris-duckdb docs
+ * adapter (`ss:` / `fn:`).
+ */
+const CLARIS_DOCSET_ID = 'claris-help';
+function buildDocsEntryRef(kind, categoryId, id, slug) {
+  if (!slug || categoryId == null || id == null) return null;
+  const helpService = require('./help.service');
+  const docsManifest = require('./docs-manifest');
+  if (!docsManifest.isInstalled(CLARIS_DOCSET_ID)) return null;
+  if (!helpService.hasAnyHtml(slug)) return null;
+  const prefix = kind === 'step' ? 'ss' : 'fn';
+  return {
+    set: CLARIS_DOCSET_ID,
+    category: `${prefix}:${Number(categoryId)}`,
+    entry: `${prefix}:${Number(id)}`,
+  };
+}
+
+/**
  * ============================================================================
  * Build-Metadaten (für Response-Header / -Envelope)
  * ============================================================================
@@ -1055,8 +1098,12 @@ async function getReferenceMeta(ctx) {
   for (const row of metaRows.rows) referenceMeta[row.key] = row.value;
 
   const grammarTable = await refTableExists(ctx, 'step_xml_map');
+  // runtime & diagnostics tables (fm_spec >= 2.8.0) — counted only where present
+  const countIf = async (table) => (await refTableExists(ctx, table))
+    ? Number((await db.executeQuery(ctx, `SELECT COUNT(*) AS n FROM ref.${table}`)).rows[0].n)
+    : 0;
 
-  const [stepCount, fnCount, stepLoc, fnLoc, grammar] = await Promise.all([
+  const [stepCount, fnCount, stepLoc, fnLoc, grammar, triggers, errorCodes, featureVersions, constants] = await Promise.all([
     db.executeQuery(ctx, `SELECT COUNT(*) AS n FROM ref.script_steps`),
     db.executeQuery(ctx, `SELECT COUNT(*) AS n FROM ref.functions`),
     db.executeQuery(ctx, `SELECT COUNT(DISTINCT language) AS n FROM ref.script_steps_lang`),
@@ -1064,6 +1111,10 @@ async function getReferenceMeta(ctx) {
     grammarTable
       ? db.executeQuery(ctx, `SELECT COUNT(*) AS n FROM ref.step_xml_map`)
       : Promise.resolve({ rows: [{ n: 0 }] }),
+    countIf('script_triggers'),
+    countIf('error_codes'),
+    countIf('feature_versions'),
+    countIf('language_constants'),
   ]);
 
   // Locale-Matrix (deckt Tab 4.3 mit ab). Pro Sprache: Step-/Functions-/
@@ -1090,18 +1141,28 @@ async function getReferenceMeta(ctx) {
     referenceMeta: {
       schema_version:    referenceMeta.schema_version || null,
       filemaker_coverage: referenceMeta.filemaker_coverage || null,
+      doc_coverage:      referenceMeta.doc_coverage || null,      // documentation layer (since fm_spec 1.19.0)
+      doc_help_build:    referenceMeta.doc_help_build || null,
+      doc_source:        referenceMeta.doc_source || null,
       built_at:          referenceMeta.built_at || null,
+      shape_coverages:   referenceMeta.shape_coverages || null, // fm_spec >= 2.0.0
       source_commit:     referenceMeta.source_commit || null,
     },
+    coverages: await getShapeCoverages(ctx),
     counts: {
       scriptSteps:     Number(stepCount.rows[0].n),
       functions:       Number(fnCount.rows[0].n),
       stepLocales:     Number(stepLoc.rows[0].n),
       functionLocales: Number(fnLoc.rows[0].n),
       grammarSteps:    Number(grammar.rows[0].n),
+      triggers,                 // fm_spec >= 1.18.0 (0 on older builds)
+      errorCodes,               // fm_spec >= 2.8.0
+      featureVersions,          // fm_spec >= 2.8.0
+      constants,                // language_constants rows (52 since 2.8.0)
     },
     locales,
     grammarAvailable: grammarTable,
+    diagnosticsAvailable: errorCodes > 0, // error_codes/feature_versions/trigger_compat shipped (fm_spec >= 2.8.0)
   };
   metaCache.set(cacheKey, data);
   return data;
@@ -1161,8 +1222,111 @@ async function getStepAllLangs(ctx, idOrSlug) {
     originVersion: base.origin_version || null,
     compat:        compatMap.get(Number(base.step_id)) || null,
     osAffinity:    await getOsAffinity(ctx, 'step_os_affinity', 'step_id', base.step_id),
+    docsEntry:     buildDocsEntryRef('step', base.category_id, base.step_id, base.url_slug),
     langs,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Shape coverages (fm_spec >= 2.0.0)
+//
+// The seven shape tables (step_xml_map, step_options, step_option_values,
+// step_repeat_groups, step_skeleton_elements, step_option_element_bindings,
+// step_mirror_elements since 2.6.0) carry a `coverage` column: '*' = standard row, '<NN>' = override/addition
+// of ONE FileMaker coverage (26 today). The vocabulary lives in `coverages`
+// (base flag, paired version, SaXML version). A reader resolves against one
+// TARGET coverage: rows of the target override the '*' row of the same key,
+// no target row = the standard row — the same rule fmgen applies
+// (fmgen_lib/db.py Reference._resolve). Older references have neither the
+// column nor the table: a single, unversioned shape.
+// ---------------------------------------------------------------------------
+
+/**
+ * Shape coverages of the attached reference, base first:
+ * [{ coverage, pairedVersion, saxmlVersion, isBase }]. Empty on builds
+ * without the `coverages` vocabulary (fm_spec < 2.0.0).
+ */
+async function getShapeCoverages(ctx) {
+  const cacheKey = 'fmspec-coverages';
+  if (metaCache.has(cacheKey)) return metaCache.get(cacheKey);
+  let out = [];
+  if (await refTableExists(ctx, 'coverages')) {
+    const r = await db.executeQuery(ctx, `
+      SELECT coverage, paired_version, saxml_version, is_base
+      FROM ref.coverages
+      ORDER BY is_base DESC, coverage
+    `);
+    out = r.rows.map((c) => ({
+      coverage:      String(c.coverage),
+      pairedVersion: c.paired_version ?? null,
+      saxmlVersion:  c.saxml_version ?? null,
+      isBase:        Boolean(c.is_base),
+    }));
+  }
+  metaCache.set(cacheKey, out);
+  return out;
+}
+
+/**
+ * Resolve the requested shape coverage. Empty/undefined = the base coverage
+ * of the reference; any other value must be one of its coverages, otherwise
+ * REF_COVERAGE_INVALID (400). Returns { coverage, source } with source
+ * 'query' | 'base' | 'none' (reference without shape coverages).
+ */
+async function resolveShapeCoverage(ctx, requested) {
+  const list = await getShapeCoverages(ctx);
+  const wanted = requested == null ? '' : String(requested).trim();
+  if (list.length === 0) {
+    if (wanted) {
+      const err = new Error('This reference build carries no shape coverages (fm_spec < 2.0.0) — omit the coverage parameter.');
+      err.code = 'REF_COVERAGE_INVALID';
+      throw err;
+    }
+    return { coverage: null, source: 'none' };
+  }
+  const base = list.find((c) => c.isBase) || list[0];
+  if (!wanted) return { coverage: base.coverage, source: 'base' };
+  const hit = list.find((c) => c.coverage === wanted);
+  if (!hit) {
+    const err = new Error(`Unknown shape coverage '${wanted}'. Known: ${list.map((c) => c.coverage).join(', ')}.`);
+    err.code = 'REF_COVERAGE_INVALID';
+    err.details = { known: list.map((c) => c.coverage) };
+    throw err;
+  }
+  return { coverage: hit.coverage, source: 'query' };
+}
+
+/**
+ * Resolution rule over a union of '*' rows and target-coverage rows: target
+ * rows win over '*' rows with the same key; target rows keep their relative
+ * order and come first, then the surviving '*' rows. `coverage` stays on the
+ * row so the viewer can mark overrides. No target = rows as they are.
+ */
+function resolveCoverageRows(rows, keyFn, target) {
+  if (target == null) return rows;
+  const own = rows.filter((r) => String(r.coverage) === target);
+  const ownKeys = new Set(own.map(keyFn));
+  const std = rows.filter((r) => String(r.coverage) !== target && !ownKeys.has(keyFn(r)));
+  return own.concat(std);
+}
+
+/** Coverages (other than '*') that carry any shape row for one step. */
+async function getStepOverrideCoverages(ctx, stepId, hasCoverage) {
+  if (!hasCoverage) return [];
+  const parts = [];
+  for (const t of ['step_xml_map', 'step_options', 'step_option_values',
+                   'step_repeat_groups', 'step_skeleton_elements', 'step_option_element_bindings',
+                   'step_mirror_elements']) {
+    if (await refTableExists(ctx, t) && await refColumnExists(ctx, t, 'coverage')) {
+      parts.push(`SELECT coverage FROM ref.${t} WHERE step_id = ${Number(stepId)}`);
+    }
+  }
+  if (parts.length === 0) return [];
+  const r = await db.executeQuery(ctx, `
+    SELECT DISTINCT coverage FROM (${parts.join(' UNION ALL ')}) u
+    WHERE coverage <> '*' ORDER BY coverage
+  `);
+  return r.rows.map((x) => String(x.coverage));
 }
 
 /**
@@ -1171,7 +1335,7 @@ async function getStepAllLangs(ctx, idOrSlug) {
  * die Tabelle bei Referenz < 1.2.0) → `{ available:false, xmlMap:null, … }`.
  * Ein unbekannter Step wirft dagegen REF_STEP_NOT_FOUND (Controller → 404).
  */
-async function getStepGrammar(ctx, idOrSlug) {
+async function getStepGrammar(ctx, idOrSlug, requestedCoverage) {
   assertAttached();
   const base = await findStepBySlugOrId(ctx, idOrSlug);
   if (!base) {
@@ -1184,6 +1348,10 @@ async function getStepGrammar(ctx, idOrSlug) {
     stepId: base.step_id,
     canonicalName: base.canonical_name,
     available: false,
+    coverage: null,
+    coverageSource: 'none',
+    coverages: [],
+    overrideCoverages: [],
     xmlMap: null,
     options: [],
     constraints: [],
@@ -1191,54 +1359,80 @@ async function getStepGrammar(ctx, idOrSlug) {
     skeletonElements: [],
     elementBindings: [],
     optionImplications: [],
+    mirrorElements: [],
   };
 
   if (!(await refTableExists(ctx, 'step_xml_map'))) return empty;
 
+  // Shape coverages (fm_spec >= 2.0.0): read the standard rows plus the rows
+  // of the TARGET coverage and resolve per table (override rule above).
+  // No column = pre-2.0 reference, single shape, coverage null.
+  const hasCoverage = await refColumnExists(ctx, 'step_xml_map', 'coverage');
+  const { coverage, source: coverageSource } = hasCoverage
+    ? await resolveShapeCoverage(ctx, requestedCoverage)
+    : { coverage: null, source: 'none' };
+  const cov = hasCoverage
+    ? (coverage != null ? ` AND coverage IN ('*', ?)` : ` AND coverage = '*'`)
+    : '';
+  const covParams = hasCoverage && coverage != null ? [coverage] : [];
+  const rowCov = (r) => (r.coverage != null ? String(r.coverage) : null);
+  // step_constraints.coverage (fm_spec >= 2.7.0): '*' = every coverage, a
+  // coverage id scopes the row (saxml_omission). Every row is listed — the
+  // scope is shown, not filtered — so a 22-only export gap stays visible
+  // when the grammar is viewed for 26 and vice versa.
+  const conCov = (await refColumnExists(ctx, 'step_constraints', 'coverage')) ? ', coverage' : '';
+
   // SELECT * — the deployed consumer variant strips curation columns (notes)
   // and adds payload columns (saxml_example); tolerate both shapes.
   const mapRes = await db.executeQuery(ctx, `
-    SELECT * FROM ref.step_xml_map WHERE step_id = ?
-  `, [base.step_id]);
-  if (mapRes.rows.length === 0) return empty;
-  const m = mapRes.rows[0];
+    SELECT * FROM ref.step_xml_map WHERE step_id = ?${cov}
+  `, [base.step_id, ...covParams]);
+  const mapRows = resolveCoverageRows(mapRes.rows, (r) => String(r.step_id), coverage);
+  if (mapRows.length === 0) return { ...empty, coverage, coverageSource, coverages: await getShapeCoverages(ctx) };
+  const m = mapRows[0];
 
   const [optRes, valRes, conRes] = await Promise.all([
+    // SELECT * keeps the reads tolerant across reference schema versions
+    // (slot_kind / xml_true / xml_false since 2.2.0, coverage since 2.0.0)
     db.executeQuery(ctx, `
-      SELECT option_key, option_type, required, display_location,
-             display_label_en, true_text, false_text, omit_when_false,
-             inverted_label, xml_path, sort_order, evidence, verified_version
+      SELECT *
       FROM ref.step_options
-      WHERE step_id = ?
+      WHERE step_id = ?${cov}
       ORDER BY sort_order, option_key
-    `, [base.step_id]),
-    // SELECT * keeps this tolerant across reference schema versions
-    // (per-value `evidence` exists only in newer reference builds)
+    `, [base.step_id, ...covParams]),
     db.executeQuery(ctx, `
       SELECT *
       FROM ref.step_option_values
-      WHERE step_id = ?
+      WHERE step_id = ?${cov}
       ORDER BY option_key, xml_value
-    `, [base.step_id]),
+    `, [base.step_id, ...covParams]),
     db.executeQuery(ctx, `
-      SELECT constraint_kind, detail, evidence, verified_version
+      SELECT constraint_kind, detail, evidence, verified_version${conCov}
       FROM ref.step_constraints
       WHERE step_id = ?
-      ORDER BY constraint_kind
+      ORDER BY constraint_kind${conCov}
     `, [base.step_id]),
   ]);
 
+  // enum values: target rows come FIRST so a display text shared by two xml
+  // values resolves to the coverage-specific value (226 RAGPromptRequest)
+  const valueRows = resolveCoverageRows(
+    valRes.rows, (r) => `${r.option_key}\u0000${r.xml_value}`, coverage);
   const valuesByKey = new Map();
-  for (const v of valRes.rows) {
+  for (const v of valueRows) {
     if (!valuesByKey.has(v.option_key)) valuesByKey.set(v.option_key, []);
     valuesByKey.get(v.option_key).push({
       xmlValue: v.xml_value,
       displayTextEn: v.display_text_en,
       evidence: v.evidence ?? null,
+      coverage: rowCov(v),
     });
   }
 
-  const options = optRes.rows.map((o) => ({
+  const optionRows = resolveCoverageRows(optRes.rows, (r) => r.option_key, coverage)
+    .sort((a, b) => (Number(a.sort_order ?? 999) - Number(b.sort_order ?? 999))
+      || String(a.option_key).localeCompare(String(b.option_key)));
+  const options = optionRows.map((o) => ({
     optionKey:      o.option_key,
     optionType:     o.option_type,
     required:       Boolean(o.required),
@@ -1252,6 +1446,15 @@ async function getStepGrammar(ctx, idOrSlug) {
     sortOrder:      o.sort_order != null ? Number(o.sort_order) : null,
     evidence:       o.evidence,
     verifiedVersion: o.verified_version,
+    // value form of a target slot (fm_spec >= 2.2.0); null = not curated
+    slotKind:       o.slot_kind ?? null,
+    // XML value domain of a boolean attribute (fm_spec >= 2.2.0); null = True/False
+    xmlTrue:        o.xml_true ?? null,
+    xmlFalse:       o.xml_false ?? null,
+    // discarded by FileMaker on paste whatever its value (fm_spec >= 2.6.0);
+    // false on older references (column absent)
+    pasteDropped:   o.paste_dropped != null ? Boolean(o.paste_dropped) : false,
+    coverage:       rowCov(o),
     values:         valuesByKey.get(o.option_key) || [],
   }));
 
@@ -1273,6 +1476,7 @@ async function getStepGrammar(ctx, idOrSlug) {
     evidence:        c.evidence,
     verifiedVersion: c.verified_version,
     consumerNote:    kindNotes.get(c.constraint_kind) ?? null,
+    coverage:        c.coverage != null ? String(c.coverage) : null,
   }));
 
   // Repeat groups (fm_spec >= 1.15.0; fixed-slot columns >= 1.16.0).
@@ -1281,10 +1485,14 @@ async function getStepGrammar(ctx, idOrSlug) {
   if (await refTableExists(ctx, 'step_repeat_groups')) {
     const grpRes = await db.executeQuery(ctx, `
       SELECT * FROM ref.step_repeat_groups
-      WHERE step_id = ?
+      WHERE step_id = ?${cov}
       ORDER BY (parent_group IS NOT NULL), group_key
-    `, [base.step_id]);
-    repeatGroups = grpRes.rows.map((g) => ({
+    `, [base.step_id, ...covParams]);
+    const grpRows = resolveCoverageRows(grpRes.rows, (r) => r.group_key, coverage)
+      .sort((a, b) => Number(a.parent_group != null) - Number(b.parent_group != null)
+        || String(a.group_key).localeCompare(String(b.group_key)));
+    repeatGroups = grpRows.map((g) => ({
+      coverage:       rowCov(g),
       groupKey:       g.group_key,
       groupLabel:     g.group_label,
       parentGroup:    g.parent_group ?? null,
@@ -1308,10 +1516,17 @@ async function getStepGrammar(ctx, idOrSlug) {
   if (await refTableExists(ctx, 'step_skeleton_elements')) {
     const skRes = await db.executeQuery(ctx, `
       SELECT * FROM ref.step_skeleton_elements
-      WHERE step_id = ?
+      WHERE step_id = ?${cov}
       ORDER BY (parent_tag <> 'Step'), child_tag
-    `, [base.step_id]);
-    skeletonElements = skRes.rows.map((s) => ({
+    `, [base.step_id, ...covParams]);
+    const skRows = resolveCoverageRows(
+      skRes.rows,
+      (r) => [r.parent_tag, r.child_tag, r.condition_option ?? '', r.condition_value ?? ''].join('\u0000'),
+      coverage,
+    ).sort((a, b) => Number(a.parent_tag !== 'Step') - Number(b.parent_tag !== 'Step')
+      || String(a.child_tag).localeCompare(String(b.child_tag)));
+    skeletonElements = skRows.map((s) => ({
+      coverage:        rowCov(s),
       parentTag:       s.parent_tag,
       childTag:        s.child_tag,
       conditionOption: s.condition_option ?? null,
@@ -1324,10 +1539,19 @@ async function getStepGrammar(ctx, idOrSlug) {
   if (await refTableExists(ctx, 'step_option_element_bindings')) {
     const bdRes = await db.executeQuery(ctx, `
       SELECT * FROM ref.step_option_element_bindings
-      WHERE step_id = ?
+      WHERE step_id = ?${cov}
       ORDER BY element_path, binding, option_key, option_value
-    `, [base.step_id]);
-    elementBindings = bdRes.rows.map((b) => ({
+    `, [base.step_id, ...covParams]);
+    const bdRows = resolveCoverageRows(
+      bdRes.rows,
+      (r) => [r.option_key ?? '', r.option_value ?? '', r.element_path, r.binding].join('\u0000'),
+      coverage,
+    ).sort((a, b) => String(a.element_path).localeCompare(String(b.element_path))
+      || String(a.binding).localeCompare(String(b.binding))
+      || String(a.option_key ?? '').localeCompare(String(b.option_key ?? ''))
+      || String(a.option_value ?? '').localeCompare(String(b.option_value ?? '')));
+    elementBindings = bdRows.map((b) => ({
+      coverage:        rowCov(b),
       optionKey:       b.option_key ?? null,
       optionValue:     b.option_value ?? null,
       elementPath:     b.element_path,
@@ -1354,11 +1578,47 @@ async function getStepGrammar(ctx, idOrSlug) {
     }));
   }
 
+  // Mirror elements (fm_spec >= 2.6.0): values FileMaker writes twice and
+  // keeps in sync on paste (144 title -> Step-level Calculation); empty on
+  // older references.
+  let mirrorElements = [];
+  if (await refTableExists(ctx, 'step_mirror_elements')) {
+    const mrRes = await db.executeQuery(ctx, `
+      SELECT * FROM ref.step_mirror_elements
+      WHERE step_id = ?${cov}
+      ORDER BY source_option, target_path
+    `, [base.step_id, ...covParams]);
+    const mrRows = resolveCoverageRows(
+      mrRes.rows,
+      (r) => [r.source_option, r.target_path].join('\u0000'),
+      coverage,
+    ).sort((a, b) => String(a.source_option).localeCompare(String(b.source_option))
+      || String(a.target_path).localeCompare(String(b.target_path)));
+    mirrorElements = mrRows.map((m) => ({
+      coverage:        rowCov(m),
+      sourceOption:    m.source_option,
+      targetPath:      m.target_path,
+      trigger:         m.trigger,
+      evidence:        m.evidence ?? null,
+      verifiedVersion: m.verified_version ?? null,
+    }));
+  }
+
   return {
     stepId: base.step_id,
     canonicalName: base.canonical_name,
     available: true,
+    // resolved shape coverage (fm_spec >= 2.0.0): the coverage the rows below
+    // are resolved for, how it was chosen, the reference's coverages and the
+    // coverages that carry override rows for THIS step
+    coverage,
+    coverageSource,
+    coverages: await getShapeCoverages(ctx),
+    overrideCoverages: await getStepOverrideCoverages(ctx, base.step_id, hasCoverage),
     xmlMap: {
+      coverage:         rowCov(m),
+      // step-level value form of the target slot(s) (fm_spec >= 1.17.0)
+      targetSlotKind:   m.target_slot_kind ?? null,
       snippetTemplate:  m.snippet_template,
       saxmlParamTypes:  m.saxml_param_types,
       saxmlExample:     m.saxml_example ?? null,
@@ -1377,7 +1637,341 @@ async function getStepGrammar(ctx, idOrSlug) {
     skeletonElements,
     elementBindings,
     optionImplications,
+    mirrorElements,
   };
+}
+
+/**
+ * ============================================================================
+ * Lokalisierte Anzeigenamen für BuiltinFunction-Objekte
+ * ============================================================================
+ *
+ * Seit Katalog-Schema 1.32.0 ist `ObjectCatalog.Object_Name` eines Built-ins der
+ * KANONISCHE englische Referenzname — die Identität des Knotens, bewusst
+ * sprachunabhängig. Für einen Entwickler, der seine Formeln deutsch schreibt,
+ * heißt das: die Objektseite, die Objektliste und die Trefferliste zeigen
+ * `Get(PageNumber)`, obwohl in seiner Lösung `Hole ( Seitennummer )` steht.
+ * Diese Funktion liefert die lokalisierte Fassung NEBEN dem kanonischen Namen
+ * nach — sie ersetzt ihn nie, weil sonst die Identität aus der Anzeige
+ * verschwindet (und Suche/Joins/Deep-Links auf dem kanonischen Namen stehen).
+ *
+ * Ein Bulk-Lookup pro Antwort, Muster wie enrichFunctionTokens: Zeilen mit
+ * Object_Type='BuiltinFunction' sammeln, EINE Abfrage, in-place anreichern.
+ * Gesetzt wird `Localized_Name` nur, wenn es sich vom kanonischen Namen
+ * unterscheidet — sonst wäre die Zusatzangabe reines Rauschen (englische UI,
+ * oder eine Funktion, deren Name in der Zielsprache gleich lautet).
+ *
+ * Weich in jeder Richtung: ohne Sprache, ohne angehängte Referenz-DB, ohne
+ * Identitätszeile (Namens-Fallback-Knoten) oder auf einem Katalog vor Schema
+ * 1.32.0 passiert schlicht nichts — der kanonische Name allein ist immer eine
+ * korrekte Anzeige.
+ *
+ * @param {Object} ctx   - Request-Kontext (Solution-Scope)
+ * @param {Array}  rows  - Zeilen mit Object_UUID/Object_Type/Object_Name
+ * @param {string} lang  - aktive UI-Sprache
+ * @returns {Array} dieselben Zeilen (in-place angereichert)
+ */
+async function enrichBuiltinLocalizedNames(ctx, rows, lang) {
+  if (!Array.isArray(rows) || rows.length === 0 || !lang) return rows;
+  if (!isFunctionLang(lang)) return rows;
+
+  const byUuid = new Map();
+  for (const r of rows) {
+    if (r && r.Object_Type === 'BuiltinFunction' && r.Object_UUID) {
+      const key = String(r.Object_UUID);
+      if (!byUuid.has(key)) byUuid.set(key, []);
+      byUuid.get(key).push(r);
+    }
+  }
+  if (byUuid.size === 0) return rows;
+
+  const ids = Array.from(byUuid.keys());
+  const placeholders = ids.map(() => '?').join(',');
+  let resultRows = [];
+  try {
+    const r = await db.executeQuery(
+      ctx,
+      `SELECT b.Object_UUID, fl.display_name
+       FROM BuiltinFunctionIdentity b
+       JOIN ref.functions_lang fl
+         ON fl.function_id = b.Function_ID
+        AND fl.language = ?
+       WHERE b.Object_UUID IN (${placeholders})
+         AND NULLIF(trim(fl.display_name), '') IS NOT NULL`,
+      [lang, ...ids]
+    );
+    resultRows = r.rows;
+  } catch (e) {
+    return rows;
+  }
+
+  const norm = (v) => String(v).replace(/\s+/g, '').toLowerCase();
+  for (const row of resultRows) {
+    const targets = byUuid.get(String(row.Object_UUID));
+    if (!targets) continue;
+    const localized = String(row.display_name).trim();
+    for (const t of targets) {
+      if (localized && norm(localized) !== norm(t.Object_Name ?? '')) {
+        t.Localized_Name = localized;
+      }
+    }
+  }
+  return rows;
+}
+
+// ---------------------------------------------------------------------------
+// Runtime & diagnostics (fm_spec >= 2.8.0): trigger_compat, error_codes(_lang),
+// feature_versions(_lang) and the extended language_constants. Every reader
+// degrades on older references — compat null, lists empty — never a 500.
+// ---------------------------------------------------------------------------
+
+/**
+ * Tri-state platform cell → API value: true = Yes, false = No, null = Partial
+ * (conditionally supported — read the Claris page). NULL never means
+ * "undocumented": a MISSING row is that case, and the callers express it by
+ * `compat: null` on the whole object.
+ */
+function compatFromRow(row) {
+  const compat = {};
+  for (const p of STEP_COMPAT_PLATFORMS) {
+    compat[p] = row[p] === null || row[p] === undefined ? null : Boolean(row[p]);
+  }
+  return compat;
+}
+
+/**
+ * Trigger compatibility map (triggerId → compat) from `trigger_compat`
+ * (fm_spec >= 2.8.0; same vocabulary and tri-state rule as step_compat).
+ * Empty map on older references → consumers show no platform line.
+ */
+let triggerCompatMapCache = null;
+async function getTriggerCompatMap(ctx) {
+  if (triggerCompatMapCache) return triggerCompatMapCache;
+  const map = new Map();
+  if (db.isReferenceAttached() && (await refTableExists(ctx, 'trigger_compat'))) {
+    const r = await db.executeQuery(ctx, `
+      SELECT trigger_id, pro, server, go, webdirect, cloud, dataapi, cwp
+      FROM ref.trigger_compat
+    `);
+    for (const row of r.rows) map.set(Number(row.trigger_id), compatFromRow(row));
+  }
+  triggerCompatMapCache = map;
+  return map;
+}
+
+/** Claris help slug of a trigger page = the lower-cased event name (verified for all 26). */
+function triggerSlug(eventName) {
+  return String(eventName || '').toLowerCase();
+}
+
+function mapTriggerRow(row, compatMap, language) {
+  const id = Number(row.trigger_id);
+  const slug = triggerSlug(row.event_name);
+  return {
+    triggerId:             id,
+    eventName:             row.event_name,
+    level:                 row.level,
+    label:                 row.event_label || row.event_name,
+    parameterCapable:      Boolean(row.parameter_capable),
+    hasParameterFieldAttr: Boolean(row.has_parameter_field_attr),
+    sinceVersion:          row.since_version || null,
+    sinceVersionNum:       row.since_version_num == null ? null : Number(row.since_version_num),
+    compat:                compatMap.get(id) || null,
+    urlSlug:               slug,
+    helpUrl:               `https://help.claris.com/${mirrorLangDir(language)}/pro-help/content/${slug}.html`,
+    localHelpUrl:          buildLocalHelpUrl('triggers', language, slug),
+  };
+}
+
+/**
+ * All 26 script triggers with the label of ONE language, since-version and
+ * platform compatibility. Empty list on references without script_triggers.
+ */
+async function listTriggers(ctx, lang) {
+  assertAttached();
+  const language = resolveStepLang(lang);
+  const cacheKey = `triggers-list:${language}`;
+  if (metaCache.has(cacheKey)) return metaCache.get(cacheKey);
+  if (!(await refTableExists(ctx, 'script_triggers'))) {
+    metaCache.set(cacheKey, []);
+    return [];
+  }
+  const hasLang = await refTableExists(ctx, 'script_triggers_lang');
+  const r = await db.executeQuery(ctx, `
+    SELECT t.trigger_id, t.level, t.event_name, t.parameter_capable, t.has_parameter_field_attr,
+           t.since_version, t.since_version_num,
+           ${hasLang ? 'l.event_label' : 'NULL AS event_label'}
+    FROM ref.script_triggers t
+    ${hasLang ? 'LEFT JOIN ref.script_triggers_lang l ON l.trigger_id = t.trigger_id AND l.language = ?' : ''}
+    ORDER BY t.trigger_id
+  `, hasLang ? [language] : []);
+  const compatMap = await getTriggerCompatMap(ctx);
+  const triggers = r.rows.map((row) => mapTriggerRow(row, compatMap, language));
+  metaCache.set(cacheKey, triggers);
+  return triggers;
+}
+
+/**
+ * One trigger by slot id or event name (case-insensitive), with the labels of
+ * ALL languages. null when unknown or on references without script_triggers.
+ */
+async function getTriggerDetail(ctx, idOrName, lang) {
+  assertAttached();
+  const language = resolveStepLang(lang);
+  if (!(await refTableExists(ctx, 'script_triggers'))) return null;
+  const needle = String(idOrName || '').trim();
+  const byId = /^\d+$/.test(needle);
+  const r = await db.executeQuery(ctx, `
+    SELECT trigger_id, level, event_name, parameter_capable, has_parameter_field_attr,
+           since_version, since_version_num
+    FROM ref.script_triggers
+    WHERE ${byId ? 'trigger_id = ?' : 'lower(event_name) = lower(?)'}
+    LIMIT 1
+  `, [byId ? Number(needle) : needle]);
+  if (r.rows.length === 0) return null;
+  const base = r.rows[0];
+  let labels = [];
+  if (await refTableExists(ctx, 'script_triggers_lang')) {
+    const l = await db.executeQuery(ctx, `
+      SELECT language, event_label FROM ref.script_triggers_lang
+      WHERE trigger_id = ? ORDER BY language
+    `, [Number(base.trigger_id)]);
+    labels = l.rows.map((row) => ({ language: row.language, label: row.event_label }));
+  }
+  const compatMap = await getTriggerCompatMap(ctx);
+  const own = labels.find((x) => x.language === language);
+  return {
+    ...mapTriggerRow({ ...base, event_label: own ? own.label : null }, compatMap, language),
+    labels,
+  };
+}
+
+/**
+ * Error codes with the message of ONE language (EN text as fallback and
+ * always as `messageEn`). Cached per language; the optional `q` filters the
+ * cached list: an integer matches the span (`BETWEEN code_from AND code_to`),
+ * any other text matches message / code text case-insensitively.
+ * Empty list on references without error_codes (fm_spec < 2.8.0).
+ */
+async function listErrorCodes(ctx, lang, q) {
+  assertAttached();
+  const language = resolveStepLang(lang);
+  const cacheKey = `error-codes:${language}`;
+  let rows = metaCache.get(cacheKey);
+  if (!rows) {
+    rows = [];
+    if (await refTableExists(ctx, 'error_codes')) {
+      const hasLang = await refTableExists(ctx, 'error_codes_lang');
+      const r = await db.executeQuery(ctx, `
+        SELECT e.code_from, e.code_to, e.code_text, e.scope, e.message_en,
+               ${hasLang ? 'l.message' : 'NULL AS message'}
+        FROM ref.error_codes e
+        ${hasLang ? 'LEFT JOIN ref.error_codes_lang l ON l.code_from = e.code_from AND l.language = ?' : ''}
+        ORDER BY e.code_from
+      `, hasLang ? [language] : []);
+      rows = r.rows.map((row) => ({
+        codeFrom:  Number(row.code_from),
+        codeTo:    Number(row.code_to),
+        codeText:  row.code_text,
+        scope:     row.scope,
+        message:   row.message || row.message_en,
+        messageEn: row.message_en,
+      }));
+    }
+    metaCache.set(cacheKey, rows);
+  }
+  return filterErrorCodes(rows, q);
+}
+
+/** Pure filter over a mapped error-code list (unit-tested; see listErrorCodes). */
+function filterErrorCodes(rows, q) {
+  const needle = q == null ? '' : String(q).trim();
+  if (!needle) return rows;
+  if (/^-?\d+$/.test(needle)) {
+    const n = Number(needle);
+    return rows.filter((e) => n >= e.codeFrom && n <= e.codeTo);
+  }
+  const lc = needle.toLowerCase();
+  return rows.filter((e) => e.codeText.includes(needle)
+    || (e.message || '').toLowerCase().includes(lc)
+    || (e.messageEn || '').toLowerCase().includes(lc));
+}
+
+/** Pure span lookup (unit-tested): the row whose span contains `code`, else null. */
+function findErrorCode(rows, code) {
+  const n = Number(code);
+  if (!Number.isInteger(n)) return null;
+  return rows.find((e) => n >= e.codeFrom && n <= e.codeTo) || null;
+}
+
+/** One error code by number: exact code or the range it falls into (5123 → 5000-5499). */
+async function getErrorCode(ctx, code, lang) {
+  const rows = await listErrorCodes(ctx, lang, null);
+  return findErrorCode(rows, code);
+}
+
+/**
+ * Features with their introduction version (feature_versions, fm_spec >= 2.8.0),
+ * localized label of ONE language with EN fallback. Empty list on older builds.
+ */
+async function listFeatureVersions(ctx, lang) {
+  assertAttached();
+  const language = resolveStepLang(lang);
+  const cacheKey = `feature-versions:${language}`;
+  if (metaCache.has(cacheKey)) return metaCache.get(cacheKey);
+  let rows = [];
+  if (await refTableExists(ctx, 'feature_versions')) {
+    const hasLang = await refTableExists(ctx, 'feature_versions_lang');
+    const r = await db.executeQuery(ctx, `
+      SELECT f.feature_id, f.feature_en, f.version_introduced, f.version_num, f.feature_key,
+             ${hasLang ? 'l.feature_label' : 'NULL AS feature_label'}
+      FROM ref.feature_versions f
+      ${hasLang ? 'LEFT JOIN ref.feature_versions_lang l ON l.feature_id = f.feature_id AND l.language = ?' : ''}
+      ORDER BY f.feature_id
+    `, hasLang ? [language] : []);
+    rows = r.rows.map((row) => ({
+      featureId:         Number(row.feature_id),
+      feature:           row.feature_label || row.feature_en,
+      featureEn:         row.feature_en,
+      versionIntroduced: row.version_introduced,
+      versionNum:        Number(row.version_num),
+      featureKey:        row.feature_key || null,
+    }));
+  }
+  metaCache.set(cacheKey, rows);
+  return rows;
+}
+
+/**
+ * language_constants (+ used_with/source since fm_spec 2.8.0). `usedWith` is
+ * the list of canonical function names the constant is a parameter value of
+ * (Get functions by their canonical name, e.g. RecordID) — the only safe way
+ * to classify a free token: Lower/Higher are lookup constants AND Lower is a
+ * function. Older references deliver the three base columns only.
+ */
+async function listLanguageConstants(ctx) {
+  assertAttached();
+  const cacheKey = 'language-constants';
+  if (metaCache.has(cacheKey)) return metaCache.get(cacheKey);
+  let rows = [];
+  if (await refTableExists(ctx, 'language_constants')) {
+    const hasUsedWith = await refColumnExists(ctx, 'language_constants', 'used_with');
+    const r = await db.executeQuery(ctx, `
+      SELECT name, constant_type, canonical_name,
+             ${hasUsedWith ? 'used_with, source' : 'NULL AS used_with, NULL AS source'}
+      FROM ref.language_constants
+      ORDER BY constant_type, name
+    `);
+    rows = r.rows.map((row) => ({
+      name:          row.name,
+      constantType:  row.constant_type,
+      canonicalName: row.canonical_name,
+      usedWith:      row.used_with ? String(row.used_with).split(',').map((x) => x.trim()).filter(Boolean) : [],
+      source:        row.source || null,
+    }));
+  }
+  metaCache.set(cacheKey, rows);
+  return rows;
 }
 
 module.exports = {
@@ -1404,16 +1998,31 @@ module.exports = {
   // Reverse-Lookup
   lookupToken,
   enrichFunctionTokens,
+  enrichBuiltinLocalizedNames,
   // Script-Trigger-Referenz
   getScriptTriggerEventMap,
   getScriptTriggerEventLabels,
+  // Runtime & diagnostics (fm_spec >= 2.8.0)
+  getTriggerCompatMap,
+  listTriggers,
+  getTriggerDetail,
+  listErrorCodes,
+  getErrorCode,
+  listFeatureVersions,
+  listLanguageConstants,
+  compatFromRow,
+  filterErrorCodes,
+  findErrorCode,
   // Help-URL
   buildLocalHelpUrl,
   mirrorLangDir,
+  buildDocsEntryRef,
   // Build-Info
   getBuildMeta,
   // fm-spec Schema-Viewer
   getReferenceMeta,
   getStepAllLangs,
   getStepGrammar,
+  getShapeCoverages,
+  resolveShapeCoverage,
 };

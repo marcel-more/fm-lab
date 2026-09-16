@@ -11,11 +11,11 @@ wholesale replaces the engine (see *Patch contract* below).
 |---|---|
 | `convert_fm_xml.sh` | Orchestrator (entry point). Carries `CONVERTER_VERSION`. |
 | `gen_streamify_sql.sh` | Streamify generator + `--check` freshness gate (rc contract 0/2/3/4; called by the orchestrator before any SAX run) |
-| `gen_design_functions.sh` | Generator + `--check` freshness gate (rc 0/2/3/4) of the design-function seed `sql/generated/design_functions_seed.sql`, derived from `reference/fm_spec.duckdb` (names of FileMaker's design functions in every reference language, for the P1c chunk retype). Called by `tools/fm-reference/pull-reference.sh` after every reference deploy and by the publish pre-check |
+| `gen_design_functions.sh` | Generator + `--check` freshness gate (rc 0/2/3/4) of the built-in function name seed `sql/generated/design_functions_seed.sql`, derived from `reference/fm_spec.duckdb` (names of every FileMaker built-in function — all categories except the Get selectors — in every reference language, for the P1c chunk retype; file/table names kept from the design-functions-only origin). Since converter 2.28.0 the seed carries a **second** table, `GetParameterNames` — the bare `Get(…)` parameter names in every reference spelling, the validity gate of the P4 `displays_symbol` edge. Called by `tools/fm-reference/pull-reference.sh` after every reference deploy and by the publish pre-check |
 | `engine/` | awk engine: `katana_common.awk`, `split_fm_xml.awk`, `streamify_fm_xml.awk`, `turbo_phaseS_fuse.awk` |
 | `lib/` | shell modules sourced by the orchestrator: `convert_preprocess.sh`, `convert_turbo.sh`, `convert_report.sh`, `webbed_caps.sh` |
-| `sql/` | phase templates P1–P6 (`convert_xml_01_extract.sql` carries `@SCHEMA_VERSION` + `@SCHEMA_HASH_FILES`, engine-relative), `01b` heal cascade, `01c` design-function retype (seeded by `sql/generated/design_functions_seed.sql` — a committed generate, never edit by hand, regenerate via `gen_design_functions.sh`), `03b` plugin subname recovery, `create_analysis_views.sql` (P-Analysis), `streamify/` overrides (generated variant: `convert_xml_01_extract.streamify.sql` — never edit by hand, regenerate via `gen_streamify_sql.sh`) |
-| `fixtures/` | webbed probe fixtures (SAX/CR/WS parity probes) |
+| `sql/` | phase templates P1–P6 (`convert_xml_01_extract.sql` carries `@SCHEMA_VERSION` + `@SCHEMA_HASH_FILES`, engine-relative), `01b` heal cascade, `01c` built-in function retype (seeded by `sql/generated/design_functions_seed.sql` — a committed generate, never edit by hand, regenerate via `gen_design_functions.sh`), `01d` display-calc promotion (SaXML 2.3.0.0 staging → DDR tables), `03b` plugin subname recovery, `create_analysis_views.sql` (P-Analysis), `streamify/` overrides (generated variant: `convert_xml_01_extract.streamify.sql` — never edit by hand, regenerate via `gen_streamify_sql.sh`) |
+| `fixtures/` | webbed probe fixtures (SAX/CR/WS parity probes) and `fixtures/saxml/` — the coverage exports (FileMaker 22 + 26, see its README; master-only, excluded from the public repository via the publish manifest) |
 | `version_check.json` | webbed capability registry + tested baseline (also read by `tools/build-container-env.mjs` for the container DuckDB pin) |
 
 ## Self-containment
@@ -30,7 +30,7 @@ is used only for the documented **outside interface**:
 - `tools/install_modes.sh` — shared NDJSON emit helpers (REST-API SSE bridge)
 - `tools/graph-export/cluster.sh` — P7 auto-clustering (best-effort; a
   cluster failure never fails the import)
-- `tools/tests/fixtures/xml/` — `--test` mode input (isolated ooe run)
+- `fixtures/saxml/` — the coverage fixtures (FileMaker 22 + 26 exports of fm-lab's coverage solution); `--test --test-profile saxml22|saxml23 [--test-variant noddr]` stages one profile under `db/fm_test_xml/<set>/` and imports it into `db/fm_test_<set>.duckdb` (`FM_TEST_XML_DIR` imports an arbitrary directory as-is)
 - webbed DuckDB extension — provisioned by the container/setup;
   `version_check.json` only probes it
 

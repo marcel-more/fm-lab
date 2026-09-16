@@ -6,7 +6,7 @@
 -- @version: 2.0
 -- @tags: tables, details, fields, structure
 -- @note: Flat rows with a `section` discriminator:
---          'meta'  → one row, table-level scalars + field-type counts + TO counts (local/cross-file).
+--          'meta'  → one row, table-level scalars (incl. the table comment) + field-type counts + TO counts (local/cross-file).
 --          'field' → one row per field: id, name, type, data type, comment, UUID (clickable → field detail).
 --          'to'    → one row per table occurrence built on this base table, resolved via the graph
 --                    (ObjectLinks base_table role) so cross-file occurrences are included; `is_cross_file`
@@ -14,7 +14,7 @@
 
 -- Clone-Scoping: Object_UUID ist bei geklonten/modularen Lösungen nicht eindeutig — Identität ist (UUID, File_Name)
 WITH table_match AS (
-  SELECT bt.BT_ID, bt.BT_Name, bt.BT_UUID, bt.File_Name
+  SELECT bt.BT_ID, bt.BT_Name, bt.BT_UUID, bt.BT_Comment, bt.File_Name
   FROM BaseTableCatalog bt
   JOIN ObjectCatalog oc ON bt.BT_UUID = oc.Object_UUID AND oc.File_Name = bt.File_Name
   WHERE oc.Object_UUID = getvariable('uuid')
@@ -89,6 +89,7 @@ SELECT * EXCLUDE (order_hint, seq) FROM (
     tm.File_Name AS file_name,
     tm.BT_UUID   AS bt_uuid,
     tm.BT_ID     AS bt_id,
+    tm.BT_Comment AS bt_comment,
     fs.total_fields, fs.normal_fields, fs.calc_fields, fs.summary_fields, fs.other_fields,
     ts.to_count, ts.to_local_count, ts.to_crossfile_count,
     CAST(NULL AS VARCHAR) AS field_name,
@@ -113,7 +114,7 @@ SELECT * EXCLUDE (order_hint, seq) FROM (
   SELECT
     'field', 1,
     fl.Field_ID,
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
     fl.Field_Name, fl.Field_Type, fl.Data_Type, fl.Field_Comment, fl.Field_UUID, fl.Is_Global, fl.File_Name,
     COALESCE(fl.Storage_Index, 'None'),
     NULL, NULL, NULL, NULL,
@@ -126,7 +127,7 @@ SELECT * EXCLUDE (order_hint, seq) FROM (
   SELECT
     'to', 2,
     ROW_NUMBER() OVER (ORDER BY tl.is_cross_file, tl.to_name),
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
     tl.to_name, tl.to_uuid, tl.to_file, tl.is_cross_file,
     NULL, NULL

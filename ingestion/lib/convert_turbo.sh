@@ -568,8 +568,13 @@ merge_part_dbs() {
             [ -z "$tbl" ] && continue
             # File_Name column present? Then delete the affected names up front
             # (makes re-import idempotent; a no-op on force_rebuild since disjoint).
+            # Scope = the part's FilesCatalog (the whole file was re-parsed), NOT the
+            # table's own rows: a table that dropped to 0 rows in the re-export
+            # (e.g. a menu set deleted in FileMaker, DDR tables of a DDR-less
+            # re-export) has no rows to name — the stale master rows survived
+            # ("drop-to-zero", converter 2.24.0).
             if printf '%s\n' "$fn_tables" | grep -qxF "$tbl"; then
-                echo "DELETE FROM \"$tbl\" WHERE \"File_Name\" IN (SELECT DISTINCT \"File_Name\" FROM p${ai}.\"$tbl\");" >> "$msql"
+                echo "DELETE FROM \"$tbl\" WHERE \"File_Name\" IN (SELECT DISTINCT \"File_Name\" FROM p${ai}.\"FilesCatalog\");" >> "$msql"
             fi
             echo "INSERT INTO \"$tbl\" BY NAME SELECT * FROM p${ai}.\"$tbl\";" >> "$msql"
         done <<< "$tables"
@@ -649,15 +654,15 @@ _turbo_catalog_owned() {
     case "$1" in
         main)            echo "__MAIN__" ;;
         StepsForScripts) echo "StepsForScripts" ;;
-        DDR_INFO)        echo "DDR_Calculations DDR_ChunkListContexts DDR_ScriptSteps" ;;
+        DDR_INFO)        echo "DDR_Calculations DDR_ChunkListContexts DDR_DisplayCalcAnchors23 DDR_ScriptSteps" ;;
         # DDR_INFO nest children. The Calculation half feeds ONLY DDR_Calculations
         # + DDR_ChunkListContexts (the Script XPath finds nothing → 0 rows), the
         # Script half ONLY DDR_ScriptSteps. They are mutually exclusive with
         # DDR_INFO (nest on XOR off) → no OWNER conflict. WITHOUT these lines
         # catmerge would fall back to the part path.
-        Calculation)     echo "DDR_Calculations DDR_ChunkListContexts" ;;
+        Calculation)     echo "DDR_Calculations DDR_ChunkListContexts DDR_DisplayCalcAnchors23" ;;
         Script)          echo "DDR_ScriptSteps" ;;
-        LayoutCatalog)   echo "Layouts LayoutObjects LayoutParts" ;;
+        LayoutCatalog)   echo "Layouts LayoutObjects LayoutParts LayoutTableViewColumns" ;;
         *)               echo "?" ;;
     esac
 }
@@ -805,14 +810,14 @@ _catmerge_owner_of() {
 
 _turbo_merge_catalog() {
     MERGE_RC=0
-    local -a CID CCAT
-    local cid cat
-    while IFS=$'\t' read -r cid cat; do
+    local -a CID CCAT CFN
+    local cid cat cfn
+    while IFS=$'\t' read -r cid cat cfn; do
         [ -z "$cid" ] && continue
         [ "$(cat "$STREAMING_DIR/chunk_${cid}.rc" 2>/dev/null)" = "0" ] || continue
         [ -f "$STREAMING_DIR/chunk_${cid}.duckdb" ] || continue
-        CID+=("$cid"); CCAT+=("$cat")
-    done < <("$DUCKDB_BIN" -readonly "$CHUNKMAP_DB" -noheader -list -c "SELECT chunk_id||chr(9)||catalog FROM chunkmap ORDER BY catalog, chunk_id;")
+        CID+=("$cid"); CCAT+=("$cat"); CFN+=("$cfn")
+    done < <("$DUCKDB_BIN" -readonly "$CHUNKMAP_DB" -noheader -list -c "SELECT chunk_id||chr(9)||catalog||chr(9)||file_name FROM chunkmap ORDER BY catalog, chunk_id;")
     [ ${#CID[@]} -eq 0 ] && return 0
 
     # P1 tables + File_Name tables from ONE chunk (NOT from the master — on incremental
@@ -902,14 +907,56 @@ _turbo_merge_catalog() {
         fi
     fi
 
-    # Merge: per table with Parquet files: DELETE-by-File (no-op on an empty master, but
-    # collision-/incremental-safe) + wildcard INSERT. Atomic per (file×catalog) via owner partition.
-    # a1: tables that may carry `ON CONFLICT DO NOTHING` (PK/UNIQUE present). Computed once.
+    # Merge: per table: DELETE-by-File (no-op on an empty master, but collision-/
+    # incremental-safe) + wildcard INSERT of the parquet slices. Atomic per
+    # (file×catalog) via owner partition. a1: tables that may carry `ON CONFLICT DO
+    # NOTHING` (PK/UNIQUE present). Computed once.
+    #
+    # DELETE scope ("drop-to-zero", converter 2.24.0): the files whose OWNER catalog
+    # was re-parsed this run — derived from the chunkmap (chunk → XML file → main
+    # chunk of the same file → its FilesCatalog parquet = internal File_Name), NOT from
+    # the table's own parquet rows. A table that dropped to 0 rows in the re-export
+    # (menu set deleted in FileMaker, DDR tables of a DDR-less re-export) has no
+    # parquet at all and its stale master rows survived. Files whose owner catalog was
+    # skipped by the catalog gate (unchanged) are NOT in the scope → their rows stay,
+    # exactly as before. main-owned tables: every file of the run (main is never skipped).
+    # Chunks the catalog gate left untouched this run (unchanged catalog of a changed
+    # file): their master rows must survive. Absent catalog (not in the export at all,
+    # e.g. DDR_INFO of a DDR-less re-export) = no chunkmap row = rows ARE deleted.
+    local _gate_skipped; _gate_skipped=$("$DUCKDB_BIN" -readonly "$CHUNKMAP_DB" -noheader -list -c \
+        "SELECT DISTINCT file_name||chr(9)||catalog FROM chunkmap WHERE status='skipped_unchanged';" 2>/dev/null)
+    # Static owner catalogs of a table (from the ownership map — NOT only the catalogs
+    # seen this run: a table whose owner catalog was skipped for every file must not
+    # degrade to the main scope). DDR nest children (Calculation/Script) and DDR_INFO
+    # are XOR per file → a table may have two owner catalogs.
+    _catmerge_static_owner_cats() {   # $1 = table → space-separated owner catalogs ('' = main-owned)
+        local c out=""
+        for c in StepsForScripts DDR_INFO Calculation Script LayoutCatalog; do
+            case " $(_turbo_catalog_owned "$c") " in *" $1 "*) out="$out${out:+ }$c" ;; esac
+        done
+        printf '%s' "$out"
+    }
+    _catmerge_owner_files_pq() {   # $1 = table → parquet list literal of the main chunks in DELETE scope (may be empty)
+        local t="$1" cats c j f fn list="" skip
+        cats="$(_catmerge_static_owner_cats "$t")"
+        for j in "${!CID[@]}"; do
+            [ "${CCAT[$j]}" = "main" ] || continue
+            fn="${CFN[$j]}"; skip=false
+            for c in $cats; do
+                case "$_gate_skipped" in *"$fn	$c"*) skip=true ;; esac
+            done
+            $skip && continue
+            f="$pqdir/FilesCatalog/${CID[$j]}.parquet"
+            [ -f "$f" ] || continue
+            list="$list${list:+, }'$f'"
+        done
+        printf '%s' "$list"
+    }
     local pk_tables; pk_tables=$(_pk_constrained_tables "$seed_chunk")
-    local msql dtypes; msql="$(mktemp "${TMPDIR:-/tmp}/fmlab.XXXXXX")"
+    local msql dtypes has_pq owner_pq; msql="$(mktemp "${TMPDIR:-/tmp}/fmlab.XXXXXX")"
     while IFS= read -r t; do
         [ -z "$t" ] && continue
-        ls "$pqdir/$t"/*.parquet >/dev/null 2>&1 || continue
+        has_pq=false; ls "$pqdir/$t"/*.parquet >/dev/null 2>&1 && has_pq=true
         if _turbo_table_multifed "$t"; then
             # Provenance-scoped DELETE: delete only the Owner_Type classes of the feeders
             # reparsed in THIS run, across ALL processed files (the FilesCatalog parquet
@@ -920,12 +967,19 @@ _turbo_merge_catalog() {
             dtypes="$(_turbo_multifed_delete_types "$t" "$_seencat")"
             if [ -n "$dtypes" ] && ls "$pqdir/FilesCatalog"/*.parquet >/dev/null 2>&1; then
                 echo "DELETE FROM \"$t\" WHERE \"File_Name\" IN (SELECT \"File_Name\" FROM read_parquet('$pqdir/FilesCatalog/*.parquet')) AND \"$(_turbo_multifed_prov_col "$t")\" IN ($dtypes);" >> "$msql"
-            else
+            elif $has_pq; then
                 echo "DELETE FROM \"$t\" WHERE \"File_Name\" IN (SELECT DISTINCT \"File_Name\" FROM read_parquet('$pqdir/$t/*.parquet'));" >> "$msql"
             fi
         elif printf '%s\n' "$fn_tables" | grep -qxF "$t"; then
-            echo "DELETE FROM \"$t\" WHERE \"File_Name\" IN (SELECT DISTINCT \"File_Name\" FROM read_parquet('$pqdir/$t/*.parquet'));" >> "$msql"
+            owner_pq="$(_catmerge_owner_files_pq "$t")"
+            [ -n "$owner_pq" ] && owner_pq="[$owner_pq]"
+            if [ -n "$owner_pq" ]; then
+                echo "DELETE FROM \"$t\" WHERE \"File_Name\" IN (SELECT DISTINCT \"File_Name\" FROM read_parquet($owner_pq));" >> "$msql"
+            elif $has_pq; then
+                echo "DELETE FROM \"$t\" WHERE \"File_Name\" IN (SELECT DISTINCT \"File_Name\" FROM read_parquet('$pqdir/$t/*.parquet'));" >> "$msql"
+            fi
         fi
+        $has_pq || continue
         # H2: heal tables get the healing INSERT variant when the gate saw
         # duplicates — global min-identity survivorship instead of glob-order
         # last-write-wins; identical identities still collapse via the a1 guard.
@@ -1048,6 +1102,9 @@ _turbo_split_one_file() {
         $_UTF8_IS_SRC || rm -f "$UTF8"; return 4
     fi
     [ -z "$ROOT_ELEMENT" ] && { echo "  WARNING: Skipped — could not detect XML root element (expected FMSaveAsXML)" >>"$out"; $_UTF8_IS_SRC || rm -f "$UTF8"; return 4; }
+    # SaXML profile of the file (log only; every chunk worker re-probes its chunk in run_p1_on).
+    _saxml_header_probe "$UTF8"
+    echo "  SaXML: version=${SAXML_VERSION_DETECTED:-?} profile=$SAXML_PROFILE_DETECTED" >>"$out"
 
     # recmap (streamify-aware, identical to the process_single_file logic): in
     # --streamify mode map to the renamed record anchors, otherwise the original SUBCHUNK_RECMAP.

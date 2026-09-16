@@ -1,20 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SubNav } from '../components/SubNav';
 import { StatusBar } from '../components/StatusBar';
 import { buildBreadcrumb } from '../lib/navigation';
+import { PlatformTags } from '../components/PlatformTags';
 import { useApiLang } from '../hooks/useApiLang';
 import {
   fetchStepLangs,
   fetchStepGrammar,
   resolveHelpHref,
-  PLATFORM_LABELS,
+  buildDocsEntryPath,
   OS_LABELS,
-  STEP_COMPAT_PLATFORMS,
   type StepAllLangs,
   type StepGrammar,
+  type StepOption,
 } from '../api/fmSpecApi';
+import { buildHullTree, buildOptionLookup, groupBindings } from '../lib/fmSpecGrammar';
+import type { HullNode, OptionLookup } from '../lib/fmSpecGrammar';
 import './FmSpecView.css';
 
 // Bug-registry kinds in step_constraints (fm_spec >= 1.14.4) — rendered with
@@ -24,6 +27,10 @@ const KNOWN_BUG_KINDS = new Set([
   'clipboard_loss', 'version_skew', 'save_corruption',
   'serialization_unstable', 'localized_build_defect',
 ]);
+// Export-gap kind (fm_spec >= 2.7.0): a slot the SaXML export never carries —
+// not a defect of the snippet (the clipboard form is complete), but a catalog
+// built from the export cannot show it. Rows are scoped by coverage.
+const EXPORT_GAP_KIND = 'saxml_omission';
 
 /** Registry details are long prose — collapse behind the first sentence. */
 function ConstraintDetail({ detail }: { detail: string | null }) {
@@ -37,6 +44,54 @@ function ConstraintDetail({ detail }: { detail: string | null }) {
       <summary>{firstSentence}.</summary>
       {detail}
     </details>
+  );
+}
+
+/**
+ * Override badge of a shape row (fm_spec >= 2.0.0): a row whose `coverage`
+ * is not '*' replaces the standard row of the same key for that coverage.
+ */
+/** Skeleton hulls as the tree they describe — nested lists in template order. */
+function HullList({ nodes, lookup }: { nodes: HullNode[]; lookup: OptionLookup }) {
+  const { t } = useTranslation(['fmSpec']);
+  return (
+    <ul className="fmspec-repeat-groups fmspec-hull-tree">
+      {nodes.map(({ row: s, orphan, children }, i) => (
+        <li key={`${s.parentTag}/${s.childTag}/${i}`}>
+          <span className="fmspec-rg__label mono">
+            {`<${s.childTag}>`} <CoverageBadge coverage={s.coverage} />
+          </span>
+          <span className="fmspec-rg__meta">
+            {orphan && (
+              <>{t('fmSpec:step.grammar.sk.in', { parent: `<${s.parentTag}>` })}{' · '}</>
+            )}
+            {t(`fmSpec:step.grammar.sk.${s.keepMode}`, { defaultValue: s.keepMode })}
+            {s.conditionOption && (
+              <> · {t('fmSpec:step.grammar.sk.condition', {
+                cond: lookup.condition(s.conditionOption, [s.conditionValue]),
+              })}</>
+            )}
+            {s.evidence && (
+              <> · {s.evidence}{s.verifiedVersion ? ` · ${s.verifiedVersion}` : ''}</>
+            )}
+          </span>
+          {children.length > 0 && <HullList nodes={children} lookup={lookup} />}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function CoverageBadge({ coverage }: { coverage?: string | null }) {
+  const { t } = useTranslation(['fmSpec']);
+  if (!coverage || coverage === '*') return null;
+  return (
+    <span
+      className="fmspec-tag fmspec-tag--coverage"
+      title={t('fmSpec:step.grammar.overrideHint', { coverage }) as string}
+    >
+      {t('fmSpec:step.grammar.overrideBadge', { coverage })}
+    </span>
   );
 }
 
@@ -58,25 +113,53 @@ export function FmSpecStepView() {
   const [grammarAvailable, setGrammarAvailable] = useState<boolean | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // shape coverage the grammar is resolved for (fm_spec >= 2.0.0); null =
+  // the reference's base coverage — the server reports the resolved value
+  const [coverage, setCoverage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!stepId) return;
     let cancelled = false;
-    setData(null); setGrammar(null); setGrammarAvailable(null); setErr(null);
+    setData(null); setErr(null);
     fetchStepLangs(stepId)
       .then((d) => { if (!cancelled) setData(d); })
       .catch((e) => { if (!cancelled) setErr(e.message || 'error'); });
-    fetchStepGrammar(stepId)
+    return () => { cancelled = true; };
+  }, [stepId, uiLang]);
+
+  useEffect(() => {
+    if (!stepId) return;
+    let cancelled = false;
+    setGrammar(null); setGrammarAvailable(null);
+    fetchStepGrammar(stepId, coverage)
       .then((g) => { if (!cancelled) { setGrammar(g); setGrammarAvailable(g != null); } })
       .catch(() => { if (!cancelled) setGrammarAvailable(false); });
     return () => { cancelled = true; };
-  }, [stepId, uiLang]);
+  }, [stepId, coverage]);
+
+  // reset the coverage choice when navigating to another step
+  useEffect(() => { setCoverage(null); }, [stepId]);
+
+  const coverages = grammar?.coverages ?? [];
+  const activeCoverage = grammar?.coverage ?? null;
+  const baseCoverage = coverages.find((c) => c.isBase)?.coverage ?? null;
+  const hasOverridesForActive = activeCoverage != null
+    && (grammar?.overrideCoverages ?? []).includes(activeCoverage);
 
   const stepName = data?.canonicalName ?? (stepId ? `Step ${stepId}` : '');
   const breadcrumbs = buildBreadcrumb({ kind: 'fmSpecStep', stepName }, t);
 
   // Parameter folgen der globalen UI-Sprache (kein eigener Selektor mehr);
   // fällt auf den ersten verfügbaren Eintrag zurück, falls die Sprache fehlt.
+  // reader-friendly shape of the grammar rows (lib/fmSpecGrammar): option
+  // labels + enum display texts, requires/excludes grouped into their value
+  // sets, skeleton hulls as a tree in template order
+  const lookup = useMemo(() => buildOptionLookup(grammar?.options), [grammar]);
+  const bindingGroups = useMemo(() => groupBindings(grammar?.elementBindings), [grammar]);
+  const hullTree = useMemo(
+    () => buildHullTree(grammar?.skeletonElements, grammar?.xmlMap?.snippetTemplate),
+    [grammar],
+  );
   const paramEntry = useMemo(
     () => data?.langs.find((l) => l.language === uiLang) ?? data?.langs[0] ?? null,
     [data, uiLang],
@@ -100,6 +183,13 @@ export function FmSpecStepView() {
           <h1 className="fmspec-title">
             {stepName}
             {data && <span className="fmspec-title__id">#{data.stepId}</span>}
+            {/* Gegenrichtung zur Claris-Doku-Seite — nur wenn das Docset
+                installiert ist und die Seite dort existiert (Server-Check). */}
+            {data?.docsEntry && (
+              <Link className="fmspec-title__doclink" to={buildDocsEntryPath(data.docsEntry, uiLang)!}>
+                {t('fmSpec:clarisHelp')}
+              </Link>
+            )}
           </h1>
           {data && (
             <p className="fmspec-subtitle">
@@ -112,18 +202,8 @@ export function FmSpecStepView() {
               gelistet werden Yes + Partial; Partial ist markiert und NIE als
               „undokumentiert" zu lesen. false-Plattformen werden weggelassen. */}
           {data?.compat && (
-            <p className="fmspec-subtitle fmspec-platform-line">
-              {t('fmSpec:step.compat.label')}:{' '}
-              {STEP_COMPAT_PLATFORMS.filter((p) => data.compat![p] !== false).map((p) => (
-                <span
-                  key={p}
-                  className={`fmspec-tag fmspec-tag--platform${data.compat![p] === null ? ' fmspec-tag--partial' : ''}`}
-                  title={data.compat![p] === null ? (t('fmSpec:step.compat.partialHint') as string) : undefined}
-                >
-                  {PLATFORM_LABELS[p]}
-                  {data.compat![p] === null && <> · {t('fmSpec:step.compat.partial')}</>}
-                </span>
-              ))}
+            <p className="fmspec-subtitle">
+              <PlatformTags compat={data.compat} label={t('fmSpec:step.compat.label') as string} />
             </p>
           )}
           {/* OS-Bindung (Referenz ≥ 1.13.0, step_os_affinity): kuratierte
@@ -187,11 +267,30 @@ export function FmSpecStepView() {
               {grammarAvailable === false && (
                 <div className="fmspec-notice">{t('fmSpec:step.grammar.notAvailable')}</div>
               )}
+              {grammar && coverages.length > 1 && (
+                <div className="fmspec-coverage-switch" title={t('fmSpec:step.grammar.coverageHint') as string}>
+                  <span className="fmspec-coverage-switch__label">{t('fmSpec:step.grammar.coverage')}:</span>
+                  {coverages.map((c) => (
+                    <button
+                      key={c.coverage}
+                      type="button"
+                      className={`fmspec-coverage-switch__btn${activeCoverage === c.coverage ? ' is-active' : ''}`}
+                      onClick={() => setCoverage(c.coverage === baseCoverage ? null : c.coverage)}
+                      title={c.pairedVersion ? `paired ${c.pairedVersion}${c.saxmlVersion ? ` · SaXML ${c.saxmlVersion}` : ''}` : undefined}
+                    >
+                      FM {c.coverage}{c.isBase ? ` · ${t('fmSpec:step.grammar.coverageBase')}` : ''}
+                    </button>
+                  ))}
+                  {activeCoverage != null && activeCoverage !== baseCoverage && !hasOverridesForActive && (
+                    <span className="fmspec-muted"> · {t('fmSpec:step.grammar.noOverrides')}</span>
+                  )}
+                </div>
+              )}
               {grammar?.xmlMap && (
                 <div className="fmspec-grammar">
                   <div className="fmspec-codeblock">
                     <div className="fmspec-codeblock__head">
-                      <span>{t('fmSpec:step.grammar.template')}</span>
+                      <span>{t('fmSpec:step.grammar.template')} <CoverageBadge coverage={grammar.xmlMap.coverage} /></span>
                       <button type="button" className="fmspec-copy" onClick={copyTemplate}>
                         {copied ? t('fmSpec:step.grammar.copied') : t('fmSpec:step.grammar.copy')}
                       </button>
@@ -202,6 +301,12 @@ export function FmSpecStepView() {
                   <dl className="fmspec-facts">
                     <dt>{t('fmSpec:step.grammar.elementOrder')}</dt>
                     <dd className="mono">{grammar.xmlMap.elementOrder ?? dash}</dd>
+                    {grammar.xmlMap.targetSlotKind && (
+                      <>
+                        <dt>{t('fmSpec:step.grammar.targetSlotKind')}</dt>
+                        <dd>{t(`fmSpec:step.grammar.opt.slot_${grammar.xmlMap.targetSlotKind}`, { defaultValue: grammar.xmlMap.targetSlotKind })}</dd>
+                      </>
+                    )}
                     {grammar.xmlMap.variableTargetMarker === true && (
                       <>
                         <dt>{t('fmSpec:step.grammar.variableTargetMarker')}</dt>
@@ -242,7 +347,7 @@ export function FmSpecStepView() {
                       <div className="fmspec-subhead">{t('fmSpec:step.grammar.constraints')}</div>
                       <ul className="fmspec-constraints">
                         {grammar.constraints.map((c) => (
-                          <li key={c.constraintKind}>
+                          <li key={`${c.constraintKind}@${c.coverage ?? '*'}`}>
                             <span className="fmspec-constraint__kind mono">
                               {c.constraintKind}
                               {KNOWN_BUG_KINDS.has(c.constraintKind) && (
@@ -251,6 +356,22 @@ export function FmSpecStepView() {
                                   title={t('fmSpec:step.grammar.knownBugHint') as string}
                                 >
                                   FM bug
+                                </span>
+                              )}
+                              {c.constraintKind === EXPORT_GAP_KIND && (
+                                <span
+                                  className="fmspec-constraint__badge"
+                                  title={t('fmSpec:step.grammar.saxmlGapHint') as string}
+                                >
+                                  SaXML gap
+                                </span>
+                              )}
+                              {c.coverage && c.coverage !== '*' && (
+                                <span
+                                  className="fmspec-constraint__version"
+                                  title={t('fmSpec:step.grammar.constraintCoverageHint', { coverage: c.coverage }) as string}
+                                >
+                                  FM {c.coverage}
                                 </span>
                               )}
                               {c.verifiedVersion && (
@@ -276,6 +397,7 @@ export function FmSpecStepView() {
                         {grammar.repeatGroups!.map((g) => (
                           <li key={g.groupKey}>
                             <span className="fmspec-rg__label mono">{g.groupLabel}</span>
+                            <CoverageBadge coverage={g.coverage} />
                             <span className="fmspec-rg__meta">
                               {t('fmSpec:step.grammar.rg.container')}: <code>{g.containerPath}</code>
                               {' · '}{g.itemForm}
@@ -299,55 +421,40 @@ export function FmSpecStepView() {
                     </>
                   )}
 
-                  {(grammar.skeletonElements?.length ?? 0) > 0 && (
+                  {hullTree.length > 0 && (
                     <>
-                      <div className="fmspec-subhead">{t('fmSpec:step.grammar.skeletons')}</div>
-                      <ul className="fmspec-repeat-groups">
-                        {grammar.skeletonElements!.map((s, i) => (
-                          <li key={`${s.parentTag}/${s.childTag}/${i}`}>
-                            <span className="fmspec-rg__label mono">{`<${s.childTag}>`}</span>
-                            <span className="fmspec-rg__meta">
-                              {s.parentTag !== 'Step' && (
-                                <>{t('fmSpec:step.grammar.sk.in', { parent: `<${s.parentTag}>` })}{' · '}</>
-                              )}
-                              {t(`fmSpec:step.grammar.sk.${s.keepMode}`, { defaultValue: s.keepMode })}
-                              {s.conditionOption && (
-                                <> · {t('fmSpec:step.grammar.sk.condition', {
-                                  cond: `${s.conditionOption} = ${s.conditionValue}`,
-                                })}</>
-                              )}
-                              {s.evidence && (
-                                <> · {s.evidence}{s.verifiedVersion ? ` · ${s.verifiedVersion}` : ''}</>
-                              )}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="fmspec-subhead" title={t('fmSpec:step.grammar.sk.help') as string}>
+                        {t('fmSpec:step.grammar.skeletons')}
+                      </div>
+                      <HullList nodes={hullTree} lookup={lookup} />
                     </>
                   )}
 
-                  {(grammar.elementBindings?.length ?? 0) > 0 && (
+                  {bindingGroups.length > 0 && (
                     <>
-                      <div className="fmspec-subhead">{t('fmSpec:step.grammar.bindings')}</div>
+                      <div className="fmspec-subhead" title={t('fmSpec:step.grammar.bd.help') as string}>
+                        {t('fmSpec:step.grammar.bindings')}
+                      </div>
                       <ul className="fmspec-repeat-groups">
-                        {grammar.elementBindings!.map((b, i) => (
-                          <li key={`${b.elementPath}/${b.binding}/${i}`}>
+                        {bindingGroups.map((b, i) => (
+                          <li key={`${b.elementPath}/${b.binding}/${b.optionKey ?? ''}/${i}`}>
                             <span className="fmspec-rg__label mono">{`<${b.elementPath.split('/').pop()}>`}</span>
+                            <CoverageBadge coverage={b.coverage} />
                             <span className="fmspec-rg__meta">
                               {b.elementPath.includes('/') && (
                                 <><code>{b.elementPath}</code>{' · '}</>
                               )}
                               {b.binding === 'requires' && t('fmSpec:step.grammar.bd.requires', {
-                                cond: `${b.optionKey} = ${b.optionValue}`,
+                                cond: lookup.condition(b.optionKey, b.optionValues),
                               })}
                               {b.binding === 'excludes' && t('fmSpec:step.grammar.bd.excludes', {
-                                cond: `${b.optionKey} = ${b.optionValue}`,
+                                cond: lookup.condition(b.optionKey, b.optionValues),
                               })}
                               {b.binding === 'requires_option' && t('fmSpec:step.grammar.bd.requiresOption', {
-                                option: b.optionKey ?? '',
+                                option: lookup.option(b.optionKey),
                               })}
                               {b.binding === 'excludes_option' && t('fmSpec:step.grammar.bd.excludesOption', {
-                                option: b.optionKey ?? '',
+                                option: lookup.option(b.optionKey),
                               })}
                               {b.binding === 'suppress_empty' && t('fmSpec:step.grammar.bd.suppressEmpty')}
                               {b.evidence && (
@@ -360,9 +467,36 @@ export function FmSpecStepView() {
                     </>
                   )}
 
+                  {(grammar.mirrorElements?.length ?? 0) > 0 && (
+                    <>
+                      <div className="fmspec-subhead" title={t('fmSpec:step.grammar.mr.help') as string}>
+                        {t('fmSpec:step.grammar.mirrors')}
+                      </div>
+                      <ul className="fmspec-repeat-groups">
+                        {grammar.mirrorElements!.map((m, i) => (
+                          <li key={`${m.sourceOption}/${m.targetPath}/${i}`}>
+                            <span className="fmspec-rg__label mono">{`<${m.targetPath.split('/').pop()}>`}</span>
+                            <CoverageBadge coverage={m.coverage} />
+                            <span className="fmspec-rg__meta">
+                              <code>{`Step/${m.targetPath}`}</code>{' · '}
+                              {t(`fmSpec:step.grammar.mr.${m.trigger}`, {
+                                option: lookup.option(m.sourceOption), defaultValue: m.trigger,
+                              })}
+                              {m.evidence && (
+                                <> · {m.evidence}{m.verifiedVersion ? ` · ${m.verifiedVersion}` : ''}</>
+                              )}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+
                   {(grammar.optionImplications?.length ?? 0) > 0 && (
                     <>
-                      <div className="fmspec-subhead">{t('fmSpec:step.grammar.implications')}</div>
+                      <div className="fmspec-subhead" title={t('fmSpec:step.grammar.imp.help') as string}>
+                        {t('fmSpec:step.grammar.implications')}
+                      </div>
                       <ul className="fmspec-repeat-groups">
                         {grammar.optionImplications!.map((im, i) => (
                           <li key={`${im.triggerKind}/${im.trigger}/${i}`}>
@@ -371,8 +505,8 @@ export function FmSpecStepView() {
                               {t(`fmSpec:step.grammar.imp.${im.triggerKind}`, { defaultValue: im.triggerKind })}
                               {' → '}
                               <code>
-                                {im.impliedOption}
-                                {im.impliedValue != null ? ` = ${im.impliedValue}` : ''}
+                                {lookup.option(im.impliedOption)}
+                                {im.impliedValue != null ? ` = ${lookup.value(im.impliedOption, im.impliedValue)}` : ''}
                               </code>
                               {im.isDefault && <> · {t('fmSpec:step.grammar.imp.default')}</>}
                               {im.evidence && (
@@ -461,7 +595,7 @@ function FragmentOption({
   dash,
   valuesLabel,
 }: {
-  o: import('../api/fmSpecApi').StepOption;
+  o: StepOption;
   dash: string;
   valuesLabel: string;
 }) {
@@ -472,10 +606,19 @@ function FragmentOption({
   // pre-1.7.0 references deliver evidence=null → no badges, no toggle hint
   const hasDeviantEvidence = o.values.some((v) => v.evidence != null && v.evidence !== o.evidence);
   const isBool = o.optionType === 'boolean' && (o.trueText != null || o.falseText != null);
+  // curated XML value domain of a boolean attribute (fm_spec >= 2.2.0)
+  const hasXmlDomain = o.optionType === 'boolean' && o.xmlTrue != null && o.xmlFalse != null;
   return (
     <>
       <tr>
-        <td className="mono">{o.optionKey}</td>
+        <td className="mono">
+          {o.optionKey} <CoverageBadge coverage={o.coverage} />
+          {o.pasteDropped && (
+            <span className="fmspec-badge fmspec-badge--dropped" title={t('fmSpec:step.grammar.opt.pasteDroppedHint') as string}>
+              {t('fmSpec:step.grammar.opt.pasteDropped')}
+            </span>
+          )}
+        </td>
         <td>
           {o.optionType}
           {hasValues && (
@@ -496,6 +639,16 @@ function FragmentOption({
                   {' '}⇄
                 </span>
               )}
+            </div>
+          )}
+          {hasXmlDomain && (
+            <div className="fmspec-bool-map">
+              {t('fmSpec:step.grammar.opt.xmlDomain')}: <span className="mono">{o.xmlTrue}</span>{' / '}<span className="mono">{o.xmlFalse}</span>
+            </div>
+          )}
+          {o.slotKind && (
+            <div className="fmspec-bool-map">
+              {t('fmSpec:step.grammar.opt.slotKind')}: {t(`fmSpec:step.grammar.opt.slot_${o.slotKind}`, { defaultValue: o.slotKind })}
             </div>
           )}
         </td>

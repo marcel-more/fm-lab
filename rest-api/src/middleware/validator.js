@@ -21,6 +21,9 @@ const schemas = {
     format: Joi.string().lowercase().valid(...Object.values(OUTPUT_FORMATS)).default('json'),
     meta: Joi.boolean().default(false),
     debug: Joi.boolean().default(false),
+    // Aktive UI-Sprache: liefert BuiltinFunction-Zeilen zusätzlich
+    // `Localized_Name` (lokalisierte Fassung neben dem kanonischen Namen).
+    lang: Joi.string().optional(),
   }),
 
   // GET /api/list
@@ -43,6 +46,9 @@ const schemas = {
     format: Joi.string().lowercase().valid(...Object.values(OUTPUT_FORMATS)).default('json'),
     meta: Joi.boolean().default(false),
     debug: Joi.boolean().default(false),
+    // Aktive UI-Sprache: liefert BuiltinFunction-Zeilen zusätzlich
+    // `Localized_Name` (lokalisierte Fassung neben dem kanonischen Namen).
+    lang: Joi.string().optional(),
   }),
 
   // GET /api/list/categories - Filter-Pillen-Daten für einen Pseudo-Token-Typ.
@@ -92,6 +98,9 @@ const schemas = {
     format: Joi.string().lowercase().valid(...Object.values(OUTPUT_FORMATS)).default('json'),
     meta: Joi.boolean().default(false),
     debug: Joi.boolean().default(false),
+    // Aktive UI-Sprache: liefert BuiltinFunction-Zeilen zusätzlich
+    // `Localized_Name` (lokalisierte Fassung neben dem kanonischen Namen).
+    lang: Joi.string().optional(),
   }),
 
   // GET /api/search/count
@@ -144,6 +153,12 @@ const schemas = {
     debug: Joi.boolean().default(false),
     // Optionale Token-Anreicherung mit Reference-DB pro Sprache
     enrich: Joi.string().optional(),
+    // Aktive UI-Sprache: Detail-Templates zeigen damit die lokalisierte
+    // Schreibweise NEBEN dem Katalognamen (BuiltinFunction — der Katalogname ist
+    // seit Schema 1.32.0 sprachunabhängig kanonisch). Bewusst tolerant: eine
+    // unbekannte Sprache liefert schlicht keinen lokalisierten Namen, statt den
+    // Detailaufruf mit 400 zu beantworten.
+    lang: Joi.string().optional(),
   }),
 
   // GET /api/get-calc - Standalone calculation (token format only).

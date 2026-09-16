@@ -66,8 +66,6 @@ Reference repositories rather than documentation mirrors — cloned for testing 
 
 | Doc set | Content |
 |---|---|
-| [Doc Set ooe-fm](Doc%20Set%20ooe-fm.md) | "One of Everything" FileMaker reference solution with SaXML exports across FileMaker 18–22 — the converter's test corpus |
-| [Doc Set fm-xml-export-exploder](Doc%20Set%20fm-xml-export-exploder.md) | Source of a Rust CLI tool that splits FileMaker XML exports into per-object text files — reference tooling |
 
 ---
 

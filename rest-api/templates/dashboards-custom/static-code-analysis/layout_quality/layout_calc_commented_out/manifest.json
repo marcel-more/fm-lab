@@ -2,7 +2,7 @@
   "id": "layout_calc_commented_out",
   "version": "1.0.0",
   "title": "Commented-out layout calculation",
-  "description": "Layout-quality rule — a hide, tooltip or label calculation on a layout object consists entirely of a comment. The calculation never evaluates, so the intended behavior is silently disabled.\n\nBased on the fmCheckMate check \"Broken Calculation /*Commented Out*/\" — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+  "description": "Layout-quality rule — a hide, field-entry, tooltip or label calculation on a layout object consists entirely of a comment. The calculation never evaluates, so the intended behavior is silently disabled.\n\nBased on the fmCheckMate check \"Broken Calculation /*Commented Out*/\" — https://github.com/mrwatson-de/fmCheckMate-XSLT",
   "author": "fm-lab rules",
   "icon": "code",
   "category": "layout_quality",
@@ -15,14 +15,14 @@
   "rule": {
     "severity": "error",
     "category": "layout_quality",
-    "rationale": "A calculation wrapped entirely in /* ... */ evaluates to nothing. A hide condition or tooltip that was disabled this way stays disabled forever without any visible trace in Layout mode.",
+    "rationale": "A calculation wrapped entirely in /* ... */ evaluates to nothing. A hide condition, field-entry condition or tooltip that was disabled this way stays disabled forever without any visible trace in Layout mode.",
     "remediation": "Restore the calculation or clear the slot entirely — an empty slot states intent, a commented-out one hides it.",
     "meta": {
       "name": "Commented-out layout calculation",
       "author": "fm-lab rules",
       "source": "fmCheckMate-XSLT",
       "url": "https://github.com/mrwatson-de/fmCheckMate-XSLT",
-      "description": "Layout-quality rule — a hide, tooltip or label calculation on a layout object consists entirely of a comment. The calculation never evaluates, so the intended behavior is silently disabled.",
+      "description": "Layout-quality rule — a hide, field-entry, tooltip or label calculation on a layout object consists entirely of a comment. The calculation never evaluates, so the intended behavior is silently disabled.",
       "created": "2026-08-15",
       "references": [
         {
@@ -94,7 +94,7 @@
       "name": "calc_slot",
       "type": "string",
       "required": false,
-      "description": "Calculation-slot filter chip (hide, tooltip, label); unset = all."
+      "description": "Calculation-slot filter chip (hide, entry, tooltip, label); unset = all."
     },
     {
       "name": "object_type",
@@ -110,6 +110,7 @@
   "messages": {
     "hide": "The hide calculation is completely commented out",
     "tooltip": "The tooltip calculation is completely commented out",
-    "label": "The label calculation is completely commented out"
+    "label": "The label calculation is completely commented out",
+    "entry": "The field-entry calculation is completely commented out"
   }
 }

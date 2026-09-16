@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "플랫폼 전용 트리거: FileMaker Go (iOS)",
+    "analysis.defaultResult.meaning": "FileMaker Go (iOS)에서만 발생하는 트리거 이벤트에 연결된 범위 내 스크립트"
+  },
+  "layout": {}
+}

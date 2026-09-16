@@ -267,6 +267,14 @@ button:disabled {
   color: var(--color-text-secondary, var(--color-text-muted));
 }
 
+/* Lokalisierte Namensfassung eines Built-ins, hinter dem kanonischen Namen.
+   Zurückgenommen gesetzt: der kanonische Name ist die Identität und bleibt der
+   Titel, die lokalisierte Form ist die Lesehilfe. */
+.object-name .object-name-localized {
+  font-weight: 400;
+  color: var(--color-text-secondary, var(--color-text-muted));
+}
+
 /* ScriptStep-Trefferanzeige: Step_Text als Code-Zeile oben, einzeilig mit
    Ellipsis (DDR_Step_Text kann mehrzeilig sein — Tooltip via title zeigt
    den vollen Text). Darunter ein Breadcrumb "Datei ▸ Skript ▸ Step N". */

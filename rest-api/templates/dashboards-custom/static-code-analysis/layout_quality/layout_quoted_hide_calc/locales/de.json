@@ -1,21 +1,23 @@
 {
   "manifest": {
-    "title": "Ausblende-Bedingung ist eine String-Konstante",
-    "description": "Layout-Qualitätsregel — die Ausblenden-Bedingung eines Layoutobjekts ist ein einzelnes String-Literal in Anführungszeichen. Die Formel wurde vermutlich mitsamt Anführungszeichen eingefügt und wirkt als Konstante statt als Berechnung.\n\nAngelehnt an die fmCheckMate-Prüfung „ReportBrokenCalculationQuoted“ — https://github.com/mrwatson-de/fmCheckMate-XSLT",
-    "messages.quoted": "Die Ausblenden-Bedingung ist eine String-Konstante in Anführungszeichen, keine Berechnung"
+    "title": "Ausblende- oder Feldeingabe-Bedingung ist eine String-Konstante",
+    "description": "Layout-Qualitätsregel — die Ausblenden- oder Feldeingabe-Bedingung eines Layoutobjekts ist ein einzelnes String-Literal in Anführungszeichen. Die Formel wurde vermutlich mitsamt Anführungszeichen eingefügt und wirkt als Konstante statt als Berechnung.\n\nAngelehnt an die fmCheckMate-Prüfung „ReportBrokenCalculationQuoted“ — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+    "messages.quoted": "Die Ausblenden-Bedingung ist eine String-Konstante in Anführungszeichen, keine Berechnung",
+    "messages.quoted_entry": "Die Feldeingabe-Bedingung ist eine String-Konstante in Anführungszeichen, keine Berechnung"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Treffer",
     "summary_kpi.props.items[1].label": "Betroffene Layouts",
     "summary_kpi.props.items[2].label": "Betroffene Dateien",
-    "findings_card.props.title": "Ausblende-Bedingung ist eine String-Konstante",
+    "findings_card.props.title": "Ausblende- oder Feldeingabe-Bedingung ist eine String-Konstante",
     "findings_table.props.searchPlaceholder": "Datei, Layout oder Objekt suchen…",
-    "findings_table.props.empty.message": "Keine String-Konstanten in Ausblende-Bedingungen gefunden.",
+    "findings_table.props.empty.message": "Keine String-Konstanten in Ausblende- oder Feldeingabe-Bedingungen gefunden.",
     "findings_table.props.columns[0].label": "Datei",
     "findings_table.props.columns[1].label": "Layout",
     "findings_table.props.columns[2].label": "Objekttyp",
     "findings_table.props.columns[3].label": "Objekt",
-    "findings_table.props.columns[6].label": "Breite",
-    "findings_table.props.columns[7].label": "Höhe"
+    "findings_table.props.columns[4].label": "Slot",
+    "findings_table.props.columns[7].label": "Breite",
+    "findings_table.props.columns[8].label": "Höhe"
   }
 }

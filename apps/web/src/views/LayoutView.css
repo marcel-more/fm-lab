@@ -605,3 +605,22 @@
 .fm-lo-cf-format-none {
   color: var(--color-text-muted);
 }
+
+/* Compact runtime hint on layout trigger rows (fm_spec trigger_compat ≥ 2.8.0):
+   WebDirect / Go cells that are No or Partial. Partial keeps its own look —
+   it is "conditionally supported", never "unsupported". */
+.fm-lo-compat-badge {
+  display: inline-block;
+  margin-left: 0.4em;
+  padding: 0 0.4em;
+  border-radius: 3px;
+  font-size: 0.78em;
+  line-height: 1.5;
+  background: var(--color-danger-bg, rgba(220, 53, 69, 0.12));
+  color: var(--color-danger, #b02a37);
+  white-space: nowrap;
+}
+.fm-lo-compat-badge--partial {
+  background: var(--color-warning-bg, rgba(255, 193, 7, 0.18));
+  color: var(--color-warning-text, #8a6d00);
+}

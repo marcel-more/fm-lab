@@ -1,21 +1,23 @@
 {
   "manifest": {
-    "title": "Verbergconditie is een constante tussen aanhalingstekens",
-    "description": "Layoutkwaliteitsregel — de verbergconditie van een object is één stringliteraal tussen aanhalingstekens. De formule is vermoedelijk met aanhalingstekens en al geplakt; ze werkt als constante in plaats van als berekening.\n\nGebaseerd op de fmCheckMate-controle “ReportBrokenCalculationQuoted” — https://github.com/mrwatson-de/fmCheckMate-XSLT",
-    "messages.quoted": "De verbergconditie is een stringconstante tussen aanhalingstekens, geen berekening"
+    "title": "Verberg- of veldinvoerconditie is een constante tussen aanhalingstekens",
+    "description": "Layoutkwaliteitsregel — de verberg- of veldinvoerconditie van een object is één stringliteraal tussen aanhalingstekens. De formule is vermoedelijk met aanhalingstekens en al geplakt; ze werkt als constante in plaats van als berekening.\n\nGebaseerd op de fmCheckMate-controle “ReportBrokenCalculationQuoted” — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+    "messages.quoted": "De verbergconditie is een stringconstante tussen aanhalingstekens, geen berekening",
+    "messages.quoted_entry": "De veldinvoerconditie is een stringconstante tussen aanhalingstekens, geen berekening"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Bevindingen",
     "summary_kpi.props.items[1].label": "Betrokken Layouts",
     "summary_kpi.props.items[2].label": "Betrokken bestanden",
-    "findings_card.props.title": "Verbergconditie is een constante tussen aanhalingstekens",
+    "findings_card.props.title": "Verberg- of veldinvoerconditie is een constante tussen aanhalingstekens",
     "findings_table.props.searchPlaceholder": "Bestand, Layout of object zoeken…",
-    "findings_table.props.empty.message": "Geen verbergcondities tussen aanhalingstekens gevonden.",
+    "findings_table.props.empty.message": "Geen verberg- of veldinvoercondities tussen aanhalingstekens gevonden.",
     "findings_table.props.columns[0].label": "Bestand",
     "findings_table.props.columns[1].label": "Layout",
     "findings_table.props.columns[2].label": "Objecttype",
     "findings_table.props.columns[3].label": "Object",
-    "findings_table.props.columns[6].label": "Breedte",
-    "findings_table.props.columns[7].label": "Hoogte"
+    "findings_table.props.columns[4].label": "Slot",
+    "findings_table.props.columns[7].label": "Breedte",
+    "findings_table.props.columns[8].label": "Hoogte"
   }
 }

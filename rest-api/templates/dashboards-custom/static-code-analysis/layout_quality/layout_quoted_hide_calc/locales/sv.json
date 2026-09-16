@@ -1,21 +1,23 @@
 {
   "manifest": {
-    "title": "Döljvillkor är en citerad konstant",
-    "description": "Layoutkvalitetsregel — döljvillkoret för ett objekt är en enda citerad stränglitteral. Formeln klistrades troligen in med citattecken; den fungerar som konstant i stället för som beräkning.\n\nBaserad på fmCheckMate-kontrollen ”ReportBrokenCalculationQuoted” — https://github.com/mrwatson-de/fmCheckMate-XSLT",
-    "messages.quoted": "Döljvillkoret är en citerad strängkonstant, inte en beräkning"
+    "title": "Dölj- eller fältinmatningsvillkor är en citerad konstant",
+    "description": "Layoutkvalitetsregel — dölj- eller fältinmatningsvillkoret för ett objekt är en enda citerad stränglitteral. Formeln klistrades troligen in med citattecken; den fungerar som konstant i stället för som beräkning.\n\nBaserad på fmCheckMate-kontrollen ”ReportBrokenCalculationQuoted” — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+    "messages.quoted": "Döljvillkoret är en citerad strängkonstant, inte en beräkning",
+    "messages.quoted_entry": "Fältinmatningsvillkoret är en citerad strängkonstant, inte en beräkning"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Träffar",
     "summary_kpi.props.items[1].label": "Berörda Layouter",
     "summary_kpi.props.items[2].label": "Berörda filer",
-    "findings_card.props.title": "Döljvillkor är en citerad konstant",
+    "findings_card.props.title": "Dölj- eller fältinmatningsvillkor är en citerad konstant",
     "findings_table.props.searchPlaceholder": "Sök fil, Layout eller objekt…",
-    "findings_table.props.empty.message": "Inga citerade döljvillkor hittades.",
+    "findings_table.props.empty.message": "Inga citerade dölj- eller fältinmatningsvillkor hittades.",
     "findings_table.props.columns[0].label": "Fil",
     "findings_table.props.columns[1].label": "Layout",
     "findings_table.props.columns[2].label": "Objekttyp",
     "findings_table.props.columns[3].label": "Objekt",
-    "findings_table.props.columns[6].label": "Bredd",
-    "findings_table.props.columns[7].label": "Höjd"
+    "findings_table.props.columns[4].label": "Slot",
+    "findings_table.props.columns[7].label": "Bredd",
+    "findings_table.props.columns[8].label": "Höjd"
   }
 }

@@ -1,8 +1,8 @@
 {
   "id": "layout_quoted_hide_calc",
   "version": "1.0.0",
-  "title": "Hide condition is a quoted constant",
-  "description": "Layout-quality rule — the hide-object condition of a layout object is a single quoted string literal. The formula was probably pasted together with its quotes; it evaluates as a constant instead of the intended calculation.\n\nBased on the fmCheckMate check \"ReportBrokenCalculationQuoted\" — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+  "title": "Hide or field-entry condition is a quoted constant",
+  "description": "Layout-quality rule — the hide-object condition or the field-entry condition of a layout object is a single quoted string literal. The formula was probably pasted together with its quotes; it evaluates as a constant instead of the intended calculation.\n\nBased on the fmCheckMate check \"ReportBrokenCalculationQuoted\" — https://github.com/mrwatson-de/fmCheckMate-XSLT",
   "author": "fm-lab rules",
   "icon": "quote",
   "category": "layout_quality",
@@ -15,14 +15,14 @@
   "rule": {
     "severity": "error",
     "category": "layout_quality",
-    "rationale": "A formula pasted with surrounding quotes turns into a string constant. The hide condition no longer reacts to record data — depending on the string it is constantly true or constantly false.",
+    "rationale": "A formula pasted with surrounding quotes turns into a string constant. The hide or field-entry condition no longer reacts to record data — depending on the string it is constantly true or constantly false.",
     "remediation": "Remove the surrounding quotes so the text becomes a real calculation again, and re-check the intended logic.",
     "meta": {
-      "name": "Hide condition is a quoted constant",
+      "name": "Hide or field-entry condition is a quoted constant",
       "author": "fm-lab rules",
       "source": "fmCheckMate-XSLT",
       "url": "https://github.com/mrwatson-de/fmCheckMate-XSLT",
-      "description": "Layout-quality rule — the hide-object condition of a layout object is a single quoted string literal. The formula was probably pasted together with its quotes; it evaluates as a constant instead of the intended calculation.",
+      "description": "Layout-quality rule — the hide-object condition or the field-entry condition of a layout object is a single quoted string literal. The formula was probably pasted together with its quotes; it evaluates as a constant instead of the intended calculation.",
       "created": "2026-08-15",
       "references": [
         {
@@ -92,6 +92,7 @@
     "allow_navigation": true
   },
   "messages": {
-    "quoted": "Hide condition is a quoted string constant, not a calculation"
+    "quoted": "Hide condition is a quoted string constant, not a calculation",
+    "quoted_entry": "Field-entry condition is a quoted string constant, not a calculation"
   }
 }

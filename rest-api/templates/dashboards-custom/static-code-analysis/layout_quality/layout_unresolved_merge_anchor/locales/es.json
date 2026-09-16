@@ -1,0 +1,25 @@
+{
+  "manifest": {
+    "title": "Ancla de combinación sin resolver",
+    "description": "Regla de calidad de layouts — un objeto de texto contiene un ancla de campo combinado (<<Campo>>) que FileMaker no puede resolver. Esa ancla no se descarta: se muestra LITERALMENTE en modo visualizar y vista previa, de modo que el usuario ve el <<Campo>> en bruto donde debería haber un valor. Además no deja rastro en el catálogo — ni arista displays_field ni objeto propio —, por lo que esta regla es el único lugar donde se hace visible. La detección compara las anclas del texto (excluidas las variables combinadas <<$…>> y las fórmulas de layout <<ƒ:…>>; una repetición o una cualificación por TO cuentan como una sola ancla) con las entradas FieldReference de la FieldList estructural del objeto, que contiene exactamente una entrada por ancla resuelta. El recuento decide el hallazgo; los nombres sospechosos son un extra y quedan vacíos cuando no pueden asignarse con seguridad.",
+    "messages.unresolved-anchor": "Ancla de combinación sin resolución de campo — se muestra literalmente"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Hallazgos",
+    "summary_kpi.props.items[1].label": "Anclas sin resolver",
+    "summary_kpi.props.items[2].label": "Layouts afectados",
+    "summary_kpi.props.items[3].label": "Archivos afectados",
+    "findings_card.props.title": "Ancla de combinación sin resolver",
+    "findings_table.props.searchPlaceholder": "Buscar archivo, layout, objeto o ancla…",
+    "findings_table.props.empty.message": "No se han encontrado anclas de combinación sin resolver.",
+    "findings_table.props.columns[0].label": "Archivo",
+    "findings_table.props.columns[1].label": "Layout",
+    "findings_table.props.columns[2].label": "Objeto",
+    "findings_table.props.columns[3].label": "Se muestra literal",
+    "findings_table.props.columns[4].label": "Todas las anclas",
+    "findings_table.props.columns[5].label": "Sin resolver",
+    "findings_table.props.columns[6].label": "Anclas",
+    "findings_table.props.columns[9].label": "Ancho",
+    "findings_table.props.columns[10].label": "Alto"
+  }
+}

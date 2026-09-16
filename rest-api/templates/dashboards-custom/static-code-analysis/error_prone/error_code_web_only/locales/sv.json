@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Felkodsliteral endast webb",
+    "analysis.defaultResult.meaning": "Jämförelser av Get(LastError) med en kod som bara Web Publishing Engine eller ett REST-API returnerar"
+  },
+  "layout": {}
+}

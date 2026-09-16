@@ -51,4 +51,6 @@ The complete field definitions, grouped per base table: one `<FieldCatalog>` per
 - `DDRREF/@hash` joins the formula to its chunk list in [XML DDR_INFO](XML%20DDR_INFO.md).
 - `<Validation><MaximumSize>` carries the unsigned 32-bit sentinel `4294967295` when the field has no character limit — the importer normalizes exactly this slot to `NULL` (`Validation_MaxChars`); all other numeric slots import verbatim into 64-bit columns.
 
+- **Version difference:** SaXML v2.3.0.0 (FileMaker 26) adds three things per field. `Field/Annotation/Text` carries the **field annotation** (the DDL comment); `Field/DisplayNames` carries an `enable` flag plus a `Calculation` for **customized display names** (the formula anchors in [DDR-Info](XML%20DDR_INFO.md) as `_<Field-UUID>_5`); and **disabled** auto-enter, lookup and validation definitions are exported with `enable="False"` instead of being omitted — formula, DDR anchor and chunks are written for them, so they are visible but must not count as usage. The validation calculation anchor also moves from `_<Field-UUID>_2` to `_<Field-UUID>_4_2` (the message calculation stays `_4`).
+
 **Extracted into:** [FieldsForTables](../../schema/catalog-tables/FieldsForTables.md) — column details in the [schema reference](../../schema/Schema.md).

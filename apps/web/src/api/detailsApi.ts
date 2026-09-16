@@ -33,6 +33,7 @@ export interface ObjectDetailsResponse {
 export async function fetchObjectDetails(
   uuid: string,
   file?: string | null,
+  lang?: string | null,
 ): Promise<ObjectDetailsResponse> {
   const searchParams = new URLSearchParams({
     uuid,
@@ -40,6 +41,11 @@ export async function fetchObjectDetails(
     meta: 'true',
   });
   if (file) searchParams.set('file', file);
+  // Aktive UI-Sprache: Detail-Templates zeigen damit die lokalisierte
+  // Schreibweise neben dem Katalognamen. Betrifft heute BuiltinFunction, dessen
+  // Katalogname sprachunabhängig der kanonische englische Referenzname ist;
+  // andere Typen ignorieren den Parameter.
+  if (lang) searchParams.set('lang', lang);
 
   const response = await fetch(`${baseUrl}/api/get-details?${searchParams}`);
 

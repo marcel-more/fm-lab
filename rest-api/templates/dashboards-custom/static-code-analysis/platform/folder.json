@@ -1,6 +1,6 @@
 {
   "title": "Platform Compatibility",
   "icon": "server",
-  "description": "Two orthogonal platform axes. Compatibility (platform_compat_*): runtime-context checks against the Claris step-compatibility table (fm_spec: step_compat) — NULL in the source is 'Partial', conditionally supported, never 'undocumented'. Platform binding (platform_specific_*): neutral inventory of scripts BUILT FOR a platform — iOS via exclusive steps + dedicated functions, Server via Perform-Script-on-Server context; only these two environments have a binding signal source.",
+  "description": "Three orthogonal platform axes. Compatibility (platform_compat_*): runtime-context checks against the Claris step-compatibility table (fm_spec: step_compat) — NULL in the source is 'Partial', conditionally supported, never 'undocumented'. Platform binding (platform_specific_*): neutral inventory of scripts BUILT FOR a platform — iOS via exclusive steps + dedicated functions, Server via Perform-Script-on-Server context; only these two environments have a binding signal source. Version floor (version_floor): the effective minimum FileMaker version of the scope — the introduction versions of the steps, functions and triggers in use against the minimum each file declares.",
   "order": 90
 }

@@ -139,7 +139,19 @@ echo "  edges.csv: $EDGE_COUNT edges in $((T_EXPORT_END - T_EXPORT_START))s"
 echo "→ clustering ($ENGINE) …"
 ENGINE_STATS_FILE="$WORKDIR/engine_stats.txt"
 T_CLUSTER_START=$(date +%s)
-if [ "$ENGINE" = "leiden" ]; then
+if [ "$EDGE_COUNT" -eq 0 ]; then
+  # Kantenloser Graph = legitimer Zustand (Mikro-Lösung, deren einzige operationale
+  # Links Builtins/lokale Variablen sind — beide filtert der logische Export weg).
+  # Community-Detection ist darauf gegenstandslos, also gar nicht erst eine Engine
+  # starten: igraph 0.11 terminiert in diesem Fall nicht (community_leiden mit
+  # n_iterations=-1 dreht endlos), und auch eine gutmütige Engine liefert nur die
+  # triviale Partition. Wir schreiben die leere communities.csv selbst — Schritt 3
+  # läuft normal weiter und räumt dabei ObjectClusters/CommunityNames korrekt leer.
+  echo "  no edges — skipping community detection (nothing to partition)"
+  printf 'object_uuid,community\n' > communities.csv
+  printf '[%s] nodes=0 edges=0 communities=0 modularity=NaN resolution=%s seed=%s | skipped: edgeless graph\n' \
+    "$ENGINE" "$RESOLUTION" "$SEED" > "$ENGINE_STATS_FILE"
+elif [ "$ENGINE" = "leiden" ]; then
   python3 "$SCRIPT_DIR/cluster_leiden.py" edges.csv communities.csv "$RESOLUTION" "$SEED" 2> "$ENGINE_STATS_FILE" || {
     cat "$ENGINE_STATS_FILE" >&2
     echo "ERROR: leiden clustering failed." >&2; exit 8; }

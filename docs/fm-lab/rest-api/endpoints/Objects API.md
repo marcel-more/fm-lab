@@ -15,6 +15,7 @@ The `ObjectCatalog` row of a single object.
 | `uuid` | string | — | **Required.** Object UUID |
 | `file` | string | — | Clone disambiguation |
 | `format` | enum | `json` | See [REST API Output Formats](../REST%20API%20Output%20Formats.md) |
+| `lang` | string | — | Active UI language — see [Localized built-in names](#localized-built-in-names) |
 | `meta` / `debug` | boolean | `false` | Envelope extras |
 
 ```bash
@@ -45,6 +46,7 @@ Type-specific rich detail view. The server resolves the object's type and dispat
 | `file` | string | — | Clone disambiguation |
 | `format` | enum | `json` | Full format enum; `tokens` has special semantics (below) |
 | `enrich` | string | — | Language code — only with `format=tokens`: augments tokens with reference-database display names, signatures and help URLs |
+| `lang` | string | — | Active UI language — detail templates that can show a localized spelling next to the catalog name use it (today `BuiltinFunction`); other types ignore it |
 | `meta` / `debug` | boolean | `false` | `meta` reports `template_used`, `object_type`, … |
 
 **`format=tokens`** returns the structured token payload for editor-style rendering (see [tokens](../REST%20API%20Output%20Formats.md#tokens)). Supported object types: `Script`, `ScriptStep`, `LayoutObject`, `CustomFunction`, `Field`, `CustomMenu`, `CustomMenuItem`, `Calculation`, `ScriptTrigger` — other types yield `400 VALIDATION_ERROR` listing the supported set. Reference enrichment soft-fails when the reference database is not installed (`enrich: null`, `enrich_error: "REF_NOT_ATTACHED"`).
@@ -54,6 +56,12 @@ For a `LayoutObject` the payload carries, besides the button-embedded step lines
 Detail templates whose output is a prose block automatically render as plain text for any non-JSON format.
 
 **Layout special case:** the detail template for `Layout` objects generates a complete **SVG wireframe** of the layout (parts as bands, objects as color-coded rectangles with labels and tooltips, nested objects resolved to absolute coordinates). `format=content` returns the ready-to-use SVG document; the default `format=json` delivers the same markup line-wise as rows with a `content` column. Interactive clients that need hover/navigation on individual layout objects should use the structured layout data templates via [/query](Query%20and%20Report%20API.md) instead — see [SVG and visual output](../REST%20API%20Output%20Formats.md#a-note-on-svg-and-visual-output).
+
+### Localized built-in names
+
+A `BuiltinFunction` is catalogued under the **canonical English name of the standard reference** (`Length`, `Get(PageNumber)`) — that name is the node's identity and therefore language-independent, whatever language the solution's formulas are written in. For a developer working in German that alone is not the name they know, so `?lang=<code>` adds `Localized_Name` (`Hole ( Seitennummer )`) **next to** the canonical name rather than replacing it: the canonical name stays what search, deep links and the reference join run on.
+
+Resolved by lookup — `BuiltinFunctionIdentity.Function_ID` → the reference's localized display name — never derived from the name. The field is present only when it actually differs from the canonical name, so an English UI sees no redundant duplicate. Applies to `/api/get`, `/api/list` and `/api/search` alike, so list, hit list and detail page show the same name; the graph keeps the canonical label alone, where space is tight and labels are mostly hidden.
 
 ## GET /api/get-calc
 

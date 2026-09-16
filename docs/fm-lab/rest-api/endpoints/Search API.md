@@ -19,6 +19,7 @@ List all objects of one type.
 | `with_category` | boolean | `false` | Pseudo-token types only: include the category |
 | `category` | string (CSV) | — | Pseudo-token types only: filter by categories |
 | `sort` | enum | — | `usage` · `name` · `category` |
+| `lang` | string | — | Active UI language: `BuiltinFunction` rows additionally carry `Localized_Name` |
 
 The pseudo-token parameters (`with_usage`, `with_category`, `category`, `sort`) apply to the aggregate types `ScriptStepType`, `BuiltinFunction`, `PluginFunction` (usage/sort also to `PluginComponent`); on other types they are ignored. `category`/`with_category` on `PluginComponent` yields `400 VALIDATION_ERROR`.
 
@@ -72,7 +73,9 @@ Search objects by name pattern.
 | `limit` | integer | `100` | |
 | `offset` | integer | `0` | Pagination |
 
-Beyond object names, the search also matches **value-list values** (hits report the matched values in `Matched_Values`) and **script-step contents** (hits are `ScriptStep` rows carrying `Step_Text`, `Script_Name` and `Step_Index` for breadcrumb display). Results are ordered by name.
+Beyond object names, the search also matches **value-list values** (hits report the matched values in `Matched_Values`), **script-step contents** (hits are `ScriptStep` rows carrying `Step_Text`, `Script_Name` and `Step_Index` for breadcrumb display) and the **localized spellings of built-in functions**. Results are ordered by name.
+
+A built-in is catalogued under its canonical English name — that is its identity — so a solution whose formulas are written in German would otherwise be unable to find it: searching `Seitennummer` matches the node `Get(PageNumber)`, and `Matched_Values` names the spelling that matched. Every language the standard reference knows is covered, in both namespaces (function names and `Get` parameters). With `?lang=` the hit also carries `Localized_Name`, the localized form to display next to the canonical one — finding and showing belong together. Catalogs imported before schema 1.32.0 lack the lookup and simply search by name only.
 
 `Calculation` objects are **excluded** from the generic (untyped) name search — their generated names (`<Owner> › <Role>`) would flood every owner-name query with duplicates. With an explicit `type=calculation` the type remains fully searchable and listable.
 

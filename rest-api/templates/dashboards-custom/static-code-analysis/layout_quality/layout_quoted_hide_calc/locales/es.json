@@ -1,21 +1,23 @@
 {
   "manifest": {
-    "title": "Condición de ocultar es una constante entre comillas",
-    "description": "Regla de calidad de Layout — la condición de ocultar de un objeto es un único literal de cadena entre comillas. Probablemente la fórmula se pegó con las comillas; actúa como constante en lugar del cálculo previsto.\n\nBasado en la comprobación de fmCheckMate «ReportBrokenCalculationQuoted» — https://github.com/mrwatson-de/fmCheckMate-XSLT",
-    "messages.quoted": "La condición de ocultar es una constante de cadena entre comillas, no un cálculo"
+    "title": "Condición de ocultar o de entrada de campo es una constante entre comillas",
+    "description": "Regla de calidad de Layout — la condición de ocultar o de entrada de campo de un objeto es un único literal de cadena entre comillas. Probablemente la fórmula se pegó con las comillas; actúa como constante en lugar del cálculo previsto.\n\nBasado en la comprobación de fmCheckMate «ReportBrokenCalculationQuoted» — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+    "messages.quoted": "La condición de ocultar es una constante de cadena entre comillas, no un cálculo",
+    "messages.quoted_entry": "La condición de entrada de campo es una constante de cadena entre comillas, no un cálculo"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Hallazgos",
     "summary_kpi.props.items[1].label": "Layouts afectados",
     "summary_kpi.props.items[2].label": "Archivos afectados",
-    "findings_card.props.title": "Condición de ocultar es una constante entre comillas",
+    "findings_card.props.title": "Condición de ocultar o de entrada de campo es una constante entre comillas",
     "findings_table.props.searchPlaceholder": "Buscar archivo, Layout u objeto…",
-    "findings_table.props.empty.message": "No se encontraron condiciones de ocultar entre comillas.",
+    "findings_table.props.empty.message": "No se encontraron condiciones de ocultar o de entrada de campo entre comillas.",
     "findings_table.props.columns[0].label": "Archivo",
     "findings_table.props.columns[1].label": "Layout",
     "findings_table.props.columns[2].label": "Tipo de objeto",
     "findings_table.props.columns[3].label": "Objeto",
-    "findings_table.props.columns[6].label": "Ancho",
-    "findings_table.props.columns[7].label": "Alto"
+    "findings_table.props.columns[4].label": "Slot",
+    "findings_table.props.columns[7].label": "Ancho",
+    "findings_table.props.columns[8].label": "Alto"
   }
 }

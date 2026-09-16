@@ -59,6 +59,126 @@ Note on the name collision: theme-internal `<Metadata><namedstyles>` blocks (ins
 `ThemeCatalog`) are NOT the file-options branch — only a `<Metadata>` with an
 `<AddAction>` child counts (the P1 parser filters accordingly).
 
+## SaXML profiles (version-explicit import)
+
+The converter reads the root attribute `FMSaveAsXML/@version` of every export and
+imports the file under one of two **profiles** (converter 2.24.0, schema 1.28.0):
+
+| `@version` | Profile | FileMaker | Encoding of the export |
+|---|---|---|---|
+| 2.1.0.0 – 2.2.x | `saxml22` | 19 – 22 | UTF-16 (converted by the pre-processor) |
+| 2.3.0.0 and later | `saxml23` | 26+ | UTF-8 |
+| 2.0.0.0 (`<FMDynamicTemplate>`) | — (skipped) | 18 | |
+
+The profile is persisted in `FilesCatalog.SaXML_Version`/`SaXML_Profile` and
+`XMLMetadata.SaXML_Profile`. Extractions that exist in only one form live in
+`-- @P1_PROFILE:<profile>@ … -- @END_P1_PROFILE@` blocks of the P1 template; the driver
+filters them in every mode. A corpus may mix files of both profiles — the decision is
+per file. **Never** import the FileMaker 22 and the FileMaker 26 export of the *same*
+file into one catalog: they share every object UUID.
+
+Vocabulary delta of **SaXML 2.3.0.0** (evidence: `ingestion/fixtures/saxml/
+fmlab_coverage__saxml_v2_3_0_0__fm_v26_0_2__ddr_info.xml` vs. the 2.2.3.0 export of the
+same file):
+
+| Element / attribute | 2.2.x (`saxml22`) | 2.3.0.0 (`saxml23`) | Catalog target |
+|---|---|---|---|
+| Root | `version Source File UUID locale Has_DDR_INFO` | + `binary_under_lo`, `split_catalogs` | `XMLMetadata`/`FilesCatalog` |
+| `<Structure>` | `AddAction` (+ others) | `AddAction` only | — |
+| Value-list options | top-level `<OptionsForValueLists>` | embedded in `ValueListCatalog/ValueList` (`Source`, `Field`, `CustomValues`, `External`) | `OptionsForValueLists` (one read per profile) |
+| Custom-function formulas | top-level `<CalcsForCustomFunctions>` (also a row per folder/separator) | `<Calculation>` embedded in `<CustomFunction>` (no `<ChunkList>`) | `CalcsForCustomFunctions` (folders/separators: no row in either profile) |
+| `Field/Annotation/Text`, `Field/DisplayNames@enable` + `Calculation` | — | new; the display-names formula anchors in `DDR_INFO` as `_<Field-UUID>_5` | `FieldsForTables.Field_Annotation`, `Field_DisplayNames_Enabled`, `DisplayNames_Calc_Text/Hash`; calc role `display_names` |
+| Field validation calc anchor | `_<Field-UUID>_2` | `_<Field-UUID>_4_2` (message calc stays `_4`) | folded to slot `2` = role `validation` in P4 (owner-bound — step anchors use the same `<pos>_<sub>` form) |
+| Disabled definitions `AutoEnter/Calculated@enable`, `AutoEnter/Looked_up@enable`, `Validation/Calculated@enable`, `Validation/MessageCalc@enable` | absent — a disabled definition is not exported at all | `enable="True"` on active, `enable="False"` on disabled definitions (formula, DDR anchor and chunks are still written) | `FieldsForTables.*_Enabled`; `CalculationsCatalog.Is_Enabled`; no operational links for disabled slots |
+| `Part@type` of `Part@kind="5"` | `Trailing Grand Summary` (Claris mislabel; real trailing grand summary is kind 6) | `Trailing Sub-summary` | `LayoutParts.Part_Type` canonical from the kind (schema 1.29.0), raw value in `Definition_Type` |
+| `Step id="144"` (Save Records as PDF) boolean options | `Append …`, `With dialog` | `With dialog`, `Append …`, + `Create folders`, `SaveResult` | `StepsForScripts.Boolean_Type/Value` is the first slot — differs across versions; all options in `Parameters_XML` |
+| `Step id="36"` (Export Records) XSLT | `DataSourceReference/XSL` calculation not exported | exported (`step_xslt` instances) | Claris source gap of 2.2.3.0, no converter action |
+| `Layout/TableView/ObjectList/TableViewLayoutObject{hidden,id,name,width}/FieldReference` | — | new (every layout carries its table-view columns) | `LayoutTableViewColumns`; edge Layout → Field `displays_field`/`table_view_column` |
+| `LayoutObject … /DisplayCalculations@membercount` | = number of `<<ƒ:…>>` layout-calculation tokens of the text | always 12 — padding anchors repeat the first slot's hash or carry foreign chunks | staged in `DDR_DisplayCalcAnchors23`; stage P1d promotes only slots below the token count |
+| `Step id="138"` (Re-Login) | `DataSourceReference` not written — in the coverage fixture not even for a Re-Login into an external file | always present (`id="0"` = current file; external file with `id`, `name`, `UUID`) | edge Script → ExternalDataSource `data_source` for external sources — from the 2.3.0.0 export only |
+| Steps introduced in FileMaker 26 (`id` 238, 240–246: Configure Persistent Data, Insert Image Caption(s), Print/Create/Append/Close/Open PDF) | exported bare — `id`, `name`, `Options`, DDR anchor, **no `ParameterValues`** | full parameters | `StepsForScripts` row in both profiles; parameters, calculations and links from 2.3.0.0 only |
+| `Step id="144"` saving into a container field (FileMaker 26) | legacy path form (Booleans + `UniversalPathList`) — the configuration is unknown to FileMaker 22 | `Target` field reference + `SaveResult` "Currently open PDF", no Boolean slot | `Boolean_Type` NULL in 26, `sets_field` link to the container — cross-version comparison of such steps is not meaningful |
+| `Step id="87"` (Show Custom Dialog) | — | `height`/`width`/`top`/`left` calculations (dialog geometry) | `StepCalculations` slots `Parameter:height` … |
+| `Step id="96"` (Save a Copy as Add-on Package) | no `ParameterValues` | Boolean "Replace UUIDs" (id 262144) + package path calculation | `Parameters_XML`, `StepCalculations` |
+| Steps 215 / 218 / 219 (LLM) | — | `LLMParameters` (215, 218); `RAGTokensPerTextChunk`, `RAGAddDataResponse` + `Target`/`Variable` (219) | calculation slots; response target yields the field/variable link |
+| Other additions (read transparently) | | `ExternalDataSourceCatalog/SortOrder`, `SortSpecification@blanksLast`, `ImportField/Options@keepOriginalData`, `SQL@HasODBCAuthCalc`, `LocalCSS@type`, `enable` on `Calculated`/`Looked_up`/`MessageCalc`, `UseDefaultFields@enable`; `LibraryCatalog` before `LayoutCatalog`; new step parameter types of the FileMaker 26 steps (`PersistentStore`, `PDFtoPrint`, `PageSetup`, `SaveTo`, `From`, `PDFPassword`, `LLMBulkEmbeddingField`, `RAGTokensPerTextChunk`, `RAGAddDataResponse`, `LightMode`, `SaveResult`, dialog geometry) | typed struct reads ignore unknown attributes |
+
+**Step slots the SaXML export never carries** (only reachable via the clipboard
+format) are reference data since fm-spec 2.7.0: `reference/fm_spec.duckdb` →
+`step_constraints` rows of kind `saxml_omission`, scoped by `coverage` (`*` = every
+SaXML version, `22`/`26` = that version's export only) — query them instead of
+maintaining a list here. Current rows: the zoom formula of step 97 and the
+"automatically open"/"create email" flags of steps 36 and 144 (every version), the
+XSLT stylesheet of step 36's XML export (2.2.3.0 only — 2.3.0.0 writes
+`DataSourceReference/XSL`), the `Option` flag of step 215 and the flags of step 245
+(2.3.0.0; FileMaker 22 does not know them). `DetectVertical` of step 219 is **not** a
+gap: FileMaker 22 has no such option, 2.3.0.0 writes it as the Boolean "Detect
+vertical text" (id 32768). Layout-object gaps of 2.2.3.0 (portal sort order,
+`CanEntryCalc`) stay fm-lab data: `tools/tests/quality/baselines/shape_22_26.tsv`.
+
+### Boolean attributes of 2.3.0.0 — value coverage
+
+The converter ignores attributes it does not know, so a new attribute counts as "read
+transparently" only as long as every export carries its default value; the non-default
+semantics stay unverified until a fixture carries the other value. Status per attribute
+(coverage fixtures, 2026-09-10; "—" = non-default value not yet evidenced):
+
+| Attribute (2.3.0.0) | Where | Default observed | Non-default evidenced | Catalog effect of the non-default value |
+|---|---|---|---|---|
+| `AutoEnter/Calculated@enable` | Field | `True` | `False`: coverage 26 (1 field) | `FieldsForTables.AE_Calc_Enabled = false`, instance `Is_Enabled = false`, no operational links |
+| `AutoEnter/Looked_up@enable` | Field | `True` | `False`: coverage 26 (1 field) | `Lookup_Enabled = false`, no lookup links |
+| `Validation/Calculated@enable` | Field | `True` | `False`: coverage 26 (1 field) | `Validation_Calc_Enabled = false` |
+| `Validation/MessageCalc@enable` | Field | `True` | `False`: coverage 26 (1 field) | `Validation_Message_Calc_Enabled = false` |
+| `DisplayNames@enable` | Field | `False` | `True`: coverage 26 (2 fields) | `Field_DisplayNames_Enabled`, role `display_names`, `FieldDisplayNames` |
+| `UseDefaultFields@enable` | BaseTable | `False` | — | none (read transparently) |
+| `SortSpecification@blanksLast` | Sort Records (39), portal sorts | `False` | `True`: coverage 26 (3 sort steps; portal sorts still —) | none (read transparently) |
+| `ImportField/Options@keepOriginalData` | Import Records (35) | `False` | `True`: coverage 26 (1 import) | none (read transparently) |
+| `SQL@HasODBCAuthCalc` | Execute SQL (117) | `False` | — | none (read transparently) |
+| `Boolean "Replace UUIDs"` (id 262144) | Save a Copy as Add-on Package (96) | `False` | — | `Parameters_XML` only |
+| `Boolean "Detect vertical text"` (id 32768) | Perform RAG Action (219) | `False` | — | `Parameters_XML` only |
+| `Boolean` "Specify options as JSON" / "Save each layout object's binary data under its node" | Save a Copy as XML (3) | mixed | yes (coverage 26) | `Parameters_XML`; JSON options calc as `Parameter:JSONOutput` in `StepCalculations` |
+
+
+## Field entry behaviour (`<Field><Options>` bitmask + `<CanEntryCalc>`)
+
+A field-bearing layout object carries its per-mode entry rule as a bitmask in
+`LayoutObject/Field/Options`, and the formula of the `by_calculation` state in a
+separate element `LayoutObject/CanEntryCalc/Calculation`. **Two bits per mode**
+encode four states; both SaXML profiles write the same values (verified against
+12 probes of the coverage file, FileMaker 22.0.6 and 26.0.2):
+
+| Bits (Browse / Find) | State | `Entry_Browse` / `Entry_Find` |
+|---|---|---|
+| none | entry allowed | `allow` |
+| 24 / 25 | selection only | `select_only` |
+| 2 / 4 | display only | `view_only` |
+| 24 + 2 / 25 + 4 | governed by the formula | `by_calculation` |
+
+Base value of a default object is `1048608`; `51380276` is "both modes by
+calculation". The converter keeps the raw value (`LayoutObjects.Entry_Options_Raw`)
+because the remaining bits are undecoded.
+
+**One formula for both modes:** `<CanEntryCalc>` exists at most once per object —
+FileMaker's options dialog offers a single formula field, so a `by_calculation`
+state in both modes shares one formula. The state without a formula is legal
+(bits set, no element).
+
+**Only 2.3.0.0 writes the formula.** A FileMaker 22 export carries the identical
+bits but neither the `<CanEntryCalc>` element nor a DDR chunk list for it — the
+formula is unreadable there (an omission of the export, not of the file).
+
+**DDR key collision (FileMaker defect).** In 2.3.0.0 the chunk list of the entry
+formula is written under the SAME key as the hide condition, `_<ObjectUUID>_Hide`.
+An object that has BOTH formulas therefore ships only ONE chunk list — the entry
+formula's; the hide condition's chunks are gone. The converter assigns the anchor
+by comparing the reconstructed chunk text with both plain-text slots
+(`fm_lo_ddr_is_entry`, P4): the matching formula becomes the calculation instance
+of role `field_entry` or `hide`, the other keeps its instance without edges
+(`Edge_Subrole` NULL). Since converter 2.30.0 the edges of the entry formula carry
+`field_entry` as `Link_Subrole` (P4 retags the reference rows of that anchor after
+the assignment; hide-condition edges keep `Hide`), so `Link_Subrole`,
+`Edge_Subrole` and `v_calculation_links` agree on the slot.
+
 ## Custom sort by value list (`<Sort type="Custom">` with `<ValueListReference>`)
 
 A custom sort order carries its reference value list as a `<ValueListReference>`
@@ -131,12 +251,13 @@ The location of a custom function's calculation body changed between SaXML versi
   signature (`id`/`name`/`UUID`/`Display`/parameters). The formula bodies live in a
   **separate top-level `<CalcsForCustomFunctions>`** section, one `<CustomFunctionCalc>`
   per function (with `<CustomFunctionReference>` + `<Calculation>` incl. an inline
-  `<ChunkList>`). *Verified at `tools/tests/fixtures/xml/…_v2_2_3_0__fm_v22_0_4…`.*
+  `<ChunkList>`) — **also one entry per folder and separator** (without `<Calculation>`).
+  *Verified at `ingestion/fixtures/saxml/fmlab_coverage__saxml_v2_2_3_0__fm_v22_0_6__ddr_info.xml`.*
 - **SaXML v2.3.0.0 (FileMaker 26+):** the `<CalcsForCustomFunctions>` section is gone;
   `<Calculation>` is **embedded directly inside each `<CustomFunction>`** within
   `<CustomFunctionsCatalog>`. The embedded `<Calculation>` has **no `<ChunkList>`** —
   only `<DDRREF kind="ChunkList" hash="…">` (the chunks remain reachable via the hash in
-  `<DDR_INFO>`) and `<Text>`. *Verified at `tools/tests/fixtures/xml/v26/Ooe.xml` (v2.3.0.0 / FM 26.0.1).*
+  `<DDR_INFO>`) and `<Text>`. *Verified at `ingestion/fixtures/saxml/fmlab_coverage__saxml_v2_3_0_0__fm_v26_0_2__ddr_info.xml`.*
 
 ```xml
 <!-- v2.3.0.0 (FM 26): Calculation embedded in CustomFunctionsCatalog -->
@@ -151,8 +272,9 @@ The location of a custom function's calculation body changed between SaXML versi
 ```
 
 The exact FM version that introduced the embedded format is unknown (between v2.2.3.0 / FM 22
-and v2.3.0.0 / FM 26). The extractor handles **both** forms via a structure-tolerant double
-extraction (no version switch).
+and v2.3.0.0 / FM 26). The extractor reads **one** form per file, selected by the SaXML profile
+(`saxml22` → section, `saxml23` → embedded; see *SaXML profiles* above); folders and separators
+get no formula row in either profile.
 
 > The high-level structure block above (`version="2.2.0.0"`, with a top-level
 > `<CalcsForCustomFunctions>`) reflects the FM 19 export; under v2.3.0.0 that section

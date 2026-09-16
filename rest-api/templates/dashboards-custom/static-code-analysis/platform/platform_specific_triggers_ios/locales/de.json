@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Plattformspezifische Trigger: FileMaker Go (iOS)",
+    "analysis.defaultResult.meaning": "Scripts im Prüfumfang an Trigger-Ereignissen, die nur in FileMaker Go (iOS) feuern"
+  },
+  "layout": {}
+}

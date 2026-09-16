@@ -44,4 +44,6 @@ Value 2]]></Text></CustomValues>
 
 - The external target `ValueListReference` carries an **empty UUID** — the importer resolves it via the data source (target file) plus the list ID, with the name as fallback.
 
+- **Version difference:** this branch exists only up to SaXML v2.2.x (FileMaker ≤ 22). From v2.3.0.0 (FileMaker 26) the option details are embedded in the value-list node itself — see [XML ValueListCatalog](XML%20ValueListCatalog.md). Both forms fill the same [OptionsForValueLists](../../schema/catalog-tables/OptionsForValueLists.md) table.
+
 **Extracted into:** [OptionsForValueLists](../../schema/catalog-tables/OptionsForValueLists.md) — column details in the [schema reference](../../schema/Schema.md).

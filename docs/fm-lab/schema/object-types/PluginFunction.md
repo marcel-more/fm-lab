@@ -46,7 +46,7 @@ Calc-carried links qualify their subrole with the owner's calc-anchor slot (step
 
 - **XML schema:** no catalog of its own — derived from plugin-call tokens in the [XML DDR_INFO](../../xml/catalogs/XML%20DDR_INFO.md) calculation chunks (requires the "Include details for analysis tools" export option)
 - **DB schema:** [PluginFunctionUsages](../catalog-tables/PluginFunctionUsages.md) (one row per call) · object rows in [ObjectCatalog](../object-catalog/ObjectCatalog.md) · chunks in [DDR_Calculations](../catalog-tables/DDR_Calculations.md)
-- **Detail view template:** `rest-api/templates/sql/object_details_pluginfunction.sql`, served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md)
-- **Frontend:** object list at `http://localhost:5173/?type=PluginFunction`
+- **Detail view template:** `rest-api/templates/sql/object_details_pluginfunction.sql` — a structured projection with two sections: `meta` (catalog name, plug-in namespace, sub-function, the [PluginComponent](PluginComponent.md) it groups into) and `usage` (where-used counts per link role and source type). It carries no caller list; the references view owns that. Served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md)
+- **Frontend:** object list at `http://localhost:5173/?type=PluginFunction`; the detail tab renders its own view (identity, the reference metadata from [plugin-spec](../plugin-spec.md) — plug-in, version, deprecation status — a link to the vendor doc-set page with the vendor's online page as fallback, and the usage summary). The platform matrix stays in the badge above the tab bar
 
 **See also:** [Object Types](../object-catalog/Object%20Types.md) · [PluginComponent](PluginComponent.md) · [BuiltinFunction](BuiltinFunction.md) · [CustomFunction](CustomFunction.md) · [Link Roles and Subroles](../object-catalog/Link%20Roles%20and%20Subroles.md)

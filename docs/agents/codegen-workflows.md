@@ -101,6 +101,15 @@ reference index; object references verified against `ObjectCatalog`; conventions
 check (§L). If a check cannot be run (e.g. reference index not installed), say so
 in the delivery — never present unverified output as verified.
 
+**Version rule (shape coverage).** The target FileMaker version comes from the
+target file, never from the conversation: `FilesCatalog.FileMaker_Version` of the
+file the artifact is pasted into selects the clipboard form (22.x → coverage 22,
+26.x → coverage 26) and gates step and function availability. An explicit
+override (`--coverage`, `--target-version` in `fm-generate-script`) is the only
+other source and must be named in the delivery together with the gate protocol's
+`coverage`/`coverage_source`. A target file that is not in the catalog has no
+known version — stop and ask, or let the user choose the coverage explicitly.
+
 ---
 
 # Part B — fm-lab extensions (the workbench itself)

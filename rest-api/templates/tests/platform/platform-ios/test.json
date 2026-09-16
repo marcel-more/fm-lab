@@ -1,8 +1,8 @@
 {
   "id": "platform-ios",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "title": "Platform: FileMaker Go (iOS)",
-  "description": "Two aspects of the FileMaker Go (iOS) runtime. Compatibility: steps Claris marks 'No' (error), 'Partial' (warning - conditionally supported) or without a published statement (info). Platform binding: neutral inventory of scripts built FOR iOS - exclusive steps and dedicated functions; findings are properties, not defects. Use the profiles to run one aspect alone. The compatibility aspect additionally covers plug-in function calls: FileMaker Go supports no plug-ins at all (generic rule, every vendor).",
+  "description": "Two aspects of the FileMaker Go (iOS) runtime. Compatibility: steps Claris marks 'No' (error), 'Partial' (warning - conditionally supported) or without a published statement (info). Platform binding: neutral inventory of scripts built FOR iOS - exclusive steps and dedicated functions; findings are properties, not defects. Use the profiles to run one aspect alone. The compatibility aspect additionally covers plug-in function calls: FileMaker Go supports no plug-ins at all (generic rule, every vendor). Since fm-spec 2.8.0 the compatibility aspect also covers the script triggers attached to layouts, layout objects and the file: events Claris marks 'No' (error), 'Partial' (warning) or without a published statement (info) for this runtime (fm_spec trigger_compat).",
   "keywords": [
     "platform",
     "compatibility",
@@ -11,11 +11,14 @@
     "platform-specific",
     "binding",
     "plugin",
-    "mbs"
+    "mbs",
+    "trigger",
+    "script-trigger"
   ],
   "testType": "platform",
   "objectTypes": [
-    "Script"
+    "Script",
+    "Layout"
   ],
   "scopes": [
     "solution",
@@ -40,6 +43,14 @@
     {
       "kind": "dashboard",
       "ref": "platform_compat_plugins_ios"
+    },
+    {
+      "kind": "dashboard",
+      "ref": "platform_compat_triggers_ios"
+    },
+    {
+      "kind": "dashboard",
+      "ref": "platform_specific_triggers_ios"
     }
   ],
   "profiles": [
@@ -49,7 +60,8 @@
       "description": "Aspect a only: steps checked against the Claris step-compatibility table for FileMaker Go (iOS). Plus plug-in calls - FileMaker Go supports no plug-ins (generic rule).",
       "members": [
         "platform_compat_ios",
-        "platform_compat_plugins_ios"
+        "platform_compat_plugins_ios",
+        "platform_compat_triggers_ios"
       ]
     },
     {
@@ -57,14 +69,15 @@
       "title": "Platform binding",
       "description": "Aspect b only: usage of iOS-specific features (exclusive steps, dedicated functions) - neutral inventory.",
       "members": [
-        "platform_specific_ios"
+        "platform_specific_ios",
+        "platform_specific_triggers_ios"
       ]
     }
   ],
   "locales": {
     "de": {
       "title": "Plattform: FileMaker Go (iOS)",
-      "description": "Zwei Aspekte der Laufzeitumgebung FileMaker Go (iOS). Kompatibilität: Schritte, die Claris mit 'Nein' (Fehler), 'Teilweise' (Warnung — bedingt unterstützt) oder ohne veröffentlichte Aussage (Info) führt. Plattform-Bindung: neutrales Inventar der Scripts, die FÜR iOS gebaut sind — exklusive Schritte und dedizierte Funktionen; Findings sind Eigenschaften, keine Defekte. Über die Profile lässt sich je ein Aspekt allein ausführen. Der Kompatibilitäts-Aspekt deckt zusätzlich Plug-in-Funktionsaufrufe ab: FileMaker Go unterstützt überhaupt keine Plug-ins (generische Regel, jeder Hersteller).",
+      "description": "Zwei Aspekte der Laufzeitumgebung FileMaker Go (iOS). Kompatibilität: Schritte, die Claris mit 'Nein' (Fehler), 'Teilweise' (Warnung — bedingt unterstützt) oder ohne veröffentlichte Aussage (Info) führt. Plattform-Bindung: neutrales Inventar der Scripts, die FÜR iOS gebaut sind — exklusive Schritte und dedizierte Funktionen; Findings sind Eigenschaften, keine Defekte. Über die Profile lässt sich je ein Aspekt allein ausführen. Der Kompatibilitäts-Aspekt deckt zusätzlich Plug-in-Funktionsaufrufe ab: FileMaker Go unterstützt überhaupt keine Plug-ins (generische Regel, jeder Hersteller). Seit fm-spec 2.8.0 deckt der Kompatibilitäts-Aspekt auch die Script-Trigger an Layouts, Layout-Objekten und der Datei ab: Ereignisse, die Claris für diese Laufzeitumgebung mit 'Nein' (Fehler), 'Teilweise' (Warnung) oder ohne veröffentlichte Aussage (Info) führt (fm_spec trigger_compat).",
       "profiles.compat.title": "Kompatibilität",
       "profiles.compat.description": "Nur Aspekt a: Schritte, geprüft gegen die Claris-Schritt-Kompatibilitätstabelle für FileMaker Go (iOS). Dazu Plug-in-Aufrufe — FileMaker Go unterstützt keine Plug-ins (generische Regel).",
       "profiles.specific.title": "Plattform-Bindung",
@@ -72,7 +85,7 @@
     },
     "es": {
       "title": "Plataforma: FileMaker Go (iOS)",
-      "description": "Dos aspectos del entorno de ejecución FileMaker Go (iOS). Compatibilidad: pasos que Claris marca como 'No' (error), 'Parcial' (advertencia: compatible con condiciones) o sin declaración publicada (info). Vinculación de plataforma: inventario neutral de los scripts creados PARA iOS — pasos exclusivos y funciones dedicadas; los hallazgos son propiedades, no defectos. Los perfiles permiten ejecutar un solo aspecto. El aspecto de compatibilidad cubre además las llamadas a funciones de plug-in: FileMaker Go no admite ningún plug-in (regla genérica, todos los fabricantes).",
+      "description": "Dos aspectos del entorno de ejecución FileMaker Go (iOS). Compatibilidad: pasos que Claris marca como 'No' (error), 'Parcial' (advertencia: compatible con condiciones) o sin declaración publicada (info). Vinculación de plataforma: inventario neutral de los scripts creados PARA iOS — pasos exclusivos y funciones dedicadas; los hallazgos son propiedades, no defectos. Los perfiles permiten ejecutar un solo aspecto. El aspecto de compatibilidad cubre además las llamadas a funciones de plug-in: FileMaker Go no admite ningún plug-in (regla genérica, todos los fabricantes). Desde fm-spec 2.8.0 el aspecto de compatibilidad cubre también los activadores de script de presentaciones, objetos de presentación y del archivo: eventos que Claris marca como 'No' (error), 'Parcial' (advertencia) o sin declaración publicada (info) para este entorno (fm_spec trigger_compat).",
       "profiles.compat.title": "Compatibilidad",
       "profiles.compat.description": "Solo el aspecto a: pasos comprobados frente a la tabla de compatibilidad de pasos de Claris para FileMaker Go (iOS). Además, llamadas a plug-ins: FileMaker Go no admite plug-ins (regla genérica).",
       "profiles.specific.title": "Vinculación de plataforma",
@@ -80,7 +93,7 @@
     },
     "fr": {
       "title": "Plateforme : FileMaker Go (iOS)",
-      "description": "Deux aspects de l'environnement d'exécution FileMaker Go (iOS). Compatibilité : actions que Claris indique comme « Non » (erreur), « Partiel » (avertissement — prise en charge conditionnelle) ou sans déclaration publiée (info). Liaison de plateforme : inventaire neutre des scripts conçus POUR iOS — actions exclusives et fonctions dédiées ; les constats sont des propriétés, pas des défauts. Les profils permettent d'exécuter un seul aspect. L'aspect compatibilité couvre en outre les appels de fonctions de plug-in : FileMaker Go ne prend en charge aucun plug-in (règle générique, tous éditeurs).",
+      "description": "Deux aspects de l'environnement d'exécution FileMaker Go (iOS). Compatibilité : actions que Claris indique comme « Non » (erreur), « Partiel » (avertissement — prise en charge conditionnelle) ou sans déclaration publiée (info). Liaison de plateforme : inventaire neutre des scripts conçus POUR iOS — actions exclusives et fonctions dédiées ; les constats sont des propriétés, pas des défauts. Les profils permettent d'exécuter un seul aspect. L'aspect compatibilité couvre en outre les appels de fonctions de plug-in : FileMaker Go ne prend en charge aucun plug-in (règle générique, tous éditeurs). Depuis fm-spec 2.8.0, l'aspect compatibilité couvre aussi les déclencheurs de script des modèles, des objets de modèle et du fichier : événements que Claris indique comme « Non » (erreur), « Partiel » (avertissement) ou sans déclaration publiée (info) pour cet environnement (fm_spec trigger_compat).",
       "profiles.compat.title": "Compatibilité",
       "profiles.compat.description": "Aspect a uniquement : actions vérifiées d'après la table de compatibilité des actions de Claris pour FileMaker Go (iOS). Plus les appels de plug-in — FileMaker Go ne prend en charge aucun plug-in (règle générique).",
       "profiles.specific.title": "Liaison de plateforme",
@@ -88,7 +101,7 @@
     },
     "it": {
       "title": "Piattaforma: FileMaker Go (iOS)",
-      "description": "Due aspetti dell'ambiente di esecuzione FileMaker Go (iOS). Compatibilità: passi che Claris indica come 'No' (errore), 'Parziale' (avviso — supportato con riserva) o senza dichiarazione pubblicata (info). Vincolo di piattaforma: inventario neutro degli script creati PER iOS — passi esclusivi e funzioni dedicate; i riscontri sono proprietà, non difetti. I profili consentono di eseguire un solo aspetto. L'aspetto di compatibilità copre inoltre le chiamate a funzioni plug-in: FileMaker Go non supporta alcun plug-in (regola generica, per ogni produttore).",
+      "description": "Due aspetti dell'ambiente di esecuzione FileMaker Go (iOS). Compatibilità: passi che Claris indica come 'No' (errore), 'Parziale' (avviso — supportato con riserva) o senza dichiarazione pubblicata (info). Vincolo di piattaforma: inventario neutro degli script creati PER iOS — passi esclusivi e funzioni dedicate; i riscontri sono proprietà, non difetti. I profili consentono di eseguire un solo aspetto. L'aspetto di compatibilità copre inoltre le chiamate a funzioni plug-in: FileMaker Go non supporta alcun plug-in (regola generica, per ogni produttore). Da fm-spec 2.8.0 l'aspetto di compatibilità copre anche i trigger di script di formati, oggetti di formato e file: eventi che Claris indica come 'No' (errore), 'Parziale' (avviso) o senza dichiarazione pubblicata (info) per questo ambiente (fm_spec trigger_compat).",
       "profiles.compat.title": "Compatibilità",
       "profiles.compat.description": "Solo aspetto a: passi verificati rispetto alla tabella di compatibilità dei passi di Claris per FileMaker Go (iOS). In più le chiamate a plug-in — FileMaker Go non supporta plug-in (regola generica).",
       "profiles.specific.title": "Vincolo di piattaforma",
@@ -96,7 +109,7 @@
     },
     "ja": {
       "title": "プラットフォーム: FileMaker Go (iOS)",
-      "description": "FileMaker Go (iOS) 実行環境の二つの側面を扱います。互換性：Claris が「いいえ」とする（エラー）、「一部」とする（警告 — 条件付きで対応）、または公表された記載がない（情報）ステップ。プラットフォーム結合：iOS のために作られたスクリプトの中立的なインベントリ — 専用ステップと専用関数。検出結果は欠陥ではなく特性です。プロファイルを使えば片方の側面だけを実行できます。互換性の側面はプラグイン関数呼び出しも対象とします：FileMaker Go はプラグインを一切サポートしません（ベンダーを問わない一般規則）。",
+      "description": "FileMaker Go (iOS) 実行環境の二つの側面を扱います。互換性：Claris が「いいえ」とする（エラー）、「一部」とする（警告 — 条件付きで対応）、または公表された記載がない（情報）ステップ。プラットフォーム結合：iOS のために作られたスクリプトの中立的なインベントリ — 専用ステップと専用関数。検出結果は欠陥ではなく特性です。プロファイルを使えば片方の側面だけを実行できます。互換性の側面はプラグイン関数呼び出しも対象とします：FileMaker Go はプラグインを一切サポートしません（ベンダーを問わない一般規則）。 fm-spec 2.8.0 以降、互換性の側面はレイアウト、レイアウトオブジェクト、ファイルのスクリプトトリガも対象とします。この実行環境について Claris が「いいえ」（エラー）、「一部」（警告）とする、または公表された記載がない（情報）イベントです（fm_spec trigger_compat）。",
       "profiles.compat.title": "互換性",
       "profiles.compat.description": "側面 a のみ：FileMaker Go (iOS) 向けの Claris ステップ互換性表に照らして検査したステップ。加えてプラグイン呼び出し — FileMaker Go はプラグインをサポートしません（一般規則）。",
       "profiles.specific.title": "プラットフォーム結合",
@@ -104,7 +117,7 @@
     },
     "ko": {
       "title": "플랫폼: FileMaker Go (iOS)",
-      "description": "FileMaker Go (iOS) 런타임 환경의 두 가지 측면을 다룹니다. 호환성: Claris가 '아니요'(오류), '부분'(경고 — 조건부 지원)으로 표시하거나 공개된 언급이 없는(정보) 단계. 플랫폼 결합: iOS를 위해 만들어진 스크립트의 중립적 목록 — 전용 단계와 전용 함수이며, 발견 항목은 결함이 아니라 속성입니다. 프로필을 사용하면 한 측면만 실행할 수 있습니다. 호환성 측면은 플러그인 함수 호출도 함께 다룹니다: FileMaker Go는 플러그인을 전혀 지원하지 않습니다(공급업체를 불문한 일반 규칙).",
+      "description": "FileMaker Go (iOS) 런타임 환경의 두 가지 측면을 다룹니다. 호환성: Claris가 '아니요'(오류), '부분'(경고 — 조건부 지원)으로 표시하거나 공개된 언급이 없는(정보) 단계. 플랫폼 결합: iOS를 위해 만들어진 스크립트의 중립적 목록 — 전용 단계와 전용 함수이며, 발견 항목은 결함이 아니라 속성입니다. 프로필을 사용하면 한 측면만 실행할 수 있습니다. 호환성 측면은 플러그인 함수 호출도 함께 다룹니다: FileMaker Go는 플러그인을 전혀 지원하지 않습니다(공급업체를 불문한 일반 규칙). fm-spec 2.8.0부터 호환성 측면은 레이아웃, 레이아웃 개체, 파일의 스크립트 트리거도 다룹니다. 이 런타임에 대해 Claris가 '아니요'(오류), '부분'(경고)으로 표시하거나 공개된 언급이 없는(정보) 이벤트입니다(fm_spec trigger_compat).",
       "profiles.compat.title": "호환성",
       "profiles.compat.description": "측면 a만: FileMaker Go (iOS)에 대한 Claris 단계 호환성 표를 기준으로 검사한 단계. 여기에 플러그인 호출 — FileMaker Go는 플러그인을 지원하지 않습니다(일반 규칙).",
       "profiles.specific.title": "플랫폼 결합",
@@ -112,7 +125,7 @@
     },
     "nl": {
       "title": "Platform: FileMaker Go (iOS)",
-      "description": "Twee aspecten van de runtime-omgeving FileMaker Go (iOS). Compatibiliteit: stappen die Claris markeert als 'Nee' (fout), 'Gedeeltelijk' (waarschuwing — voorwaardelijk ondersteund) of zonder gepubliceerde uitspraak (info). Platformbinding: neutrale inventarisatie van scripts die VOOR iOS zijn gebouwd — exclusieve stappen en speciale functies; bevindingen zijn eigenschappen, geen gebreken. Met de profielen voer je één aspect afzonderlijk uit. Het compatibiliteitsaspect dekt daarnaast plug-infunctieaanroepen: FileMaker Go ondersteunt in het geheel geen plug-ins (generieke regel, elke leverancier).",
+      "description": "Twee aspecten van de runtime-omgeving FileMaker Go (iOS). Compatibiliteit: stappen die Claris markeert als 'Nee' (fout), 'Gedeeltelijk' (waarschuwing — voorwaardelijk ondersteund) of zonder gepubliceerde uitspraak (info). Platformbinding: neutrale inventarisatie van scripts die VOOR iOS zijn gebouwd — exclusieve stappen en speciale functies; bevindingen zijn eigenschappen, geen gebreken. Met de profielen voer je één aspect afzonderlijk uit. Het compatibiliteitsaspect dekt daarnaast plug-infunctieaanroepen: FileMaker Go ondersteunt in het geheel geen plug-ins (generieke regel, elke leverancier). Sinds fm-spec 2.8.0 dekt het compatibiliteitsaspect ook de scripttriggers van lay-outs, lay-outobjecten en het bestand: gebeurtenissen die Claris voor deze runtime markeert als 'Nee' (fout), 'Gedeeltelijk' (waarschuwing) of zonder gepubliceerde uitspraak (info) (fm_spec trigger_compat).",
       "profiles.compat.title": "Compatibiliteit",
       "profiles.compat.description": "Alleen aspect a: stappen getoetst aan de Claris-stapcompatibiliteitstabel voor FileMaker Go (iOS). Plus plug-inaanroepen — FileMaker Go ondersteunt geen plug-ins (generieke regel).",
       "profiles.specific.title": "Platformbinding",
@@ -120,7 +133,7 @@
     },
     "pt": {
       "title": "Plataforma: FileMaker Go (iOS)",
-      "description": "Dois aspectos do ambiente de execução FileMaker Go (iOS). Compatibilidade: passos que a Claris marca como 'Não' (erro), 'Parcial' (aviso — com suporte condicional) ou sem declaração publicada (info). Vinculação de plataforma: inventário neutro dos scripts feitos PARA iOS — passos exclusivos e funções dedicadas; os resultados são propriedades, não defeitos. Os perfis permitem executar apenas um dos aspectos. O aspecto de compatibilidade abrange ainda as chamadas de funções de plug-in: o FileMaker Go não suporta plug-in algum (regra genérica, qualquer fabricante).",
+      "description": "Dois aspectos do ambiente de execução FileMaker Go (iOS). Compatibilidade: passos que a Claris marca como 'Não' (erro), 'Parcial' (aviso — com suporte condicional) ou sem declaração publicada (info). Vinculação de plataforma: inventário neutro dos scripts feitos PARA iOS — passos exclusivos e funções dedicadas; os resultados são propriedades, não defeitos. Os perfis permitem executar apenas um dos aspectos. O aspecto de compatibilidade abrange ainda as chamadas de funções de plug-in: o FileMaker Go não suporta plug-in algum (regra genérica, qualquer fabricante). Desde o fm-spec 2.8.0 o aspecto de compatibilidade abrange também os acionadores de script de layouts, objetos de layout e do arquivo: eventos que a Claris marca como 'Não' (erro), 'Parcial' (aviso) ou sem declaração publicada (info) para este ambiente (fm_spec trigger_compat).",
       "profiles.compat.title": "Compatibilidade",
       "profiles.compat.description": "Apenas o aspecto a: passos verificados na tabela de compatibilidade de passos da Claris para FileMaker Go (iOS). Mais as chamadas de plug-in — o FileMaker Go não suporta plug-ins (regra genérica).",
       "profiles.specific.title": "Vinculação de plataforma",
@@ -128,7 +141,7 @@
     },
     "sv": {
       "title": "Plattform: FileMaker Go (iOS)",
-      "description": "Två aspekter av körmiljön FileMaker Go (iOS). Kompatibilitet: steg som Claris anger som 'Nej' (fel), 'Delvis' (varning — stöds villkorligt) eller utan publicerat besked (info). Plattformsbindning: neutral inventering av skript byggda FÖR iOS — exklusiva steg och dedikerade funktioner; träffarna är egenskaper, inte defekter. Med profilerna kör du en aspekt i taget. Kompatibilitetsaspekten omfattar dessutom plug-in-funktionsanrop: FileMaker Go stöder inga plug-ins alls (generell regel, oavsett tillverkare).",
+      "description": "Två aspekter av körmiljön FileMaker Go (iOS). Kompatibilitet: steg som Claris anger som 'Nej' (fel), 'Delvis' (varning — stöds villkorligt) eller utan publicerat besked (info). Plattformsbindning: neutral inventering av skript byggda FÖR iOS — exklusiva steg och dedikerade funktioner; träffarna är egenskaper, inte defekter. Med profilerna kör du en aspekt i taget. Kompatibilitetsaspekten omfattar dessutom plug-in-funktionsanrop: FileMaker Go stöder inga plug-ins alls (generell regel, oavsett tillverkare). Sedan fm-spec 2.8.0 omfattar kompatibilitetsaspekten även skriptutlösarna på layouter, layoutobjekt och filen: händelser som Claris för den här körmiljön anger som 'Nej' (fel), 'Delvis' (varning) eller utan publicerat besked (info) (fm_spec trigger_compat).",
       "profiles.compat.title": "Kompatibilitet",
       "profiles.compat.description": "Endast aspekt a: steg kontrollerade mot Claris stegkompatibilitetstabell för FileMaker Go (iOS). Plus plug-in-anrop — FileMaker Go stöder inga plug-ins (generell regel).",
       "profiles.specific.title": "Plattformsbindning",
@@ -136,7 +149,7 @@
     },
     "zh-Hans": {
       "title": "平台：FileMaker Go (iOS)",
-      "description": "涵盖 FileMaker Go (iOS) 运行环境的两个方面。兼容性：Claris 标记为“否”的步骤（错误）、标记为“部分”的步骤（警告 —— 有条件支持），以及没有公开说明的步骤（信息）。平台绑定：为 iOS 而构建的脚本的中性清单 —— 专属步骤与专用函数；发现项是特征而非缺陷。通过配置可单独运行其中一个方面。兼容性方面还涵盖插件函数调用：FileMaker Go 完全不支持插件（通用规则，适用于所有厂商）。",
+      "description": "涵盖 FileMaker Go (iOS) 运行环境的两个方面。兼容性：Claris 标记为“否”的步骤（错误）、标记为“部分”的步骤（警告 —— 有条件支持），以及没有公开说明的步骤（信息）。平台绑定：为 iOS 而构建的脚本的中性清单 —— 专属步骤与专用函数；发现项是特征而非缺陷。通过配置可单独运行其中一个方面。兼容性方面还涵盖插件函数调用：FileMaker Go 完全不支持插件（通用规则，适用于所有厂商）。 自 fm-spec 2.8.0 起，兼容性方面还涵盖布局、布局对象和文件上的脚本触发器：Claris 针对此运行环境标记为“否”（错误）、“部分”（警告）或没有公开说明（信息）的事件（fm_spec trigger_compat）。",
       "profiles.compat.title": "兼容性",
       "profiles.compat.description": "仅方面 a：对照 Claris 针对 FileMaker Go (iOS) 的步骤兼容性表检查的步骤。另含插件调用 —— FileMaker Go 不支持插件（通用规则）。",
       "profiles.specific.title": "平台绑定",

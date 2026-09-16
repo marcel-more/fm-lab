@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "type": "Grid",
+    "props": {
+      "columns": 12,
+      "gap": 16
+    },
+    "children": [
+      {
+        "type": "Card",
+        "id": "summary_card",
+        "props": {
+          "span": 12,
+          "variant": "hero"
+        },
+        "data": {
+          "dataset": "summary"
+        },
+        "children": [
+          {
+            "type": "KPIStrip",
+            "id": "summary_kpi",
+            "props": {
+              "items": [
+                {
+                  "label": "Findings",
+                  "field": "finding_count",
+                  "format": "number"
+                },
+                {
+                  "label": "Effective minimum",
+                  "field": "effective_version",
+                  "format": "text"
+                },
+                {
+                  "label": "Affected files",
+                  "field": "affected_files",
+                  "format": "number"
+                },
+                {
+                  "label": "Steps",
+                  "field": "steps",
+                  "format": "number"
+                },
+                {
+                  "label": "Functions",
+                  "field": "functions",
+                  "format": "number"
+                },
+                {
+                  "label": "Triggers",
+                  "field": "triggers",
+                  "format": "number"
+                },
+                {
+                  "label": "Without declaration",
+                  "field": "files_without_declaration",
+                  "format": "number"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "findings_card",
+        "props": {
+          "span": 12,
+          "title": "Features above the declared minimum version"
+        },
+        "data": {
+          "dataset": "findings"
+        },
+        "children": [
+          {
+            "type": "Table",
+            "id": "findings_table",
+            "props": {
+              "rowKey": "row_key",
+              "density": "comfortable",
+              "sortable": true,
+              "searchable": true,
+              "searchPlaceholder": "Search file, feature or object…",
+              "chipFilter": "axis",
+              "columns": [
+                {
+                  "field": "required_version",
+                  "label": "Requires"
+                },
+                {
+                  "field": "declared_version",
+                  "label": "Declared"
+                },
+                {
+                  "field": "file_name",
+                  "label": "File"
+                },
+                {
+                  "field": "axis",
+                  "label": "Axis"
+                },
+                {
+                  "field": "feature",
+                  "label": "Feature"
+                },
+                {
+                  "field": "usage_count",
+                  "label": "Uses"
+                },
+                {
+                  "field": "example_name",
+                  "label": "Example"
+                }
+              ],
+              "onRowClick": {
+                "action": "openObject",
+                "args": {
+                  "uuid": "{{nav_uuid}}",
+                  "file": "{{file_name}}"
+                }
+              },
+              "empty": {
+                "message": "No feature in scope requires more than its file declares."
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

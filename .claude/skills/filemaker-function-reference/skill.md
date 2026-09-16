@@ -432,6 +432,39 @@ Ersatztext — any text expression or text field.
 **Next steps**:
 Ask the user whether they need details on a specific function.
 
+## Error codes (fm_spec ≥ 2.8.0)
+
+Trigger: "what does error 101 mean", "Fehler 5123", "which errors does the Data API return". The reference carries the FileMaker error-code table (`error_codes` + `error_codes_lang`, 294 codes, 11 locales). Codes are **spans** — Claris lists ranges such as `1552-1559` (plug-ins) and `5000-5499` (custom errors of *Revert Transaction*) — so the lookup is `BETWEEN`, never `=`; `scope = 'web'` marks the 25 codes only the web publishing engine or a FileMaker REST API returns. Answer in the conversation language via `error_codes_lang` (EN is `message_en`); never quote a code's meaning from memory. Fallback for a reference without the table: the online page `https://help.claris.com/<lang>/pro-help/content/error-codes.html`.
+
+```bash
+duckdb -readonly reference/fm_spec.duckdb -c "
+  SELECT e.code_text, e.scope, e.message_en, l.message AS de
+  FROM error_codes e
+  LEFT JOIN error_codes_lang l ON l.code_from = e.code_from AND l.language = 'de'
+  WHERE 5123 BETWEEN e.code_from AND e.code_to;     -- → 5000-5499
+"
+duckdb -readonly reference/fm_spec.duckdb -c "
+  SELECT code_text, message_en FROM error_codes WHERE scope = 'web' ORDER BY code_from;
+"
+```
+
+## Script trigger compatibility (fm_spec ≥ 2.8.0)
+
+Trigger: "does OnObjectKeystroke fire in WebDirect", "which triggers work in FileMaker Go", "since when does OnWindowTransaction exist". `script_triggers` (26 events: slot id, level, since-version) × `script_triggers_lang` (dialog labels, 11 locales) × `trigger_compat` (the Claris compatibility table, same seven columns as `step_compat`). **Tri-state:** `true` = Yes, `false` = No, **`NULL` = Partial — conditionally supported, read the event's Claris page** (`https://help.claris.com/<lang>/pro-help/content/<lower-case event name>.html`); never "undocumented", never "compatible". Quote the tri-state rule when answering a Partial cell.
+
+```bash
+duckdb -readonly reference/fm_spec.duckdb -c "
+  SELECT t.trigger_id, t.event_name, t.level, t.since_version, l.event_label AS de,
+         c.pro, c.server, c.go, c.webdirect, c.cloud, c.dataapi, c.cwp   -- NULL = Partial
+  FROM script_triggers t
+  LEFT JOIN script_triggers_lang l ON l.trigger_id = t.trigger_id AND l.language = 'de'
+  LEFT JOIN trigger_compat c ON c.trigger_id = t.trigger_id
+  WHERE lower(t.event_name) = lower('OnObjectKeystroke');
+"
+```
+
+Feature introduction versions ("since which version do card windows exist?") live next door in `feature_versions` (`version_num` = major·1 000 000 + minor·1 000 + patch) with labels in `feature_versions_lang`; the named constants of the calculation language (`language_constants`, with `used_with` = the functions a constant belongs to) tell the lookup constant `Lower` from the function `Lower`.
+
 ## Important notes
 
 - **DuckDB first, HTML as the detail source**: Use the DuckDB reference index for all lookups and pattern searches — significantly faster than grepping in the HTML mirror.
@@ -446,6 +479,7 @@ Ask the user whether they need details on a specific function.
 - **10 languages for functions**: de, en, es, fr, it, ja, ko, nl, pt, sv (no `zh-Hans`; English additionally available as `functions.canonical_name`)
 - **11 languages for script steps**: de, en, es, fr, it, ja, ko, nl, pt, sv, zh-Hans
 - Native FileMaker functions have **no dot notation** (in contrast to MBS plugin functions)
+- **Error codes and trigger compatibility** (fm_spec ≥ 2.8.0): `error_codes` spans (`BETWEEN`), `trigger_compat` tri-state (NULL = Partial) — sections above; on an older reference the tables are absent → say so and fall back to the online Claris pages
 
 ## Error handling
 

@@ -1,6 +1,6 @@
 import { API_BASE } from '../config/apiBase';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SubNav, StatusBar, TitleBox } from '../components';
 import { useApiLang } from '../hooks';
@@ -16,6 +16,8 @@ interface DocsEntryResponse {
   content_url?: string | null;       // Claris: separater HTML-Mirror-Endpoint
   metadata?: Record<string, unknown>;
   online_url?: string | null;
+  /** Claris sets only: counterpart in the fm-spec browser (`/fm-spec/<kind>/<id>`). */
+  spec_ref?: { kind: 'step' | 'function'; id: number } | null;
   format: 'html' | 'markdown';
   breadcrumb: DocsCrumb[];
   lang_effective?: string;           // tatsächlich ausgelieferte Sprache (s.u.)
@@ -294,6 +296,16 @@ export const DocsEntryView: React.FC = () => {
               >
                 {t('nav:docs.openOnline')}
               </a>
+            )}
+            {/* Gegenrichtung in den fm-spec-Browser (Chip-Stil). Nur wenn der
+                Adapter ein Ziel liefert — Topic-Seiten haben keins. */}
+            {entry.spec_ref && (
+              <Link
+                to={`/fm-spec/${entry.spec_ref.kind}/${entry.spec_ref.id}`}
+                className="docs-entry__meta-chip"
+              >
+                {t('nav:docs.openInFmSpec')}
+              </Link>
             )}
           </div>
         </TitleBox>

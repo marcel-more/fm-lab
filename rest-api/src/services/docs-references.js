@@ -96,30 +96,46 @@ async function referencesPerCategoryMbs(ctx) {
  * Claris-Funktionen (BuiltinFunction): pro `function_id` aus der Reference-DB
  * die Anzahl aufrufender ObjectLinks im FM-Catalog.
  *
- * Match-Logik:
- *   1. ObjectCatalog (BuiltinFunction) ↔ ObjectLinks (calls_function) →
- *      use-Count je Object_Name (lokalisiert).
- *   2. ref.function_name_lookup mappt jeden gebräuchlichen Namen auf die
- *      kanonische function_id (deckt canonical_en, display_<lang>, fmstrs_eid).
- *      `is_primary = 1` schließt Ambiguitäten aus (z.B. Alias-Schreibweisen).
- *   3. SUM, weil mehrere Object_Names auf dieselbe function_id mappen können.
+ * Match-Logik: der Import schreibt die Referenz-Identität jedes aufgelösten
+ * Built-in-Knotens mit (`BuiltinFunctionIdentity`, Katalog-Schema 1.32.0) — hier
+ * wird sie NACHGESCHLAGEN, nicht aus dem Namen zurückgerechnet. Ein Knoten ohne
+ * Identitätszeile ist bewusst nicht zählbar (Token, den die Referenz nicht
+ * kennt: `Get`, die Keyword-/JSON-Konstanten, Funktionen neuer als die
+ * Referenz).
+ *
+ * Vorher lief der Join namensbasiert über `ref.function_name_lookup` und hatte
+ * zwei Fehler, die beide hier verschwinden:
+ *   • Lokalisierte Autorensprachen zählten 0 — ein deutsches
+ *     `HoleAlsZeitstempel` traf keinen `is_primary`-Namen. Der Import
+ *     normalisiert die Knoten jetzt auf den kanonischen englischen Namen.
+ *   • Get-Parameter zählten DOPPELT: die Referenz führt die gewickelte Form
+ *     `Get(LayoutName)` (chunk_role 'getfunction') UND den nackten Parameter
+ *     `LayoutName` ('getparameter') je mit is_primary = 1, und der Katalog trug
+ *     für denselben Aufruf beide Knoten. Ein Knoten je Parameter plus ein
+ *     Identitäts-Join zählt jetzt pro echter Aufrufstelle.
+ * Damit fällt auch die `is_primary`-Krücke weg.
+ *
+ * Gezählt werden BEIDE Verwendungsklassen eines Built-ins:
+ *   • `calls_function`  — Aufruf in einer Formel
+ *   • `displays_symbol` — ein Layout-Symbol {{X}}, laut Claris-Doku der Wert von
+ *                         Get(X) zur Anzeigezeit, also eine echte Verwendung
+ *                         DIESES Get-Parameters (sie zählt auch im Where-used)
+ * Beide sind Verwendungsnachweise derselben Funktion und der Zähler beantwortet
+ * „wie oft kommt diese Funktion in der Lösung vor" — eine Klasse davon
+ * wegzulassen hat einen Get-Parameter, den eine Lösung nur als Merge-Symbol
+ * benutzt, mit 0 geführt (gemessen: Get(PageNumber) mit 10 Aufrufen und
+ * 324 Symbolen wurde als 10 gezählt). Doppelzählung gibt es dabei nicht: ein
+ * Layoutobjekt, das {{PageNumber}} zeigt UND in seiner Ausblendungsformel
+ * Get(PageNumber) rechnet, sind zwei verschiedene Verwendungsstellen.
  */
 async function referencesPerFunctionClarisFunctions(ctx) {
   const sql = `
-    WITH usage AS (
-      SELECT oc.Object_Name AS name, COUNT(*) AS use_count
-      FROM ObjectCatalog oc
-      JOIN ObjectLinks ol ON oc.Object_UUID = ol.Target_UUID
-      WHERE oc.Object_Type = 'BuiltinFunction'
-        AND ol.Link_Role = 'calls_function'
-      GROUP BY oc.Object_Name
-    )
-    SELECT 'fn:' || lk.function_id AS fn_id,
-           SUM(usage.use_count)    AS ref_count
-    FROM usage
-    JOIN ref.function_name_lookup lk ON lk.lookup_name = usage.name
-    WHERE lk.is_primary = 1
-    GROUP BY lk.function_id
+    SELECT 'fn:' || bfi.Function_ID AS fn_id,
+           COUNT(*)                 AS ref_count
+    FROM ObjectLinks ol
+    JOIN BuiltinFunctionIdentity bfi ON bfi.Object_UUID = ol.Target_UUID
+    WHERE ol.Link_Role IN ('calls_function', 'displays_symbol')
+    GROUP BY bfi.Function_ID
   `;
   const result = await db.executeQuery(ctx, sql);
   return result.rows;

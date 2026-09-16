@@ -58,6 +58,7 @@ export type BreadcrumbCtx =
   | { kind: 'fmSpec' }
   | { kind: 'fmSpecStep'; stepName: string }
   | { kind: 'fmSpecFunction'; name: string }
+  | { kind: 'fmSpecTrigger'; name: string }
   | { kind: 'settings' };
 
 /**
@@ -170,6 +171,8 @@ export function buildBreadcrumb(ctx: BreadcrumbCtx, t: TranslateFn): BreadcrumbI
       return finalize([home, { label: t('nav:crumbs.fmSpec'), path: '/fm-spec' }, { label: ctx.stepName, path: null }]);
     case 'fmSpecFunction':
       return finalize([home, { label: t('nav:crumbs.fmSpec'), path: '/fm-spec' }, { label: ctx.name, path: null }]);
+    case 'fmSpecTrigger':
+      return finalize([home, { label: t('nav:crumbs.fmSpec'), path: '/fm-spec?tab=triggers' }, { label: ctx.name, path: null }]);
     case 'settings':
       return finalize([home, { label: t('nav:crumbs.settings'), path: '/settings' }]);
   }

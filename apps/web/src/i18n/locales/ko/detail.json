@@ -27,7 +27,10 @@
     "BaseTable": "테이블 세부 정보",
     "CustomFunction": "함수 세부 정보",
     "ValueList": "값 목록 세부 정보",
-    "Calculation": "계산식 상세"
+    "Calculation": "계산식 상세",
+    "BuiltinFunction": "내장 함수 세부 정보",
+    "PluginFunction": "플러그인 함수 세부 정보",
+    "PluginComponent": "플러그인 구성 요소 세부 정보"
   },
   "layoutCanvas": {
     "searchPlaceholder": "레이아웃 오브젝트 검색…",
@@ -160,6 +163,10 @@
       "hide": {
         "short": "Hide",
         "long": "숨기기 조건"
+      },
+      "field_entry": {
+        "short": "Entry",
+        "long": "필드 입력 조건"
       },
       "conditional_format": {
         "short": "CF",
@@ -312,7 +319,8 @@
     "noName": "(이름 없음)",
     "filterByCategory": "{{category}}로 필터링",
     "graphButton": "그래프",
-    "valueListMatch": "값"
+    "valueListMatch": "값",
+    "spellingMatch": "표기"
   },
   "scriptSearchFilter": {
     "searchAria": "참조 검색",
@@ -513,6 +521,7 @@
     "ariaLabel": "테이블 세부 정보",
     "metaName": "이름",
     "metaFile": "파일",
+    "metaComment": "설명",
     "fields": "필드",
     "count": "개수",
     "total": "합계",
@@ -705,6 +714,7 @@
       "step_xslt": "XSLT 스타일시트",
       "record_access": "레코드 액세스 계산",
       "hide": "숨김 조건",
+      "field_entry": "필드 입력 조건",
       "tooltip": "도구 설명",
       "placeholder": "자리 표시자",
       "conditional_format": "조건부 서식",
@@ -739,7 +749,12 @@
     "paramFieldLabel": "매개변수 필드",
     "paramFieldCandidates": "후보:",
     "paramFieldOrphan": "이 파일에 같은 이름의 필드가 없습니다(고아 이름)",
-    "openParamCalc": "계산 상세 열기"
+    "openParamCalc": "계산 상세 열기",
+    "platformsLabel": "플랫폼",
+    "compatPartial": "부분",
+    "compatNo": "아니요",
+    "compatPartialHint": "부분 — 조건부 지원. 이벤트의 Claris 도움말 페이지 참조",
+    "compatNoHint": "이 이벤트는 해당 런타임에서 발생하지 않습니다"
   },
   "layoutObjectDetail": {
     "showInLayout": "레이아웃에서 보기: {{name}}",
@@ -812,5 +827,40 @@
     "propPosition": "위치/크기",
     "propNesting": "중첩",
     "nestingLevel": "레벨 {{level}}"
+  },
+  "pseudoFunction": {
+    "metaFunction": "함수",
+    "metaType": "유형",
+    "metaScope": "범위",
+    "scopeValue": "솔루션 독립적 — 어떤 파일에도 속하지 않음",
+    "usageHeading": "사용",
+    "usageEmpty": "이 솔루션에서 사용되지 않습니다.",
+    "colRole": "역할",
+    "colType": "객체 유형",
+    "colObjects": "객체",
+    "colFiles": "파일",
+    "colOccurrences": "발생 횟수",
+    "totalRow": "합계"
+  },
+  "builtinFunction": {
+    "clarisHelpOnline": "Claris 도움말 ↗",
+    "typeValue": "FileMaker 내장 함수"
+  },
+  "pluginFunction": {
+    "docsetLink": "{{plugin}} 문서 →",
+    "docsOnline": "{{plugin}} 문서 ↗",
+    "typeValue": "플러그인 함수",
+    "metaCatalogName": "카탈로그 이름",
+    "metaComponent": "구성 요소",
+    "metaPlugin": "플러그인"
+  },
+  "pluginComponent": {
+    "typeValue": "플러그인 구성 요소",
+    "documentedFunctions": "레퍼런스의 함수 수",
+    "vendorComponent": "공급업체 구성 요소",
+    "functionsInSolution": "이 솔루션의 함수",
+    "usedSuffix": "{{used}}개 사용",
+    "functionsHeading": "함수",
+    "colFunction": "함수"
   }
 }

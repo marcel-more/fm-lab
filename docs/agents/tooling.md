@@ -54,14 +54,6 @@ solution) — it never blocks the master DB.
 
 All installers check versions and prompt before replacing existing sets.
 
-## Test data & auxiliary tools
-
-| Skill | Purpose |
-|---|---|
-| `install-ooe-fm` | "One Of Everything" FileMaker reference repo (XML test cases) |
-| `install-fm-xml-export-exploder` | Tool for splitting XML exports into components |
-| `test-convert-xml` | Conversion test run: `tools/tests/fixtures/xml/` → `db/fm_test.duckdb` (production DB untouched; auto-provisions ooe-fm data) |
-
 ## Misc
 
 - `fm-open` — open the currently discussed object in FileMaker via fmIDE fmp:// URL

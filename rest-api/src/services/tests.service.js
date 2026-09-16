@@ -45,6 +45,14 @@ const DEFAULT_FINDINGS_LIMIT = 20;
 
 // The canonical S-Block / file-filter markers for the textual M5 checks.
 const RE_SCOPE_VAR = /getvariable\('scope_uuids'\)/g;
+// M5c: the per-row text column of a findings result (dashboards: `message`,
+// query templates: `_message` — the generic query table hides `_` columns).
+const RE_MESSAGE_COL = /\bAS\s+_?message\b/i;
+
+/** M5c predicate: does a findings SQL text project a per-row text column? */
+function findingsHasMessageColumn(sqlText) {
+  return typeof sqlText === 'string' && RE_MESSAGE_COL.test(sqlText);
+}
 const RE_FILE_VAR = /getvariable\('file'\)/g;
 
 const testCache = new LRUCache({
@@ -269,6 +277,14 @@ async function validateTest(test) {
           }
         }
       }
+      // M5c — the findings dataset must carry a `message`/`_message` column:
+      // the tests panel renders that text per row; without it every finding
+      // is an empty (and, with a row action, invisible but clickable) line.
+      const findingsSql = resolved.sqlByDataset.findings;
+      if (typeof findingsSql === 'string' && !findingsHasMessageColumn(findingsSql)) {
+        pushIssue(validation, 'warning', 'M5c',
+          `${label}/findings: no "AS message" (or "AS _message") column — finding rows render without text`);
+      }
       // M5 family — only when the member declares object-like scope support
       const supported = (analysis.scope && analysis.scope.supported) || [];
       if (supported.some(s => s === 'object' || s === 'object-list' || s === 'cluster')) {
@@ -297,6 +313,10 @@ async function validateTest(test) {
         memberObjectTypeSets.push(new Set(meta.object_types));
       } else {
         universalMembers += 1;
+      }
+      if (typeof resolved.content === 'string' && !findingsHasMessageColumn(resolved.content)) {
+        pushIssue(validation, 'warning', 'M5c',
+          `${label}: no "AS _message" (or "AS message") column — finding rows render without text`);
       }
       for (const t of meta.output_types || []) memberOutputTypes.add(t);
       const scopes = meta.scope || [];
@@ -835,6 +855,41 @@ const { deriveResultState, catalogMeta } = resultsService;
  * type is unknown, otherwise the skip payload. Members without a declared
  * list are universal.
  */
+/**
+ * Runtime half of the member scope declaration (`analysis.scope.supported`,
+ * query `@scope`). The test-level `scopes` check admits the request; a member
+ * that does not support the requested scope must not run unscoped — it would
+ * report the file's (or the solution's) findings under the object's name.
+ * Solution scope is universal; `scope_uuids`-bearing scopes (object,
+ * object-list, cluster) and `file` are honoured only when declared.
+ * A member whose findings dataset declares `post-filter` mode supports the
+ * object-like scopes by construction (rows are cut at the anchor after the
+ * run) — the summary keeps its declared scope rule.
+ */
+function memberScopeSkip(supported, scope, findingsMode) {
+  if (!scope || scope === 'solution') return null;
+  const list = Array.isArray(supported) && supported.length ? supported : ['solution', 'file'];
+  if (list.includes(scope)) return null;
+  const objectLike = scope === 'object' || scope === 'object-list' || scope === 'cluster';
+  if (objectLike && findingsMode === 'post-filter') return null;
+  return {
+    skipReason: 'scope',
+    skipMessage: `Not run in ${scope} scope — this member supports ${list.join(', ')} scope only (run it from the ${list.includes('file') ? 'file' : 'solution'} level).`,
+  };
+}
+
+/**
+ * `post-filter` scope mode: keep the finding rows whose anchor column is in
+ * the scope set. Rows without the anchor column stay (aggregate findings).
+ */
+function postFilterFindings(rows, anchor, scopeUuidsCsv) {
+  if (!Array.isArray(rows) || !scopeUuidsCsv) return rows;
+  const wanted = new Set(String(scopeUuidsCsv).split(',').map(x => x.trim()).filter(Boolean));
+  if (wanted.size === 0) return rows;
+  const col = anchor || 'nav_uuid';
+  return rows.filter(r => r == null || r[col] == null || wanted.has(String(r[col])));
+}
+
 function memberObjectTypeSkip(declaredTypes, objectType) {
   if (!objectType) return null;
   const types = Array.isArray(declaredTypes) ? declaredTypes.filter(Boolean) : [];
@@ -843,6 +898,30 @@ function memberObjectTypeSkip(declaredTypes, objectType) {
     skipReason: 'object-type',
     skipMessage: `Not applicable to a ${objectType} — this member checks ${types.join(', ')} objects.`,
   };
+}
+
+/**
+ * Declared scope of a member: dashboards from `analysis.scope` (supported
+ * list, anchor, per-dataset mode), query templates from `@scope`. Missing
+ * declarations fall back to the schema default (solution + file).
+ */
+async function resolveMemberScope(member, bundle) {
+  const out = { supported: null, anchor: 'nav_uuid', findingsMode: null };
+  try {
+    if (member.kind === 'dashboard') {
+      const b = bundle || await dashboardService.getBundle(member.ref);
+      const sc = (b.manifest.analysis && b.manifest.analysis.scope) || {};
+      out.supported = Array.isArray(sc.supported) ? sc.supported : null;
+      out.anchor = sc.anchor || 'nav_uuid';
+      out.findingsMode = (sc.mode && sc.mode.findings) || null;
+      return out;
+    }
+    const meta = await templateService.getTemplateMeta(member.ref, 'query');
+    out.supported = meta && Array.isArray(meta.scope) ? meta.scope : null;
+    return out;
+  } catch {
+    return out;
+  }
 }
 
 /** Declared object types of a member (manifest / SQL frontmatter); [] = universal. */
@@ -941,6 +1020,32 @@ async function runMember(ctx, member, scopeParams, options) {
           resultState: 'skipped',
         };
       }
+      // Trigger-compatibility and error-code members need fm_spec >= 2.8.0
+      // (trigger_compat, error_codes). Same version-state semantics.
+      if (requires.includes('fm-spec-diagnostics') && !db.hasDiagnosticsTables()) {
+        return {
+          ...base,
+          title: bundle.manifest.title || member.ref,
+          status: 'skipped',
+          runStatus: 'skipped',
+          skipReason: 'missing-fm-spec-diagnostics',
+          skipMessage: 'Reference database predates schema 2.8.0 — re-run tools/fm-reference/pull-reference.sh to deploy the trigger-compatibility and error-code tables.',
+          resultState: 'skipped',
+        };
+      }
+      // Version-floor members need fm_spec >= 2.9.0 (the numeric version keys
+      // step_compat.originated_in_version_num / functions.origin_version_num).
+      if (requires.includes('fm-spec-version-keys') && !db.hasVersionKeys()) {
+        return {
+          ...base,
+          title: bundle.manifest.title || member.ref,
+          status: 'skipped',
+          runStatus: 'skipped',
+          skipReason: 'missing-fm-spec-version-keys',
+          skipMessage: 'Reference database predates schema 2.9.0 — re-run tools/fm-reference/pull-reference.sh to deploy the numeric version keys.',
+          resultState: 'skipped',
+        };
+      }
     } catch { /* bundle resolution problems surface in runOne below */ }
   }
   // Object scope: a member declaring other object types than the target's is
@@ -950,6 +1055,24 @@ async function runMember(ctx, member, scopeParams, options) {
   // applies to single-member runs as well.
   if (options.objectType) {
     const skip = memberObjectTypeSkip(await resolveMemberObjectTypes(member, bundle), options.objectType);
+    if (skip) {
+      return {
+        ...base,
+        title: (bundle && bundle.manifest.title) || await resolveMemberTitle(member),
+        status: 'skipped',
+        runStatus: 'skipped',
+        ...skip,
+        resultState: 'skipped',
+      };
+    }
+  }
+  // Member scope declaration (runtime half of M5): a member without native
+  // support for the requested scope is skipped with reason 'scope' instead of
+  // running unscoped under the object's name.
+  let scopeDecl = { supported: null, anchor: 'nav_uuid', findingsMode: null };
+  if (options.scope && options.scope !== 'solution') {
+    scopeDecl = await resolveMemberScope(member, bundle);
+    const skip = memberScopeSkip(scopeDecl.supported, options.scope, scopeDecl.findingsMode);
     if (skip) {
       return {
         ...base,
@@ -993,6 +1116,12 @@ async function runMember(ctx, member, scopeParams, options) {
   };
   if (envelope.findings) {
     memberResult.findings = envelope.findings;
+    if (scopeDecl.findingsMode === 'post-filter' && params.scope_uuids) {
+      memberResult.findings = {
+        ...envelope.findings,
+        rows: postFilterFindings(envelope.findings.rows, scopeDecl.anchor, params.scope_uuids),
+      };
+    }
     const rowAction = findingsRowAction(bundle && bundle.layout);
     if (rowAction) memberResult.rowAction = rowAction;
   }
@@ -1024,6 +1153,8 @@ async function runTest(ctx, test, query = {}, memberIndex = null) {
     cacheable: context.scope === 'solution',
     // Object scope only: drives the per-member object-type skip (runMember).
     objectType: context.scope === 'object' ? (context.object_type || null) : null,
+    // Requested scope: drives the per-member scope skip / post-filter (runMember).
+    scope: context.scope,
   };
   // Optional bundle profile narrows the member set. Unknown ids are a
   // hard error, never a silent fallback to "all". Members outside the profile
@@ -1178,6 +1309,9 @@ module.exports = {
   normalizeScope,
   validateTest,
   memberObjectTypeSkip,
+  memberScopeSkip,
+  postFilterFindings,
+  findingsHasMessageColumn,
   findingsRowAction,
   deriveResultState,
 };

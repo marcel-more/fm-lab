@@ -27,7 +27,10 @@
     "BaseTable": "Tabellen-Details",
     "CustomFunction": "Funktions-Details",
     "ValueList": "Wertelisten-Details",
-    "Calculation": "Berechnungs-Details"
+    "Calculation": "Berechnungs-Details",
+    "BuiltinFunction": "Details der Built-in-Funktion",
+    "PluginFunction": "Details der Plugin-Funktion",
+    "PluginComponent": "Details der Plugin-Komponente"
   },
   "layoutCanvas": {
     "searchPlaceholder": "Layout-Objekt suchen…",
@@ -166,6 +169,10 @@
         "short": "Hide",
         "long": "Hide-Condition"
       },
+      "field_entry": {
+        "short": "Entry",
+        "long": "Feldeingabe-Bedingung"
+      },
       "conditional_format": {
         "short": "CF",
         "long": "Bedingte Formatierung"
@@ -284,7 +291,17 @@
     "summaryRestartGroup": "Ergebnis je Gruppe neu",
     "summaryRepMode": "Wiederholungen berechnen",
     "calcEvaluatesWhenEmpty": "Berechnet auch bei leeren Feldern",
-    "validationMessageCalc": "Fehlermeldungs-Berechnung"
+    "validationMessageCalc": "Fehlermeldungs-Berechnung",
+    "disabled": "deaktiviert",
+    "sectionExtended": "Erweiterte Feldoptionen (FileMaker 26)",
+    "annotation": "Anmerkung (DDL)",
+    "displayNames": "Feld-Anzeigenamen",
+    "displayNamesEnabled": "Angepasste Anzeigenamen aktiv",
+    "displayNamesDisabled": "Nicht angepasst",
+    "displayNameElements": "Elemente",
+    "displayNameKey": "Element",
+    "displayNameValue": "Etikett / Formel",
+    "displayNamesFormula": "Anzeigenamen-Formel"
   },
   "typeDetail": {
     "loading": "Wird geladen…",
@@ -318,7 +335,8 @@
     "noName": "(ohne Namen)",
     "filterByCategory": "Filter auf {{category}}",
     "graphButton": "Graph",
-    "valueListMatch": "Werte"
+    "valueListMatch": "Werte",
+    "spellingMatch": "Schreibweise"
   },
   "scriptSearchFilter": {
     "searchAria": "Refs durchsuchen",
@@ -546,6 +564,7 @@
     "ariaLabel": "Tabellen-Details",
     "metaName": "Name",
     "metaFile": "Datei",
+    "metaComment": "Kommentar",
     "fields": "Felder",
     "count": "Anzahl",
     "total": "Gesamt",
@@ -716,7 +735,13 @@
     "layoutFormula": "Layoutformel",
     "resultType": "Ergebnistyp",
     "resultTypeTooltip": "Ergebnistyp: {{type}}",
-    "resultTypes": { "Text": "Text", "Number": "Zahl", "Date": "Datum", "Time": "Zeit", "Timestamp": "Zeitstempel" },
+    "resultTypes": {
+      "Text": "Text",
+      "Number": "Zahl",
+      "Date": "Datum",
+      "Time": "Zeit",
+      "Timestamp": "Zeitstempel"
+    },
     "targets": "Aufgelöste Ziele",
     "slotsHeading": "Berechnungen",
     "ddrlessHint": "Nur Klartext — diese Instanz hat keine DDR-Chunk-Daten; Tokens, Tooltips und Cross-Navigation sind nicht verfügbar.",
@@ -732,6 +757,7 @@
       "step_xslt": "XSLT-Stylesheet",
       "record_access": "Datensatzzugriffs-Berechnung",
       "hide": "Ausblenden-Bedingung",
+      "field_entry": "Feldeingabe-Bedingung",
       "tooltip": "Tooltip",
       "placeholder": "Platzhalter",
       "conditional_format": "Bedingte Formatierung",
@@ -766,7 +792,12 @@
     "paramFieldLabel": "Parameterfeld",
     "paramFieldCandidates": "Kandidaten:",
     "paramFieldOrphan": "Kein gleichnamiges Feld in dieser Datei (verwaister Name)",
-    "openParamCalc": "Berechnungs-Details öffnen"
+    "openParamCalc": "Berechnungs-Details öffnen",
+    "platformsLabel": "Plattformen",
+    "compatPartial": "teilweise",
+    "compatNo": "nein",
+    "compatPartialHint": "Teilweise — bedingt unterstützt; siehe Claris-Hilfeseite des Ereignisses",
+    "compatNoHint": "Dieses Ereignis feuert in dieser Laufzeitumgebung nicht"
   },
   "layoutObjectDetail": {
     "showInLayout": "Im Layout anzeigen: {{name}}",
@@ -839,5 +870,40 @@
     "propPosition": "Position/Größe",
     "propNesting": "Verschachtelung",
     "nestingLevel": "Ebene {{level}}"
+  },
+  "pseudoFunction": {
+    "metaFunction": "Funktion",
+    "metaType": "Typ",
+    "metaScope": "Geltungsbereich",
+    "scopeValue": "Lösungsunabhängig – gehört zu keiner Datei",
+    "usageHeading": "Verwendung",
+    "usageEmpty": "In dieser Lösung nicht verwendet.",
+    "colRole": "Rolle",
+    "colType": "Objekttyp",
+    "colObjects": "Objekte",
+    "colFiles": "Dateien",
+    "colOccurrences": "Vorkommen",
+    "totalRow": "Gesamt"
+  },
+  "builtinFunction": {
+    "clarisHelpOnline": "Claris Hilfe ↗",
+    "typeValue": "FileMaker Built-in-Funktion"
+  },
+  "pluginFunction": {
+    "docsetLink": "{{plugin}}-Doku →",
+    "docsOnline": "{{plugin}}-Doku ↗",
+    "typeValue": "Plugin-Funktion",
+    "metaCatalogName": "Katalogname",
+    "metaComponent": "Komponente",
+    "metaPlugin": "Plugin"
+  },
+  "pluginComponent": {
+    "typeValue": "Plugin-Komponente",
+    "documentedFunctions": "Funktionen in der Referenz",
+    "vendorComponent": "Hersteller-Komponente",
+    "functionsInSolution": "Funktionen in dieser Lösung",
+    "usedSuffix": "{{used}} verwendet",
+    "functionsHeading": "Funktionen",
+    "colFunction": "Funktion"
   }
 }

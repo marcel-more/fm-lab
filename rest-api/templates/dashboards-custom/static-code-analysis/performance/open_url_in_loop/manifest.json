@@ -1,6 +1,6 @@
 {
   "id": "open_url_in_loop",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "title": "Open URL inside Loop",
   "description": "Performance / UX rule — Open URL inside a Loop launches an external handler on every iteration.",
   "author": "fm-lab rules",

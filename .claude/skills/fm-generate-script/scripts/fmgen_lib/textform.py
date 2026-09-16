@@ -602,6 +602,9 @@ class ParsedStep:
     warnings: list[str] = field(default_factory=list)
 
 
+_BOOL_STATES = {"on", "off", "true", "false", "yes", "no"}
+
+
 def parse_step(st: RawStep, ref: Reference) -> ParsedStep:
     canonical = ref.steps().get(st.step_id, {}).get("canonical_name", st.head)
     ps = ParsedStep(line=st.line, step_id=st.step_id, canonical_name=canonical,
@@ -733,6 +736,25 @@ def parse_step(st: RawStep, ref: Reference) -> ParsedStep:
                     and o["option_key"] not in ps.options]
             if pool:
                 return pool[0]
+        if _LABEL_RE.match(param) is None:
+            # Placeholder display (step_option_values.display_text_en =
+            # '{key}'): the enum state renders as the VALUE of another option
+            # — 97 Set Zoom Level 'ByCalculation' shows the calculation in the
+            # zoom slot. A bare value that is not in the enum's own domain
+            # binds to that option; the enum state follows by implication.
+            for o in free:
+                if o["option_type"] != "enum":
+                    continue
+                for row in ref.option_values(ps.step_id):
+                    disp = row["display_text_en"] or ""
+                    if row["option_key"] != o["option_key"] or not disp.startswith("{"):
+                        continue
+                    other = disp.strip("{}")
+                    tgt = next((x for x in inline_all if x["option_key"] == other
+                                and x["option_key"] not in ps.options), None)
+                    if tgt is not None:
+                        ps.options[o["option_key"]] = row["xml_value"]
+                        return tgt
         if not free:
             # single-free-option fallback: a bare (non-label-shaped) value maps
             # unambiguously when exactly one inline option is still unfilled,
@@ -794,20 +816,41 @@ def parse_step(st: RawStep, ref: Reference) -> ParsedStep:
         if m and _norm_label(m.group(1)) in by_label:
             label = _norm_label(m.group(1))
             cands = label_candidates.get(label, [])
+            value = m.group(2).strip()
             if len(cands) > 1:
                 scoped = [o for o in cands if _option_section(o["xml_path"]) == section]
                 # only an unambiguous hit inside the open section wins; anything
                 # else keeps the previous flat behaviour untouched
                 opt = scoped[0] if len(scoped) == 1 else by_label[label]
+                # An enum and a reference share one label (74/122/228 'Using
+                # layout' = layout_destination + layout, mirroring FileMaker's
+                # display): a labeled VALUE that is a display text or xml
+                # value of the enum candidate belongs to the enum
+                # ('<Current Layout>'), anything else to the reference
+                # ('"LO - Text" (Coverage)').
+                enum_hit = _enum_candidate_for_value(cands, value, ps, ref)
+                if enum_hit is not None:
+                    opt = enum_hit
+                # A flag and its target share one label (242 'Password' =
+                # password_enabled + password, 'Save print options to' =
+                # flag + target): a labeled VALUE that is no boolean state
+                # belongs to the non-boolean candidate.
+                if opt["option_type"] == "boolean" and value \
+                        and value.casefold() not in _BOOL_STATES \
+                        and value.casefold() not in {
+                            (opt.get("true_text") or "").casefold(),
+                            (opt.get("false_text") or "").casefold()}:
+                    non_bool = [o for o in cands if o["option_type"] != "boolean"]
+                    if len(non_bool) == 1:
+                        opt = non_bool[0]
             else:
                 opt = by_label[label]
-            value = m.group(2).strip()
         else:
             opt = take_bare_boolean(param) or take_positional(param)
         if opt is None:
             ps.errors.append(
                 f"line {st.line}: cannot map parameter '{_ellipsis(param)}' "
-                f"to an option of '{canonical}'")
+                f"to an option of '{canonical}'" + _other_coverage_hint(ps, param, m, ref))
             continue
         if opt["option_key"] in ps.options:
             if opt["option_key"] in scalar_keys:
@@ -829,6 +872,10 @@ def parse_step(st: RawStep, ref: Reference) -> ParsedStep:
 
     _canonicalize_flat_groups(ps, groups, groups_by_key)
     _apply_post_implications(ps, ref)
+    # canonical form: a mirror's read option and a paste-dropped option leave
+    # the IR here (fm_spec 2.6.0) — both are reported, never silently lost
+    ps.warnings += apply_mirror_rules(ps, ref, canonical=True)
+    ps.warnings += apply_paste_dropped(ps, ref, "the canonical form")
 
     for key in unsatisfied_required(set(ps.options)):
         ps.errors.append(
@@ -961,6 +1008,26 @@ def _canonicalize_flat_groups(ps: ParsedStep, groups: list[dict],
         ps.options[key] = [item]
 
 
+def _enum_candidate_for_value(cands: list[dict], value: str, ps: ParsedStep,
+                              ref: Reference) -> dict | None:
+    """Among options sharing one label, the enum whose domain (display text
+    or xml value, case-insensitive) contains `value` — None when no enum
+    candidate owns the value."""
+    v = value.strip().casefold()
+    if not v:
+        return None
+    for o in cands:
+        if o["option_type"] != "enum" or o["option_key"] in ps.options:
+            continue
+        for row in ref.option_values(ps.step_id):
+            if row["option_key"] != o["option_key"]:
+                continue
+            if v == (row["display_text_en"] or "").casefold() \
+                    or v == row["xml_value"].casefold():
+                return o
+    return None
+
+
 def _coerce(ps: ParsedStep, opt: dict, value: str, ref: Reference):
     kind = opt["option_type"]
     key = opt["option_key"]
@@ -985,11 +1052,15 @@ def _coerce(ps: ParsedStep, opt: dict, value: str, ref: Reference):
         # (inverted_label is documentary only)
         return "True" if state else "False"
     if kind == "enum":
-        for row in ref.option_values(ps.step_id):
-            if row["option_key"] != key:
-                continue
+        rows = [r for r in ref.option_values(ps.step_id) if r["option_key"] == key]
+        # display texts first, across ALL states, then xml values: a display
+        # text may equal the xml value of another state (35 import_method:
+        # 'Update' is the display of UpdateOnMatch and the xml value of the
+        # state displayed as 'Replace') — row order must not decide
+        for row in rows:
             if row["display_text_en"] and row["display_text_en"].casefold() == value.casefold():
                 return row["xml_value"]
+        for row in rows:
             if row["xml_value"].casefold() == value.casefold():
                 return row["xml_value"]
         ps.errors.append(
@@ -1005,12 +1076,44 @@ def _coerce(ps: ParsedStep, opt: dict, value: str, ref: Reference):
                 f"line {ps.line}: '{_ellipsis(value)}' is not a valid object reference for '{key}'")
             return None
         return r
-    if kind == "text" and ";" in value and len(value) >= 2 \
-            and value.startswith('"') and value.endswith('"'):
-        # decompile wraps text values containing the parameter separator in
-        # quotes (render_canonical) — unwrap them here, symmetric pair
+    if kind == "text" and len(value) >= 2 \
+            and value.startswith('"') and value.endswith('"') \
+            and text_needs_quotes(value[1:-1]):
+        # decompile wraps text values that would break the notation
+        # (separator, brackets, calc-comment openers) in quotes
+        # (render_canonical) — unwrap them here, symmetric pair
         return value[1:-1]
     return value  # calculation / text / repetition: verbatim
+
+
+def text_needs_quotes(value: str) -> bool:
+    """A text value is quoted in the text form when it carries the parameter
+    separator, a bracket, or a calc-comment opener: `;` would split the
+    parameter, `[`/`]` would shift the bracket depth, and `//` or `/*` would
+    read as a calculation comment — the line scanner (_scan_state) stops at
+    a `//` outside a string and swallows the following steps as
+    continuation (find criteria text `// *:*:*`, Perform Find corpus)."""
+    return any(t in value for t in (";", "[", "]", "//", "/*"))
+
+
+def _other_coverage_hint(ps: ParsedStep, param: str, m, ref: Reference) -> str:
+    """Suffix for an unmappable parameter whose label or key exists in
+    another coverage's rows (S-6 'option needs FileMaker 26'): the shape of
+    the target coverage has no slot for it, the other coverage has."""
+    try:
+        rows = ref.options_any_coverage(ps.step_id)
+    except Exception:  # pragma: no cover - diagnostics only
+        return ""
+    target = ref.target_coverage()
+    label = _norm_label(m.group(1)) if m else _norm_label(param.split(":")[0])
+    hits = sorted({str(r["coverage"]) for r in rows
+                   if str(r["coverage"]) not in ("*", target)
+                   and (_norm_label(r.get("display_label_en") or "") == label
+                        or _norm_label(r["option_key"]) == label)})
+    if not hits:
+        return ""
+    return (f" — the option exists only in the FileMaker {', '.join(hits)} form "
+            f"(target coverage {target}); target a FileMaker {hits[0]} file or drop it")
 
 
 def _ellipsis(s: str, n: int = 60) -> str:
@@ -1127,6 +1230,94 @@ def _apply_post_implications(ps: ParsedStep, ref: Reference) -> None:
                 ps.options.setdefault(r["implied_option"], r["implied_value"])
 
 
+def _option_label(ref: Reference, step_id: int, key: str) -> str:
+    for o in ref.options(step_id):
+        if o["option_key"] == key:
+            return o.get("display_label_en") or key
+    return key
+
+
+def apply_mirror_rules(ps: ParsedStep, ref: Reference, canonical: bool) -> list[str]:
+    """Mirror rules (step_mirror_elements, fm_spec 2.6.0): FileMaker writes
+    the value of a source option a second time at another place of the step
+    and keeps both in sync on paste — the source is the truth (144 Save
+    Records as PDF: the document title is mirrored as a bare Step-level
+    Calculation; paste probe 22.0.6/26.0.2: a title heals its mirror in, a
+    pure mirror heals the title in, a divergent mirror is overwritten by the
+    title). The read option of the target is the step_options row whose
+    xml_path is the target path (title_mirror) — a legacy notation that stays
+    readable but never canonical.
+
+    canonical=True (parse side): the read option leaves the IR — a pure mirror
+    is read as the source, an equal mirror is redundancy, a divergent mirror
+    loses (as it does on paste). Every case is a warning: the draft is not
+    canonical, the canonical text carries the source alone.
+    canonical=False (emit side, IR that may not have passed parse): the copy
+    is materialized — the target takes the source value when unset, a pure
+    mirror heals the source in; an explicitly set, divergent target is never
+    overwritten (implication doctrine) but reported, because FileMaker will
+    overwrite it on paste and the snippet is not canonical.
+    Returns the warnings."""
+    out: list[str] = []
+    for r in ref.mirror_elements(ps.step_id):
+        src, tgt = r["source_option"], ref.mirror_target_option(ps.step_id, r["target_path"])
+        if tgt is None:
+            continue
+        sval, tval = ps.options.get(src), ps.options.get(tgt)
+        src_label = _option_label(ref, ps.step_id, src)
+        if canonical:
+            if tval is None:
+                continue
+            if sval is None:
+                ps.options[src] = tval
+                out.append(
+                    f"line {ps.line}: '{tgt}' is FileMaker's copy of '{src}' ({src_label}) — "
+                    f"read as {src_label}: {tval} (FileMaker heals the {src_label.lower()} in "
+                    "on paste); write only the source in the canonical form")
+            elif str(sval) != str(tval):
+                out.append(
+                    f"line {ps.line}: '{tgt}' ({tval}) differs from '{src}' ({sval}) — the "
+                    f"{src_label.lower()} wins, FileMaker overwrites the mirror on paste; "
+                    "the mirror value is discarded, the canonical form carries the source alone")
+            else:
+                out.append(
+                    f"line {ps.line}: '{tgt}' is a derived copy of '{src}' ({src_label}) — "
+                    "dropped from the canonical form (the emitter writes it from the source)")
+            del ps.options[tgt]
+        else:
+            if sval is not None and tval is None:
+                ps.options[tgt] = sval
+            elif sval is None and tval is not None:
+                ps.options[src] = tval
+                out.append(
+                    f"line {ps.line}: '{tgt}' set without '{src}' — the {src_label.lower()} is "
+                    "emitted from the mirror (FileMaker heals it in on paste)")
+            elif sval is not None and tval is not None and str(sval) != str(tval):
+                out.append(
+                    f"line {ps.line}: '{tgt}' ({tval}) differs from '{src}' ({sval}) — left as "
+                    f"written, but FileMaker overwrites the mirror with the {src_label.lower()} "
+                    "on paste; the emitted snippet is not canonical")
+    return out
+
+
+def apply_paste_dropped(ps: ParsedStep, ref: Reference, where: str) -> list[str]:
+    """Options FileMaker discards on paste whatever their value
+    (step_options.paste_dropped, fm_spec 2.6.0 — 144 appearance): the value
+    has no persistence, so it leaves the IR with a warning and never reaches
+    `where` (the canonical form on the parse side, the emission on the emit
+    side). Returns the warnings."""
+    out: list[str] = []
+    for key in sorted(ref.paste_dropped_options(ps.step_id)):
+        if key not in ps.options:
+            continue
+        val = ps.options.pop(key)
+        out.append(
+            f"line {ps.line}: option '{key}' ({val}) of '{ps.canonical_name}' is discarded "
+            f"by FileMaker on paste whatever its value — left out of {where} "
+            "(fm_spec step_options.paste_dropped)")
+    return out
+
+
 # ------------------------------------------------------------ canonical render
 
 def render_ref(val: dict) -> str:
@@ -1142,8 +1333,15 @@ def render_ref(val: dict) -> str:
     return f'"{val.get("name", "")}"'
 
 
-def render_canonical(ps: ParsedStep, ref: Reference | None = None) -> str:
-    """Render the parsed step back to canonical text (T1-T4 spacing; T9 groups)."""
+def render_canonical(ps: ParsedStep, ref: Reference | None = None,
+                     force_labels: bool = False) -> str:
+    """Render the parsed step back to canonical text (T1-T4 spacing; T9 groups).
+
+    force_labels: every top-level option without a display label renders in
+    the `option_key: value` extension form instead of positionally — the
+    decompiler's fallback when the positional rendering would not re-parse
+    into the same options (57 Send Event: three unlabeled inline text options
+    behind two positional slots; 181 Get Folder Path: three calc slots)."""
     prefix = "" if ps.enabled else "// "
     if ps.step_id == 89:
         text = ps.options.get("text", "")
@@ -1169,14 +1367,16 @@ def render_canonical(ps: ParsedStep, ref: Reference | None = None) -> str:
                 continue
             if g["item_form"] == "scalar":
                 for v in val:
-                    part = _render_option_part(ps, key, v, meta.get(key, {}), ref)
+                    part = _render_option_part(ps, key, v, meta.get(key, {}), ref,
+                                               force_label=force_labels)
                     if part is not None:
                         parts.append(part)
             else:
                 for item in val:
                     parts.append(_render_item(ps, g, item, meta, ref, groups_by_key))
             continue
-        part = _render_option_part(ps, key, val, meta.get(key, {}), ref)
+        part = _render_option_part(ps, key, val, meta.get(key, {}), ref,
+                                   force_label=force_labels)
         if part is not None:
             parts.append(part)
     if not parts:
@@ -1210,14 +1410,52 @@ def _render_item(ps: ParsedStep, group: dict, item: dict, meta: dict,
     return f"{group['group_label']}: [ {' ; '.join(out)} ]"
 
 
+def _enum_value_implied(ps: ParsedStep, key: str, val: str, display: str,
+                        ref: Reference) -> bool:
+    """Is the enum state (key=val) re-derived by the parser from the OTHER
+    options of the step, so that rendering it would be redundant?
+
+    Two parse-side sources exist: (1) a placeholder display `{other}` names
+    an option — a bare value binding to `other` sets the enum state
+    (take_positional, 97 Set Zoom Level 'ByCalculation' via the calculation
+    slot); (2) a step_option_implications row implies (key, val) from a
+    present option (option_present) or from a reference form (value_form,
+    6 layout form => destination='SelectedLayout'). Nothing else implies it
+    — an enum state written by FileMaker WITHOUT its companion (corpus 07:
+    'LayoutNameByCalc' with no calc, 'ByCalculation' with no calc,
+    'SelectedLayout' with no layout, 'ByName' with no window name) would be
+    lost in the positional form and must render explicitly."""
+    for token in re.findall(r"\{([^{}]+)\}", display):
+        if token in ps.options:
+            return True
+    for r in ref.option_implications(ps.step_id):
+        if r["implied_option"] != key or r["implied_value"] != val:
+            continue
+        if r["trigger_kind"] == "option_present" and r["trigger"] in ps.options:
+            return True
+        if r["trigger_kind"] == "value_form" and any(
+                isinstance(v, dict) and v.get("_form") == r["trigger"]
+                for v in ps.options.values()):
+            return True
+    return False
+
+
 def _render_option_part(ps: ParsedStep, key: str, val, o: dict,
-                        ref: Reference | None) -> str | None:
-    """One `Label: value` / bare part — the per-option rendering of T4."""
+                        ref: Reference | None, force_label: bool = False) -> str | None:
+    """One `Label: value` / bare part — the per-option rendering of T4.
+
+    Explicit `option_key: value` form (parse_step's by_label accepts the
+    option key) whenever the display form cannot carry the state back:
+    a flag-style boolean in its non-default OFF state, an enum state whose
+    display is a placeholder of an absent companion, a display label the
+    label grammar cannot read, or (force_label) an unlabeled option whose
+    positional slot is ambiguous."""
     if isinstance(val, str) and val == "":
         # an empty value carries no information the text form could hold —
         # the template's empty default reproduces it on emit (131
         # UniversalPathList without a source path)
         return None
+    label = o.get("display_label_en")
     if isinstance(val, dict):
         rendered = render_ref(val)
     elif o.get("option_type") == "boolean":
@@ -1225,28 +1463,55 @@ def _render_option_part(ps: ParsedStep, key: str, val, o: dict,
         state = val == "True"
         if o.get("true_text") and not o.get("false_text"):
             # Flag-style boolean (no off text): displayed as the bare flag
-            # keyword when set, absent when not — matches FileMaker's
-            # rendering and take_bare_boolean's parse direction.
+            # keyword when set — matches FileMaker's rendering and
+            # take_bare_boolean's parse direction. The OFF state is present
+            # here only when it is NOT the template default (decompile drops
+            # defaults): it renders explicitly, otherwise the emit side
+            # would restore the default (corpus 07: SelectAll/NoStyle/
+            # AppendLineFeed/LimitToWindowsOfCurrentFile state="False").
             if not state:
-                return None
+                return f"{key}: Off"
             return o["true_text"]
         rendered = (o.get("true_text") or "On") if state else (o.get("false_text") or "Off")
     elif o.get("option_type") == "enum":
         # enum states whose display text is another option's value (e.g.
         # Go to Layout destination=SelectedLayout) do not render separately
-        display = next((r["display_text_en"] for r in (ref.option_values(ps.step_id) if ref else [])
-                        if r["option_key"] == key and r["xml_value"] == val), None)
+        # — unless nothing in the step implies them (see _enum_value_implied)
+        rows = [r for r in (ref.option_values(ps.step_id) if ref else [])
+                if r["option_key"] == key]
+        display = next((r["display_text_en"] for r in rows if r["xml_value"] == val), None)
         if display and "{" in display:
+            if ref is not None and not _enum_value_implied(ps, key, str(val), display, ref):
+                return f"{key}: {val}"
             return None
+        if display and sum(1 for r in rows if r["display_text_en"] == display) > 1:
+            # one display text for several states (134 'Microsoft Entra ID'
+            # = Azure and AzureGroup, 'Custom OAuth' = CustomOauth and
+            # CustomOauthGroup): the parser would take the first — the
+            # xml value is the only unambiguous spelling (_coerce accepts it)
+            display = None
         rendered = display or str(val)
     else:
         rendered = str(val)
-        if o.get("option_type") == "text" and ";" in rendered:
-            # the parameter separator would split this value on re-parse —
+        if o.get("option_type") == "text" and text_needs_quotes(rendered):
+            # separator, bracket or comment opener would break the re-parse —
             # wrap in quotes; _coerce unwraps (symmetric pair)
             rendered = f'"{rendered}"'
-    label = o.get("display_label_en")
-    if not label and o.get("display_location") not in (None, "inline"):
+    if label and _LABEL_RE.match(f"{label}: x") is None:
+        # a display label the label grammar cannot read back (longer than
+        # its limit: 63 'Multiple emails (one for each record in found
+        # set)', 66 'Wait for speech completion before continuing') — the
+        # option key is the label both directions agree on
+        label = key
+    if label and force_label and ref is not None and sum(
+            1 for o2 in ref.options(ps.step_id)
+            if _norm_label(o2.get("display_label_en") or "") == _norm_label(label)) > 1:
+        # a display label several options of the step share (63 'Collect
+        # addresses across found set' on To/Cc/Bcc): the parser binds it
+        # by the section that is open, which the rendering order does not
+        # guarantee — under the guard the option key is the label
+        label = key
+    if not label and (force_label or o.get("display_location") not in (None, "inline")):
         # Hidden/dialog-only options have no positional slot in the text
         # form (T4) — an unlabeled value could never be parsed back. Use
         # the option_key as extension label; parse_step accepts option_key

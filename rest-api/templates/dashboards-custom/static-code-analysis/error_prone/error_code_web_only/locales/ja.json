@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Web 専用エラーコードリテラル",
+    "analysis.defaultResult.meaning": "Web 公開エンジンまたは REST API のみが返すコードとの Get(LastError) 比較"
+  },
+  "layout": {}
+}

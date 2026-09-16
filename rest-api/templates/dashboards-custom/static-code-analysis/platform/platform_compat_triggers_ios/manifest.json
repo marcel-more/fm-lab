@@ -1,0 +1,82 @@
+{
+  "id": "platform_compat_triggers_ios",
+  "version": "1.0.0",
+  "title": "Trigger compatibility: FileMaker Go (iOS)",
+  "description": "Script triggers in scope whose event does not fire, fires only partially, or has no published compatibility statement in FileMaker Go (iOS). Source: Claris trigger-compatibility table (fm_spec trigger_compat, fm-spec 2.8.0+, tri-state: Yes/No/Partial), joined over the SaXML slot id - never over the raw event name. The owner (layout, layout object or file) and the script are both listed; the script is the navigation anchor.",
+  "author": "fm-lab rules",
+  "icon": "server",
+  "category": "platform",
+  "tags": [
+    "rule",
+    "platform"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "warning",
+    "category": "platform",
+    "rationale": "A trigger event Claris marks 'No' never fires in FileMaker Go (iOS) - the attached script is dead on that runtime; 'Partial' events fire under conditions documented on the event's Claris help page.",
+    "remediation": "Move the logic to an event that fires on the target runtime, or guard the script so the behaviour without the trigger is acceptable; for 'Partial' events read the trigger notes on the Claris help page."
+  },
+  "analysis": {
+    "objectTypes": [
+      "Script",
+      "Layout"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
+    },
+    "requires": [
+      "fm-spec-diagnostics"
+    ],
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Script triggers in scope whose event does not or only partially fires in FileMaker Go (iOS)"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql"
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "limit",
+      "type": "number",
+      "required": false,
+      "description": "Maximum number of findings returned (default 500)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

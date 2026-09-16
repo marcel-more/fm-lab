@@ -7,12 +7,14 @@
   "help": {
     "open": "ヘルプ"
   },
+  "clarisHelp": "Claris ヘルプ →",
   "search": {
     "placeholder": "フィルタ…",
     "platformAll": "すべてのプラットフォーム",
     "platformLabel": "プラットフォーム",
     "platformStepHint": "このプラットフォームで実行できるステップを表示（一部対応を含む）",
-    "platformFnHint": "このプラットフォーム向けに作られた関数を表示（プラットフォーム結合）"
+    "platformFnHint": "このプラットフォーム向けに作られた関数を表示（プラットフォーム結合）",
+    "platformTriggerHint": "このプラットフォームで発生するトリガイベントを表示（一部対応を含む）"
   },
   "list": {
     "count": "{{shown}} / {{total}}"
@@ -20,11 +22,14 @@
   "tabs": {
     "steps": "ScriptSteps",
     "functions": "関数",
-    "locales": "言語"
+    "locales": "言語",
+    "triggers": "トリガ",
+    "errorCodes": "エラーコード"
   },
   "header": {
     "schemaVersion": "スキーマ",
-    "coverage": "FMバージョン",
+    "coverage": "FM バージョン（シェイプ）",
+    "docCoverage": "FM バージョン（ドキュメント）",
     "built": "ビルド日時",
     "steps": "ScriptSteps",
     "functions": "関数",
@@ -32,7 +37,9 @@
     "localesValue": "{{steps}} / {{functions}}",
     "grammar": "文法カバレッジ",
     "grammarValue": "{{covered}}/{{total}} ステップ",
-    "attribution": "ドキュメントコンテンツ © Claris International Inc. FileMaker および Claris は Claris International Inc. の商標です。本プロジェクトは Claris と提携しておらず、Claris の承認も受けていません。完全な帰属表示は SOURCES を参照してください。"
+    "attribution": "ドキュメントコンテンツ © Claris International Inc. FileMaker および Claris は Claris International Inc. の商標です。本プロジェクトは Claris と提携しておらず、Claris の承認も受けていません。完全な帰属表示は SOURCES を参照してください。",
+    "triggers": "トリガ",
+    "errorCodes": "エラーコード"
   },
   "steps": {
     "col": {
@@ -52,7 +59,8 @@
       "name": "名前",
       "category": "カテゴリ",
       "returnType": "戻り値の型",
-      "originVersion": "登場バージョン"
+      "originVersion": "登場バージョン",
+      "removedInVersion": "削除バージョン"
     },
     "detail": {
       "returnType": "戻り値の型",
@@ -120,8 +128,22 @@
         "evidence": "根拠",
         "values": "値",
         "invertedHint": "ラベルの意味は XML の状態に対して反転しています — true_text/false_text にテキスト→XML の完全な対応が含まれるため、追加の反転は不要です。",
-        "docOnly": "Claris のドキュメントに記載されていますが、ラウンドトリップ検証はされていません — ペースト後に動作を確認してください。"
-      }
+        "docOnly": "Claris のドキュメントに記載されていますが、ラウンドトリップ検証はされていません — ペースト後に動作を確認してください。",
+        "slotKind": "スロット",
+        "xmlDomain": "XML ドメイン",
+        "slot_field_only": "フィールドのみ",
+        "slot_field_or_var": "フィールドまたは変数",
+        "slot_variable_only": "変数のみ",
+        "pasteDropped": "貼り付け時に破棄",
+        "pasteDroppedHint": "FileMaker は貼り付け時にこのオプションを値にかかわらず破棄します — ジェネレーターは省略し、リファレンスは読み取り用にプレースホルダーを保持します。"
+      },
+      "coverage": "シェイプのカバレッジ",
+      "coverageHint": "このシェイプが、ペアリングされたエクスポートとクリップボードの証拠に対して検証された FileMaker バージョン。バージョンが付いた行はそのカバレッジのオーバーライドで、同じキーの標準行を置き換えます。",
+      "coverageBase": "基準",
+      "overrideBadge": "FM {{coverage}}",
+      "overrideHint": "カバレッジ {{coverage}} のオーバーライド行 — 同じキーの標準行を置き換えます。",
+      "noOverrides": "このカバレッジにはオーバーライド行がありません — 標準のシェイプが適用されます。",
+      "targetSlotKind": "ターゲットスロットの種類"
     },
     "saxml": {
       "paramTypes": "パラメータ型のシーケンス",
@@ -133,7 +155,8 @@
     "compat": {
       "label": "プラットフォーム互換性",
       "partial": "一部対応",
-      "partialHint": "一部対応 — 条件付きでサポート。ステップのClarisヘルプページを参照"
+      "partialHint": "一部対応 — 条件付きでサポート。ステップのClarisヘルプページを参照",
+      "none": "プラットフォームなし — Claris はこのイベントをどこでも対応として掲載していません"
     }
   },
   "osAffinity": {
@@ -146,5 +169,56 @@
     "hint_unsupported": "Clarisはこのosを明示的に非対応としています（ソースに忠実な逆方向の記述）",
     "hint_variant": "どこでも動作しますが、動作や結果はOSに依存します",
     "hint_os_probe": "実行時にプラットフォーム/OSを返します — ガードイディオムであり、バインディングではありません"
+  },
+  "triggers": {
+    "col": {
+      "id": "スロット ID",
+      "event": "イベント",
+      "label": "ラベル",
+      "level": "レベル",
+      "since": "導入バージョン",
+      "parameter": "パラメータ",
+      "platforms": "プラットフォーム"
+    },
+    "level": {
+      "object": "オブジェクト",
+      "layout": "レイアウト",
+      "file": "ファイル"
+    },
+    "paramYes": "あり",
+    "paramNo": "なし",
+    "unavailable": "このリファレンスにはスクリプトトリガのテーブルがありません（fm-spec < 1.18.0）。"
+  },
+  "errorCodes": {
+    "col": {
+      "code": "コード",
+      "message": "メッセージ",
+      "scope": "範囲"
+    },
+    "scope": {
+      "core": "コア",
+      "web": "Web"
+    },
+    "scopeHint": {
+      "core": "FileMaker クライアントおよびホストが返すコード",
+      "web": "Web 公開エンジンまたは FileMaker REST API が返すコード（Claris では (*) で表示）"
+    },
+    "search": {
+      "hint": "数値はそのコードまたは含まれる範囲を検索します（5123 → 5000-5499）。テキストはメッセージを検索します"
+    },
+    "unavailable": "このリファレンスにはエラーコードのテーブルがありません（fm-spec < 2.8.0）。"
+  },
+  "trigger": {
+    "section": {
+      "labels": "ローカライズされたラベル",
+      "platforms": "プラットフォーム互換性"
+    },
+    "localized": {
+      "label": "ダイアログのラベル"
+    },
+    "parameterField": "パラメータフィールド属性あり",
+    "compat": {
+      "unavailable": "公開された互換性情報なし — リファレンスが fm-spec 2.8.0 より古い"
+    }
   }
 }

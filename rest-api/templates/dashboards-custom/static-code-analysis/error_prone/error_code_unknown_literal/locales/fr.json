@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Littéral de code d'erreur inconnu",
+    "analysis.defaultResult.meaning": "Comparaisons de Get(LastError) avec un code absent de la table des codes d'erreur FileMaker"
+  },
+  "layout": {}
+}

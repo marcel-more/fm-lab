@@ -10,7 +10,7 @@ import { FIELD_NAV_TYPES, SCRIPT_NAV_TYPES } from '../lib/layoutObjectNav';
 import { ScriptViewer } from './ScriptViewer';
 import { CalcTokenList, normalizeCalcWhitespace } from './CalcTokenSpan';
 import { LayoutFormulaLine } from './LayoutFormulaLine';
-import { useTriggerEventFormat } from '../lib/triggerEvents';
+import { useTriggerEventFormat, useTriggerCompat } from '../lib/triggerEvents';
 import {
   VarSelectionContext,
   useVarSelection,
@@ -231,9 +231,33 @@ const LayoutObjectTriggerTable: React.FC<{
 }> = ({ uuid, triggers, file, report }) => {
   const { t } = useTranslation(['detail']);
   const fmtEvent = useTriggerEventFormat();
+  const compatOf = useTriggerCompat();
   if (triggers.length === 0) return null;
 
   const showPreview = triggers.some(tr => tr.previewMode);
+  // Compact runtime hint (fm_spec trigger_compat ≥ 2.8.0): only the two UI
+  // client runtimes matter on a layout, and only their No/Partial cells —
+  // tri-state kept (Partial ≠ unsupported), nothing shown on older references.
+  const compatBadges = (triggerId: number) => {
+    const c = compatOf(triggerId);
+    if (!c) return null;
+    const items = ([['webdirect', 'WebDirect'], ['go', 'Go']] as const)
+      .filter(([k]) => c[k] === false || c[k] === null)
+      .map(([k, label]) => (
+        <span
+          key={k}
+          className={`fm-lo-compat-badge${c[k] === null ? ' fm-lo-compat-badge--partial' : ''}`}
+          title={c[k] === null
+            ? (t('detail:scriptTriggerDetail.compatPartialHint', { defaultValue: 'Partial — conditionally supported; see the Claris help page of the event' }) as string)
+            : (t('detail:scriptTriggerDetail.compatNoHint', { defaultValue: 'This event does not fire on that runtime' }) as string)}
+        >
+          {label} · {c[k] === null
+            ? t('detail:scriptTriggerDetail.compatPartial', { defaultValue: 'partial' })
+            : t('detail:scriptTriggerDetail.compatNo', { defaultValue: 'no' })}
+        </span>
+      ));
+    return items.length > 0 ? <> {items}</> : null;
+  };
   const check = (on: boolean, title: string) =>
     on ? <span className="fm-lo-mode-check" title={title}>✓</span> : null;
 
@@ -282,6 +306,7 @@ const LayoutObjectTriggerTable: React.FC<{
                 ) : (
                   fmtEvent(tr.action)
                 )}
+                {compatBadges(tr.triggerId)}
               </td>
               <td>
                 <div className="fm-lo-trigger-script">

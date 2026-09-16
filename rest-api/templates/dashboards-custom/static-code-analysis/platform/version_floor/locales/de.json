@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Versions-Untergrenze: effektive Mindestversion",
+    "analysis.defaultResult.meaning": "Funktionsumfang im Prüfumfang, der eine neuere FileMaker-Version verlangt, als die Datei deklariert"
+  },
+  "layout": {}
+}

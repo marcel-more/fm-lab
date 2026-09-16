@@ -1,0 +1,25 @@
+{
+  "manifest": {
+    "title": "Nicht auflösbarer Merge-Anker",
+    "description": "Layout-Qualitätsregel — ein Textobjekt trägt einen Merge-Field-Anker (<<Feld>>), den FileMaker nicht auflösen kann. Ein solcher Anker wird nicht verworfen: er wird im Blätter- und Seitenansichtsmodus LITERAL gerendert, der Benutzer sieht also das rohe <<Feld>> anstelle eines Werts. Im Katalog hinterlässt er außerdem keine Spur — keine displays_field-Kante, kein eigenes Objekt —, weshalb diese Regel die einzige Stelle ist, an der er sichtbar wird. Erkannt wird über einen Vergleich: die Anker im Text (Merge-Variablen <<$…>> und Layoutformeln <<ƒ:…>> ausgenommen, eine Wiederholung oder eine TO-Qualifizierung zählt als ein Anker) gegen die FieldReference-Einträge der strukturellen FieldList des Objekts, die genau einen Eintrag je aufgelöstem Anker führt. Über den Befund entscheidet die Zählung; die namentlich genannten Verdächtigen sind eine Zugabe und bleiben leer, wenn die Namen nicht sicher zuzuordnen sind.",
+    "messages.unresolved-anchor": "Merge-Anker ohne Feldauflösung — er wird literal gerendert"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Treffer",
+    "summary_kpi.props.items[1].label": "Nicht auflösbare Anker",
+    "summary_kpi.props.items[2].label": "Betroffene Layouts",
+    "summary_kpi.props.items[3].label": "Betroffene Dateien",
+    "findings_card.props.title": "Nicht auflösbarer Merge-Anker",
+    "findings_table.props.searchPlaceholder": "Datei, Layout, Objekt oder Anker suchen…",
+    "findings_table.props.empty.message": "Keine nicht auflösbaren Merge-Anker gefunden.",
+    "findings_table.props.columns[0].label": "Datei",
+    "findings_table.props.columns[1].label": "Layout",
+    "findings_table.props.columns[2].label": "Objekt",
+    "findings_table.props.columns[3].label": "Rendert literal",
+    "findings_table.props.columns[4].label": "Alle Anker",
+    "findings_table.props.columns[5].label": "Nicht aufgelöst",
+    "findings_table.props.columns[6].label": "Anker",
+    "findings_table.props.columns[9].label": "Breite",
+    "findings_table.props.columns[10].label": "Höhe"
+  }
+}

@@ -108,6 +108,34 @@
   text-decoration: underline;
 }
 
+/* Cross-navigation chip (→ fm-spec browser): filter-chip look — soft accent
+   pill in the meta strip, stronger on hover. Same tokens as the active
+   toolbar chips elsewhere (--color-accent-soft-*). */
+.docs-entry__meta-chip {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: var(--color-accent-soft-bg);
+  color: var(--color-accent-soft-fg);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+.docs-entry__meta-chip:hover,
+.docs-entry__meta-chip:focus-visible {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-text-inverse, #fff);
+  text-decoration: none;
+}
+
 /* Loading / error / empty states */
 .docs-entry__loading,
 .docs-entry__empty {

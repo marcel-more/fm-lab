@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Onbekende foutcode-literal",
+    "analysis.defaultResult.meaning": "Vergelijkingen van Get(LastError) met een code die de FileMaker-foutcodetabel niet vermeldt"
+  },
+  "layout": {}
+}

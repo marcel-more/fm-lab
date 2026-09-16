@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "実効的な最小 FileMaker バージョン",
+    "analysis.defaultResult.meaning": "ファイルが宣言する最小バージョンよりも新しい FileMaker を必要とする、対象範囲内の機能"
+  },
+  "layout": {}
+}

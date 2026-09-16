@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../api/client';
+import { useApiLang } from './useApiLang';
 import { isConnectionError } from '../lib/netErrors';
 import type { components } from '@packages/shared/types';
 
@@ -102,6 +103,10 @@ export const useInfiniteSearch = ({
     requestGenerationRef.current++;
   }
 
+  // Aktive UI-Sprache: die Trefferliste zeigt bei Built-ins die lokalisierte
+  // Fassung neben dem kanonischen Namen (Localized_Name).
+  const lang = useApiLang();
+
   // Build search params (normalize to API format)
   const buildSearchParams = useCallback((withOffset: number = 0) => {
     // Wildcard-Mapping: * → % (SQL-Wildcard)
@@ -118,8 +123,9 @@ export const useInfiniteSearch = ({
       type: objectType as any || undefined,
       limit: CHUNK_SIZE,
       offset: withOffset,
+      lang,
     };
-  }, [searchName, selectedFile, objectType]);
+  }, [searchName, selectedFile, objectType, lang]);
 
   /**
    * Reset and load initial data

@@ -62,6 +62,8 @@ The [XML export](../xml/XML.md) represents each object type as its own dictionar
 | [DDR_Calculations](catalog-tables/DDR_Calculations.md) | Tokenized formula chunks for dependency analysis (requires DDR-Info) |
 | [DDR_ChunkListContexts](catalog-tables/DDR_ChunkListContexts.md) | Context TO and chunk count per ChunkList anchor — records empty ChunkLists too (requires DDR-Info) |
 | [DesignFunctionNames](catalog-tables/DesignFunctionNames.md) | FileMaker design-function names in every reference language — positive match list of the phase-1c chunk retype (generated from the reference database, not from the export) |
+| [BuiltinFunctionIdentity](catalog-tables/BuiltinFunctionIdentity.md) | Which reference function a synthetic BuiltinFunction node stands for — canonical name, function ID, namespace (resolved at import) |
+| [BuiltinTokenResolution](catalog-tables/BuiltinTokenResolution.md) | The other side of that resolution: one row per occurring token form, mapping it to the node it resolves to — several localized spellings meet on one built-in |
 | [VariablesCatalog](catalog-tables/VariablesCatalog.md) | Aggregated view per variable: scope, counts, reliability |
 | [VariableUsages](catalog-tables/VariableUsages.md) | Every single variable set/read with its context |
 | [PluginFunctionUsages](catalog-tables/PluginFunctionUsages.md) | Plugin function calls (e.g. MBS) found in calculations |
@@ -72,6 +74,7 @@ The [XML export](../xml/XML.md) represents each object type as its own dictionar
 |---|---|
 | [BaseTableCatalog](catalog-tables/BaseTableCatalog.md) | Base tables (schema level) |
 | [FieldsForTables](catalog-tables/FieldsForTables.md) | Full field definitions: type, storage, auto-enter, validation, summary |
+| [FieldDisplayNames](catalog-tables/FieldDisplayNames.md) | Elements of a field's customized display names, one row per context key (FileMaker 26 exports only) |
 | [TableOccurrenceCatalog](catalog-tables/TableOccurrenceCatalog.md) | Table occurrences incl. graph-canvas geometry |
 | [RelationshipCatalog](catalog-tables/RelationshipCatalog.md) | Relationships, one row per join predicate, incl. sort definitions |
 | [ExternalDataSourceCatalog](catalog-tables/ExternalDataSourceCatalog.md) | External data sources |
@@ -85,6 +88,7 @@ The [XML export](../xml/XML.md) represents each object type as its own dictionar
 | [LayoutObjects](catalog-tables/LayoutObjects.md) | All layout objects (22 types) with real container nesting |
 | [LayoutObjectConditions](catalog-tables/LayoutObjectConditions.md) | Conditional-formatting rules, one row per rule, with parsed condition and format |
 | [LayoutObjectSymbols](catalog-tables/LayoutObjectSymbols.md) | `{{…}}` symbol inventory per text layout object |
+| [LayoutTableViewColumns](catalog-tables/LayoutTableViewColumns.md) | Columns of a layout's table view incl. their field reference (FileMaker 26 exports only) |
 | [ThemeCatalog](catalog-tables/ThemeCatalog.md) | Layout themes incl. raw CSS rule set |
 
 ### Custom functions
@@ -141,7 +145,7 @@ Beyond the documented surface, the catalog contains working tables the pipeline 
 
 Where the object catalog describes your solution, [fm-spec](../Wiki/fm-spec.md) describes FileMaker itself. `reference/fm_spec.duckdb` is a solution-independent, machine-readable reference of the FileMaker language: all 207 script steps and 367 calculation functions with stable IDs, official documentation links in up to 11 locales, structured parameter definitions, and — the part no documentation site offers — a machine-readable emission layer: per-step XML templates, option grammars with allowed values, structural constraints, per-step platform compatibility and curated per-function platform affinity. Names are treated strictly as a localized display layer over stable IDs, which is why FM-Lab's analyses and generated artifacts work regardless of the language a developer's FileMaker runs in.
 
-The database is organized in five layers plus a build stamp:
+The database is organized in six layers plus a build stamp:
 
 ### Canonical core
 
@@ -170,20 +174,27 @@ The database is organized in five layers plus a build stamp:
 | [function_parameters_lang](fm-spec-tables/function_parameters_lang.md) | Localized function-parameter names |
 | [function_name_lookup](fm-spec-tables/function_name_lookup.md) | Any localized name → canonical function ID |
 | [script_triggers_lang](fm-spec-tables/script_triggers_lang.md) | Localized trigger-event labels as the trigger dialogs write them |
-| [language_constants](fm-spec-tables/language_constants.md) | Canonical spellings of language constants |
+| [language_constants](fm-spec-tables/language_constants.md) | Canonical spellings of language constants, with the functions each constant is a parameter value of (`used_with`) |
+| [error_codes_lang](fm-spec-tables/error_codes_lang.md) | Localized messages of the FileMaker error codes (10 locales) |
+| [feature_versions_lang](fm-spec-tables/feature_versions_lang.md) | Localized feature labels of the version table (10 locales) |
 
 ### Emission layer (machine-readable syntax & grammar)
 
 | Table | Content |
 |---|---|
 | [step_xml_map](fm-spec-tables/step_xml_map.md) | XML snippet template, element order and SaXML example per step |
+| [coverages](fm-spec-tables/coverages.md) | Shape coverages of the build (FileMaker version, paired build, SaXML version, base flag) — see [Coverage resolution](Coverage%20resolution.md) |
+| [coverage_step_rules](fm-spec-tables/coverage_step_rules.md) | Editor chrome/state a FileMaker version writes on every step, dropped before a template match |
+| [coverage_renames](fm-spec-tables/coverage_renames.md) | Spelling and wrapping deltas of a coverage relative to the base shape (read direction: corrected element names, renamed values, the text hoist of one step) |
 | [step_repeat_groups](fm-spec-tables/step_repeat_groups.md) | Repeat groups (lists) per step: container, item template, notation label |
 | [step_skeleton_elements](fm-spec-tables/step_skeleton_elements.md) | Skeleton hulls per step that survive the pruning of unconfigured content |
 | [step_option_element_bindings](fm-spec-tables/step_option_element_bindings.md) | Option-value/element couplings per step (mode-bound elements, e.g. device modes) |
+| [step_mirror_elements](fm-spec-tables/step_mirror_elements.md) | Value-copy rules per step (a value FileMaker writes twice and keeps in sync, e.g. the PDF document title) |
 | [step_option_implications](fm-spec-tables/step_option_implications.md) | Parse-side option implications of the text notation (keywords, reference forms, mode switches) |
 | [step_constraints](fm-spec-tables/step_constraints.md) | Structural rules a valid snippet must satisfy — plus the registry of documented FileMaker serialization bugs (warning class) |
 | [constraint_kinds](fm-spec-tables/constraint_kinds.md) | Registry of the constraint-kind vocabulary with consumer-facing lead texts for the bug kinds |
 | [step_compat](fm-spec-tables/step_compat.md) | Platform matrix per step: Pro, Server, Go, WebDirect, Cloud, Data API, CWP (tri-state: Yes / No / Partial) |
+| [trigger_compat](fm-spec-tables/trigger_compat.md) | Platform matrix per script-trigger event, same seven columns and tri-state as `step_compat` |
 | [function_platform_affinity](fm-spec-tables/function_platform_affinity.md) | Curated platform *affinity* per function ("meaningful results only there") — Claris publishes no function compatibility table |
 | [ref_element_semantics](fm-spec-tables/ref_element_semantics.md) | How reference elements resolve against the solution catalog |
 
@@ -194,6 +205,13 @@ The database is organized in five layers plus a build stamp:
 | [step_os_affinity](fm-spec-tables/step_os_affinity.md) | Curated OS affinity per step (macOS / Windows / Linux / iOS): exclusive, source-true inverse *unsupported*, behavioral variants — distilled from Claris help prose, quote per row |
 | [function_os_affinity](fm-spec-tables/function_os_affinity.md) | Curated OS affinity per function, plus the `os_probe` class (Get(SystemPlatform) & co — the guard idiom, not a binding) |
 | [runtime_os_matrix](fm-spec-tables/runtime_os_matrix.md) | Host matrix runtime × OS — the only sanctioned translator between the runtime and OS axes |
+
+### Runtime & diagnostics
+
+| Table | Content |
+|---|---|
+| [error_codes](fm-spec-tables/error_codes.md) | FileMaker error codes as spans (`code_from`…`code_to`, ranges such as 5000-5499 included), scope core / web, English message |
+| [feature_versions](fm-spec-tables/feature_versions.md) | Features not compatible with previous versions and the version each was introduced in (three-part numeric key, stable feature ids) |
 
 ### Action layer
 
@@ -206,7 +224,7 @@ The database is organized in five layers plus a build stamp:
 
 | Table | Content |
 |---|---|
-| [reference_meta](fm-spec-tables/reference_meta.md) | Build stamp: schema version, FileMaker coverage, attribution pointer |
+| [reference_meta](fm-spec-tables/reference_meta.md) | Build stamp: schema version, shape and documentation coverages, attribution pointer |
 
 ## 4 · plugin-spec — the plug-in platform map
 

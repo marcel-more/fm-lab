@@ -1,5 +1,5 @@
 -- @title: Solution profile (R1) — solution-wide facts for header, business context, architecture
--- @description: Eleven read-only result sets. Variables: engine (required).
+-- @description: Twelve read-only result sets. Variables: engine (required). #12 attaches reference/fm_spec.duckdb read-only (fm_spec >= 2.8.0; empty on older references).
 -- @version: 1.0.0
 -- @tags: solution, profile, report
 -- @note: #9 reads ClusterGodNodes (view over LogicalLinks) exactly once; nothing here scans
@@ -131,3 +131,21 @@ SELECT folder, File_Name, SUM(c) AS members, COUNT(*) AS communities_touched,
 FROM per GROUP BY 1, 2
 ORDER BY communities_touched DESC, members DESC
 LIMIT 15;
+
+-- #12 (8b) trigger entry points × runtime compatibility — how web-/mobile-ready are the
+-- solution's UI entry points? Per file: triggers whose event does not fire (No) or fires
+-- only partially in WebDirect / Go (fm_spec trigger_compat, tri-state: NULL = Partial,
+-- never "undocumented"). Reference attached read-only; on a reference without the table
+-- every count is 0 and `compat_rows` says so.
+ATTACH IF NOT EXISTS 'reference/fm_spec.duckdb' AS ref (READ_ONLY);
+SELECT t.File_Name,
+       COUNT(*) AS script_triggers,
+       COUNT(*) FILTER (WHERE c.webdirect = false) AS webdirect_no,
+       COUNT(*) FILTER (WHERE c.trigger_id IS NOT NULL AND c.webdirect IS NULL) AS webdirect_partial,
+       COUNT(*) FILTER (WHERE c.go = false) AS go_no,
+       COUNT(*) FILTER (WHERE c.trigger_id IS NOT NULL AND c.go IS NULL) AS go_partial,
+       COUNT(*) FILTER (WHERE c.trigger_id IS NOT NULL) AS compat_rows
+FROM ScriptTriggers t
+LEFT JOIN (SELECT trigger_id, webdirect, go FROM ref.trigger_compat) c ON c.trigger_id = t.Trigger_ID
+WHERE t.Script_UUID IS NOT NULL
+GROUP BY 1 ORDER BY script_triggers DESC;

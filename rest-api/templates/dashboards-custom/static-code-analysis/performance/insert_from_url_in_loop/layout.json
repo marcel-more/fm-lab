@@ -68,7 +68,7 @@
                   "label": "Script"
                 },
                 {
-                  "field": "step_index",
+                  "field": "step_no",
                   "label": "Step",
                   "align": "right",
                   "format": "number"

@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Déclencheurs propres à la plateforme : FileMaker Go (iOS)",
+    "analysis.defaultResult.meaning": "Scripts du périmètre rattachés à des événements déclencheurs qui ne se produisent que dans FileMaker Go (iOS)"
+  },
+  "layout": {}
+}

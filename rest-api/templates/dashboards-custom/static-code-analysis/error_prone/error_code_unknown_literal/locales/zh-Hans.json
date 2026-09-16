@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "未知错误代码字面量",
+    "analysis.defaultResult.meaning": "Get(LastError) 与 FileMaker 错误代码表中未列出的代码进行的比较"
+  },
+  "layout": {}
+}

@@ -1,10 +1,11 @@
 {
   "manifest": {
     "title": "コメントアウトされた Layout 計算式",
-    "description": "Layout 品質ルール — Layout オブジェクトの非表示・ツールチップ・ラベル計算式が全体としてコメントになっています。式は評価されず、意図した動作は静かに無効化されています。\n\nfmCheckMate チェック「Broken Calculation /*Commented Out*/」 — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+    "description": "Layout 品質ルール — Layout オブジェクトの非表示・フィールド入力・ツールチップ・ラベル計算式が全体としてコメントになっています。式は評価されず、意図した動作は静かに無効化されています。\n\nfmCheckMate チェック「Broken Calculation /*Commented Out*/」 — https://github.com/mrwatson-de/fmCheckMate-XSLT",
     "messages.hide": "非表示の計算式が完全にコメントアウトされています",
     "messages.tooltip": "ツールチップの計算式が完全にコメントアウトされています",
-    "messages.label": "ラベルの計算式が完全にコメントアウトされています"
+    "messages.label": "ラベルの計算式が完全にコメントアウトされています",
+    "messages.entry": "フィールド入力の計算式が完全にコメントアウトされています"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "検出数",
@@ -22,6 +23,7 @@
     "calc_slot_filter.props.options[1].label": "非表示",
     "calc_slot_filter.props.options[2].label": "ツールチップ",
     "calc_slot_filter.props.options[3].label": "ラベル",
+    "calc_slot_filter.props.options[4].label": "フィールド入力",
     "object_type_select.props.label": "オブジェクトタイプ",
     "object_type_select.props.emptyOptionLabel": "すべてのオブジェクトタイプ",
     "findings_table.props.columns[7].label": "幅",

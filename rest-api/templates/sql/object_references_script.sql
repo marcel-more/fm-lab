@@ -257,15 +257,26 @@ UNION ALL
 -- dieselbe Funktion mehrmals pro Step vorkommen kann.
 -- Anreicherung mit Reference-DB-Daten (function_name_lookup → functions_lang)
 -- erfolgt im Controller via referenceService.enrichFunctionTokens.
+-- Der Chunk-ROHTEXT ist entity-kodiert (`AnzahlGefundeneDatens&#xE4;tze` — so
+-- serialisiert FileMakers DOM-Pfad nach Chunk_Content). v_builtin_token_lookup
+-- führt beide Achsen, kodiert und dekodiert, also wird hier mit dem Rohtext
+-- nachgeschlagen und die lesbare Schreibweise (gleiche Sprache, nur dekodiert)
+-- aus der View übernommen; ohne Treffer bleibt der Rohtext stehen.
 SELECT DISTINCT
   CAST(xcr.Source_Subkey AS INTEGER) AS line_index,
   5 AS source_priority,
   'function' AS type,
-  regexp_extract(dc.Chunk_Content, '<Chunk[^>]*>(.+?)</Chunk>', 1) AS name,
-  -- Synthetische ObjectCatalog-UUID für Cross-Navigation.
-  -- Get-Sub-Parameter werden im aktuellen Token-Modell als nackter 'Get'-Token gerendert;
-  -- der bare 'Get'-ObjectCatalog-Eintrag existiert mit dieser UUID-Form.
-  md5('BuiltinFunction::' || regexp_extract(dc.Chunk_Content, '<Chunk[^>]*>(.+?)</Chunk>', 1)) AS uuid,
+  COALESCE(bl.Name_Decoded, fn.token) AS name,
+  -- Cross-Navigation: NACHSCHLAGEN statt aus dem Namen rechnen. Die UUID eines
+  -- Built-ins ist seit Katalog-Schema 1.32.0 aus dem kanonischen englischen
+  -- Referenznamen gebildet, nicht aus dem Token — `md5('BuiltinFunction::' ||
+  -- <Token>)` traf bei lokalisierten Formeln (`Seitennummer`) einen Knoten, den
+  -- es nicht gibt, und bei Namen mit Umlaut zusätzlich einen, der wegen der
+  -- Entity-Kodierung nie existieren konnte. v_builtin_token_lookup kennt jede
+  -- Referenzsprache, beide Namensräume, beide Text-Achsen und die
+  -- Namens-Fallback-Knoten; ein Token ohne Treffer bleibt über den LEFT JOIN
+  -- uuidlos und rendert unverlinkt statt auf 404 zu zeigen.
+  bl.Object_UUID AS uuid,
   CAST(NULL AS VARCHAR) AS field_file,
   CAST(NULL AS VARCHAR) AS field_basetable,
   CAST(NULL AS VARCHAR) AS to_name,
@@ -278,6 +289,11 @@ FROM XMLCalcReferences xcr
 JOIN DDR_Calculations dc
   ON dc.Calc_Hash = xcr.Calc_Hash
  AND dc.File_Name = xcr.File_Name
+CROSS JOIN LATERAL (
+  SELECT regexp_extract(dc.Chunk_Content, '<Chunk[^>]*>(.+?)</Chunk>', 1) AS token
+) fn
+LEFT JOIN v_builtin_token_lookup bl
+  ON bl.Name_Norm = lower(fn.token)
 WHERE xcr.Source_UUID  = getvariable('uuid')
   AND (getvariable('file') IS NULL OR xcr.File_Name = getvariable('file'))
   AND xcr.Source_Type  = 'Script'
@@ -287,7 +303,6 @@ WHERE xcr.Source_UUID  = getvariable('uuid')
   -- keine FileMaker-Funktionen (kein Reference-DB-Eintrag, kein Hilfe-Link).
   -- Wir filtern sie hier raus, damit das Frontend keine Popover-losen
   -- function-Refs anzeigen muss. `xor`/`not` defensiv mit drin.
-  AND regexp_extract(dc.Chunk_Content, '<Chunk[^>]*>(.+?)</Chunk>', 1)
-        NOT IN ('and', 'or', 'not', 'xor')
+  AND fn.token NOT IN ('and', 'or', 'not', 'xor')
 
 ORDER BY line_index, source_priority, type, name, sub_function NULLS FIRST;

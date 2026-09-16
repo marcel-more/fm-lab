@@ -3,13 +3,13 @@
 -- @params: uuid (required)
 -- @output_format: content
 -- @author: Marcel
--- @version: 1.3
+-- @version: 1.4
 -- @tags: fields, details, ddr, calculations
 -- @note: Shows field properties and calculation formula (primary: Text CDATA, fallback: DDR chunks reconstruction)
 
 WITH field_match AS (
   SELECT f.Field_UUID, f.Field_Name, f.Table_Name, f.Table_UUID,
-         f.Field_Type, f.Data_Type, f.Field_Comment,
+         f.Field_Type, f.Data_Type, f.Field_Comment, f.Field_Annotation,
          f.Is_Global, f.Max_Repetitions, f.DDR_Hash, f.File_Name,
          f.Field_ID, f.Calculation_Text
   FROM FieldsForTables f
@@ -113,9 +113,13 @@ SELECT content FROM (
   SELECT 3, 7, 'Comment:      ' || fm.Field_Comment FROM field_match fm
   WHERE fm.Field_Comment IS NOT NULL AND fm.Field_Comment != ''
   UNION ALL
-  SELECT 3, 8, 'File:         ' || fm.File_Name FROM field_match fm
+  -- FileMaker 26 (schema 1.28.0): free-text annotation of the field, only when set
+  SELECT 3, 8, 'Annotation:   ' || fm.Field_Annotation FROM field_match fm
+  WHERE fm.Field_Annotation IS NOT NULL AND fm.Field_Annotation != ''
   UNION ALL
-  SELECT 3, 9, 'UUID:         ' || fm.Field_UUID FROM field_match fm
+  SELECT 3, 9, 'File:         ' || fm.File_Name FROM field_match fm
+  UNION ALL
+  SELECT 3, 10, 'UUID:         ' || fm.Field_UUID FROM field_match fm
 
   UNION ALL
 

@@ -27,6 +27,34 @@
   font-weight: 500;
   color: var(--color-text-muted);
 }
+/* Gegenlink in die Claris-Doku-Seite — gleiche Chip-Optik wie der
+   fm-spec-Chip in der Doku-Meta-Zeile (.docs-entry__meta-chip): Accent-Pill,
+   auf Hover invertiert. Sitzt im <h1>, daher align-self: center gegen die
+   Baseline-Ausrichtung des Titels. */
+.fmspec-title__doclink {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: var(--color-accent-soft-bg);
+  color: var(--color-accent-soft-fg);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+.fmspec-title__doclink:hover,
+.fmspec-title__doclink:focus-visible {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-text-inverse, #fff);
+  text-decoration: none;
+}
 .fmspec-subtitle {
   margin: 0;
   font-size: 0.9rem;
@@ -224,6 +252,13 @@
 .fmspec-badge--no {
   background: var(--color-bg-surface-2, rgba(154, 154, 168, 0.2));
   color: var(--color-text-muted);
+}
+/* option FileMaker discards on paste whatever its value (fm_spec paste_dropped) */
+.fmspec-badge--dropped {
+  margin-left: 0.4em;
+  color: var(--color-text-secondary);
+  border: 1px dashed var(--color-border);
+  background: transparent;
 }
 .fmspec-tag {
   margin-left: 6px;
@@ -429,6 +464,29 @@
 }
 .fmspec-inverted { cursor: help; }
 
+/* shape coverages (fm_spec >= 2.0.0): switch + override badge */
+.fmspec-coverage-switch {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem;
+  margin: 0 0 0.75rem; font-size: 0.85rem;
+}
+.fmspec-coverage-switch__label { color: var(--color-text-muted); }
+.fmspec-coverage-switch__btn {
+  font: inherit; font-size: 0.8rem; padding: 0.15rem 0.55rem;
+  border: 1px solid var(--color-border); border-radius: 999px;
+  background: transparent; color: var(--color-text-primary); cursor: pointer;
+}
+.fmspec-coverage-switch__btn.is-active {
+  background: var(--color-primary); border-color: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+.fmspec-tag--coverage {
+  margin-left: 0.35rem; font-size: 0.7rem; vertical-align: middle;
+  background: var(--color-primary-soft, rgba(80, 120, 200, 0.15));
+  color: var(--color-primary); border: 1px solid var(--color-primary);
+  cursor: help;
+}
+.fmspec-retired { text-decoration: line-through; }
+
 /* per-enum-value evidence badge (shown only when it deviates from the option row) */
 .fmspec-evidence-badge {
   display: inline-block;
@@ -516,6 +574,16 @@
 .fmspec-rg__meta {
   font-size: 0.82rem;
   color: var(--color-text-secondary);
+}
+/* skeleton hulls as a tree: nested lists indent below their parent hull */
+.fmspec-hull-tree .fmspec-hull-tree {
+  margin-top: 4px;
+  margin-left: 14px;
+  gap: 4px;
+}
+/* block headings carry a short explanation as a tooltip */
+.fmspec-subhead[title] {
+  cursor: help;
 }
 
 .fmspec-notes {

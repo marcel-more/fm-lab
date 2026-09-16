@@ -233,6 +233,19 @@ never appear on the OS axis:
   with qualifier `sdk-only`; the `server` flag is a runtime statement and
   stays out of the OS profile). Member `platform_specific_os`.
 
+**Third evidence on axis a — script triggers** (`ref.trigger_compat`, since
+fm_spec 2.8.0, same seven columns and tri-state as `step_compat`): a layout,
+layout object or file can carry an event that never fires — or fires only
+partially — on the UI client the solution targets. Join `ScriptTriggers.
+Trigger_ID = trigger_id` (the slot id; `Trigger_Action` is a localizable
+passthrough). Only the **UI-client sets** carry this member
+(`platform_compat_triggers_webdirect`, `platform_compat_triggers_ios`): a
+trigger is a UI event, "does not fire under PSoS" is a property of every
+trigger, not a finding. Axis b gets the trigger evidence too: the events that
+exist only in Go (strict predicate `go AND every other column = false` over
+the table, no id list) mark the attached scripts as iOS-bound
+(`platform_specific_triggers_ios`, profile `specific` of `platform-ios`).
+
 **Guard idiom (context evidence, not a binding):** `os_probe` functions —
 Get(SystemPlatform), Get(Device), Get(SystemVersion),
 Get(ApplicationArchitecture) (`ref.function_os_affinity`,
@@ -283,4 +296,8 @@ no matrix rows until its host OS is documented with a Claris source.
 environment; `platform-odata` uses the borrowed `server` base + the four
 derivable OData rules). `platform-ios`/`platform-server` additionally carry
 the binding aspect as a second member (`platform_specific_<env>`, profiles
-`compat`/`specific`).
+`compat`/`specific`); `platform-webdirect`/`platform-ios` carry the trigger
+members since fm_spec 2.8.0. Error-code literals compared with
+`Get(LastError)` are a separate question (`script-error-checks`:
+`error_code_unknown_literal`, `error_code_web_only`, inventory
+`error_code_inventory`; lookup rule in `query-cookbook.md`).

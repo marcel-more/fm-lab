@@ -1,10 +1,11 @@
 {
   "manifest": {
     "title": "Calcolo di Layout commentato",
-    "description": "Regola di qualità del Layout — un calcolo di occultamento, tooltip o etichetta di un oggetto di Layout è costituito interamente da un commento. La formula non viene mai valutata; il comportamento previsto è disattivato silenziosamente.\n\nBasato sul controllo fmCheckMate «Broken Calculation /*Commented Out*/» — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+    "description": "Regola di qualità del Layout — un calcolo di occultamento, immissione campo, tooltip o etichetta di un oggetto di Layout è costituito interamente da un commento. La formula non viene mai valutata; il comportamento previsto è disattivato silenziosamente.\n\nBasato sul controllo fmCheckMate «Broken Calculation /*Commented Out*/» — https://github.com/mrwatson-de/fmCheckMate-XSLT",
     "messages.hide": "Il calcolo di occultamento è completamente commentato",
     "messages.tooltip": "Il calcolo del tooltip è completamente commentato",
-    "messages.label": "Il calcolo dell'etichetta è completamente commentato"
+    "messages.label": "Il calcolo dell'etichetta è completamente commentato",
+    "messages.entry": "Il calcolo di immissione del campo è completamente commentato"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Risultati",
@@ -22,6 +23,7 @@
     "calc_slot_filter.props.options[1].label": "occultamento",
     "calc_slot_filter.props.options[2].label": "tooltip",
     "calc_slot_filter.props.options[3].label": "etichetta",
+    "calc_slot_filter.props.options[4].label": "immissione campo",
     "object_type_select.props.label": "Tipo di oggetto",
     "object_type_select.props.emptyOptionLabel": "tutti i tipi di oggetto",
     "findings_table.props.columns[7].label": "Larghezza",

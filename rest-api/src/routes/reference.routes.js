@@ -62,6 +62,16 @@ router.get('/reference/meta', controller.getMeta);
 // Lokalisierte Script-Trigger-Event-Beschriftungen (fm_spec ≥ 1.18.0)
 router.get('/reference/trigger-events', controller.getTriggerEvents);
 
+// === Runtime & diagnostics (fm_spec ≥ 2.8.0) ==================================
+// Listen VOR den :param-Details; /error-codes/:code nimmt negative Zahlen an
+// (der Parameter ist ein freier Pfadabschnitt, geprüft im Controller).
+router.get('/reference/triggers', controller.listTriggers);
+router.get('/reference/triggers/:idOrName', controller.getTrigger);
+router.get('/reference/error-codes', controller.listErrorCodes);
+router.get('/reference/error-codes/:code', controller.getErrorCode);
+router.get('/reference/feature-versions', controller.listFeatureVersions);
+router.get('/reference/constants', controller.listConstants);
+
 // === Steps ====================================================================
 // Reihenfolge: literale/spezifische Sub-Pfade VOR dem :idOrSlug-Detail.
 router.get('/reference/steps', controller.listSteps);

@@ -1,10 +1,11 @@
 {
   "manifest": {
     "title": "Calcul de Layout entièrement commenté",
-    "description": "Règle de qualité de Layout — un calcul de masquage, d'infobulle ou d'étiquette d'un objet de Layout est entièrement mis en commentaire. La formule n'est jamais évaluée ; le comportement prévu est désactivé silencieusement.\n\nD’après le contrôle fmCheckMate « Broken Calculation /*Commented Out*/ » — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+    "description": "Règle de qualité de Layout — un calcul de masquage, de saisie du champ, d'infobulle ou d'étiquette d'un objet de Layout est entièrement mis en commentaire. La formule n'est jamais évaluée ; le comportement prévu est désactivé silencieusement.\n\nD’après le contrôle fmCheckMate « Broken Calculation /*Commented Out*/ » — https://github.com/mrwatson-de/fmCheckMate-XSLT",
     "messages.hide": "Le calcul de masquage est entièrement commenté",
     "messages.tooltip": "Le calcul de l'infobulle est entièrement commenté",
-    "messages.label": "Le calcul de l'étiquette est entièrement commenté"
+    "messages.label": "Le calcul de l'étiquette est entièrement commenté",
+    "messages.entry": "Le calcul de saisie du champ est entièrement commenté"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Résultats",
@@ -22,6 +23,7 @@
     "calc_slot_filter.props.options[1].label": "masquage",
     "calc_slot_filter.props.options[2].label": "infobulle",
     "calc_slot_filter.props.options[3].label": "étiquette",
+    "calc_slot_filter.props.options[4].label": "saisie du champ",
     "object_type_select.props.label": "Type d'objet",
     "object_type_select.props.emptyOptionLabel": "tous les types d'objet",
     "findings_table.props.columns[7].label": "Largeur",

@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "유효 최소 FileMaker 버전",
+    "analysis.defaultResult.meaning": "파일이 선언한 최소 버전보다 최신 FileMaker가 필요한 범위 내 기능"
+  },
+  "layout": {}
+}

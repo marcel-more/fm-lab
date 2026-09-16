@@ -27,7 +27,10 @@
     "BaseTable": "Tabelldetaljer",
     "CustomFunction": "Funktionsdetaljer",
     "ValueList": "Värdelistedetaljer",
-    "Calculation": "Beräkningsdetaljer"
+    "Calculation": "Beräkningsdetaljer",
+    "BuiltinFunction": "Detaljer för inbyggd funktion",
+    "PluginFunction": "Detaljer för plugin-funktion",
+    "PluginComponent": "Detaljer för plugin-komponent"
   },
   "layoutCanvas": {
     "searchPlaceholder": "Sök layoutobjekt…",
@@ -160,6 +163,10 @@
       "hide": {
         "short": "Hide",
         "long": "Döljvillkor"
+      },
+      "field_entry": {
+        "short": "Entry",
+        "long": "Fältinmatningsvillkor"
       },
       "conditional_format": {
         "short": "CF",
@@ -312,7 +319,8 @@
     "noName": "(inget namn)",
     "filterByCategory": "Filtrera efter {{category}}",
     "graphButton": "Graf",
-    "valueListMatch": "Värden"
+    "valueListMatch": "Värden",
+    "spellingMatch": "Stavning"
   },
   "scriptSearchFilter": {
     "searchAria": "Sök referenser",
@@ -513,6 +521,7 @@
     "ariaLabel": "Tabelldetaljer",
     "metaName": "Namn",
     "metaFile": "Fil",
+    "metaComment": "Kommentar",
     "fields": "Fält",
     "count": "Antal",
     "total": "Totalt",
@@ -705,6 +714,7 @@
       "step_xslt": "XSLT-formatmall",
       "record_access": "Beräkning för poståtkomst",
       "hide": "Döljvillkor",
+      "field_entry": "Fältinmatningsvillkor",
       "tooltip": "Verktygstips",
       "placeholder": "Platshållare",
       "conditional_format": "Villkorlig formatering",
@@ -739,7 +749,12 @@
     "paramFieldLabel": "Parameterfält",
     "paramFieldCandidates": "Kandidater:",
     "paramFieldOrphan": "Inget fält med samma namn i den här filen (föräldralöst namn)",
-    "openParamCalc": "Öppna beräkningsdetaljer"
+    "openParamCalc": "Öppna beräkningsdetaljer",
+    "platformsLabel": "Plattformar",
+    "compatPartial": "delvis",
+    "compatNo": "nej",
+    "compatPartialHint": "Delvis — stöds villkorligt; se händelsens hjälpsida hos Claris",
+    "compatNoHint": "Händelsen utlöses inte i den körmiljön"
   },
   "layoutObjectDetail": {
     "showInLayout": "Visa i layout: {{name}}",
@@ -812,5 +827,40 @@
     "propPosition": "Position/storlek",
     "propNesting": "Kapsling",
     "nestingLevel": "Nivå {{level}}"
+  },
+  "pseudoFunction": {
+    "metaFunction": "Funktion",
+    "metaType": "Typ",
+    "metaScope": "Omfattning",
+    "scopeValue": "Lösningsoberoende – tillhör ingen fil",
+    "usageHeading": "Användning",
+    "usageEmpty": "Används inte i den här lösningen.",
+    "colRole": "Roll",
+    "colType": "Objekttyp",
+    "colObjects": "Objekt",
+    "colFiles": "Filer",
+    "colOccurrences": "Förekomster",
+    "totalRow": "Totalt"
+  },
+  "builtinFunction": {
+    "clarisHelpOnline": "Claris-hjälp ↗",
+    "typeValue": "Inbyggd FileMaker-funktion"
+  },
+  "pluginFunction": {
+    "docsetLink": "{{plugin}}-dokumentation →",
+    "docsOnline": "{{plugin}}-dokumentation ↗",
+    "typeValue": "Plugin-funktion",
+    "metaCatalogName": "Katalognamn",
+    "metaComponent": "Komponent",
+    "metaPlugin": "Plugin"
+  },
+  "pluginComponent": {
+    "typeValue": "Plugin-komponent",
+    "documentedFunctions": "Funktioner i referensen",
+    "vendorComponent": "Leverantörens komponent",
+    "functionsInSolution": "Funktioner i den här lösningen",
+    "usedSuffix": "{{used}} används",
+    "functionsHeading": "Funktioner",
+    "colFunction": "Funktion"
   }
 }

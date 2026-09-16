@@ -170,6 +170,10 @@ SELECT
     CASE
         WHEN c.Calc_Kind_Raw = ''                   THEN 'Function Body'
         WHEN c.Calc_Kind_Raw ~ '^[0-9]+(_[0-9]+)*$' THEN 'Step Parameter'
+        -- Feld-Eingabeformel: FileMaker verwendet für sie denselben DDR-Suffix
+        -- 'Hide' wie für die Ausblendungsformel (Schema 1.31.0) — die Rolle
+        -- entscheidet, nicht der Rohschlüssel.
+        WHEN c.Calc_Role = 'field_entry'            THEN 'Field Entry Condition'
         WHEN c.Calc_Kind_Raw = 'Hide'               THEN 'Hide Condition'
         WHEN c.Calc_Kind_Raw = 'Tooltip'            THEN 'Tooltip'
         WHEN c.Calc_Kind_Raw = 'Label'              THEN 'Calculated Label'
@@ -225,13 +229,13 @@ INSERT INTO sql_name_wrappers VALUES
     ('_SQL_Decimal',   'cast');
 
 -- --------------------------------------------
--- v_sql_field_usage — Felder, die eine SQL-Abfrage speisen (AP-4A)
+-- v_sql_field_usage — Felder, die eine SQL-Abfrage speisen
 -- --------------------------------------------
 -- Beantwortet „welche Felder speist eine ExecuteSQL-Abfrage (und in welchem Objekt)?".
 -- Eine Berechnung gilt als SQL-Kontext, wenn sie die Built-in-Funktion ExecuteSQL ODER
 -- einen registrierten Wrapper-CF aufruft. Die Feldbezüge sind (im gekapselten Fall)
 -- bereits als reads_field im Graphen — diese View liefert den fehlenden Herkunfts-
--- Marker „SQL". (Literal-SQL-Heuristik, Plan AP-4b: in dieser Lösung 0 Fälle, da SQL
+-- Marker „SQL". (Literal-SQL-Heuristik: in dieser Lösung 0 Fälle, da SQL
 -- durchgängig CF-gekapselt gebaut wird — kein literales FROM/JOIN im Chunk-Text.)
 DROP VIEW IF EXISTS v_sql_field_usage;
 CREATE VIEW v_sql_field_usage AS

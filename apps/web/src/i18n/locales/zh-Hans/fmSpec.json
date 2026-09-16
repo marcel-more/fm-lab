@@ -7,12 +7,14 @@
   "help": {
     "open": "帮助"
   },
+  "clarisHelp": "Claris 帮助 →",
   "search": {
     "placeholder": "筛选…",
     "platformAll": "所有平台",
     "platformLabel": "平台",
     "platformStepHint": "显示可在此平台运行的步骤（含部分支持）",
-    "platformFnHint": "显示为此平台构建的函数（平台绑定）"
+    "platformFnHint": "显示为此平台构建的函数（平台绑定）",
+    "platformTriggerHint": "显示在此平台上触发的触发器事件（含部分支持）"
   },
   "list": {
     "count": "{{shown}} / {{total}}"
@@ -20,11 +22,14 @@
   "tabs": {
     "steps": "ScriptSteps",
     "functions": "函数",
-    "locales": "语言"
+    "locales": "语言",
+    "triggers": "触发器",
+    "errorCodes": "错误代码"
   },
   "header": {
     "schemaVersion": "架构",
-    "coverage": "FM 版本",
+    "coverage": "FM 版本（形状）",
+    "docCoverage": "FM 版本（文档）",
     "built": "构建于",
     "steps": "ScriptSteps",
     "functions": "函数",
@@ -32,7 +37,9 @@
     "localesValue": "{{steps}} / {{functions}}",
     "grammar": "语法覆盖率",
     "grammarValue": "{{covered}}/{{total}} 个步骤",
-    "attribution": "文档内容 © Claris International Inc. FileMaker 和 Claris 是 Claris International Inc. 的商标。本项目与 Claris 无关联，也未获其认可。完整署名请参见 SOURCES。"
+    "attribution": "文档内容 © Claris International Inc. FileMaker 和 Claris 是 Claris International Inc. 的商标。本项目与 Claris 无关联，也未获其认可。完整署名请参见 SOURCES。",
+    "triggers": "触发器",
+    "errorCodes": "错误代码"
   },
   "steps": {
     "col": {
@@ -52,7 +59,8 @@
       "name": "名称",
       "category": "类别",
       "returnType": "返回类型",
-      "originVersion": "起始版本"
+      "originVersion": "起始版本",
+      "removedInVersion": "移除于"
     },
     "detail": {
       "returnType": "返回类型",
@@ -120,8 +128,22 @@
         "evidence": "证据",
         "values": "值",
         "invertedHint": "标签语义与 XML 状态相反 — true_text/false_text 已包含完整的文本→XML 映射；切勿再次反转。",
-        "docOnly": "已由 Claris 文档记载，但未经往返验证 — 粘贴后请验证行为。"
-      }
+        "docOnly": "已由 Claris 文档记载，但未经往返验证 — 粘贴后请验证行为。",
+        "slotKind": "槽",
+        "xmlDomain": "XML 值域",
+        "slot_field_only": "仅字段",
+        "slot_field_or_var": "字段或变量",
+        "slot_variable_only": "仅变量",
+        "pasteDropped": "粘贴时丢弃",
+        "pasteDroppedHint": "无论取值如何，FileMaker 在粘贴时都会丢弃此选项 — 生成器将其省略，参考库保留占位符以供读取。"
+      },
+      "coverage": "形状覆盖版本",
+      "coverageHint": "此形状据以验证的 FileMaker 版本（配对的导出与剪贴板证据）。带版本标记的行是该覆盖版本的覆盖行，会替换同一键的标准行。",
+      "coverageBase": "基准",
+      "overrideBadge": "FM {{coverage}}",
+      "overrideHint": "覆盖版本 {{coverage}} 的覆盖行——替换同一键的标准行。",
+      "noOverrides": "此覆盖版本没有覆盖行——采用标准形状。",
+      "targetSlotKind": "目标槽类型"
     },
     "saxml": {
       "paramTypes": "参数类型序列",
@@ -133,7 +155,8 @@
     "compat": {
       "label": "平台兼容性",
       "partial": "部分支持",
-      "partialHint": "部分支持 — 有条件支持，请参阅该步骤的 Claris 帮助页面"
+      "partialHint": "部分支持 — 有条件支持，请参阅该步骤的 Claris 帮助页面",
+      "none": "无平台 — Claris 未在任何平台将此事件列为受支持"
     }
   },
   "osAffinity": {
@@ -146,5 +169,56 @@
     "hint_unsupported": "Claris 明确指出此操作系统不受支持（忠于原文的反向陈述）",
     "hint_variant": "到处都能运行 — 行为或结果取决于操作系统",
     "hint_os_probe": "在运行时返回平台/操作系统 — 守卫惯用法，不是绑定"
+  },
+  "triggers": {
+    "col": {
+      "id": "槽位 ID",
+      "event": "事件",
+      "label": "标签",
+      "level": "级别",
+      "since": "引入版本",
+      "parameter": "参数",
+      "platforms": "平台"
+    },
+    "level": {
+      "object": "对象",
+      "layout": "布局",
+      "file": "文件"
+    },
+    "paramYes": "是",
+    "paramNo": "否",
+    "unavailable": "此参考库不包含脚本触发器表（fm-spec < 1.18.0）。"
+  },
+  "errorCodes": {
+    "col": {
+      "code": "代码",
+      "message": "消息",
+      "scope": "范围"
+    },
+    "scope": {
+      "core": "核心",
+      "web": "Web"
+    },
+    "scopeHint": {
+      "core": "由 FileMaker 客户端和主机返回",
+      "web": "由 Web 发布引擎或 FileMaker REST API 返回（Claris 以 (*) 标记）"
+    },
+    "search": {
+      "hint": "数字查找该代码或其所属范围（5123 → 5000-5499）；文本搜索消息"
+    },
+    "unavailable": "此参考库不包含错误代码表（fm-spec < 2.8.0）。"
+  },
+  "trigger": {
+    "section": {
+      "labels": "本地化标签",
+      "platforms": "平台兼容性"
+    },
+    "localized": {
+      "label": "对话框标签"
+    },
+    "parameterField": "带参数字段属性",
+    "compat": {
+      "unavailable": "没有已发布的兼容性声明 — 参考库早于 fm-spec 2.8.0"
+    }
   }
 }

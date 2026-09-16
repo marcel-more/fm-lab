@@ -32,8 +32,91 @@
 --   die Namensmenge ändert; das würde jeden bestehenden Katalog grundlos als
 --   driftend melden. Die Retype-Logik selbst (convert_xml_01c_…) ist gelistet.
 
--- @SCHEMA_VERSION 1.27.0
--- @SCHEMA_VERSION_DATE 2026-09-02
+-- @SCHEMA_VERSION 1.32.0
+-- @SCHEMA_VERSION_DATE 2026-09-12
+-- @SCHEMA_CHANGELOG 1.32.0: Built-in-Funktionen auf die Standard-Referenz
+--   normalisiert (Konverter 2.29.0), neue Tabellen BuiltinFunctionIdentity
+--   (Object_UUID, Function_ID, Canonical_Name, Namespace — eine Zeile je
+--   aufgelöstem BuiltinFunction-Knoten) und BuiltinTokenResolution (eine Zeile
+--   je vorkommender Token-FORM: Abbildung alte Identitätszeichenkette → Knoten,
+--   Träger der namensraum-bewussten Auflösungsregel) plus die Nachschlage-View
+--   v_builtin_token_lookup (Token-Name → Knoten, alle Referenzsprachen, beide
+--   Namensräume, beide Text-Achsen) — alles additive DDL. Identität eines
+--   Built-ins ist nicht mehr der Token, WIE ER IN DER FORMEL STEHT, sondern der
+--   kanonische englische Name der Referenz: FileMaker schreibt Get-Parameter im
+--   DDR lokalisiert und legt den Sub-Parameter zusätzlich als eigenen
+--   FunctionRef-Chunk ab, wodurch EIN Get-Parameter in bis zu drei
+--   Katalogobjekte zerfiel ('Get(PageNumber)' · 'Get(Seitennummer)' ·
+--   'Seitennummer'). Object_Name ist jetzt sprachunabhängig der kanonische Name
+--   (der lokalisierte Anzeigename bleibt Sache von ?enrich=<lang>), Symbol- und
+--   Formel-Verwendungen treffen denselben Knoten, und Consumer schlagen die
+--   Referenz-Identität nach statt sie aus dem Namen zu rechnen. Die UUID-Formel
+--   ist unverändert und bekommt nur einen kanonisierten Eingang — ein Knoten,
+--   dessen Token schon kanonisch englisch war, behält seine UUID; ein Token,
+--   den die Referenz nicht kennt (Get, True/False/and/or/not/Bold, die
+--   JSON-Typkonstanten, Funktionen neuer als die Referenz), behält die
+--   namensbasierte Identität und bekommt keine Identitätszeile.
+-- @SCHEMA_CHANGELOG 1.31.0: Feld-Eingabeverhalten und Feld-Eingabeformel (Konverter
+--   2.27.0): LayoutObjects erhält Entry_Options_Raw (Rohmaske aus <Field><Options>)
+--   sowie die abgeleiteten Modus-Spalten Entry_Browse/Entry_Find mit dem Vokabular
+--   allow | select_only | view_only | by_calculation (zwei Bits je Modus: 24/2 für
+--   Blättern, 25/4 für Suchen — an 12 Proben der Coverage-Datei belegt, in beiden
+--   SaXML-Profilen wertgleich) und Entry_Calculation_Text aus <CanEntryCalc>
+--   (schreibt NUR SaXML 2.3.0.0; 2.2.3.0 lässt die Formel weg, die Bits bleiben).
+--   Neue Calc-Rolle field_entry: FileMaker legt die Chunkliste der Eingabeformel
+--   unter DEMSELBEN DDR-Schlüssel '_<ObjectUUID>_Hide' ab wie die der
+--   Ausblendungsformel und schreibt bei zwei Formeln nur EINE — bisher entstand
+--   daraus eine „Hide Condition" ohne Formeltext, an der die Kanten der
+--   Eingabeformel hingen, während die Ausblendungsformel ihre Nachweise verlor.
+--   Der Anker wird jetzt per Textvergleich zugeordnet; die ankerlose Formel behält
+--   ihre Instanz ohne Kanten (Edge_Subrole NULL). Die Kanten der Eingabeformel
+--   trugen bis Konverter 2.29.0 den Roh-Suffix 'Hide' als Link_Subrole (P2-Quelle);
+--   seit Konverter 2.30.0 retaggt P4 sie nach der Anker-Zuordnung auf 'field_entry'
+--   (kein DDL, Schema unverändert). Neue Spalten + neue Rolle → MINOR-Bump
+--   (Master-Rebuild).
+-- @SCHEMA_CHANGELOG 1.30.0: Tabellenkommentar (Konverter 2.26.0): BaseTableCatalog
+--   erhält BT_Comment aus <BaseTable comment="…"> (beide SaXML-Profile; leer →
+--   NULL). Grundlage der Custom Query table_comment_inventory und der Kommentar-
+--   Zeile in der Tabellen-Detailansicht. Neue Spalte → MINOR-Bump (Master-Rebuild).
+-- @SCHEMA_CHANGELOG 1.29.0: Dormante Felddefinitionen (SaXML 2.3.0.0, Konverter
+--   2.25.0): FileMaker 26 exportiert DEAKTIVIERTE Auto-Enter-Berechnungen,
+--   Lookups und Prüfberechnungen (<Calculated enable="False">, <Looked_up …
+--   enable="False">), FileMaker ≤ 22 lässt sie ganz weg. FieldsForTables erhält
+--   AE_Calc_Enabled, Lookup_Enabled, Validation_Calc_Enabled,
+--   Validation_Message_Calc_Enabled (NULL = Attribut fehlt = aktiv). Dormante
+--   Slots behalten ihre Calculation-Instanz (CalculationsCatalog.Is_Enabled =
+--   FALSE, has_calculation bleibt), erzeugen aber KEINE operationalen Kanten
+--   (reads_field/calls_function/calls_customfunction/reads_variable/
+--   validates_by_calc/lookup_source) und keine VariableUsages — Where-used
+--   ohne Phantome, Parität zum 22er-Export. Neue P3-Tabelle FieldDisplayNames
+--   (JSON-Elemente der Display-Names-Formel: Schlüssel → Etikett/Formel).
+--   CalcsForCustomFunctions: Funktionen ohne <Calculation> erhalten in BEIDEN
+--   Profilen eine NULL-Zeile (vorher nur saxml22). LayoutParts.Part_Type für
+--   kind=5 kanonisch 'Trailing Sub-summary' (FileMaker ≤ 22 exportiert das
+--   Mislabel 'Trailing Grand Summary'; Definition_Type bleibt roh).
+--   Neue Spalten/Tabelle → MINOR-Bump (Master-Rebuild).
+-- @SCHEMA_CHANGELOG 1.28.0: SaXML-Profile (versionsexplizite Import-Pipeline,
+--   Konverter 2.24.0). Der Treiber liest je Datei/Chunk das Root-Attribut
+--   FMSaveAsXML/@version und leitet ein Profil ab: 'saxml22' = 2.1.0.0–2.2.x
+--   (FileMaker 19–22), 'saxml23' = ab 2.3.0.0 (FileMaker 26). Das Profil
+--   kommt als Session-Variable saxml_profile (+ saxml_version) in P1 und wird
+--   in FilesCatalog.SaXML_Version/SaXML_Profile sowie XMLMetadata.SaXML_Profile
+--   persistiert. Extraktionen, die es nur in EINER SaXML-Form gibt, stehen in
+--   Marker-Blöcken `-- @P1_PROFILE:<profil>@ … -- @END_P1_PROFILE@`, die der
+--   Treiber IMMER (in jedem Modus, auch Streamify/Turbo) auf das Dateiprofil
+--   filtert — kein Doppel-Read, kein Extract-then-Discard. Weitere Bausteine
+--   dieses Bumps (gleiche Schema-Version): OptionsForValueLists je Profil
+--   (Sektion vs. eingebetteter <ValueList>-Knoten), CalcsForCustomFunctions je
+--   Profil (Ordner/Trenner erhalten in keinem Profil mehr eine Zeile),
+--   FieldsForTables +Field_Annotation/+Field_DisplayNames_Enabled/
+--   +DisplayNames_Calc_Text/+DisplayNames_Calc_Hash (SaXML 2.3.0.0; neue
+--   Calc-Rolle display_names, DDR-Suffix '_5'), neue Tabelle
+--   LayoutTableViewColumns (nur saxml23; P4-Kante Layout→Field
+--   displays_field/table_view_column), Staging-Tabelle DDR_DisplayCalcAnchors23
+--   (saxml23 liest die DisplayCalculations-Anker dorthin; Master-Stufe P1d
+--   übernimmt je Textobjekt nur die Slots unterhalb der <<ƒ:…>>-Token-Zahl in
+--   die DDR-Tabellen — FileMaker 26 polstert die Liste immer auf 12 Anker).
+--   Neue Spalten/Tabellen → MINOR-Bump (Master-Rebuild).
 -- @SCHEMA_CHANGELOG 1.27.0: Display-Calculation-Lücken (Merge-Familie): neue
 --   P1-Tabelle DDR_ChunkListContexts (Kontext-TO + Chunk_Count je ChunkList-
 --   Anker aus DDR_INFO, AUCH für leere ChunkLists — die tauchten bisher
@@ -346,7 +429,7 @@
 -- @SCHEMA_CHANGELOG 1.4.0: neue Tabellen FileAccessAuthorizations,
 --   CustomMenuSetCatalog, LibraryReferences (additiv; bestehende 41 Tabellen unverändert).
 --   + CustomMenuSet im ObjectCatalog + CustomMenuSet→CustomMenu (contains_menu) in ObjectLinks.
--- @SCHEMA_HASH_FILES sql/convert_xml_01_extract.sql sql/convert_xml_01b_heal_cascade.sql sql/convert_xml_01c_design_function_retype.sql sql/convert_xml_02_resolve.sql sql/convert_xml_03_details.sql sql/convert_xml_04_catalog.sql sql/convert_xml_01_extract.streamify.sql engine/streamify_fm_xml.awk engine/katana_common.awk
+-- @SCHEMA_HASH_FILES sql/convert_xml_01_extract.sql sql/convert_xml_01b_heal_cascade.sql sql/convert_xml_01c_design_function_retype.sql sql/convert_xml_01d_display_calc_promote.sql sql/convert_xml_02_resolve.sql sql/convert_xml_03_details.sql sql/convert_xml_04_catalog.sql sql/convert_xml_01_extract.streamify.sql engine/streamify_fm_xml.awk engine/katana_common.awk
 */
 
 
@@ -511,6 +594,17 @@ CREATE OR REPLACE MACRO fm_heal_pick(is_survivor, catalog_name, file_name, orig_
 SET file_search_path = COALESCE(NULLIF(getenv('FM_XML_DIR'), ''), 'xml');
 SET VARIABLE fm_xml = 'Test.xml';  -- Wird durch Skill-Script ersetzt
 
+-- SaXML-Profil der Datei (Schema 1.28.0): vom Treiber (run_p1_on) aus dem
+-- Root-Attribut FMSaveAsXML/@version je Datei bzw. Chunk gesetzt —
+--   saxml22 = 2.1.0.0 – 2.2.x (FileMaker 19–22)
+--   saxml23 = ab 2.3.0.0     (FileMaker 26)
+-- Der Treiber filtert zusätzlich die Marker-Blöcke @P1_PROFILE:<profil>@ …
+-- @END_P1_PROFILE@ dieses Templates auf das Profil (immer aktiv, alle Modi);
+-- die Variablen dienen der Persistenz (FilesCatalog/XMLMetadata) und
+-- profilabhängigen Ausdrücken innerhalb gemeinsamer Statements.
+SET VARIABLE saxml_version = '';          -- Wird durch Skill-Script ersetzt
+SET VARIABLE saxml_profile = 'saxml22';   -- Wird durch Skill-Script ersetzt
+
 -- Schema-Marker (werden vom Shell-Skript zur Build-Zeit ersetzt; siehe
 -- Header-Kommentar @SCHEMA_VERSION / @SCHEMA_HASH_FILES).
 -- Die SchemaInfo-Tabelle (s. u.) wird am Ende des Imports mit diesen Werten
@@ -618,6 +712,7 @@ CREATE TABLE IF NOT EXISTS XMLMetadata (
     File_UUID VARCHAR,
     Locale VARCHAR,
     File_Name VARCHAR,
+    SaXML_Profile VARCHAR,                  -- Schema 1.28.0: 'saxml22' | 'saxml23' (Treiber-Kopfsonde)
     PRIMARY KEY (File_UUID, File_Name)
 );
 
@@ -631,14 +726,16 @@ SELECT
     file_full as Filename,
     file_uuid as File_UUID,
     locale as Locale,
-    getvariable('fm_file') as File_Name
+    getvariable('fm_file') as File_Name,
+    getvariable('saxml_profile') as SaXML_Profile
 FROM _root_attrs
 ON CONFLICT (File_UUID, File_Name) DO UPDATE SET
     Has_DDR_INFO = EXCLUDED.Has_DDR_INFO,
     XML_Version = EXCLUDED.XML_Version,
     FileMaker_Version = EXCLUDED.FileMaker_Version,
     Filename = EXCLUDED.Filename,
-    Locale = EXCLUDED.Locale;
+    Locale = EXCLUDED.Locale,
+    SaXML_Profile = EXCLUDED.SaXML_Profile;
 
 
 -- ========================================
@@ -656,12 +753,18 @@ CREATE TABLE IF NOT EXISTS FilesCatalog (
     FileMaker_Version VARCHAR,              -- FileMaker Version (z.B. "ProAdvanced 21.0.2.206")
     Has_DDR_INFO BOOLEAN DEFAULT FALSE,     -- DDR-Info verfügbar?
     Import_Timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- Zeitpunkt des letzten Imports
-    XML_Path VARCHAR                        -- Pfad zur XML-Quelldatei
+    XML_Path VARCHAR,                       -- Pfad zur XML-Quelldatei
+    -- SaXML-Profil (Schema 1.28.0): Root-Attribut FMSaveAsXML/@version der Quelle
+    -- (z. B. '2.2.3.0', '2.3.0.0') und das daraus abgeleitete Import-Profil
+    -- ('saxml22' | 'saxml23'), nach dem der Treiber die P1-Extraktionen dispatcht.
+    -- Konsumenten (P6 v_check_saxml_profile, Quality-Test, Frontend) filtern damit.
+    SaXML_Version VARCHAR,
+    SaXML_Profile VARCHAR
 );
 
 -- FilesCatalog befüllen (UPSERT bei wiederholten Importen)
 -- @P1_SECTION:main@
-INSERT INTO FilesCatalog (File_Name, File_FullName, File_UUID, FileMaker_Version, Has_DDR_INFO, Import_Timestamp, XML_Path)
+INSERT INTO FilesCatalog (File_Name, File_FullName, File_UUID, FileMaker_Version, Has_DDR_INFO, Import_Timestamp, XML_Path, SaXML_Version, SaXML_Profile)
 SELECT
     file_name as File_Name,
     file_full as File_FullName,
@@ -669,7 +772,9 @@ SELECT
     fm_version as FileMaker_Version,
     has_ddr_info = 'True' as Has_DDR_INFO,
     (now() AT TIME ZONE 'UTC') as Import_Timestamp,   -- explizit UTC (TZ-unabhängig, s. devcontainer Etc/UTC)
-    getvariable('fm_xml') as XML_Path
+    getvariable('fm_xml') as XML_Path,
+    xml_version as SaXML_Version,
+    getvariable('saxml_profile') as SaXML_Profile
 FROM _root_attrs
 ON CONFLICT (File_Name) DO UPDATE SET
     -- Audit: File_FullName/File_UUID fehlten (stale nach Re-Export mit
@@ -679,7 +784,9 @@ ON CONFLICT (File_Name) DO UPDATE SET
     Import_Timestamp = EXCLUDED.Import_Timestamp,
     FileMaker_Version = EXCLUDED.FileMaker_Version,
     Has_DDR_INFO = EXCLUDED.Has_DDR_INFO,
-    XML_Path = EXCLUDED.XML_Path;
+    XML_Path = EXCLUDED.XML_Path,
+    SaXML_Version = EXCLUDED.SaXML_Version,
+    SaXML_Profile = EXCLUDED.SaXML_Profile;
 
 
 -- DuplicateAbsorptions
@@ -925,6 +1032,7 @@ CREATE TABLE IF NOT EXISTS BaseTableCatalog (
     BT_ID BIGINT,
     BT_Name VARCHAR,
     BT_UUID VARCHAR,
+    BT_Comment VARCHAR,   -- <BaseTable comment="…"> (Tabellenkommentar; leer → NULL)
     File_Name VARCHAR,
     PRIMARY KEY (BT_UUID, File_Name)
 );
@@ -934,7 +1042,7 @@ WITH filename_normalized AS (
     SELECT getvariable('fm_file') as File_Name
 ),
 bt_records AS (
-    SELECT id, name, UUID
+    SELECT id, name, comment, UUID
     FROM read_xml(
         getvariable('fm_xml'),
         root_element='BaseTableCatalog',
@@ -944,6 +1052,7 @@ bt_records AS (
         columns={
             'id': 'BIGINT',
             'name': 'VARCHAR',
+            'comment': 'VARCHAR',
             'UUID': 'STRUCT("#text" VARCHAR, "modifications" BIGINT, "userName" VARCHAR, "accountName" VARCHAR, "timestamp" VARCHAR)'
         }
     )
@@ -966,12 +1075,14 @@ SELECT
     xml_unescape(br.name) AS BT_Name,
     fm_heal_pick(br.is_survivor, 'BaseTableCatalog', fn.File_Name,
                  br.UUID->>'#text', 'table_id=' || br.id::VARCHAR) AS BT_UUID,
+    NULLIF(ws_restore(xml_unescape(br.comment)), '') AS BT_Comment,
     fn.File_Name as File_Name
 FROM bt_healed br
 CROSS JOIN filename_normalized fn
 ON CONFLICT (BT_UUID, File_Name) DO UPDATE SET
     BT_ID = EXCLUDED.BT_ID,
-    BT_Name = EXCLUDED.BT_Name;
+    BT_Name = EXCLUDED.BT_Name,
+    BT_Comment = EXCLUDED.BT_Comment;
 
 -- Zensus (Dup-Absorption): geparste Quell-Records, minimaler Re-Read (nur id).
 INSERT INTO DuplicateAbsorptions
@@ -1647,6 +1758,24 @@ CREATE TABLE IF NOT EXISTS FieldsForTables (
     Storage_IndexLanguage_ID BIGINT,     -- <Storage><LanguageReference @id>
     Summary_RestartEachGroup BOOLEAN,    -- <SummaryInfo @restartEachGroup> Ergebnis je Gruppe neu
     Summary_RepetitionMode VARCHAR,      -- <SummaryInfo @summarizeRepetition>: 'Together' | 'Individually'
+    -- SaXML 2.3.0.0 (FileMaker 26+, Schema 1.28.0): <Annotation><Text> Freitext-
+    -- Anmerkung des Felds (leer → NULL), <DisplayNames @enable> Anzeigenamen-
+    -- Feature und dessen Formel <DisplayNames><Calculation> (Klartext + DDRREF-
+    -- Hash; DDR-Anker '_<Field-UUID>_5' → Calc-Rolle display_names in P4).
+    -- SaXML ≤ 2.2.x: alle vier NULL (Elemente existieren nicht). Kein Profil-
+    -- Block nötig — ein Struct, fehlende Elemente → NULL.
+    Field_Annotation VARCHAR,
+    Field_DisplayNames_Enabled BOOLEAN,
+    DisplayNames_Calc_Text VARCHAR,
+    DisplayNames_Calc_Hash VARCHAR,
+    -- Dormante Definitionen (Schema 1.29.0, SaXML 2.3.0.0): FileMaker 26 exportiert
+    -- deaktivierte Slots mit enable="False" (≤ 22: Slot fehlt ganz). NULL = Attribut
+    -- nicht vorhanden = aktiv. P2/P3/P4 erzeugen für deaktivierte Slots keine
+    -- operationalen Kanten/VariableUsages; die Instanz trägt Is_Enabled = FALSE.
+    AE_Calc_Enabled BOOLEAN,             -- <AutoEnter><Calculated @enable>
+    Lookup_Enabled BOOLEAN,              -- <AutoEnter><Looked_up @enable>
+    Validation_Calc_Enabled BOOLEAN,     -- <Validation><Calculated @enable>
+    Validation_Message_Calc_Enabled BOOLEAN, -- <Validation><MessageCalc @enable>
     File_Name VARCHAR,
     PRIMARY KEY (Field_UUID, File_Name)
 );
@@ -1696,8 +1825,8 @@ field_records AS (
                         "MaximumSize" BIGINT,
                         "Range" STRUCT("from" VARCHAR, "to" VARCHAR),
                         "Message" VARCHAR,
-                        "Calculated" STRUCT("Calculation" STRUCT("DDRREF" STRUCT("hash" VARCHAR), "Text" VARCHAR)),
-                        "MessageCalc" STRUCT("Calculation" STRUCT("DDRREF" STRUCT("hash" VARCHAR))),
+                        "Calculated" STRUCT("enable" BOOLEAN, "Calculation" STRUCT("DDRREF" STRUCT("hash" VARCHAR), "Text" VARCHAR)),
+                        "MessageCalc" STRUCT("enable" BOOLEAN, "Calculation" STRUCT("DDRREF" STRUCT("hash" VARCHAR))),
                         "ValueListReference" STRUCT("id" BIGINT, "name" VARCHAR, "UUID" VARCHAR)
                     ),
                     "SummaryInfo" STRUCT(
@@ -1708,6 +1837,8 @@ field_records AS (
                             "FieldReference" STRUCT("id" BIGINT, "name" VARCHAR, "UUID" VARCHAR)
                         )
                     ),
+                    "Annotation" STRUCT("Text" VARCHAR),
+                    "DisplayNames" STRUCT("enable" BOOLEAN, "Calculation" STRUCT("DDRREF" STRUCT("hash" VARCHAR), "Text" VARCHAR)),
                     "Calculation" STRUCT("DDRREF" STRUCT("hash" VARCHAR), "Text" VARCHAR),
                     "AutoEnter" STRUCT(
                         "type" VARCHAR,
@@ -1721,6 +1852,7 @@ field_records AS (
                             "generate" VARCHAR
                         ),
                         "Looked_up" STRUCT(
+                            "enable" BOOLEAN,
                             "dontCopyIfEmpty" BOOLEAN,
                             "noMatchCopyOption" VARCHAR,
                             "FieldReference" STRUCT(
@@ -1735,6 +1867,7 @@ field_records AS (
                             )
                         ),
                         "Calculated" STRUCT(
+                            "enable" BOOLEAN,
                             "Calculation" STRUCT(
                                 "DDRREF" STRUCT("hash" VARCHAR),
                                 "Text" VARCHAR
@@ -1842,6 +1975,16 @@ SELECT
     -- Summary-Modifikatoren
     f.SummaryInfo.restartEachGroup AS Summary_RestartEachGroup,
     NULLIF(f.SummaryInfo.summarizeRepetition, '') AS Summary_RepetitionMode,
+    -- SaXML 2.3.0.0 (Schema 1.28.0): Annotation, DisplayNames-Flag + -Formel
+    NULLIF(ws_restore(f.Annotation.Text), '') AS Field_Annotation,
+    f.DisplayNames.enable AS Field_DisplayNames_Enabled,
+    NULLIF(ws_restore(f.DisplayNames.Calculation.Text), '') AS DisplayNames_Calc_Text,
+    NULLIF(f.DisplayNames.Calculation.DDRREF.hash, '') AS DisplayNames_Calc_Hash,
+    -- Dormante Definitionen (Schema 1.29.0): enable-Attribute, NULL = aktiv
+    f.AutoEnter.Calculated.enable AS AE_Calc_Enabled,
+    f.AutoEnter.Looked_up.enable AS Lookup_Enabled,
+    f.Validation.Calculated.enable AS Validation_Calc_Enabled,
+    f.Validation.MessageCalc.enable AS Validation_Message_Calc_Enabled,
     fn.File_Name as File_Name
 FROM field_healed
 CROSS JOIN filename_normalized fn
@@ -1900,7 +2043,15 @@ ON CONFLICT (Field_UUID, File_Name) DO UPDATE SET
     Storage_IndexLanguage = EXCLUDED.Storage_IndexLanguage,
     Storage_IndexLanguage_ID = EXCLUDED.Storage_IndexLanguage_ID,
     Summary_RestartEachGroup = EXCLUDED.Summary_RestartEachGroup,
-    Summary_RepetitionMode = EXCLUDED.Summary_RepetitionMode;
+    Summary_RepetitionMode = EXCLUDED.Summary_RepetitionMode,
+    Field_Annotation = EXCLUDED.Field_Annotation,
+    Field_DisplayNames_Enabled = EXCLUDED.Field_DisplayNames_Enabled,
+    DisplayNames_Calc_Text = EXCLUDED.DisplayNames_Calc_Text,
+    DisplayNames_Calc_Hash = EXCLUDED.DisplayNames_Calc_Hash,
+    AE_Calc_Enabled = EXCLUDED.AE_Calc_Enabled,
+    Lookup_Enabled = EXCLUDED.Lookup_Enabled,
+    Validation_Calc_Enabled = EXCLUDED.Validation_Calc_Enabled,
+    Validation_Message_Calc_Enabled = EXCLUDED.Validation_Message_Calc_Enabled;
 
 -- Zensus (Dup-Absorption): Quell-Rowset = ein Record je Feld (UNNEST je FieldCatalog)
 -- mit demselben id-Filter wie der Katalog-INSERT; minimaler Re-Read (nur Feld-id).
@@ -2201,6 +2352,10 @@ CREATE TABLE IF NOT EXISTS OptionsForValueLists (
 );
 
 -- @P1_SECTION:main@
+-- Profil saxml22 (SaXML ≤ 2.2.x): die Optionen liegen in der eigenen Top-Level-
+-- Sektion <OptionsForValueLists>. Ab 2.3.0.0 entfällt die Sektion (Read wäre
+-- leer) → Block nur für saxml22; der eingebettete Feed folgt im saxml23-Block.
+-- @P1_PROFILE:saxml22@
 WITH filename_normalized AS (
     SELECT getvariable('fm_file') as File_Name
 ),
@@ -2340,6 +2495,138 @@ FROM read_xml(
 WHERE ValueListReference.id IS NOT NULL
   AND Source.value IS NOT NULL
 ON CONFLICT (Catalog, File_Name, Chunk_Seq) DO UPDATE SET Source_Records = EXCLUDED.Source_Records;
+-- @END_P1_PROFILE@
+
+-- Profil saxml23 (SaXML 2.3.0.0+, FileMaker 26): die separate Sektion entfällt;
+-- Source/Field/CustomValues/External liegen direkt im <ValueList>-Knoten des
+-- <ValueListCatalog>. Ein Read je Datei, gleiche Zielspalten wie der saxml22-Pfad.
+-- Identität aus den Knoten-Attributen (id/name) + <UUID>; Heilung im
+-- ValueListCatalog-Namensraum mit identischem Diskriminator (s. o.), damit die
+-- Options-Zeile eines geheilten Zwillings dieselbe Ersatz-UUID trägt.
+-- Belegt an ingestion/fixtures/saxml/fmlab_coverage__saxml_v2_3_0_0__fm_v26_0_2__ddr_info.xml
+-- (6 Wertelisten → 6 Zeilen; Konverter 2.23.0 lieferte 0).
+-- @P1_PROFILE:saxml23@
+WITH filename_normalized AS (
+    SELECT getvariable('fm_file') as File_Name
+),
+ovl23_records AS (
+    SELECT *
+    FROM read_xml(
+        getvariable('fm_xml'),
+        root_element='ValueListCatalog',
+        record_element='ValueList',
+        max_depth=10,
+        maximum_file_size=getvariable('dom_threshold'),
+        streaming=getvariable('use_streaming'),
+        columns={
+            'id': 'BIGINT',
+            'name': 'VARCHAR',
+            'UUID': 'STRUCT("#text" VARCHAR)',
+            'Source': 'STRUCT(value VARCHAR)',
+            'Field': 'STRUCT(
+                "PrimaryField" STRUCT(
+                    "show" BOOLEAN, "sort" BOOLEAN,
+                    "FieldReference" STRUCT(
+                        id BIGINT, name VARCHAR, UUID VARCHAR,
+                        "TableOccurrenceReference" STRUCT(id BIGINT, name VARCHAR, UUID VARCHAR)
+                    )
+                ),
+                "SecondaryField" STRUCT(
+                    "show" BOOLEAN, "sort" BOOLEAN,
+                    "FieldReference" STRUCT(
+                        id BIGINT, name VARCHAR, UUID VARCHAR,
+                        "TableOccurrenceReference" STRUCT(id BIGINT, name VARCHAR, UUID VARCHAR)
+                    )
+                )
+            )',
+            'CustomValues': 'STRUCT("Text" STRUCT("#text" VARCHAR)[])',
+            'External': 'STRUCT(
+                "DataSourceReference" STRUCT(id BIGINT, name VARCHAR, UUID VARCHAR),
+                "ValueListReference" STRUCT(id BIGINT, name VARCHAR, UUID VARCHAR)
+            )'
+        }
+    )
+    WHERE id IS NOT NULL
+      AND Source.value IS NOT NULL
+),
+ovl23_healed AS (
+    SELECT vr.*,
+           (vr.UUID."#text" IS NULL
+            OR vr.id = MIN(vr.id) OVER (PARTITION BY vr.UUID."#text")) AS is_survivor
+    FROM ovl23_records vr
+)
+INSERT INTO OptionsForValueLists
+SELECT
+    id AS VL_ID,
+    xml_unescape(name) AS VL_Name,
+    fm_heal_pick(is_survivor, 'ValueListCatalog', fn.File_Name,
+                 UUID."#text", 'vl_id=' || id::VARCHAR) AS VL_UUID,
+    Source.value AS Source_Type,
+    [v."#text" for v in CustomValues.Text] AS Custom_Values,
+    Field.PrimaryField.FieldReference.id AS Field_ID,
+    xml_unescape(Field.PrimaryField.FieldReference.name) AS Field_Name,
+    Field.PrimaryField.FieldReference.UUID AS Field_UUID,
+    Field.PrimaryField.FieldReference.TableOccurrenceReference.id AS TO_ID,
+    xml_unescape(Field.PrimaryField.FieldReference.TableOccurrenceReference.name) AS TO_Name,
+    Field.PrimaryField.FieldReference.TableOccurrenceReference.UUID AS TO_UUID,
+    Field.PrimaryField.sort AS Field_Sort,
+    Field.SecondaryField.FieldReference.id AS Secondary_Field_ID,
+    Field.SecondaryField.FieldReference.name AS Secondary_Field_Name,
+    Field.SecondaryField.FieldReference.UUID AS Secondary_Field_UUID,
+    Field.SecondaryField.FieldReference.TableOccurrenceReference.id AS Secondary_TO_ID,
+    Field.SecondaryField.FieldReference.TableOccurrenceReference.name AS Secondary_TO_Name,
+    Field.SecondaryField.FieldReference.TableOccurrenceReference.UUID AS Secondary_TO_UUID,
+    Field.SecondaryField.sort AS Secondary_Sort,
+    External.DataSourceReference.id AS External_DS_ID,
+    xml_unescape(External.DataSourceReference.name) AS External_DS_Name,
+    External.DataSourceReference.UUID AS External_DS_UUID,
+    External.ValueListReference.id AS External_VL_ID,
+    xml_unescape(External.ValueListReference.name) AS External_VL_Name,
+    fn.File_Name as File_Name
+FROM ovl23_healed
+CROSS JOIN filename_normalized fn
+ON CONFLICT (VL_UUID, File_Name) DO UPDATE SET
+    VL_ID = EXCLUDED.VL_ID,
+    VL_Name = EXCLUDED.VL_Name,
+    Source_Type = EXCLUDED.Source_Type,
+    Custom_Values = EXCLUDED.Custom_Values,
+    Field_ID = EXCLUDED.Field_ID,
+    Field_Name = EXCLUDED.Field_Name,
+    Field_UUID = EXCLUDED.Field_UUID,
+    TO_ID = EXCLUDED.TO_ID,
+    TO_Name = EXCLUDED.TO_Name,
+    TO_UUID = EXCLUDED.TO_UUID,
+    Field_Sort = EXCLUDED.Field_Sort,
+    Secondary_Field_ID = EXCLUDED.Secondary_Field_ID,
+    Secondary_Field_Name = EXCLUDED.Secondary_Field_Name,
+    Secondary_Field_UUID = EXCLUDED.Secondary_Field_UUID,
+    Secondary_TO_ID = EXCLUDED.Secondary_TO_ID,
+    Secondary_TO_Name = EXCLUDED.Secondary_TO_Name,
+    Secondary_TO_UUID = EXCLUDED.Secondary_TO_UUID,
+    Secondary_Sort = EXCLUDED.Secondary_Sort,
+    External_DS_ID = EXCLUDED.External_DS_ID,
+    External_DS_Name = EXCLUDED.External_DS_Name,
+    External_DS_UUID = EXCLUDED.External_DS_UUID,
+    External_VL_ID = EXCLUDED.External_VL_ID,
+    External_VL_Name = EXCLUDED.External_VL_Name;
+
+-- Zensus (Dup-Absorption) des saxml23-Feeds: dieselben Filter wie der INSERT.
+INSERT INTO DuplicateAbsorptions
+SELECT getvariable('fm_file'), 'OptionsForValueLists', 'VL_UUID,File_Name',
+       COALESCE(getvariable('seq_offset'), 0)::BIGINT, COUNT(*)
+FROM read_xml(
+    getvariable('fm_xml'),
+    root_element='ValueListCatalog',
+    record_element='ValueList',
+    max_depth=10,
+    maximum_file_size=getvariable('dom_threshold'),
+    streaming=getvariable('use_streaming'),
+    columns={'id': 'BIGINT', 'Source': 'STRUCT(value VARCHAR)'}
+)
+WHERE id IS NOT NULL
+  AND Source.value IS NOT NULL
+ON CONFLICT (Catalog, File_Name, Chunk_Seq) DO UPDATE SET Source_Records = EXCLUDED.Source_Records;
+-- @END_P1_PROFILE@
 
 
 -- CustomFunctionsCatalog
@@ -2546,6 +2833,13 @@ CREATE TABLE IF NOT EXISTS CalcsForCustomFunctions (
 );
 
 -- @P1_SECTION:main@
+-- Profil saxml22 (SaXML ≤ 2.2.x): Formelkörper in der Top-Level-Sektion
+-- <CalcsForCustomFunctions>. FileMaker schreibt dort AUCH für Ordner und Trenner
+-- einen <CustomFunctionCalc> (ohne <Calculation>) — diese Zeilen entfallen seit
+-- Schema 1.28.0 in beiden Profilen (Anti-Join gegen die Ordner-/Trenner-Flags des
+-- bereits geparsten _cf_catalog_raw; P6 v_check_saxml_profile: cf_calc_rows =
+-- cf_functions). Ab 2.3.0.0 entfällt die Sektion → Block nur für saxml22.
+-- @P1_PROFILE:saxml22@
 WITH filename_normalized AS (
     SELECT getvariable('fm_file') as File_Name
 )
@@ -2586,6 +2880,11 @@ FROM read_xml(
     }
 )
 CROSS JOIN filename_normalized fn
+WHERE NOT EXISTS (
+    SELECT 1 FROM _cf_catalog_raw r
+    WHERE r.CF_UUID_Orig = CustomFunctionReference.UUID
+      AND (COALESCE(r.Folder_Type, 'False') <> 'False' OR COALESCE(r.Is_Separator, FALSE))
+)
 ON CONFLICT (CF_UUID, File_Name) DO UPDATE SET
     CF_ID = EXCLUDED.CF_ID,
     CF_Name = EXCLUDED.CF_Name,
@@ -2593,15 +2892,17 @@ ON CONFLICT (CF_UUID, File_Name) DO UPDATE SET
     Code_Chunks = EXCLUDED.Code_Chunks,
     DDR_Hash = EXCLUDED.DDR_Hash,
     DDR_UUID = EXCLUDED.DDR_UUID;
+-- @END_P1_PROFILE@
 
-
--- Embedded-Pfad SaXML v2.3.0.0 (FM 26+): <Calculation> ist direkt in jedes
+-- Profil saxml23 (SaXML 2.3.0.0+, FileMaker 26): <Calculation> ist direkt in jedes
 -- <CustomFunction> eingebettet; die separate <CalcsForCustomFunctions>-Sektion entfällt.
 -- Quelle ist das oben bereits geparste _cf_catalog_raw → KEIN zusätzlicher XML-Parse.
--- Code_Chunks = NULL: das eingebettete <Calculation> trägt keine <ChunkList> (verifiziert
--- an der v26-Test-XML unter tools/tests/fixtures/xml/) — die Chunks bleiben über DDR_Hash → DDR_Calculations erreichbar.
--- ON CONFLICT DO NOTHING: trägt eine Datei je beide Formen, gewinnt der Legacy-Pfad oben
--- (kein Datenverlust). Bei FM ≤ 22 ist Calculation NULL → 0 Zeilen, also ein No-Op.
+-- Code_Chunks = NULL: das eingebettete <Calculation> trägt keine <ChunkList>
+-- (ingestion/fixtures/saxml/fmlab_coverage__saxml_v2_3_0_0__fm_v26_0_2__ddr_info.xml) —
+-- die Chunks bleiben über DDR_Hash → DDR_Calculations erreichbar. Ordner/Trenner
+-- werden über ihre Flags ausgeschlossen (ein fehlendes <Calculation> allein ist
+-- KEIN Ordner-Kriterium: leere Funktionen haben ebenfalls keins).
+-- @P1_PROFILE:saxml23@
 INSERT INTO CalcsForCustomFunctions
 SELECT
     CF_ID,
@@ -2613,8 +2914,18 @@ SELECT
     regexp_replace(Calculation.DDRREF."#text", '^_', '') AS DDR_UUID,
     File_Name
 FROM _cf_catalog_raw
-WHERE Calculation IS NOT NULL AND Calculation.Text IS NOT NULL
-ON CONFLICT (CF_UUID, File_Name) DO NOTHING;
+-- Funktionen OHNE <Calculation> (leerer Formelkörper) erhalten wie im saxml22-
+-- Pfad eine NULL-Zeile (Schema 1.29.0; vorher fehlte sie → P6 cf_calc_rows ≠ cf_functions).
+WHERE COALESCE(Folder_Type, 'False') = 'False'
+  AND NOT COALESCE(Is_Separator, FALSE)
+ON CONFLICT (CF_UUID, File_Name) DO UPDATE SET
+    CF_ID = EXCLUDED.CF_ID,
+    CF_Name = EXCLUDED.CF_Name,
+    Calculation_Code = EXCLUDED.Calculation_Code,
+    Code_Chunks = EXCLUDED.Code_Chunks,
+    DDR_Hash = EXCLUDED.DDR_Hash,
+    DDR_UUID = EXCLUDED.DDR_UUID;
+-- @END_P1_PROFILE@
 
 
 -- Update CustomFunctionsCatalog with DDR_Hash from CalcsForCustomFunctions
@@ -3352,6 +3663,119 @@ ON CONFLICT (Catalog, File_Name, Object_UUID, Occurrence_Seq, Chunk_Seq) DO NOTH
 -- ScriptTriggers (Owner_Type='Layout', Owner_UUID=L_UUID; multi-fed Merge via
 -- convert_turbo.sh). Keine eigene Layout-Trigger-Tabelle nötig.
 
+-- LayoutTableViewColumns (Schema 1.28.0, SaXML 2.3.0.0 / FileMaker 26+)
+-- @END_P1_SECTION@
+-- Spalten der Tabellenansicht eines Layouts: <Layout><TableView><ObjectList>
+-- <TableViewLayoutObject hidden id name width><FieldReference …>. Neu in 2.3.0.0
+-- (SaXML ≤ 2.2.x exportiert die Spaltenkonfiguration nicht → Tabelle bleibt für
+-- saxml22-Dateien leer; der Read läuft nur im saxml23-Profil). Die Spalten sind
+-- KEINE LayoutObjects (keine Bounds, keine eigene UUID) → Detailtabelle je
+-- (Layout, Spalte) + P4-Kante Layout→Field displays_field/table_view_column
+-- (Feldnutzung in der Tabellenansicht war bisher unsichtbar). Belegt an
+-- ingestion/fixtures/saxml/fmlab_coverage__saxml_v2_3_0_0__fm_v26_0_2__ddr_info.xml
+-- (20 Layouts mit TableView, 42 Spalten, davon 1 hidden).
+CREATE TABLE IF NOT EXISTS LayoutTableViewColumns (
+    L_ID BIGINT,
+    L_Name VARCHAR,
+    L_UUID VARCHAR,             -- geheilt im Layouts-Namensraum (identische Ersatz-UUID wie Layouts.L_UUID)
+    Column_Seq BIGINT,          -- 1-basierte Position in der ObjectList (Spaltenreihenfolge)
+    Column_ID BIGINT,           -- TableViewLayoutObject@id
+    Column_Name VARCHAR,        -- TableViewLayoutObject@name (Spaltentitel)
+    Is_Hidden BOOLEAN,          -- TableViewLayoutObject@hidden
+    Column_Width BIGINT,        -- TableViewLayoutObject@width (px)
+    Field_ID BIGINT,
+    Field_Name VARCHAR,
+    Field_UUID VARCHAR,         -- leer/NULL bei Feldern externer TOs (P6 v_check_table_view_columns)
+    Field_Repetition BIGINT,
+    TO_ID BIGINT,
+    TO_Name VARCHAR,
+    TO_UUID VARCHAR,
+    File_Name VARCHAR,
+    PRIMARY KEY (L_UUID, Column_Seq, File_Name)
+);
+
+-- @P1_SECTION:LayoutCatalog@
+-- @P1_PROFILE:saxml23@
+WITH filename_normalized AS (
+    SELECT getvariable('fm_file') as File_Name
+),
+tv_layouts AS (
+    SELECT id, name, UUID, TableView
+    FROM read_xml(
+        getvariable('fm_xml'),
+        root_element='LayoutCatalog',
+        record_element='LC_Layout',
+        max_depth=10,
+        maximum_file_size=getvariable('dom_threshold'),
+        streaming=getvariable('use_streaming'),
+        columns={
+            'id': 'BIGINT',
+            'name': 'VARCHAR',
+            'UUID': 'STRUCT("#text" VARCHAR)',
+            'TableView': 'STRUCT("ObjectList" STRUCT("TableViewLayoutObject" STRUCT(
+                hidden BOOLEAN, id BIGINT, name VARCHAR, width BIGINT,
+                "FieldReference" STRUCT(
+                    id BIGINT, name VARCHAR, repetition BIGINT, UUID VARCHAR,
+                    "TableOccurrenceReference" STRUCT(id BIGINT, name VARCHAR, UUID VARCHAR)
+                )
+            )[]))'
+        }
+    )
+    WHERE id IS NOT NULL
+),
+-- Survivor-Regel identisch zum Layouts-INSERT (kleinste L_ID je UUID), damit
+-- fm_heal_pick dieselbe Ersatz-UUID liefert wie dort.
+tv_healed AS (
+    SELECT t.*,
+           (t.UUID."#text" IS NULL OR t.id IS NULL
+            OR t.id = MIN(t.id) OVER (PARTITION BY t.UUID."#text")) AS is_survivor
+    FROM tv_layouts t
+),
+tv_cols AS (
+    SELECT id, name, UUID, is_survivor,
+           unnest(TableView.ObjectList.TableViewLayoutObject) AS col,
+           generate_subscripts(TableView.ObjectList.TableViewLayoutObject, 1) AS seq
+    FROM tv_healed
+    WHERE TableView.ObjectList.TableViewLayoutObject IS NOT NULL
+)
+INSERT INTO LayoutTableViewColumns
+SELECT
+    c.id AS L_ID,
+    xml_unescape(c.name) AS L_Name,
+    fm_heal_pick(c.is_survivor, 'Layouts', fn.File_Name,
+                 c.UUID."#text", 'layout_id=' || c.id::VARCHAR) AS L_UUID,
+    c.seq AS Column_Seq,
+    c.col.id AS Column_ID,
+    xml_unescape(c.col.name) AS Column_Name,
+    c.col.hidden AS Is_Hidden,
+    c.col.width AS Column_Width,
+    c.col.FieldReference.id AS Field_ID,
+    xml_unescape(c.col.FieldReference.name) AS Field_Name,
+    NULLIF(c.col.FieldReference.UUID, '') AS Field_UUID,
+    c.col.FieldReference.repetition AS Field_Repetition,
+    c.col.FieldReference.TableOccurrenceReference.id AS TO_ID,
+    xml_unescape(c.col.FieldReference.TableOccurrenceReference.name) AS TO_Name,
+    NULLIF(c.col.FieldReference.TableOccurrenceReference.UUID, '') AS TO_UUID,
+    fn.File_Name AS File_Name
+FROM tv_cols c
+CROSS JOIN filename_normalized fn
+WHERE c.col.id IS NOT NULL
+ON CONFLICT (L_UUID, Column_Seq, File_Name) DO UPDATE SET
+    L_ID = EXCLUDED.L_ID,
+    L_Name = EXCLUDED.L_Name,
+    Column_ID = EXCLUDED.Column_ID,
+    Column_Name = EXCLUDED.Column_Name,
+    Is_Hidden = EXCLUDED.Is_Hidden,
+    Column_Width = EXCLUDED.Column_Width,
+    Field_ID = EXCLUDED.Field_ID,
+    Field_Name = EXCLUDED.Field_Name,
+    Field_UUID = EXCLUDED.Field_UUID,
+    Field_Repetition = EXCLUDED.Field_Repetition,
+    TO_ID = EXCLUDED.TO_ID,
+    TO_Name = EXCLUDED.TO_Name,
+    TO_UUID = EXCLUDED.TO_UUID;
+-- @END_P1_PROFILE@
+
 -- LayoutParts
 -- @END_P1_SECTION@
 -- Part_Seq (Schema 1.5.1): laufende Part-Nummer je Layout (XML-Reihenfolge,
@@ -3513,6 +3937,10 @@ CREATE TABLE IF NOT EXISTS LayoutObjects (
     Tooltip_Calculation_Text VARCHAR,
     Label_Calculation_Text VARCHAR,
     ScriptTrigger_Parameter_Text VARCHAR,
+    Entry_Options_Raw BIGINT,
+    Entry_Browse VARCHAR,
+    Entry_Find VARCHAR,
+    Entry_Calculation_Text VARCHAR,
     Text_Content VARCHAR,
     Object_XML VARCHAR,
     File_Name VARCHAR,
@@ -3589,6 +4017,11 @@ root_objects AS (
             xml_extract_text(object_xml, '/LayoutObject/ScriptTriggers/ScriptTrigger/ScriptReference/Calculation/Text'),
             E'\n'
         ) as ScriptTrigger_Parameter_Text,
+        -- Feld-Eingabeverhalten (Schema 1.31.0): Rohmaske + Formel-Slot.
+        -- Die Modus-Spalten werden im INSERT aus der Maske abgeleitet; die
+        -- Formel steht NUR im 26er Export (SaXML 2.2.3.0 lässt sie weg).
+        xml_extract_text(object_xml, '/LayoutObject/Field/Options')[1]::BIGINT as Entry_Options_Raw,
+        xml_extract_text(object_xml, '/LayoutObject/CanEntryCalc/Calculation/Text')[1] as Entry_Calculation_Text,
         xml_extract_text(object_xml, '/LayoutObject/Text/StyledText/Data')[1] as Text_Content,
         object_xml
     FROM parts_resolved
@@ -3602,7 +4035,8 @@ nested_objects AS (
         Object_Hash, Object_UUID, Bounds_Top, Bounds_Left, Bounds_Bottom, Bounds_Right,
         Parent_Object_ID, Nesting_Level, Z_Order,
         Hide_Calculation_Text, Tooltip_Calculation_Text, Label_Calculation_Text,
-        ScriptTrigger_Parameter_Text, Text_Content, object_xml
+        ScriptTrigger_Parameter_Text, Entry_Options_Raw, Entry_Calculation_Text,
+        Text_Content, object_xml
     FROM root_objects
 
     UNION ALL
@@ -3637,6 +4071,11 @@ nested_objects AS (
             xml_extract_text(child_xml, '/LayoutObject/ScriptTriggers/ScriptTrigger/ScriptReference/Calculation/Text'),
             E'\n'
         ) as ScriptTrigger_Parameter_Text,
+        -- Feld-Eingabeverhalten (Schema 1.31.0): Rohmaske + Formel-Slot.
+        -- Die Modus-Spalten werden im INSERT aus der Maske abgeleitet; die
+        -- Formel steht NUR im 26er Export (SaXML 2.2.3.0 lässt sie weg).
+        xml_extract_text(child_xml, '/LayoutObject/Field/Options')[1]::BIGINT as Entry_Options_Raw,
+        xml_extract_text(child_xml, '/LayoutObject/CanEntryCalc/Calculation/Text')[1] as Entry_Calculation_Text,
         COALESCE(
             xml_extract_text(child_xml, '/LayoutObject/Text/StyledText/Data')[1],
             xml_extract_text(child_xml, '/LayoutObject/Title/Text')[1]
@@ -3696,6 +4135,22 @@ SELECT
     ws_restore(Tooltip_Calculation_Text) as Tooltip_Calculation_Text,
     ws_restore(Label_Calculation_Text) as Label_Calculation_Text,
     ws_restore(ScriptTrigger_Parameter_Text) as ScriptTrigger_Parameter_Text,
+    Entry_Options_Raw,
+    -- Feld-Eingabe je Modus (Schema 1.31.0). Zwei Bits je Modus kodieren
+    -- vier Zustände; Beleg = 12 Proben der Coverage-Datei (22 und 26 wertgleich).
+    CASE WHEN Entry_Options_Raw IS NULL THEN NULL
+         WHEN ((Entry_Options_Raw >> 24) & 1) = 1 AND ((Entry_Options_Raw >> 2) & 1) = 1 THEN 'by_calculation'
+         WHEN ((Entry_Options_Raw >> 24) & 1) = 1 THEN 'select_only'
+         WHEN ((Entry_Options_Raw >> 2) & 1) = 1 THEN 'view_only'
+         ELSE 'allow' END as Entry_Browse,
+    -- Feld-Eingabe je Modus (Schema 1.31.0). Zwei Bits je Modus kodieren
+    -- vier Zustände; Beleg = 12 Proben der Coverage-Datei (22 und 26 wertgleich).
+    CASE WHEN Entry_Options_Raw IS NULL THEN NULL
+         WHEN ((Entry_Options_Raw >> 25) & 1) = 1 AND ((Entry_Options_Raw >> 4) & 1) = 1 THEN 'by_calculation'
+         WHEN ((Entry_Options_Raw >> 25) & 1) = 1 THEN 'select_only'
+         WHEN ((Entry_Options_Raw >> 4) & 1) = 1 THEN 'view_only'
+         ELSE 'allow' END as Entry_Find,
+    ws_restore(Entry_Calculation_Text) as Entry_Calculation_Text,
     ws_restore(Text_Content) as Text_Content,
     ws_restore(object_xml::VARCHAR) as Object_XML,
     fn.File_Name as File_Name
@@ -3739,6 +4194,10 @@ ON CONFLICT (Object_UUID, File_Name) DO UPDATE SET
     Tooltip_Calculation_Text = EXCLUDED.Tooltip_Calculation_Text,
     Label_Calculation_Text = EXCLUDED.Label_Calculation_Text,
     ScriptTrigger_Parameter_Text = EXCLUDED.ScriptTrigger_Parameter_Text,
+    Entry_Options_Raw = EXCLUDED.Entry_Options_Raw,
+    Entry_Browse = EXCLUDED.Entry_Browse,
+    Entry_Find = EXCLUDED.Entry_Find,
+    Entry_Calculation_Text = EXCLUDED.Entry_Calculation_Text,
     Text_Content = EXCLUDED.Text_Content,
     Object_XML = EXCLUDED.Object_XML;
 
@@ -4674,6 +5133,34 @@ CREATE TABLE IF NOT EXISTS DDR_ChunkListContexts (
     PRIMARY KEY (Calc_UUID, File_Name)
 );
 
+-- DDR_DisplayCalcAnchors23 (Schema 1.28.0): Staging der DisplayCalculations-
+-- Anker im Profil saxml23. FileMaker 26 schreibt <DisplayCalculations
+-- membercount="12"> an JEDEM Textobjekt — die Polster-Anker (Slot-Index ≥ Zahl
+-- der <<ƒ:…>>-Token im Text) wiederholen den Hash des ersten Slots oder tragen
+-- fremd geparste Chunks. Damit sie keine Phantom-Instanzen/-Kanten erzeugen,
+-- liest saxml23 ALLE DisplayCalculations-Anker hierher; die Master-Stufe P1d
+-- (convert_xml_01d_display_calc_promote.sql, nach dem Merge, vor P2) übernimmt
+-- je Textobjekt nur die Slots unterhalb der Token-Zahl in DDR_Calculations/
+-- DDR_ChunkListContexts (Promoted = TRUE); der Rest bleibt hier sichtbar
+-- (P6 v_check_saxml_profile). Eine Zeile je Chunk (Chunk_Index ≥ 1) plus eine
+-- Kontextzeile je Anker (Chunk_Index = 0: Chunk_Count + Kontext-TO — auch für
+-- leere ChunkLists). saxml22 schreibt nie hierher (22 polstert nicht).
+CREATE TABLE IF NOT EXISTS DDR_DisplayCalcAnchors23 (
+    Calc_UUID VARCHAR,          -- '_<Object-UUID>_DisplayCalculations_<slot>'
+    Calc_Hash VARCHAR,
+    Chunk_Index BIGINT,         -- 0 = Kontextzeile des Ankers, ≥ 1 = Chunk
+    Chunk_Type VARCHAR,
+    Chunk_Content VARCHAR,
+    Chunk_Count BIGINT,         -- nur Kontextzeile
+    Context_TO_ID BIGINT,       -- nur Kontextzeile
+    Context_TO_Name VARCHAR,
+    Context_TO_UUID VARCHAR,
+    Slot_Index BIGINT,          -- <slot> aus dem Ankernamen (0-basiert)
+    Promoted BOOLEAN DEFAULT FALSE,
+    File_Name VARCHAR,
+    PRIMARY KEY (Calc_UUID, Chunk_Index, File_Name)
+);
+
 -- @P1_SECTION:Calculation,DDR_INFO@
 -- [streamify block: ddr_calculations — eingefügt von gen_streamify_sql.sh]
 -- streamify-Override für DDR_Calculations.
@@ -4682,32 +5169,41 @@ CREATE TABLE IF NOT EXISTS DDR_ChunkListContexts (
 -- Element-NAMEN, Calc_Hash via xml_extract. HINWEIS: Chunk_Content fällt für chunks
 -- ohne direkten Text auf chunk_xml::VARCHAR (Roh-Serialisierung) zurück → kann unter
 -- SAX abweichen (Option-1: abgeleitete Tabellen bleiben identisch, da xml_extract
--- decodiert). Chunk-Extraktion + INSERT identisch zur Basis.
-WITH filename_normalized AS (
-    SELECT getvariable('fm_file') as File_Name
-),
-ddr_calc_raw AS (
+-- decodiert). Ab hier identisch zur Basis: EIN materialisierter Parse (_ddr_calc_raw),
+-- Chunk-/Kontext-Ableitung, Profil-Blöcke (saxml22 direkt, saxml23 mit Staging der
+-- DisplayCalculations-Anker) — nur der ddr_calc_raw-Anker ist der SAX-Read.
+CREATE OR REPLACE TEMP TABLE _ddr_calc_raw AS
+SELECT
+    unnest(xml_extract_elements('<Calculation>' || Calculation || '</Calculation>', '/Calculation/ObjectList/*')) as calc_elem
+FROM read_xml(
+    getvariable('fm_xml'),
+    record_element='DDR_INFO',
+    maximum_file_size=getvariable('dom_threshold'),
+    streaming=getvariable('use_streaming'),
+    columns={'Calculation':'VARCHAR'}
+)
+WHERE Calculation IS NOT NULL;
+
+-- Chunk-Index in XML-Dokumentreihenfolge:
+-- Zwei parallele unnest()-Aufrufe iterieren synchron pro Zeile. Die Chunk-Liste
+-- und ein begleitendes generate_series mit derselben Länge erzeugen einen
+-- deterministischen, lesegerechten Chunk_Index. Vorgängerlösung mit
+-- ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) war nicht-deterministisch.
+-- Slot-Suffix erhalten: '_<UUID>_<Slot>' (numerisch UND benannt,
+-- formatunabhängig bis zum ersten Whitespace/'>'). Die alte Variante
+-- '<_([0-9A-F-]+)' schnitt den Slot ab → verschiedene Slots derselben
+-- UUID kollidierten im PK (Calc_UUID, Chunk_Index, File_Name) und
+-- überschrieben sich per ON CONFLICT DO UPDATE (~36-41% Definitionsverlust).
+-- Calc_UUID wird nirgends mit Objekt-UUIDs gejoint (alle Objekt-Joins
+-- laufen über Calc_Hash), daher ist die Bedeutungsänderung
+-- "Objekt-UUID" → "Berechnungs-Instanz-ID (UUID+Slot)" unkritisch.
+CREATE OR REPLACE TEMP TABLE _ddr_calc_chunks AS
+WITH calc_with_chunk_lists AS (
     SELECT
-        unnest(xml_extract_elements('<Calculation>' || Calculation || '</Calculation>', '/Calculation/ObjectList/*')) as calc_elem
-    FROM read_xml(
-        getvariable('fm_xml'),
-        record_element='DDR_INFO',
-        maximum_file_size=getvariable('dom_threshold'),
-        streaming=getvariable('use_streaming'),
-        columns={'Calculation':'VARCHAR'}
-    )
-    WHERE Calculation IS NOT NULL
-),
-calc_with_chunk_lists AS (
-    SELECT
-        regexp_extract(
-            calc_elem::VARCHAR,
-            '<(_[^\s>]+)',
-            1
-        ) as Calc_UUID,
+        regexp_extract(calc_elem::VARCHAR, '<(_[^\s>]+)', 1) as Calc_UUID,
         xml_extract_text(calc_elem, '//*/@hash')[1] as Calc_Hash,
         xml_extract_elements(calc_elem, '//ChunkList/Chunk') as chunks
-    FROM ddr_calc_raw
+    FROM _ddr_calc_raw
     WHERE xml_extract_text(calc_elem, '//*/@datatype')[1] = 'ChunkList'
 ),
 calc_with_chunks AS (
@@ -4718,72 +5214,113 @@ calc_with_chunks AS (
         unnest(generate_series(1, len(chunks))) as chunk_index
     FROM calc_with_chunk_lists
 )
-INSERT INTO DDR_Calculations
 SELECT
     Calc_UUID,
     Calc_Hash,
     chunk_index as Chunk_Index,
     xml_extract_text(chunk_xml, '/Chunk/@type')[1] as Chunk_Type,
-    -- ws_restore — identisch zur DOM-Basis (Begründung dort).
+    -- ws_restore: Chunk_Content ist Formel-Text — ohne Restore leakte der
+    -- 0x7F-Sentinel bei CR-haltigen Formeln in alle Downstream-Konsumenten
+    -- (Variablen-Parser, Menü-Kanten, Referenz-Regexe).
     ws_restore(COALESCE(
         xml_extract_text(chunk_xml, 'text()')[1],
         chunk_xml::VARCHAR
     )) as Chunk_Content,
-    fn.File_Name as File_Name
-FROM calc_with_chunks
-CROSS JOIN filename_normalized fn
+    getvariable('fm_file') as File_Name
+FROM calc_with_chunks;
+
+-- Kontext je ChunkList-Anker (auch leere ChunkLists). '/*/TableOccurrenceReference'
+-- greift NUR das direkte Kind des Ankers — FieldRef-Chunks nesten eigene
+-- TableOccurrenceReferences tiefer (unter ChunkList/Chunk/FieldReference) und
+-- bleiben bewusst außen vor.
+CREATE OR REPLACE TEMP TABLE _ddr_calc_ctx AS
+SELECT
+    regexp_extract(calc_elem::VARCHAR, '<(_[^\s>]+)', 1) as Calc_UUID,
+    xml_extract_text(calc_elem, '//*/@hash')[1] as Calc_Hash,
+    len(xml_extract_elements(calc_elem, '//ChunkList/Chunk')) as Chunk_Count,
+    TRY_CAST(NULLIF(xml_extract_text(calc_elem, '/*/TableOccurrenceReference/@id')[1], '') AS BIGINT) as Context_TO_ID,
+    NULLIF(xml_extract_text(calc_elem, '/*/TableOccurrenceReference/@name')[1], '') as Context_TO_Name,
+    NULLIF(xml_extract_text(calc_elem, '/*/TableOccurrenceReference/@UUID')[1], '') as Context_TO_UUID,
+    getvariable('fm_file') as File_Name
+FROM _ddr_calc_raw
+WHERE xml_extract_text(calc_elem, '//*/@datatype')[1] = 'ChunkList';
+
+-- Profil saxml22: alle Anker direkt in die DDR-Tabellen (22 polstert nicht).
+-- @P1_PROFILE:saxml22@
+INSERT INTO DDR_Calculations
+SELECT Calc_UUID, Calc_Hash, Chunk_Index, Chunk_Type, Chunk_Content, File_Name
+FROM _ddr_calc_chunks
 ON CONFLICT (Calc_UUID, Chunk_Index, File_Name) DO UPDATE SET
     Calc_Hash = EXCLUDED.Calc_Hash,
     Chunk_Type = EXCLUDED.Chunk_Type,
     Chunk_Content = EXCLUDED.Chunk_Content;
 
--- DDR_ChunkListContexts: zweiter Pass über dieselben ObjectList-Einträge
--- (Begründung + Pfad-Semantik in der DOM-Basis). Extraktion identisch zur
--- Basis, nur der ddr_calc_raw-Anker ist der SAX-Read.
-WITH filename_normalized AS (
-    SELECT getvariable('fm_file') as File_Name
-),
-ddr_calc_raw AS (
-    SELECT
-        unnest(xml_extract_elements('<Calculation>' || Calculation || '</Calculation>', '/Calculation/ObjectList/*')) as calc_elem
-    FROM read_xml(
-        getvariable('fm_xml'),
-        record_element='DDR_INFO',
-        maximum_file_size=getvariable('dom_threshold'),
-        streaming=getvariable('use_streaming'),
-        columns={'Calculation':'VARCHAR'}
-    )
-    WHERE Calculation IS NOT NULL
-),
-chunk_list_ctx AS (
-    SELECT
-        regexp_extract(calc_elem::VARCHAR, '<(_[^\s>]+)', 1) as Calc_UUID,
-        xml_extract_text(calc_elem, '//*/@hash')[1] as Calc_Hash,
-        len(xml_extract_elements(calc_elem, '//ChunkList/Chunk')) as Chunk_Count,
-        TRY_CAST(NULLIF(xml_extract_text(calc_elem, '/*/TableOccurrenceReference/@id')[1], '') AS BIGINT) as Context_TO_ID,
-        NULLIF(xml_extract_text(calc_elem, '/*/TableOccurrenceReference/@name')[1], '') as Context_TO_Name,
-        NULLIF(xml_extract_text(calc_elem, '/*/TableOccurrenceReference/@UUID')[1], '') as Context_TO_UUID
-    FROM ddr_calc_raw
-    WHERE xml_extract_text(calc_elem, '//*/@datatype')[1] = 'ChunkList'
-)
 INSERT INTO DDR_ChunkListContexts
-SELECT
-    c.Calc_UUID,
-    c.Calc_Hash,
-    c.Chunk_Count,
-    c.Context_TO_ID,
-    c.Context_TO_Name,
-    c.Context_TO_UUID,
-    fn.File_Name
-FROM chunk_list_ctx c
-CROSS JOIN filename_normalized fn
-WHERE c.Calc_UUID IS NOT NULL AND c.Calc_UUID <> ''
+SELECT Calc_UUID, Calc_Hash, Chunk_Count, Context_TO_ID, Context_TO_Name, Context_TO_UUID, File_Name
+FROM _ddr_calc_ctx
+WHERE Calc_UUID IS NOT NULL AND Calc_UUID <> ''
 ON CONFLICT (Calc_UUID, File_Name) DO UPDATE SET
     Calc_Hash = EXCLUDED.Calc_Hash,
     Chunk_Count = EXCLUDED.Chunk_Count,
     Context_TO_ID = EXCLUDED.Context_TO_ID,
     Context_TO_Name = EXCLUDED.Context_TO_Name,
     Context_TO_UUID = EXCLUDED.Context_TO_UUID;
+-- @END_P1_PROFILE@
+
+-- Profil saxml23: DisplayCalculations-Anker → Staging DDR_DisplayCalcAnchors23
+-- (Promotion in P1d nach der Token-Regel), alle übrigen Anker direkt.
+-- @P1_PROFILE:saxml23@
+INSERT INTO DDR_Calculations
+SELECT Calc_UUID, Calc_Hash, Chunk_Index, Chunk_Type, Chunk_Content, File_Name
+FROM _ddr_calc_chunks
+WHERE Calc_UUID NOT LIKE '%\_DisplayCalculations\_%' ESCAPE '\'
+ON CONFLICT (Calc_UUID, Chunk_Index, File_Name) DO UPDATE SET
+    Calc_Hash = EXCLUDED.Calc_Hash,
+    Chunk_Type = EXCLUDED.Chunk_Type,
+    Chunk_Content = EXCLUDED.Chunk_Content;
+
+INSERT INTO DDR_ChunkListContexts
+SELECT Calc_UUID, Calc_Hash, Chunk_Count, Context_TO_ID, Context_TO_Name, Context_TO_UUID, File_Name
+FROM _ddr_calc_ctx
+WHERE Calc_UUID IS NOT NULL AND Calc_UUID <> ''
+  AND Calc_UUID NOT LIKE '%\_DisplayCalculations\_%' ESCAPE '\'
+ON CONFLICT (Calc_UUID, File_Name) DO UPDATE SET
+    Calc_Hash = EXCLUDED.Calc_Hash,
+    Chunk_Count = EXCLUDED.Chunk_Count,
+    Context_TO_ID = EXCLUDED.Context_TO_ID,
+    Context_TO_Name = EXCLUDED.Context_TO_Name,
+    Context_TO_UUID = EXCLUDED.Context_TO_UUID;
+
+INSERT INTO DDR_DisplayCalcAnchors23
+SELECT Calc_UUID, Calc_Hash, Chunk_Index, Chunk_Type, Chunk_Content,
+       NULL, NULL, NULL, NULL,
+       TRY_CAST(regexp_extract(Calc_UUID, '_DisplayCalculations_([0-9]+)$', 1) AS BIGINT),
+       FALSE, File_Name
+FROM _ddr_calc_chunks
+WHERE Calc_UUID LIKE '%\_DisplayCalculations\_%' ESCAPE '\'
+UNION ALL
+SELECT Calc_UUID, Calc_Hash, 0, NULL, NULL,
+       Chunk_Count, Context_TO_ID, Context_TO_Name, Context_TO_UUID,
+       TRY_CAST(regexp_extract(Calc_UUID, '_DisplayCalculations_([0-9]+)$', 1) AS BIGINT),
+       FALSE, File_Name
+FROM _ddr_calc_ctx
+WHERE Calc_UUID IS NOT NULL AND Calc_UUID <> ''
+  AND Calc_UUID LIKE '%\_DisplayCalculations\_%' ESCAPE '\'
+ON CONFLICT (Calc_UUID, Chunk_Index, File_Name) DO UPDATE SET
+    Calc_Hash = EXCLUDED.Calc_Hash,
+    Chunk_Type = EXCLUDED.Chunk_Type,
+    Chunk_Content = EXCLUDED.Chunk_Content,
+    Chunk_Count = EXCLUDED.Chunk_Count,
+    Context_TO_ID = EXCLUDED.Context_TO_ID,
+    Context_TO_Name = EXCLUDED.Context_TO_Name,
+    Context_TO_UUID = EXCLUDED.Context_TO_UUID,
+    Slot_Index = EXCLUDED.Slot_Index,
+    Promoted = FALSE;
+-- @END_P1_PROFILE@
+
+DROP TABLE IF EXISTS _ddr_calc_chunks;
+DROP TABLE IF EXISTS _ddr_calc_ctx;
+DROP TABLE IF EXISTS _ddr_calc_raw;
 
 
 

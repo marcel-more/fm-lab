@@ -138,14 +138,11 @@ Each bundled skill has its own reference page with invocation, options and prere
 
 **Optional tools**
 
-- `.claude/skills/install-ooe-fm` — Installs OOE references as a test suite for the XML converter. This component is entirely optional and not used elsewhere in the project.
-- `.claude/skills/install-fm-xml-export-exploder` — Installs XML Export Exploder for reference purposes and local testing. This component is entirely optional and not used elsewhere in the project.
 - `.claude/skills/skill-creator` — Helps you build your own skills that extend the agentic workflow.
 
 **XML conversion**
 
 - `.claude/skills/convert-xml` — Runs the XML conversion with checks and configuration options.
-- `.claude/skills/test-convert-xml` — Runs a test conversion against the OOE references.
 
 **Agentic analysis**
 

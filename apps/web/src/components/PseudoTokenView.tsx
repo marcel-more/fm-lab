@@ -11,6 +11,7 @@ import {
   type SortMode,
 } from './PseudoTokenFilterToolbar';
 import { ObjectListItem } from './ObjectListItem';
+import { useApiLang } from '../hooks/useApiLang';
 
 export interface PseudoTokenDrilldown {
   type: string;
@@ -138,6 +139,8 @@ export const PseudoTokenView: React.FC<Props> = ({
     };
   }, [objectType, file, isTokenType]);
 
+  const lang = useApiLang();
+
   // Liste laden — bei Pseudo-Typen mit Aggregations
   useEffect(() => {
     let cancelled = false;
@@ -150,6 +153,10 @@ export const PseudoTokenView: React.FC<Props> = ({
       sort,
     });
     if (file) params.set('file', file);
+    // Aktive UI-Sprache: Built-ins liefern damit ihre lokalisierte Namensfassung
+    // mit (Localized_Name) — die Liste zeigt denselben Namen wie Detailseite
+    // und Trefferliste.
+    if (lang) params.set('lang', lang);
 
     if (isTokenType || isComponentType) {
       params.set('with_usage', 'true');
@@ -175,13 +182,17 @@ export const PseudoTokenView: React.FC<Props> = ({
     return () => {
       cancelled = true;
     };
-  }, [objectType, file, sort, activeCategories, isTokenType, isComponentType]);
+  }, [objectType, file, sort, activeCategories, isTokenType, isComponentType, lang]);
 
   // Clientseitiges Filtern nach searchText
   const filteredItems = useMemo(() => {
     if (!searchText.trim()) return items;
     const lower = searchText.toLowerCase();
-    return items.filter((it) => (it.Object_Name || '').toLowerCase().includes(lower));
+    // Auch über die lokalisierte Fassung filtern: in einer deutschen Lösung
+    // tippt man 'Seitennummer', nicht 'PageNumber'.
+    return items.filter((it) =>
+      (it.Object_Name || '').toLowerCase().includes(lower)
+      || String((it as Record<string, unknown>).Localized_Name ?? '').toLowerCase().includes(lower));
   }, [items, searchText]);
 
   const handleToggleCategory = (cat: string) => {

@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Compatibilità dei trigger: FileMaker WebDirect",
+    "analysis.defaultResult.meaning": "Trigger di script nell’ambito il cui evento non si attiva o si attiva solo parzialmente in FileMaker WebDirect"
+  },
+  "layout": {}
+}

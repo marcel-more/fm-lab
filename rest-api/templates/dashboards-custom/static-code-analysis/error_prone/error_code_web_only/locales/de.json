@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Web-Fehlercode-Literal",
+    "analysis.defaultResult.meaning": "Vergleiche von Get(LastError) mit einem Code, den nur die Web Publishing Engine oder eine REST-API zurückgibt"
+  },
+  "layout": {}
+}

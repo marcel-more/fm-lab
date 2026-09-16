@@ -26,9 +26,8 @@ Standard loop for every question: *understand the question → pick the table(s)
 Use the **`convert-xml` skill** — it runs the full pipeline (P1 extract → P6 validate, plus analysis views and P7 auto-clustering):
 
 - Single file: `convert-xml "MyDatabase.xml"` · all files in the active solution's inbox `solutions/<id>/xml/`: `convert-xml --batch` · another solution: `--batch --solution <id>` · large files: `--batch --split`
-- Supported input: SaXML v2.1.0.0+ (FileMaker 19+, root `<FMSaveAsXML>`). The older v2.0.0.0 format (`<FMDynamicTemplate>`) is skipped with a warning.
+- Supported input: SaXML v2.1.0.0+ (FileMaker 19+, root `<FMSaveAsXML>`). The older v2.0.0.0 format (`<FMDynamicTemplate>`) is skipped with a warning. Every file is imported under an explicit **SaXML profile** read from the root version — `saxml22` (2.1–2.2.x, FileMaker 19–22) or `saxml23` (2.3.0.0+, FileMaker 26) — persisted in `FilesCatalog.SaXML_Profile`; never mix the FileMaker 22 and 26 export of the *same* file in one bundle (identical object UUIDs).
 - After a successful run the master DB is synced to the REST-API copy automatically. CLI and the web import button share a lock file — the second caller fails fast (HTTP 409 / exit 7).
-- Isolated test runs: **`test-convert-xml` skill** (writes `db/fm_test.duckdb`, production DB untouched).
 
 Pipeline internals (phase table, analysis/graph views, `--split`, DB sync & locking): → `docs/agents/pipeline-reference.md`
 XML structure of the exports: → `docs/agents/xml-schema.md`
@@ -40,15 +39,15 @@ The DuckDB tables mirror the XML object catalogs. Most-used tables:
 | Table | Content |
 |---|---|
 | `ObjectCatalog` / `ObjectLinks` | Central registry of all objects (25+ types, all files) and the links between them — start here for existence & where-used questions |
-| `FilesCatalog` | Imported FileMaker files (version, DDR-Info flag) |
+| `FilesCatalog` | Imported FileMaker files (version, DDR-Info flag, `SaXML_Version`/`SaXML_Profile`) |
 | `ScriptCatalog` / `StepsForScripts` | Scripts and their steps (+ `DDR_ScriptSteps` human-readable). `Step_Index` is 0-based — user-facing step numbers are `Step_Index + 1` |
 | `StepCalculations` / `v_script_block_tree` | All calculation slots of a step (window name vs. geometry, dialog title vs. message) / per-step Loop-&-If nesting depth — use for any branch-scope question instead of hand-reconstructing control flow |
 | `CalculationsCatalog` / `v_calculation_links` | Every calculation **instance** (owner × role × index; `Object_Type='Calculation'`, exists also without DDR-Info) / its per-slot target resolution derived from the owner edges — where-used stays on the owner edges (`has_calculation` never counts as usage) |
-| `FieldsForTables` | Fields incl. type, AutoEnter, validation, storage |
+| `FieldsForTables` / `FieldDisplayNames` | Fields incl. type, AutoEnter, validation, storage; FileMaker 26: annotation + display-names formula (`Field_Annotation`, `DisplayNames_Calc_Text`, elements in `FieldDisplayNames`) and disabled definitions (`*_Enabled` = false → no where-used links) |
 | `BaseTableCatalog` / `TableOccurrenceCatalog` / `RelationshipCatalog` | Data model & relationship graph |
-| `Layouts` / `LayoutObjects` / `LayoutParts` | Layouts, all 26 layout-object types, parts |
+| `Layouts` / `LayoutObjects` / `LayoutParts` / `LayoutTableViewColumns` | Layouts, all 26 layout-object types, parts, table-view columns (FileMaker 26 exports only; edge `displays_field`/`table_view_column`) |
 | `LayoutObjectConditions` | Conditional-formatting rules, one row per rule (type/operator, operands, formula + `Calculation_UUID`-FK, raw CSS) — never regex `Object_XML` for CF |
-| `LayoutObjectSymbols` | `{{…}}` symbol inventory per text layout object (`Symbol_Norm` = case-robust key; deliberately no where-used edges) — never regex `Text_Content` for symbols |
+| `LayoutObjectSymbols` | `{{…}}` symbol inventory per text layout object (`Symbol_Norm` = case-robust key) — a **valid** symbol also carries the where-used edge `displays_symbol` → BuiltinFunction `Get(<Symbol>)`; an invalid one stays edgeless and surfaces via the test `layout-merge-anchors`. Never regex `Text_Content` for symbols |
 | `CustomFunctionsCatalog` / `CalcsForCustomFunctions` | Custom functions and their formulas |
 | `ValueListCatalog` / `OptionsForValueLists` | Value lists |
 | `VariableUsages` / `VariablesCatalog` | Every variable usage / aggregated per variable |
@@ -56,7 +55,7 @@ The DuckDB tables mirror the XML object catalogs. Most-used tables:
 | `AccountsCatalog` / `PrivilegeSetsCatalog` / `PrivilegeSet*Access` | Security model |
 | `LinkRoleRegistry` | Link-role classification & where-used flag (columns: `Link_Kind` = usage/containment/restriction, `Counts_For_Where_Used`) — the prose meaning of each role lives in `schema-reference.md`, not as a column |
 
-Full reference — all tables, column details (AutoEnter/Lookup, LayoutObjects, privilege access, variables, DDR-Info) and all 59 link roles: → `docs/agents/schema-reference.md`
+Full reference — all tables, column details (AutoEnter/Lookup, LayoutObjects, privilege access, variables, DDR-Info) and all 61 link roles: → `docs/agents/schema-reference.md`
 
 ## 5. Analytic workflows
 
@@ -126,6 +125,8 @@ Full protocol, phase model, language policy (3 layers), fallback rules, dashboar
 |---|---|
 | Native FileMaker functions & script steps ("What does `PatternCount` do?") | `filemaker-function-reference` (local Claris-Help mirror, 11 languages, online fallback) |
 | Runtime compatibility of a script step (Server/WebDirect/Go/…) — "does this run on FileMaker Server?" | `reference/fm_spec.duckdb` → `step_compat` (join `script_steps_lang` on `step_id`, `language='en'`, read the `server`/`webdirect`/`go` flags; open **read-only**: `duckdb -readonly`). The Claris source is tri-state — **NULL means "Partial: conditionally supported, see the step's Claris help page"**, never "undocumented" and never "compatible"; only a missing row means "Claris states nothing". Never answer platform questions from memory. Functions have **no** Claris compatibility table — platform *affinity* is curated instead: `function_platform_affinity` (since reference 1.12.0; affinity = "meaningful results only on X", never "does not run on X") |
+| Runtime compatibility of a **script trigger** ("does `OnObjectKeystroke` fire in WebDirect?") | `reference/fm_spec.duckdb` → `trigger_compat` (since 2.8.0; join `ScriptTriggers.Trigger_ID = trigger_id` — never the raw event name; same tri-state as `step_compat`: **NULL = Partial**, never "undocumented"; `since_version` in `script_triggers`). Test members `platform_compat_triggers_{webdirect,ios}` |
+| What FileMaker error code N means ("what is error 101 / 5123?") | `reference/fm_spec.duckdb` → `error_codes` (since 2.8.0; codes are **spans** — `WHERE N BETWEEN code_from AND code_to`, so 5123 resolves to the `5000-5499` row; `scope='web'` = returned only by the web publishing engine / REST API; localized text in `error_codes_lang`, EN in `message_en`). Never quote error codes from memory. Feature introduction versions: `feature_versions` (three-part `version_num`) |
 | **OS** binding of a step or function ("does `Perform AppleScript` work on Windows?") | `reference/fm_spec.duckdb` → `step_os_affinity` / `function_os_affinity` (since 1.13.0; curated & sparse from the Claris help prose — **absence of a row = "Claris states nothing"**, never "runs everywhere"; affinity: `exclusive` / `unsupported` (source-true inverse — resolve against the host OS of the object's runtimes via `runtime_os_matrix`, never against all 4) / `variant` / `os_probe` (Get(SystemPlatform) & co: guard idiom, not a binding)). **OS columns hold only `macos`/`windows`/`linux`/`ios` — `ios` is the operating system (hosting FileMaker Go AND iOS SDK apps); runtime terms (`go`, `ios_sdk`, `pro`) never appear there and vice versa.** `runtime_os_matrix` is the only translator between the runtime and OS axes (`cloud` has no rows — host OS undocumented) |
 | MBS plugin functions | `mbs-function-reference` |
 | Platform support of a **plugin function** ("does `MBS(...)` run on Server/macOS/…?") | `reference/plugin_spec.duckdb` → `plugin_functions` + `plugin_function_platforms` (ATTACH alias `plugref`, read-only; bundled with every fm-lab release — maintainer-derived from the MBS docs mirror, `install-mbs-docs` never regenerates it; since 1.2.0 incl. deprecated status + minimum version — `status`, `replacement`, `removed_in`, `since_version_num` (numeric comparison key: version compares never on the string)). Flags are **binary with MBS authority** — never confuse with the Claris tri-state `step_compat` (NULL = Partial exists only there). Old names resolve via `plugin_function_aliases`; FileMaker Go supports no plugins at all (generic rule, `plugin_generic_rules`); the `ios_sdk` axis means Claris iOS SDK apps, NOT Go. For OS questions use `plugin_os_map` (since 1.1.0): folds the vendor axes into the OS vocabulary (`ios_sdk` → `ios`, qualifier `sdk-only`; `server` is a runtime flag, no OS row) |
@@ -177,6 +178,5 @@ Availability of these helpers can vary per setup — skip gracefully if one is n
 
 - REST API / web frontend: `rest-api-start` / `rest-api-stop`, `rest-frontend-start` / `rest-frontend-stop`
 - Install/update local documentation mirrors: `install-claris-docs`, `install-mbs-docs`, `install-duckdb-docs`, `install-fmide-docs`
-- Test data & tooling: `install-ooe-fm`, `install-fm-xml-export-exploder`, `test-convert-xml`
 
 Details (DuckDB binary resolution, server ports, install notes): → `docs/agents/tooling.md`

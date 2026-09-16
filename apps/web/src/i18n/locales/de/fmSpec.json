@@ -7,12 +7,14 @@
   "help": {
     "open": "Hilfe"
   },
+  "clarisHelp": "Claris Hilfe →",
   "search": {
     "placeholder": "Filtern…",
     "platformAll": "Alle Plattformen",
     "platformLabel": "Plattform",
     "platformStepHint": "Steps zeigen, die auf dieser Plattform laufen (inkl. teilweise Unterstützung)",
-    "platformFnHint": "Funktionen zeigen, die für diese Plattform gebaut sind (Plattform-Bindung)"
+    "platformFnHint": "Funktionen zeigen, die für diese Plattform gebaut sind (Plattform-Bindung)",
+    "platformTriggerHint": "Trigger-Ereignisse zeigen, die auf dieser Plattform feuern (inkl. teilweiser Unterstützung)"
   },
   "list": {
     "count": "{{shown}} / {{total}}"
@@ -20,11 +22,14 @@
   "tabs": {
     "steps": "ScriptSteps",
     "functions": "Funktionen",
-    "locales": "Sprachen"
+    "locales": "Sprachen",
+    "triggers": "Trigger",
+    "errorCodes": "Fehlercodes"
   },
   "header": {
     "schemaVersion": "Schema",
-    "coverage": "FM-Version",
+    "coverage": "FM-Version (Shapes)",
+    "docCoverage": "FM-Version (Doku)",
     "built": "Erstellt am",
     "steps": "ScriptSteps",
     "functions": "Funktionen",
@@ -32,7 +37,9 @@
     "localesValue": "{{steps}} / {{functions}}",
     "grammar": "Grammatik-Abdeckung",
     "grammarValue": "{{covered}}/{{total}} Steps",
-    "attribution": "Dokumentationsinhalte © Claris International Inc. FileMaker und Claris sind Marken von Claris International Inc. Dieses Projekt steht in keiner Verbindung zu Claris und wird von Claris nicht unterstützt. Vollständige Attribution siehe SOURCES."
+    "attribution": "Dokumentationsinhalte © Claris International Inc. FileMaker und Claris sind Marken von Claris International Inc. Dieses Projekt steht in keiner Verbindung zu Claris und wird von Claris nicht unterstützt. Vollständige Attribution siehe SOURCES.",
+    "triggers": "Trigger",
+    "errorCodes": "Fehlercodes"
   },
   "steps": {
     "col": {
@@ -52,7 +59,8 @@
       "name": "Name",
       "category": "Kategorie",
       "returnType": "Rückgabetyp",
-      "originVersion": "Ursprungs-Version"
+      "originVersion": "Ursprungs-Version",
+      "removedInVersion": "Entfernt in"
     },
     "detail": {
       "returnType": "Rückgabetyp",
@@ -120,7 +128,14 @@
         "evidence": "Evidenz",
         "values": "Werte",
         "invertedHint": "Label-Semantik ist gegenüber dem XML-Zustand invertiert — true_text/false_text tragen die vollständige Text→XML-Abbildung; niemals zusätzlich invertieren.",
-        "docOnly": "Von Claris dokumentiert, aber nicht roundtrip-verifiziert — Verhalten nach dem Einfügen prüfen."
+        "docOnly": "Von Claris dokumentiert, aber nicht roundtrip-verifiziert — Verhalten nach dem Einfügen prüfen.",
+        "slotKind": "Slot",
+        "xmlDomain": "XML-Domäne",
+        "slot_field_only": "nur Feld",
+        "slot_field_or_var": "Feld oder Variable",
+        "slot_variable_only": "nur Variable",
+        "pasteDropped": "beim Einfügen verworfen",
+        "pasteDroppedHint": "FileMaker verwirft diese Option beim Einfügen unabhängig vom Wert — ein Generator lässt sie weg, die Referenz behält den Platzhalter zum Lesen."
       },
       "repeatGroups": "Wiederholgruppen (Listen)",
       "rg": {
@@ -132,6 +147,8 @@
         "countAttr": "Count-Attribut {{attr}}"
       },
       "knownBugHint": "Bekannter FileMaker-Bug — Warnklasse, keine Validitätsregel: der Step ist gültig, das Risiko liegt in FileMakers eigener Serialisierung.",
+      "saxmlGapHint": "SaXML-Exportlücke — der Export trägt diesen Slot nie, ein daraus gebauter Katalog kann ihn nicht zeigen; nur eine Clipboard-Kopie. Kein Defekt des Snippets.",
+      "constraintCoverageHint": "Gilt nur für die Serialisierung von FileMaker {{coverage}}",
       "variableTargetMarker": "Variablen-Target-Marker",
       "variableTargetMarkerHint": "Trägt einen leeren <Text/>-Marker auf Step-Ebene genau dann, wenn der Target-Slot eine Variable statt einer Feldreferenz hält.",
       "consumerNote": "Konsumenten-Hinweis",
@@ -140,7 +157,8 @@
         "in": "in {{parent}}",
         "hull": "Hülle — persistiert auch unkonfiguriert mit Default-Inhalt",
         "hull_strip_children": "Hülle — behält Attribute, ungefüllte Kinder entfallen",
-        "condition": "nur bei {{cond}}"
+        "condition": "nur bei {{cond}}",
+        "help": "Elemente, die FileMaker auch dann im Snippet behält, wenn nichts darin konfiguriert ist; dargestellt als der Baum, den sie bilden, in Template-Reihenfolge. Ein Generator stellt sie nach dem Entfernen ungefüllter Inhalte wieder her, ein Leser darf ihren Default-Inhalt verwerfen."
       },
       "bindings": "Optionsgebundene Elemente",
       "bd": {
@@ -148,7 +166,13 @@
         "excludes": "entfällt bei {{cond}}",
         "requiresOption": "existiert nur bei gesetztem {{option}}",
         "excludesOption": "entfällt bei gesetztem {{option}}",
-        "suppressEmpty": "leeres Element wird deterministisch nie emittiert (Dialog-Residuum)"
+        "suppressEmpty": "leeres Element wird deterministisch nie emittiert (Dialog-Residuum)",
+        "help": "Elemente, deren Vorhandensein von einer anderen Option abhängt. Mehrere Werte einer Option bilden die Menge, bei der das Element existiert (oder entfällt): bei jedem dieser Werte wird es geschrieben, bei allen anderen entfernt."
+      },
+      "mirrors": "Gespiegelte Werte",
+      "mr": {
+        "source_present": "Kopie von {{option}} — FileMaker schreibt sie, sobald die Quelle gesetzt ist",
+        "help": "Werte, die FileMaker ein zweites Mal an anderer Stelle des Steps schreibt und beim Einfügen synchron hält. Die Quelloption ist die Wahrheit: ein Generator kopiert sie, ein Leser behandelt die Kopie als Redundanz."
       },
       "implications": "Notations-Implikationen",
       "imp": {
@@ -156,8 +180,16 @@
         "value_form": "Referenz-Form",
         "keyword": "Schlüsselwort",
         "mode_switch": "Modus-Weiche",
-        "default": "Default-Modus (ohne Weichen-Label)"
-      }
+        "default": "Default-Modus (ohne Weichen-Label)",
+        "help": "Optionen, die die kanonische Textnotation implizit lässt: ein Schlüsselwort, eine Referenzform oder ein benannter Modus impliziert beim Parsen den Wert einer anderen Option."
+      },
+      "coverage": "Shape-Coverage",
+      "coverageHint": "FileMaker-Version, gegen deren gepaarte Export- und Clipboard-Belege diese Form verifiziert ist. Eine mit Version markierte Zeile ist ein Override dieser Coverage und ersetzt die Standardzeile mit demselben Schlüssel.",
+      "coverageBase": "Basis",
+      "overrideBadge": "FM {{coverage}}",
+      "overrideHint": "Override-Zeile der Coverage {{coverage}} — ersetzt die Standardzeile mit demselben Schlüssel.",
+      "noOverrides": "Keine Override-Zeilen für diese Coverage — es gilt die Standardform.",
+      "targetSlotKind": "Ziel-Slot-Art"
     },
     "saxml": {
       "paramTypes": "Parameter-Typ-Sequenz",
@@ -169,7 +201,8 @@
     "compat": {
       "label": "Plattform-Kompatibilität",
       "partial": "teilweise",
-      "partialHint": "Partial — bedingt unterstützt; siehe Claris-Hilfeseite des Steps"
+      "partialHint": "Partial — bedingt unterstützt; siehe Claris-Hilfeseite des Steps",
+      "none": "Keine Plattform — Claris führt dieses Ereignis nirgends als unterstützt"
     }
   },
   "osAffinity": {
@@ -182,5 +215,56 @@
     "hint_unsupported": "Claris nennt dieses OS explizit als nicht unterstützt (quellentreu inverse Aussage)",
     "hint_variant": "Läuft überall — Verhalten/Ergebnis ist OS-abhängig",
     "hint_os_probe": "Liefert die Plattform/das OS zur Laufzeit — Guard-Idiom, keine Bindung"
+  },
+  "triggers": {
+    "col": {
+      "id": "Slot-ID",
+      "event": "Ereignis",
+      "label": "Beschriftung",
+      "level": "Ebene",
+      "since": "Seit",
+      "parameter": "Parameter",
+      "platforms": "Plattformen"
+    },
+    "level": {
+      "object": "Objekt",
+      "layout": "Layout",
+      "file": "Datei"
+    },
+    "paramYes": "ja",
+    "paramNo": "nein",
+    "unavailable": "Diese Referenz führt keine Script-Trigger-Tabelle (fm-spec < 1.18.0)."
+  },
+  "errorCodes": {
+    "col": {
+      "code": "Code",
+      "message": "Meldung",
+      "scope": "Bereich"
+    },
+    "scope": {
+      "core": "Kern",
+      "web": "Web"
+    },
+    "scopeHint": {
+      "core": "Von den FileMaker-Clients und -Hosts zurückgegeben",
+      "web": "Von der Web Publishing Engine oder einer FileMaker-REST-API zurückgegeben (bei Claris mit (*) markiert)"
+    },
+    "search": {
+      "hint": "Eine Zahl findet den Code oder den Bereich, in den er fällt (5123 → 5000-5499); Text durchsucht die Meldung"
+    },
+    "unavailable": "Diese Referenz führt keine Fehlercode-Tabelle (fm-spec < 2.8.0)."
+  },
+  "trigger": {
+    "section": {
+      "labels": "Lokalisierte Beschriftungen",
+      "platforms": "Plattform-Kompatibilität"
+    },
+    "localized": {
+      "label": "Dialog-Beschriftung"
+    },
+    "parameterField": "mit Parameterfeld-Attribut",
+    "compat": {
+      "unavailable": "Keine veröffentlichte Kompatibilitätsaussage — Referenz älter als fm-spec 2.8.0"
+    }
   }
 }

@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Foutcode-literal alleen web",
+    "analysis.defaultResult.meaning": "Vergelijkingen van Get(LastError) met een code die alleen de Web Publishing Engine of een REST-API retourneert"
+  },
+  "layout": {}
+}

@@ -4,14 +4,17 @@
 -- feed the chip badges, which must always show the true per-slot totals.
 WITH slots AS (
     SELECT lo.File_Name, lo.Layout_ID, lo.Object_Type,
-           CASE c.Calc_Role WHEN 'button_label' THEN 'label' ELSE c.Calc_Role END AS calc_slot,
+           CASE c.Calc_Role WHEN 'button_label' THEN 'label'
+                            WHEN 'field_entry'  THEN 'entry'
+                            ELSE c.Calc_Role END AS calc_slot,
            COALESCE(c.Formula_Text, c.Display_Text) AS calc_text
     FROM CalculationsCatalog c
     JOIN LayoutObjects lo ON lo.Object_UUID = c.Owner_UUID AND lo.File_Name = c.File_Name
-    WHERE c.Calc_Role IN ('hide', 'tooltip', 'button_label')
+    WHERE c.Calc_Role IN ('hide', 'field_entry', 'tooltip', 'button_label')
 )
 SELECT COUNT(*) AS finding_count,
        COUNT(*) FILTER (WHERE s.calc_slot = 'hide') AS hide_count,
+       COUNT(*) FILTER (WHERE s.calc_slot = 'entry') AS entry_count,
        COUNT(*) FILTER (WHERE s.calc_slot = 'tooltip') AS tooltip_count,
        COUNT(*) FILTER (WHERE s.calc_slot = 'label') AS label_count,
        COUNT(DISTINCT l.L_UUID) AS affected_layouts,

@@ -1,10 +1,11 @@
 {
   "manifest": {
     "title": "Bortkommenterad Layout-beräkning",
-    "description": "Layoutkvalitetsregel — en dölj-, verktygstips- eller etikettberäkning på ett Layout-objekt består helt av en kommentar. Formeln utvärderas aldrig; det avsedda beteendet är tyst avstängt.\n\nBaserad på fmCheckMate-kontrollen ”Broken Calculation /*Commented Out*/” — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+    "description": "Layoutkvalitetsregel — en dölj-, fältinmatnings-, verktygstips- eller etikettberäkning på ett Layout-objekt består helt av en kommentar. Formeln utvärderas aldrig; det avsedda beteendet är tyst avstängt.\n\nBaserad på fmCheckMate-kontrollen ”Broken Calculation /*Commented Out*/” — https://github.com/mrwatson-de/fmCheckMate-XSLT",
     "messages.hide": "Döljberäkningen är helt bortkommenterad",
     "messages.tooltip": "Verktygstipsberäkningen är helt bortkommenterad",
-    "messages.label": "Etikettberäkningen är helt bortkommenterad"
+    "messages.label": "Etikettberäkningen är helt bortkommenterad",
+    "messages.entry": "Fältinmatningsberäkningen är helt bortkommenterad"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Träffar",
@@ -22,6 +23,7 @@
     "calc_slot_filter.props.options[1].label": "dölj",
     "calc_slot_filter.props.options[2].label": "verktygstips",
     "calc_slot_filter.props.options[3].label": "etikett",
+    "calc_slot_filter.props.options[4].label": "fältinmatning",
     "object_type_select.props.label": "Objekttyp",
     "object_type_select.props.emptyOptionLabel": "alla objekttyper",
     "findings_table.props.columns[7].label": "Bredd",

@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "type": "Grid",
+    "props": {
+      "columns": 12,
+      "gap": 16
+    },
+    "children": [
+      {
+        "type": "Card",
+        "id": "summary_card",
+        "props": {
+          "span": 12,
+          "variant": "hero"
+        },
+        "data": {
+          "dataset": "summary"
+        },
+        "children": [
+          {
+            "type": "KPIStrip",
+            "id": "summary_kpi",
+            "props": {
+              "items": [
+                {
+                  "label": "Findings",
+                  "field": "finding_count",
+                  "format": "number"
+                },
+                {
+                  "label": "Distinct codes",
+                  "field": "distinct_codes",
+                  "format": "number"
+                },
+                {
+                  "label": "Scripts",
+                  "field": "script_count",
+                  "format": "number"
+                },
+                {
+                  "label": "Affected files",
+                  "field": "affected_files",
+                  "format": "number"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "findings_card",
+        "props": {
+          "span": 12,
+          "title": "Unknown error-code literal"
+        },
+        "data": {
+          "dataset": "findings"
+        },
+        "children": [
+          {
+            "type": "Table",
+            "id": "findings_table",
+            "props": {
+              "rowKey": "row_key",
+              "density": "comfortable",
+              "sortable": true,
+              "searchable": true,
+              "searchPlaceholder": "Search file, script or event…",
+              "chipFilter": "severity",
+              "columns": [
+                {
+                  "field": "severity",
+                  "label": "Severity"
+                },
+                {
+                  "field": "file_name",
+                  "label": "File"
+                },
+                {
+                  "field": "script_name",
+                  "label": "Script"
+                },
+                {
+                  "field": "step_no",
+                  "label": "Step",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "literal",
+                  "label": "Code",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "code_message",
+                  "label": "Documented as"
+                }
+              ],
+              "onRowClick": {
+                "action": "openObject",
+                "args": {
+                  "uuid": "{{nav_uuid}}",
+                  "type": "Script",
+                  "step": "{{step_uuid}}"
+                }
+              },
+              "empty": {
+                "message": "Every Get(LastError) literal in scope is a documented FileMaker error code."
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

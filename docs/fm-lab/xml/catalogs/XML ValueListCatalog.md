@@ -16,4 +16,8 @@ The value lists of the file — identity plus the source kind only. The actual d
 </ValueListCatalog>
 ```
 
+## Notes
+
+- **Version difference:** from SaXML v2.3.0.0 (FileMaker 26) each `<ValueList>` additionally carries its **option details** — the `Source`, `Field`, `CustomValues` and `External` children that the separate [XML OptionsForValueLists](XML%20OptionsForValueLists.md) branch holds up to v2.2.x. The importer reads whichever form the file's profile prescribes; both fill [OptionsForValueLists](../../schema/catalog-tables/OptionsForValueLists.md).
+
 **Extracted into:** [ValueListCatalog](../../schema/catalog-tables/ValueListCatalog.md) — column details in the [schema reference](../../schema/Schema.md).

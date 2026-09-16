@@ -27,7 +27,10 @@
     "BaseTable": "Tabeldetails",
     "CustomFunction": "Functiedetails",
     "ValueList": "Waardelijstdetails",
-    "Calculation": "Berekeningsdetails"
+    "Calculation": "Berekeningsdetails",
+    "BuiltinFunction": "Details ingebouwde functie",
+    "PluginFunction": "Details plug-infunctie",
+    "PluginComponent": "Details plug-incomponent"
   },
   "layoutCanvas": {
     "searchPlaceholder": "Zoek layout-object…",
@@ -160,6 +163,10 @@
       "hide": {
         "short": "Hide",
         "long": "Verbergconditie"
+      },
+      "field_entry": {
+        "short": "Entry",
+        "long": "Veldinvoerconditie"
       },
       "conditional_format": {
         "short": "CF",
@@ -312,7 +319,8 @@
     "noName": "(geen naam)",
     "filterByCategory": "Filteren op {{category}}",
     "graphButton": "Graaf",
-    "valueListMatch": "Waarden"
+    "valueListMatch": "Waarden",
+    "spellingMatch": "Schrijfwijze"
   },
   "scriptSearchFilter": {
     "searchAria": "Zoek referenties",
@@ -513,6 +521,7 @@
     "ariaLabel": "Tabeldetails",
     "metaName": "Naam",
     "metaFile": "Bestand",
+    "metaComment": "Opmerking",
     "fields": "Velden",
     "count": "Aantal",
     "total": "Totaal",
@@ -705,6 +714,7 @@
       "step_xslt": "XSLT-stylesheet",
       "record_access": "Berekening recordtoegang",
       "hide": "Verbergconditie",
+      "field_entry": "Veldinvoerconditie",
       "tooltip": "Knopinfo",
       "placeholder": "Tijdelijke aanduiding",
       "conditional_format": "Voorwaardelijke opmaak",
@@ -739,7 +749,12 @@
     "paramFieldLabel": "Parameterveld",
     "paramFieldCandidates": "Kandidaten:",
     "paramFieldOrphan": "Geen veld met deze naam in dit bestand (verweesde naam)",
-    "openParamCalc": "Berekeningsdetails openen"
+    "openParamCalc": "Berekeningsdetails openen",
+    "platformsLabel": "Platforms",
+    "compatPartial": "gedeeltelijk",
+    "compatNo": "nee",
+    "compatPartialHint": "Gedeeltelijk — voorwaardelijk ondersteund; zie de Claris-helppagina van de gebeurtenis",
+    "compatNoHint": "Deze gebeurtenis gaat niet af in die runtime"
   },
   "layoutObjectDetail": {
     "showInLayout": "Tonen in layout: {{name}}",
@@ -812,5 +827,40 @@
     "propPosition": "Positie/grootte",
     "propNesting": "Nesting",
     "nestingLevel": "Niveau {{level}}"
+  },
+  "pseudoFunction": {
+    "metaFunction": "Functie",
+    "metaType": "Type",
+    "metaScope": "Bereik",
+    "scopeValue": "Oplossingsonafhankelijk – hoort bij geen enkel bestand",
+    "usageHeading": "Gebruik",
+    "usageEmpty": "Niet gebruikt in deze oplossing.",
+    "colRole": "Rol",
+    "colType": "Objecttype",
+    "colObjects": "Objecten",
+    "colFiles": "Bestanden",
+    "colOccurrences": "Voorkomens",
+    "totalRow": "Totaal"
+  },
+  "builtinFunction": {
+    "clarisHelpOnline": "Claris Help ↗",
+    "typeValue": "Ingebouwde FileMaker-functie"
+  },
+  "pluginFunction": {
+    "docsetLink": "{{plugin}}-documentatie →",
+    "docsOnline": "{{plugin}}-documentatie ↗",
+    "typeValue": "Plug-infunctie",
+    "metaCatalogName": "Catalogusnaam",
+    "metaComponent": "Component",
+    "metaPlugin": "Plug-in"
+  },
+  "pluginComponent": {
+    "typeValue": "Plug-incomponent",
+    "documentedFunctions": "Functies in de referentie",
+    "vendorComponent": "Component van de leverancier",
+    "functionsInSolution": "Functies in deze oplossing",
+    "usedSuffix": "{{used}} gebruikt",
+    "functionsHeading": "Functies",
+    "colFunction": "Functie"
   }
 }

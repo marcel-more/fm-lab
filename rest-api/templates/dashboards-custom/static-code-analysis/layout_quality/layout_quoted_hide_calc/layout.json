@@ -48,7 +48,7 @@
         "id": "findings_card",
         "props": {
           "span": 12,
-          "title": "Hide condition is a quoted constant"
+          "title": "Hide or field-entry condition is a quoted constant"
         },
         "data": {
           "dataset": "findings"
@@ -81,6 +81,10 @@
                   "label": "Object"
                 },
                 {
+                  "field": "calc_slot",
+                  "label": "Slot"
+                },
+                {
                   "field": "x",
                   "label": "X"
                 },
@@ -105,11 +109,11 @@
                   "file": "{{file_name}}",
                   "ref": "{{object_uuid}}",
                   "ref_src": "layout_quoted_hide_calc",
-                  "ref_msgid": "quoted"
+                  "ref_msgid": "{{msg_id}}"
                 }
               },
               "empty": {
-                "message": "No quoted hide conditions found."
+                "message": "No quoted hide or field-entry conditions found."
               }
             }
           }

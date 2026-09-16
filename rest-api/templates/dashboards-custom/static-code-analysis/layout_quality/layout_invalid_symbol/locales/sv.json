@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "Ogiltig layoutsymbol",
+    "description": "Layoutkvalitetsregel — ett textobjekt innehåller en {{Symbol}} som inte är en Get-parameter. En symbol är värdet av Get(<Symbol>) vid visningstillfället; en okänd symbol förkastas inte utan återges BOKSTAVLIGT i bläddrings- och förhandsgranskningsläge, så layouten visar den råa {{Texten}}. Giltigheten avgörs av standardreferensen (function_name_lookup, chunk_role ”getparameter”) över alla språk den täcker: FileMaker godtar även det lokaliserade parameternamnet, så en lokaliserad symbol är inget fel. Två begränsningar gör detta till en varning: referensens lokaliserade täckning är ojämn (spanska och portugisiska namn saknas helt, tyska täcks bara delvis) och parentesformer som {{Get(FoundCount)}} hamnar aldrig i symbolinventariet — där är regeln blind.",
+    "messages.unknown-symbol": "Symbolen är ingen känd Get-parameter — den återges bokstavligt"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Träffar",
+    "summary_kpi.props.items[1].label": "Unika symboler",
+    "summary_kpi.props.items[2].label": "Berörda layouter",
+    "summary_kpi.props.items[3].label": "Berörda filer",
+    "findings_card.props.title": "Ogiltig layoutsymbol",
+    "findings_table.props.searchPlaceholder": "Sök fil, layout, objekt eller symbol…",
+    "findings_table.props.empty.message": "Inga ogiltiga layoutsymboler hittades.",
+    "findings_table.props.columns[0].label": "Fil",
+    "findings_table.props.columns[1].label": "Layout",
+    "findings_table.props.columns[2].label": "Objekt",
+    "findings_table.props.columns[3].label": "Symbol",
+    "findings_table.props.columns[4].label": "Förekomster",
+    "findings_table.props.columns[7].label": "Bredd",
+    "findings_table.props.columns[8].label": "Höjd"
+  }
+}

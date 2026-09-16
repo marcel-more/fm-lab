@@ -29,7 +29,8 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 
 from .db import Reference
-from .textform import (ParsedStep, group_child_keys, group_item_keys,
+from .textform import (_apply_post_implications, ParsedStep, apply_mirror_rules,
+                       apply_paste_dropped, group_child_keys, group_item_keys,
                        is_fixed_slot, slot_families, slot_key)
 
 _PLACEHOLDER_RE = re.compile(r"\{([a-z0-9_]+)(?::([a-z_]+))?(?:\|([^{}]*))?(\?)?\}")
@@ -43,6 +44,27 @@ _OPTIONAL_ATTR_RE = re.compile(r"^\{([a-z0-9_]+)(?::([a-z_]+))?\?\}$")
 _ATTR_PLACEHOLDER_RE = re.compile(r"^\{([a-z0-9_]+)(?::[a-z_]+)?\??\}$")
 
 _MISSING = object()
+
+
+class _TextSlotReference(Exception):
+    """A field reference would be rendered into a slot that carries plain text.
+
+    The text form of a target slot holds a NAME only — a field's table and id
+    have nowhere to go and are silently dropped, which FileMaker reads back as
+    a variable of that name (verified by pasting such a snippet: the leaf name
+    is taken over verbatim, no diagnostic). Raised by `_lookup_value` and
+    turned into an emit error by the substitution pass.
+    """
+
+    def __init__(self, key: str, val: dict):
+        super().__init__(key)
+        self.key = key
+        self.val = val
+
+    def label(self) -> str:
+        table = self.val.get("table")
+        name = self.val.get("name") or "?"
+        return f"{table}::{name}" if table else str(name)
 
 
 @dataclass
@@ -63,12 +85,17 @@ def _lookup_value(ps: ParsedStep, key: str, sub: str | None, default: str | None
         return default if default is not None else _MISSING
     if isinstance(val, dict):
         if sub is None:
+            if val.get("_form") == "field":
+                # a field reference has an identity (table + id) that the text
+                # form cannot carry — never render it as a bare name
+                raise _TextSlotReference(key, val)
             return val.get("name", _MISSING)
         v = val.get(sub, _MISSING)
-        if v is _MISSING and sub == "repetition":
-            return default if default is not None else _MISSING
-        if v is _MISSING and sub == "id":
-            return default if default is not None else _MISSING
+        if v is _MISSING and default is not None:
+            # a reference part the resolver did not supply falls back to the
+            # template default of its placeholder ({table:comment|} — the
+            # BaseTable comment on a catalog that predates BT_Comment)
+            return default
         return v
     if sub is not None:
         return _MISSING
@@ -78,10 +105,41 @@ def _lookup_value(ps: ParsedStep, key: str, sub: str | None, default: str | None
 class _Sub:
     """Substitution pass over one template; tracks fill state per element."""
 
-    def __init__(self, ps: ParsedStep):
+    def __init__(self, ps: ParsedStep, ref: Reference | None = None):
         self.ps = ps
+        self.ref = ref
         self.filled = 0
         self.errors: list[str] = []
+        # boolean options whose attribute takes a value domain other than
+        # True/False (fm_spec 2.2.0 xml_true/xml_false, 74/122 NewWndStyles)
+        self.bool_domain: dict[str, tuple[str, str]] = (
+            ref.bool_domain(ps.step_id) if ref is not None and ps.step_id else {})
+
+    def domain_value(self, key: str, sub: str | None, v):
+        """Write a boolean option's internal state (True/False) in the XML
+        value domain of its attribute (xml_true/xml_false) — the internal
+        state is what the parser coerces every boolean to, the template
+        defaults ({close|Yes}) are already spelled in the domain, so only an
+        ACTUAL value is mapped. Without a curated domain the state is the
+        value."""
+        if sub is None and key in self.bool_domain and v in ("True", "False") \
+                and self.ps.options.get(key) is not None:
+            return self.bool_domain[key][0 if v == "True" else 1]
+        return v
+
+    def text_slot_error(self, exc: _TextSlotReference) -> str:
+        """Message for a field reference in a text slot (see _TextSlotReference).
+        Names the expected form when the reference classifies the slot."""
+        kind = None
+        if self.ref is not None:
+            kind = self.ref.slot_kind(self.ps.step_id, exc.key)
+        hint = (" — this slot takes a variable ($x/$$x); FileMaker offers no field "
+                "there and stores a field name as a variable name"
+                if kind == "variable_only" else
+                " — the slot is written as element text, so table and id would be "
+                "lost on paste")
+        return (f"line {self.ps.line}: field reference '{exc.label()}' in text slot "
+                f"'{exc.key}' of '{self.ps.canonical_name}'{hint}")
 
     def sub_text(self, text: str) -> tuple[str, int, int, int]:
         """Returns (result, n_filled_actual, n_missing, n_defaulted)."""
@@ -89,7 +147,12 @@ class _Sub:
 
         def repl(m: re.Match) -> str:
             nonlocal filled, missing, defaulted
-            v = _lookup_value(self.ps, m.group(1), m.group(2), m.group(3))
+            try:
+                v = _lookup_value(self.ps, m.group(1), m.group(2), m.group(3))
+            except _TextSlotReference as exc:
+                self.errors.append(self.text_slot_error(exc))
+                missing += 1
+                return ""
             if v is _MISSING:
                 missing += 1
                 return ""
@@ -97,7 +160,7 @@ class _Sub:
                 filled += 1
             else:
                 defaulted += 1
-            return str(v)
+            return str(self.domain_value(m.group(1), m.group(2), v))
 
         return _PLACEHOLDER_RE.sub(repl, text), filled, missing, defaulted
 
@@ -142,11 +205,15 @@ def _process(elem: ET.Element, sub: _Sub) -> tuple[int, int, int, int]:
             # Optional attribute: emit only when a value is present, otherwise
             # drop it. Absence never counts as 'missing' (so it neither prunes
             # the element nor keeps an otherwise-empty one alive).
-            val = _lookup_value(sub.ps, opt.group(1), opt.group(2), None)
+            try:
+                val = _lookup_value(sub.ps, opt.group(1), opt.group(2), None)
+            except _TextSlotReference as exc:
+                sub.errors.append(sub.text_slot_error(exc))
+                val = _MISSING
             if val is _MISSING:
                 del elem.attrib[k]
             else:
-                elem.attrib[k] = str(val)
+                elem.attrib[k] = str(sub.domain_value(opt.group(1), opt.group(2), val))
                 if sub.ps.options.get(opt.group(1)) is not None:
                     actuals += 1
             continue
@@ -194,6 +261,112 @@ def _collapse_variable_targets(elem: ET.Element, ps: ParsedStep) -> None:
         elem.set("repetition", str(rep))
 
 
+_TEXT_PLACEHOLDER_RE = re.compile(r"^\{([a-z0-9_]+)\}$")
+# a reference-subfield placeholder attribute ({key:sub}, {key:sub|default},
+# {key:sub?}) — the mark of an element that already carries the field form
+_REF_SUB_ATTR_RE = re.compile(r"^\{[a-z0-9_]+:[a-z_]+(?:\|[^{}]*)?\??\}$")
+
+
+def _expand_field_targets(elem: ET.Element, ps: ParsedStep,
+                         ref: Reference | None = None) -> None:
+    """Counterpart of _collapse_variable_targets for templates that encode
+    only the VARIABLE form of a field-or-variable target
+    (``<Field>{target}</Field>`` — 13/14/77/188–194/211,
+    step_xml_map.target_slot_kind = field_or_var): a field reference there
+    must become the attribute form ``<Field table id name/>`` — written as
+    text it would turn into a variable of that name on paste. Evidence:
+    paired 22.0.6 copies (Companion corpus B5/Files, Korpus 07-FM22).
+
+    A slot the reference classifies as `variable_only` has no field form at
+    all — FileMaker discards the attribute form on paste without a word, so
+    the rewrite must not happen there. The field value then reaches the text
+    placeholder and `_lookup_value` rejects it by name."""
+    for child in list(elem):
+        _expand_field_targets(child, ps, ref)
+    m = _TEXT_PLACEHOLDER_RE.match((elem.text or "").strip())
+    if not m or len(elem):
+        return
+    # Only a reference-subfield placeholder attribute marks an element that
+    # already carries the field form; a foreign attribute
+    # (IncludeToolCalls="{include_tool_calls|0}") must not switch the form
+    # choice off — it is kept next to the rewritten reference attributes.
+    if any(_REF_SUB_ATTR_RE.match(v.strip()) for v in elem.attrib.values()):
+        return
+    val = ps.options.get(m.group(1))
+    if not isinstance(val, dict) or val.get("_form") == "variable" \
+            or not (val.get("table") or val.get("id")):
+        return
+    key = m.group(1)
+    if ref is not None and ref.slot_kind(ps.step_id, key) == "variable_only":
+        return
+    elem.text = None
+    elem.set("table", "{%s:table}" % key)
+    elem.set("id", "{%s:id}" % key)
+    elem.set("name", "{%s:name}" % key)
+    if val.get("repetition"):
+        elem.set("repetition", "{%s:repetition?}" % key)
+
+
+def _settle_literal_text_marker(elem: ET.Element, ps: ParsedStep, ref: Reference,
+                                xmap: dict) -> None:
+    """Templates of field-or-variable steps WITHOUT the structural marker flag
+    carry the ``<Text/>`` marker literally (13/14/77/160/188–194/203). Native
+    FileMaker writes it only next to a VARIABLE target — a field target and an
+    unset target carry no marker (paired 22.0.6: Korpus 07-FM22 160/191/203,
+    Companion corpus 13/14/77/188). A defaulted ``<Repetition>`` (14) is the
+    target's repetition and exists only when it was actually set."""
+    if xmap.get("target_slot_kind") != "field_or_var" \
+            or xmap.get("variable_target_marker"):
+        return
+    targets = [o for o in ref.options(ps.step_id) if o["option_type"] == "target"]
+    if not targets:
+        return
+    has_var = any(
+        isinstance(ps.options.get(o["option_key"]), dict)
+        and ps.options[o["option_key"]].get("_form") == "variable"
+        for o in targets)
+    if not has_var:
+        for child in list(elem):
+            if child.tag == "Text" and not child.attrib and len(child) == 0 \
+                    and not (child.text or "").strip():
+                elem.remove(child)
+    rep_keys = [o["option_key"] for o in ref.options(ps.step_id)
+                if o["option_type"] == "repetition"
+                and o["xml_path"] == "Repetition/Calculation"]
+    if rep_keys and all(ps.options.get(k) is None for k in rep_keys):
+        rep = elem.find("Repetition")
+        if rep is not None:
+            elem.remove(rep)
+
+
+def _apply_step_rules(elem: ET.Element, ps: ParsedStep) -> None:
+    """Consumer rules the reference documents in notes rather than bindings.
+    242 Print PDF: <PrintSettings> exists only when the print options are
+    restored (restore=True) or a print-options target/password is set —
+    the default form has no PrintSettings hull (paired 26.0.2, Korpus 07)."""
+    if ps.step_id == 242:
+        keep = ps.options.get("restore") == "True" or any(
+            ps.options.get(k) is not None for k in
+            ("save_print_options_to", "use_print_options_from", "password",
+             "print_settings", "print_from", "print_type"))
+        if not keep:
+            e = elem.find("PrintSettings")
+            if e is not None:
+                elem.remove(e)
+
+
+def _apply_post_rules(elem: ET.Element, ps: ParsedStep) -> None:
+    """Rules that run AFTER skeleton restoration. 3 Save a Copy as XML (FM 26
+    form): the SaXML/JSONOptions hull is written by FileMaker even with
+    'Specify options as JSON' off — then with a GENERATED default formula
+    that no consumer can reproduce. Emit the hull only with an authored
+    formula; the generated default stays a documented read residue."""
+    if ps.step_id == 3 and ps.options.get("json_options") is None:
+        e = elem.find("SaXML")
+        if e is not None:
+            elem.remove(e)
+
+
 def _has_unfilled(elem: ET.Element) -> list[str]:
     left = []
     for e in elem.iter():
@@ -229,18 +402,37 @@ def _inject_text_marker(elem: ET.Element, ps: ParsedStep, ref: Reference) -> Non
     elem.insert(idx, ET.Element("Text"))
 
 
-def _remove_at(elem: ET.Element, path: str) -> None:
-    """Remove the element at a Step-root-relative path (first match)."""
+def _bound_target(elem: ET.Element, path: str):
+    """(parent, key, node) for a binding path relative to the Step root.
+    Three forms: an element path (`Exit`, `Source/Field`), an indexed element
+    (`Field[2]` — the second same-named child, ElementTree position
+    predicate) and an attribute (`SerialNumbers/@increment`, fm_spec 2.5.0).
+    node is the element, the attribute value, or None when absent."""
     if "/" in path:
         parent_path, tag = path.rsplit("/", 1)
         parent = elem.find(parent_path)
     else:
         parent, tag = elem, path
     if parent is None:
+        return None, None, None
+    if tag.startswith("@"):
+        return parent, tag[1:], parent.attrib.get(tag[1:])
+    try:
+        return parent, tag, parent.find(tag)
+    except SyntaxError:
+        return None, None, None
+
+
+def _remove_at(elem: ET.Element, path: str) -> None:
+    """Remove the node at a Step-root-relative binding path (first match):
+    an element, an indexed element or an attribute."""
+    parent, key, node = _bound_target(elem, path)
+    if parent is None or node is None:
         return
-    child = parent.find(tag)
-    if child is not None:
-        parent.remove(child)
+    if key in parent.attrib and not isinstance(node, ET.Element):
+        del parent.attrib[key]
+    else:
+        parent.remove(node)
 
 
 def _apply_element_bindings(elem: ET.Element, ps: ParsedStep, ref: Reference) -> None:
@@ -259,6 +451,11 @@ def _apply_element_bindings(elem: ET.Element, ps: ParsedStep, ref: Reference) ->
                       deterministically; decompilation tolerates a present
                       one via the template (185 Text residue)
 
+    element_path names an element, an indexed element (`Field[2]`, 202: the
+    trailing Field only outside the Uninstall form) or an attribute
+    (`SerialNumbers/@increment`, 91: dropped with UseEntryOptions) —
+    fm_spec 2.5.0.
+
     The decompile side needs no counterpart — the template match tolerates
     absence of any pruned element."""
     rows = ref.element_bindings(ps.step_id)
@@ -274,14 +471,15 @@ def _apply_element_bindings(elem: ET.Element, ps: ParsedStep, ref: Reference) ->
             _remove_at(elem, path)
     for r in rows:
         b, path = r["binding"], r["element_path"]
-        e = elem.find(path)
+        _parent, _key, e = _bound_target(elem, path)
         if e is None:
             continue
         val = ps.options.get(r["option_key"]) if r["option_key"] else None
         if (b == "excludes" and val == r["option_value"]) \
                 or (b == "excludes_option" and val is not None) \
                 or (b == "requires_option" and val is None) \
-                or (b == "suppress_empty" and not e.attrib and len(e) == 0
+                or (b == "suppress_empty" and isinstance(e, ET.Element)
+                    and not e.attrib and len(e) == 0
                     and not (e.text or "").strip()):
             _remove_at(elem, path)
 
@@ -362,7 +560,7 @@ def _restore_skeletons(elem: ET.Element, ps: ParsedStep, ref: Reference,
             continue
         fresh = ET.fromstring(ET.tostring(tpl_child))
         _collapse_variable_targets(fresh, ps)
-        _process(fresh, _Sub(ps))
+        _process(fresh, _Sub(ps, ref))
         # insertion index: after the last sibling that precedes child_tag.
         # At Step level the authoritative order is element_order — it also
         # carries the structural <Text/> marker, which the template does not
@@ -484,7 +682,7 @@ def _instantiate_groups(elem: ET.Element, ps: ParsedStep, ref: Reference) -> lis
             if c.tag == item_tag:
                 container.remove(c)
         for i, item in enumerate(items):
-            node = _instantiate_item(g, item, i, ps, by_key, errors)
+            node = _instantiate_item(g, item, i, ps, by_key, errors, ref)
             if node is not None:
                 container.append(node)
         if g["count_attr"]:
@@ -502,7 +700,8 @@ def _item_root_tag(g: dict) -> str:
 
 
 def _instantiate_item(g: dict, item, idx: int, ps: ParsedStep,
-                      by_key: dict, errors: list[str]) -> ET.Element | None:
+                      by_key: dict, errors: list[str],
+                      ref: Reference | None = None) -> ET.Element | None:
     tpl_str = g["item_template"].replace("{#index}", str(idx))
     try:
         node = ET.fromstring(tpl_str)
@@ -532,11 +731,11 @@ def _instantiate_item(g: dict, item, idx: int, ps: ParsedStep,
                 f"'{cg['group_label']}' item — FileMaker requires at least one")
             continue
         for j, sub in enumerate(subs):
-            child = _instantiate_item(cg, sub, j, ps, by_key, errors)
+            child = _instantiate_item(cg, sub, j, ps, by_key, errors, ref)
             if child is not None:
                 slot.append(child)
         pseudo.options.pop(ck, None)
-    sub_ = _Sub(pseudo)
+    sub_ = _Sub(pseudo, ref)
     actuals, missing, _lost, _dft = _process(node, sub_)
     errors += sub_.errors
     if missing > 0:
@@ -578,12 +777,26 @@ def emit_step(ps: ParsedStep, ref: Reference) -> tuple[ET.Element | None, list[s
     except ET.ParseError as e:
         return None, [f"step {ps.step_id}: reference template is not well-formed: {e}"], []
 
+    # parse-side implications once more on the IR (idempotent setdefault):
+    # an IR that reaches the emitter without going through parse_step (REST
+    # compile, test fixtures) must not lose an element whose binding waits
+    # for the implied option (220 message-history variable => link_avail)
+    _apply_post_implications(ps, ref)
+    # fm_spec 2.6.0: an option FileMaker discards on paste never reaches the
+    # snippet (144 appearance); a mirror rule copies the source value to its
+    # second place (144 title -> Step-level Calculation) — both on the IR, so
+    # the substitution below writes FileMaker's own canonical form
+    warnings += apply_paste_dropped(ps, ref, "the emission")
+    warnings += apply_mirror_rules(ps, ref, canonical=False)
     _collapse_variable_targets(elem, ps)
+    _expand_field_targets(elem, ps, ref)
+    _settle_literal_text_marker(elem, ps, ref, xmap)
     _inject_text_marker(elem, ps, ref)
     _apply_element_bindings(elem, ps, ref)
+    _apply_step_rules(elem, ps)
     _strip_hull_children(elem, ps, ref)
     errors += _instantiate_groups(elem, ps, ref)
-    sub = _Sub(ps)
+    sub = _Sub(ps, ref)
     _process(elem, sub)
     errors += sub.errors
     leftover = _has_unfilled(elem)
@@ -593,6 +806,12 @@ def emit_step(ps: ParsedStep, ref: Reference) -> tuple[ET.Element | None, list[s
             f"'{ps.canonical_name}' after substitution")
     _fix_presence_booleans(elem, ps, ref)
     _restore_skeletons(elem, ps, ref, template, xmap.get("element_order"))
+    # a restored hull is instantiated from the raw template and may carry an
+    # element that a binding excludes for this option state (220
+    # LLMRequestWithTools restored with its SlidingWindowVariable hull while
+    # link_avail is unset) — the bindings run once more over the whole step
+    _apply_element_bindings(elem, ps, ref)
+    _apply_post_rules(elem, ps)
     _pad_fixed_slots(elem, ps, ref, xmap.get("element_order"))
     if not ps.enabled:
         elem.set("enable", "False")
@@ -604,7 +823,11 @@ def emit_step(ps: ParsedStep, ref: Reference) -> tuple[ET.Element | None, list[s
 # ------------------------------------------------------------- serialization
 
 _XML_ESC = {"&": "&amp;", "<": "&lt;", ">": "&gt;"}
-_ATTR_ESC = {**_XML_ESC, '"': "&quot;"}
+# Attribute values: an XML parser normalizes a LITERAL tab/newline/CR in an
+# attribute to a space (attribute-value normalization), a character reference
+# survives — FileMaker writes `FieldDelimiter="&#9;"` (35 Import Records,
+# corpus 07) and would read a raw tab back as a space delimiter.
+_ATTR_ESC = {**_XML_ESC, '"': "&quot;", "\t": "&#9;", "\n": "&#10;", "\r": "&#13;"}
 
 
 def _esc(s: str, table: dict) -> str:

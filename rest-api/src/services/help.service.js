@@ -102,6 +102,21 @@ function getSlugInventory(lang) {
   return set;
 }
 
+/**
+ * True when the mirror holds the slug in ANY installed (complete) language —
+ * the existence signal for cross-navigation into the docs page, which itself
+ * falls back through `resolveHtml`. Language-independent by design: the docs
+ * page of a step/function is reachable as soon as one mirror carries it.
+ */
+function hasAnyHtml(slug) {
+  if (!slug || !/^[a-z0-9._-]+$/i.test(slug)) return false;
+  if (manifest === null) loadManifest();
+  for (const lang of manifestLangs) {
+    if (getSlugInventory(lang).has(slug)) return true;
+  }
+  return false;
+}
+
 function readHtml(lang, slug) {
   const cacheKey = `${lang}::${slug}`;
   if (htmlCache.has(cacheKey)) return htmlCache.get(cacheKey);
@@ -581,7 +596,7 @@ function escapeText(s) {
 }
 
 /**
- * Extrahiert ein eingebettetes HTML-Fragment für /embed-Endpoints (PRD §5.4a, §5.6).
+ * Extrahiert ein eingebettetes HTML-Fragment für /embed-Endpoints.
  * Nutzt `optimizeBody()` für die einheitliche Filter-/Rewrite-Pipeline.
  */
 function extractEmbed(htmlEntry) {
@@ -606,6 +621,7 @@ module.exports = {
   htmlPath,
   readHtml,
   resolveHtml,
+  hasAnyHtml,
   getStatus,
   extractEmbed,
   optimizeHelpHtml,

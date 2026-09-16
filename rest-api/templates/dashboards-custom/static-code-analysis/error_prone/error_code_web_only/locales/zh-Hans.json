@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "仅 Web 错误代码字面量",
+    "analysis.defaultResult.meaning": "Get(LastError) 与仅由 Web 发布引擎或 REST API 返回的代码进行的比较"
+  },
+  "layout": {}
+}

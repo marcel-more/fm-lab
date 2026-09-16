@@ -38,6 +38,11 @@ let dbInitError = null;
 // Komponenten-Zuordnung (lazy, prozessweit) — siehe getComponentMap().
 let componentMap = null;
 
+// Exakte Schreibweise der Rubriken aus dem Index (lazy) — die Rubrik-Route ist
+// case-SENSITIV, die Doku schreibt Komponenten aber uneinheitlich
+// (`Webview` auf der Funktionsseite, `WebView` im Index). Key = lowercase.
+let categoryNameMap = null;
+
 const SOURCE_ID = 'mbs';
 
 function getMbsConfig() {
@@ -386,6 +391,58 @@ function listCategories({ withFunctionCounts = false } = {}) {
   }));
 }
 
+/** Rubriknamen des Index in ihrer exakten Schreibweise, nach lowercase indiziert. */
+function getCategoryNameMap() {
+  if (categoryNameMap) return categoryNameMap;
+  categoryNameMap = new Map();
+  for (const row of listCategories()) {
+    categoryNameMap.set(String(row.name).toLowerCase(), row.name);
+  }
+  return categoryNameMap;
+}
+
+/**
+ * Adresse der Doku-Seite einer Funktion im Doku-Browser:
+ * `{ category, entry }` → `/docs/mbs/<category>/<entry>`.
+ *
+ * NULL, wenn die Doku nicht installiert ist, die Funktion nicht im Index steht
+ * oder ihre Komponente keine Rubrikseite hat — der Aufrufer rendert den Link
+ * dann gar nicht erst, statt ins Leere zu zeigen. Die Rubrik kommt in der
+ * EXAKTEN Schreibweise des Index zurück (die Rubrik-Route ist case-sensitiv).
+ */
+function resolveEntryRef(fnName) {
+  if (!fnName) return null;
+  try {
+    if (!resolveDocPath(fnName)) return null;
+    const comps = componentsOf(fnName);
+    if (!comps.length) return null;
+    const exact = getCategoryNameMap().get(String(comps[0]).toLowerCase());
+    return exact ? { category: exact, entry: fnName } : null;
+  } catch {
+    // Doku nicht installiert / Index nicht lesbar — kein Fehler, nur kein Link.
+    return null;
+  }
+}
+
+/**
+ * Adresse der Rubrikseite einer Komponente im Doku-Browser: `{ category }` →
+ * `/docs/mbs/<category>`. NULL, wenn die Doku nicht installiert ist oder die
+ * Komponente keine Rubrikseite (mehr) hat — Alt-Komponenten wie `Addressbook`
+ * stehen noch in der Plattform-Map, aber nicht mehr im Doku-Index.
+ *
+ * Die Rubrik kommt in der EXAKTEN Schreibweise des Index zurück: die
+ * Rubrik-Route ist case-sensitiv.
+ */
+function resolveCategoryRef(categoryName) {
+  if (!categoryName) return null;
+  try {
+    const exact = getCategoryNameMap().get(String(categoryName).toLowerCase());
+    return exact ? { category: exact } : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Funktionen innerhalb einer Kategorie — aufgelöst über die Komponenten-
  * Zuordnung (siehe getComponentMap), nicht über den Funktionsnamen.
@@ -575,6 +632,7 @@ function clearCaches() {
   docCache.clear();
   componentMap = null;
   membershipCache = null;
+  categoryNameMap = null;
 }
 
 module.exports = {
@@ -584,6 +642,8 @@ module.exports = {
   getFunctionDoc,
   suggestFunctions,
   resolveDocPath,
+  resolveEntryRef,
+  resolveCategoryRef,
   listCategories,
   listFunctionsInCategory,
   searchFunctions,

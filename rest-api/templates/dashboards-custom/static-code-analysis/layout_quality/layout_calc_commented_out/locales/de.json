@@ -1,10 +1,11 @@
 {
   "manifest": {
     "title": "Auskommentierte Layout-Berechnung",
-    "description": "Layout-Qualitätsregel — eine Ausblenden-, Tooltip- oder Beschriftungs-Berechnung eines Layoutobjekts besteht vollständig aus einem Kommentar. Die Formel wird nie ausgewertet, das beabsichtigte Verhalten ist still deaktiviert.\n\nAngelehnt an die fmCheckMate-Prüfung „Broken Calculation /*Commented Out*/“ — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+    "description": "Layout-Qualitätsregel — eine Ausblenden-, Feldeingabe-, Tooltip- oder Beschriftungs-Berechnung eines Layoutobjekts besteht vollständig aus einem Kommentar. Die Formel wird nie ausgewertet, das beabsichtigte Verhalten ist still deaktiviert.\n\nAngelehnt an die fmCheckMate-Prüfung „Broken Calculation /*Commented Out*/“ — https://github.com/mrwatson-de/fmCheckMate-XSLT",
     "messages.hide": "Die Ausblenden-Berechnung ist vollständig auskommentiert",
     "messages.tooltip": "Die Tooltip-Berechnung ist vollständig auskommentiert",
-    "messages.label": "Die Beschriftungs-Berechnung ist vollständig auskommentiert"
+    "messages.label": "Die Beschriftungs-Berechnung ist vollständig auskommentiert",
+    "messages.entry": "Die Feldeingabe-Berechnung ist vollständig auskommentiert"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Treffer",
@@ -22,6 +23,7 @@
     "calc_slot_filter.props.options[1].label": "Ausblenden",
     "calc_slot_filter.props.options[2].label": "Tooltip",
     "calc_slot_filter.props.options[3].label": "Beschriftung",
+    "calc_slot_filter.props.options[4].label": "Feldeingabe",
     "object_type_select.props.label": "Objekttyp",
     "object_type_select.props.emptyOptionLabel": "alle Objekttypen",
     "findings_table.props.columns[7].label": "Breite",

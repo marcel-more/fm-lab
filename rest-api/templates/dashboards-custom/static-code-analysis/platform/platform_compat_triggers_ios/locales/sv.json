@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Utlösarkompatibilitet: FileMaker Go (iOS)",
+    "analysis.defaultResult.meaning": "Skriptutlösare inom omfånget vars händelse inte utlöses eller bara delvis utlöses i FileMaker Go (iOS)"
+  },
+  "layout": {}
+}

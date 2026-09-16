@@ -1,0 +1,80 @@
+{
+  "id": "version-floor",
+  "version": "1.0.0",
+  "title": "Version Floor",
+  "description": "The effective minimum FileMaker version of the scope, against the minimum each file declares. Three axes feed the floor: script steps, built-in functions and script triggers, each with the introduction version Claris publishes (fm_spec step_compat / functions / script_triggers, numeric keys since fm-spec 2.9.0). A feature Claris publishes no version for is not counted - no statement is not 'old'; '6.0 or earlier' is read as a floor. Findings name, per file and highest requirement first, the features that push the floor above the declaration; the summary also states the effective minimum version of the whole scope.",
+  "keywords": [
+    "version",
+    "minimum",
+    "compatibility",
+    "platform",
+    "rollout",
+    "upgrade",
+    "filemaker"
+  ],
+  "testType": "platform",
+  "objectTypes": [
+    "Script",
+    "CustomFunction",
+    "Layout"
+  ],
+  "scopes": [
+    "solution",
+    "file",
+    "object",
+    "object-list",
+    "cluster"
+  ],
+  "outputs": [
+    "count",
+    "findings-table"
+  ],
+  "members": [
+    {
+      "kind": "dashboard",
+      "ref": "version_floor"
+    }
+  ],
+  "locales": {
+    "de": {
+      "title": "Versions-Untergrenze",
+      "description": "Die effektive Mindestversion von FileMaker im Prüfumfang, verglichen mit der Mindestversion, die jede Datei deklariert. Drei Achsen bilden die Untergrenze: Script-Schritte, eingebaute Funktionen und Script-Trigger, jeweils mit der von Claris veröffentlichten Einführungsversion (fm_spec step_compat / functions / script_triggers, numerische Schlüssel seit fm-spec 2.9.0). Was Claris ohne Versionsangabe führt, zählt nicht mit — keine Aussage heißt nicht „alt\"; „6.0 or earlier\" gilt als Untergrenze. Die Befunde nennen je Datei und nach höchster Anforderung sortiert die Merkmale, die die Untergrenze über die Deklaration heben; die Kennzahlen nennen zusätzlich die effektive Mindestversion des gesamten Prüfumfangs."
+    },
+    "es": {
+      "title": "Versión mínima efectiva",
+      "description": "La versión mínima efectiva de FileMaker del alcance, frente a la versión mínima que declara cada archivo. Tres ejes la determinan: pasos de guion, funciones integradas y activadores de guion, cada uno con la versión de introducción publicada por Claris (fm_spec step_compat / functions / script_triggers, claves numéricas desde fm-spec 2.9.0). Lo que Claris no documenta con versión no se cuenta: la ausencia de declaración no significa «antiguo»; «6.0 or earlier» se lee como límite inferior. Los hallazgos nombran, por archivo y de mayor a menor exigencia, los elementos que elevan el mínimo por encima de lo declarado."
+    },
+    "fr": {
+      "title": "Version minimale effective",
+      "description": "La version minimale effective de FileMaker pour la portée analysée, comparée à la version minimale déclarée par chaque fichier. Trois axes la déterminent : les actions de script, les fonctions intégrées et les déclencheurs de script, chacun avec la version d'introduction publiée par Claris (fm_spec step_compat / functions / script_triggers, clés numériques depuis fm-spec 2.9.0). Ce que Claris ne documente pas n'est pas compté : l'absence de déclaration ne signifie pas « ancien » ; « 6.0 or earlier » est lu comme une borne inférieure. Les constats nomment, par fichier et par exigence décroissante, les éléments qui portent le minimum au-delà de la déclaration."
+    },
+    "it": {
+      "title": "Versione minima effettiva",
+      "description": "La versione minima effettiva di FileMaker nell'ambito analizzato, a confronto con la versione minima dichiarata da ciascun file. Tre assi la determinano: i passi di script, le funzioni integrate e gli attivatori di script, ognuno con la versione di introduzione pubblicata da Claris (fm_spec step_compat / functions / script_triggers, chiavi numeriche da fm-spec 2.9.0). Ciò per cui Claris non pubblica una versione non viene conteggiato: nessuna dichiarazione non significa «vecchio»; «6.0 or earlier» vale come limite inferiore. I risultati elencano, per file e in ordine di requisito decrescente, gli elementi che portano il minimo oltre la dichiarazione."
+    },
+    "nl": {
+      "title": "Effectieve minimumversie",
+      "description": "De effectieve minimale FileMaker-versie van het bereik, tegenover de minimumversie die elk bestand opgeeft. Drie assen bepalen die ondergrens: scriptstappen, ingebouwde functies en scripttriggers, elk met de door Claris gepubliceerde introductieversie (fm_spec step_compat / functions / script_triggers, numerieke sleutels sinds fm-spec 2.9.0). Wat Claris zonder versie vermeldt, telt niet mee — geen uitspraak betekent niet 'oud'; '6.0 or earlier' geldt als ondergrens. De bevindingen noemen per bestand, op hoogste eis gesorteerd, de onderdelen die de ondergrens boven de opgave tillen."
+    },
+    "pt": {
+      "title": "Versão mínima efetiva",
+      "description": "A versão mínima efetiva do FileMaker no escopo, comparada à versão mínima que cada arquivo declara. Três eixos a determinam: passos de script, funções integradas e acionadores de script, cada um com a versão de introdução publicada pela Claris (fm_spec step_compat / functions / script_triggers, chaves numéricas desde o fm-spec 2.9.0). O que a Claris não documenta com versão não é contado: ausência de declaração não significa «antigo»; «6.0 or earlier» vale como limite inferior. Os achados nomeiam, por arquivo e da maior exigência para a menor, os elementos que elevam o mínimo acima do declarado."
+    },
+    "sv": {
+      "title": "Effektiv lägsta version",
+      "description": "Den effektiva lägsta FileMaker-versionen för omfattningen, jämförd med den lägsta version varje fil anger. Tre axlar avgör gränsen: skriptsteg, inbyggda funktioner och skriptutlösare, var och en med den introduktionsversion Claris publicerar (fm_spec step_compat / functions / script_triggers, numeriska nycklar sedan fm-spec 2.9.0). Det Claris inte anger någon version för räknas inte — inget uttalande betyder inte \"gammalt\"; \"6.0 or earlier\" läses som en undre gräns. Resultaten namnger, per fil och med högsta kravet först, de element som lyfter gränsen över det angivna."
+    },
+    "ja": {
+      "title": "実効的な最小バージョン",
+      "description": "対象範囲の実効的な最小 FileMaker バージョンを、各ファイルが宣言する最小バージョンと比較します。スクリプトステップ、組み込み関数、スクリプトトリガの 3 つの軸が下限を決め、いずれも Claris が公開する導入バージョンに基づきます（fm_spec step_compat / functions / script_triggers、数値キーは fm-spec 2.9.0 以降）。Claris がバージョンを公開していないものは数えません — 記載がないことは「古い」という意味ではありません。「6.0 or earlier」は下限として扱います。検出結果は、ファイルごとに要求の高い順で、宣言を超える下限を生む要素を示します。"
+    },
+    "ko": {
+      "title": "유효 최소 버전",
+      "description": "범위의 유효 최소 FileMaker 버전을 각 파일이 선언한 최소 버전과 비교합니다. 스크립트 단계, 내장 함수, 스크립트 트리거의 세 축이 하한을 결정하며, 각각 Claris가 공개한 도입 버전을 사용합니다(fm_spec step_compat / functions / script_triggers, 숫자 키는 fm-spec 2.9.0부터). Claris가 버전을 명시하지 않은 항목은 계산에 넣지 않습니다 — 언급이 없다는 것은 '오래되었다'는 뜻이 아닙니다. '6.0 or earlier'는 하한으로 읽습니다. 결과는 파일별로 요구 버전이 높은 순서로, 선언을 넘어서게 만드는 요소를 제시합니다."
+    },
+    "zh-Hans": {
+      "title": "有效最低版本",
+      "description": "范围内的有效最低 FileMaker 版本，与每个文件声明的最低版本进行比较。三条轴线决定该下限：脚本步骤、内置函数和脚本触发器，各自采用 Claris 公布的引入版本（fm_spec step_compat / functions / script_triggers，数字键自 fm-spec 2.9.0 起）。Claris 未公布版本的项目不计入——没有说明并不等于“旧”；“6.0 or earlier”按下限理解。检查结果按文件、以要求由高到低列出把下限抬高到声明之上的元素。"
+    }
+  }
+}

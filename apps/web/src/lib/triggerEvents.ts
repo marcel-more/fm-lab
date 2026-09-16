@@ -79,3 +79,61 @@ export function useTriggerEventFormat(): (action: string) => string {
     [labels],
   );
 }
+
+// ---------------------------------------------------------------------------
+// Trigger compatibility (fm_spec ≥ 2.8.0, `trigger_compat` via
+// /api/reference/triggers). Tri-state like step_compat: true = Yes, false =
+// No, null = PARTIAL (conditionally supported — never "undocumented").
+// Language-independent, one request per page load (module cache), graceful:
+// an older reference / a down server yields an EMPTY map — consumers then
+// show no platform line at all instead of guessing.
+// ---------------------------------------------------------------------------
+
+export type TriggerCompat = Record<'pro' | 'server' | 'go' | 'webdirect' | 'cloud' | 'dataapi' | 'cwp', boolean | null>;
+type CompatMap = Map<number, TriggerCompat>;
+
+let compatCache: CompatMap | undefined;
+let compatPending: Promise<CompatMap> | undefined;
+
+async function fetchCompat(): Promise<CompatMap> {
+  const map: CompatMap = new Map();
+  try {
+    const r = await fetch(`${API_BASE}/api/reference/triggers?lang=en`);
+    const json = await r.json();
+    if (r.ok && json?.success && Array.isArray(json.data)) {
+      for (const t of json.data as { triggerId: number; compat: TriggerCompat | null }[]) {
+        if (t.compat) map.set(t.triggerId, t.compat);
+      }
+    }
+  } catch {
+    // network/server error → empty map, no platform line
+  }
+  return map;
+}
+
+function loadCompat(): Promise<CompatMap> {
+  if (compatCache) return Promise.resolve(compatCache);
+  if (!compatPending) {
+    compatPending = fetchCompat().then((m) => { compatCache = m; compatPending = undefined; return m; });
+  }
+  return compatPending;
+}
+
+/**
+ * Compat lookup `triggerId → TriggerCompat | null`. Returns `null` for every
+ * id until loaded and for ids without a compat row (older reference) — the
+ * callers render nothing in that case.
+ */
+export function useTriggerCompat(): (triggerId: number | null | undefined) => TriggerCompat | null {
+  const [map, setMap] = useState<CompatMap | undefined>(() => compatCache);
+  useEffect(() => {
+    let alive = true;
+    if (compatCache) { setMap(compatCache); return undefined; }
+    loadCompat().then((m) => { if (alive) setMap(m); });
+    return () => { alive = false; };
+  }, []);
+  return useCallback(
+    (triggerId: number | null | undefined) => (triggerId == null ? null : (map?.get(triggerId) ?? null)),
+    [map],
+  );
+}

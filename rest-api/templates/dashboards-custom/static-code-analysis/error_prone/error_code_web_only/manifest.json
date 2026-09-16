@@ -1,0 +1,81 @@
+{
+  "id": "error_code_web_only",
+  "version": "1.0.0",
+  "title": "Web-only error-code literal",
+  "description": "Numeric literals compared with Get(LastError) whose code Claris marks (*) - returned only by the web publishing engine or a FileMaker REST API (Data API, OData, Admin API; fm_spec error_codes scope 'web', fm-spec 2.8.0+). Inventory, not defects: the comparison is right in a web context and unreachable in a FileMaker Pro/Go client script - the finding names the code so the context can be judged.",
+  "author": "fm-lab rules",
+  "icon": "bug",
+  "category": "error_prone",
+  "tags": [
+    "rule",
+    "error_prone"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "info",
+    "category": "error_prone",
+    "rationale": "Web-only codes never occur in a client-side script; a script comparing against them either runs in a web context (fine) or carries a branch that cannot fire.",
+    "remediation": "Nothing to fix by itself. Confirm the script runs under WebDirect, the Data API or Custom Web Publishing; in a pure client script the branch is dead."
+  },
+  "analysis": {
+    "objectTypes": [
+      "Script"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
+    },
+    "requires": [
+      "fm-spec-diagnostics"
+    ],
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Comparisons of Get(LastError) with a code returned only by the web publishing engine or a REST API"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql"
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "limit",
+      "type": "number",
+      "required": false,
+      "description": "Maximum number of findings returned (default 500)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

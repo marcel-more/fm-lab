@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ApiError } from '@packages/shared';
 import { api } from '../api/client';
+import { useApiLang } from './useApiLang';
 import type { FMObject, ReferenceItem, GroupedReferences } from '../types';
 
 interface UseObjectDetailResult {
@@ -25,9 +26,13 @@ const cache = new Map<string, { object: FMObject; references: GroupedReferences 
 
 // `origin` (?ref=) fließt in den Key ein, weil es die operationalen Referenzen
 // eines Pseudo-Aggregats (ScriptStepType) verändert (Origin_Hit-Markierung).
-// Ohne origin bleibt der Key abwärtskompatibel zum bare-(uuid,file)-Key.
-const cacheKeyFor = (uuid: string, file?: string | null, origin?: string | null): string =>
-  `${uuid}::${file ?? ''}${origin ? `::${origin}` : ''}`;
+// `lang` ebenso, weil BuiltinFunction-Objekte ihre lokalisierte Namensfassung
+// mitbringen (Localized_Name) — ohne die Sprache im Key bliebe nach einem
+// Sprachwechsel der zuerst geladene Name stehen.
+const cacheKeyFor = (
+  uuid: string, file?: string | null, origin?: string | null, lang?: string | null,
+): string =>
+  `${uuid}::${file ?? ''}${origin ? `::${origin}` : ''}::${lang ?? ''}`;
 
 /**
  * Hook to fetch object details and references by UUID.
@@ -52,12 +57,13 @@ export const useObjectDetail = (
   const [error, setError] = useState<string | null>(null);
   const [ambiguousFiles, setAmbiguousFiles] = useState<string[] | null>(null);
   const isFetchingRef = useRef(false);
+  const lang = useApiLang();
 
   const fetchData = useCallback(async () => {
     if (!uuid || isFetchingRef.current) return;
 
     // Check cache first
-    const cached = cache.get(cacheKeyFor(uuid, file, origin));
+    const cached = cache.get(cacheKeyFor(uuid, file, origin, lang));
     if (cached) {
       setObject(cached.object);
       setReferences(cached.references);
@@ -86,7 +92,7 @@ export const useObjectDetail = (
       // Zielliste (Origin_Hit). Strukturelle Refs sind davon unberührt.
       const originParam = origin || undefined;
       const [objectResponse, opRefsResponse, structRefsResponse] = await Promise.all([
-        api.get({ uuid, file: fileParam }),
+        api.get({ uuid, file: fileParam, lang }),
         api.references({ uuid, file: fileParam, origin: originParam, direction: 'all', link_type: 'operational', limit: REFS_LIMIT }),
         api.references({ uuid, file: fileParam, direction: 'all', link_type: 'structural', limit: REFS_LIMIT }),
       ]);
@@ -145,7 +151,7 @@ export const useObjectDetail = (
       };
 
       // Cache the result
-      cache.set(cacheKeyFor(uuid, file, origin), { object: objectData, references: grouped });
+      cache.set(cacheKeyFor(uuid, file, origin, lang), { object: objectData, references: grouped });
 
       setObject(objectData);
       setReferences(grouped);
@@ -164,7 +170,9 @@ export const useObjectDetail = (
       isFetchingRef.current = false;
       setLoading(false);
     }
-  }, [uuid, file, origin]);
+    // `lang` gehört in die Liste: sonst wird fetchData beim Sprachwechsel nicht
+    // neu erzeugt und der lokalisierte Name des Built-ins bleibt der alte.
+  }, [uuid, file, origin, lang]);
 
   useEffect(() => {
     setObject(null);

@@ -110,6 +110,37 @@ FROM (
 )
 WHERE ref_uuid IS NOT NULL OR Ref_Name IS NOT NULL;  -- Name-only = externe Referenz (P4 löst auf)
 
+-- Re-Login (Step 138) → externe Datenquelle (Konverter 2.24.0). Parameter
+-- type="DataSourceReference": id 0 = „Current File" (keine Referenz, wird
+-- übersprungen); id ≠ 0 + UUID = ExternalDataSourceCatalog-Eintrag der Datei →
+-- Ref_Type 'data_source' (P4 Block 16b: Script → ExternalDataSource, Rolle
+-- data_source). SaXML 2.3.0.0 schreibt das Element immer, ≤ 2.2.x nur bei
+-- externer Quelle — die Bedingung deckt beide Formen.
+INSERT INTO XMLStepReferences
+SELECT
+    Script_UUID,
+    Step_UUID,
+    Step_Name,
+    Step_Index::VARCHAR AS Step_Index,
+    'data_source' as Ref_Type,
+    ds_uuid as Ref_UUID,
+    NULLIF(xml_extract_text(Step_XML, '/Step/ParameterValues/Parameter/DataSourceReference/@name')[1], '') as Ref_Name,
+    File_Name,
+    NULL AS TO_Name, NULL AS TO_UUID,
+    NULL AS Data_Source_Name, NULL AS Data_Source_UUID,
+    NULL AS Variable_Scope, NULL AS Usage_Type,
+    ds_id AS Ref_ID,
+    NULL AS TO_Ref_ID
+FROM (
+    SELECT Script_UUID, Step_UUID, Step_Name, Step_Index, File_Name, Step_XML,
+           NULLIF(xml_extract_text(Step_XML, '/Step/ParameterValues/Parameter/DataSourceReference/@UUID')[1], '') AS ds_uuid,
+           TRY_CAST(NULLIF(xml_extract_text(Step_XML, '/Step/ParameterValues/Parameter/DataSourceReference/@id')[1], '') AS BIGINT) AS ds_id
+    FROM StepsForScripts
+    WHERE Step_ID = 138
+      AND Step_XML LIKE '%DataSourceReference%'
+)
+WHERE ds_uuid IS NOT NULL AND COALESCE(ds_id, 0) <> 0;
+
 -- Alle Step-Typen mit eingebetteten <FieldReference>-Elementen
 -- Universelle Erfassung: unnest jeder FieldReference im Step_XML → eine Zeile pro
 -- Feld. Step-Filter entfällt — XPath '//FieldReference' matched in 22 Step-Typen
@@ -1169,6 +1200,7 @@ FROM FieldsForTables f
 JOIN _ddr_chunks_by_hash d ON f.AE_Calc_Hash = d.Calc_Hash AND f.File_Name = d.File_Name
 WHERE d.Chunk_Type = 'FieldRef'
   AND f.AE_Calc_Hash IS NOT NULL
+  AND COALESCE(f.AE_Calc_Enabled, TRUE)  -- dormante Auto-Enter-Formel (FM 26): keine Kanten
   AND TRUE;
 
 -- A.2.5 CustomFunctionRef in AutoEnter-Calc (AE_Calc_Hash) — Subrole 'auto_enter'
@@ -1188,6 +1220,7 @@ FROM FieldsForTables f
 JOIN _ddr_chunks_by_hash d ON f.AE_Calc_Hash = d.Calc_Hash AND f.File_Name = d.File_Name
 WHERE d.Chunk_Type = 'CustomFunctionRef'
   AND f.AE_Calc_Hash IS NOT NULL
+  AND COALESCE(f.AE_Calc_Enabled, TRUE)  -- dormante Auto-Enter-Formel (FM 26): keine Kanten
   AND TRUE;
 
 -- A.2.6 PluginFunctionRef in AutoEnter-Calc → PluginFunctionUsages — Subrole 'auto_enter'
@@ -1203,6 +1236,7 @@ FROM FieldsForTables f
 JOIN _ddr_chunks_by_hash d ON f.AE_Calc_Hash = d.Calc_Hash AND f.File_Name = d.File_Name
 WHERE d.Chunk_Type = 'PluginFunctionRef'
   AND f.AE_Calc_Hash IS NOT NULL
+  AND COALESCE(f.AE_Calc_Enabled, TRUE)  -- dormante Auto-Enter-Formel (FM 26): keine Kanten
   AND TRUE;
 
 -- A.2.7 FieldRef in Validierungs-Calc (Validation_Calc_Hash) — Subrole 'validation'
@@ -1226,6 +1260,7 @@ FROM FieldsForTables f
 JOIN _ddr_chunks_by_hash d ON f.Validation_Calc_Hash = d.Calc_Hash AND f.File_Name = d.File_Name
 WHERE d.Chunk_Type = 'FieldRef'
   AND f.Validation_Calc_Hash IS NOT NULL
+  AND COALESCE(f.Validation_Calc_Enabled, TRUE)  -- dormante Prüfformel (FM 26): keine Kanten
   AND TRUE;
 
 -- A.2.8 CustomFunctionRef in Validierungs-Calc (Validation_Calc_Hash) — Subrole 'validation'
@@ -1245,6 +1280,7 @@ FROM FieldsForTables f
 JOIN _ddr_chunks_by_hash d ON f.Validation_Calc_Hash = d.Calc_Hash AND f.File_Name = d.File_Name
 WHERE d.Chunk_Type = 'CustomFunctionRef'
   AND f.Validation_Calc_Hash IS NOT NULL
+  AND COALESCE(f.Validation_Calc_Enabled, TRUE)  -- dormante Prüfformel (FM 26): keine Kanten
   AND TRUE;
 
 -- A.2.9 PluginFunctionRef in Validierungs-Calc → PluginFunctionUsages
@@ -1261,6 +1297,7 @@ FROM FieldsForTables f
 JOIN _ddr_chunks_by_hash d ON f.Validation_Calc_Hash = d.Calc_Hash AND f.File_Name = d.File_Name
 WHERE d.Chunk_Type = 'PluginFunctionRef'
   AND f.Validation_Calc_Hash IS NOT NULL
+  AND COALESCE(f.Validation_Calc_Enabled, TRUE)  -- dormante Prüfformel (FM 26): keine Kanten
   AND TRUE;
 
 -- A.2.10 FieldRef in der eigenen Fehlermeldungs-Berechnung (Validation_Message_Calc_Hash).
@@ -1286,6 +1323,7 @@ FROM FieldsForTables f
 JOIN _ddr_chunks_by_hash d ON f.Validation_Message_Calc_Hash = d.Calc_Hash AND f.File_Name = d.File_Name
 WHERE d.Chunk_Type = 'FieldRef'
   AND f.Validation_Message_Calc_Hash IS NOT NULL
+  AND COALESCE(f.Validation_Message_Calc_Enabled, TRUE)  -- dormante Fehlermeldungs-Formel (FM 26): keine Kanten
   AND TRUE;
 
 -- A.2.11 CustomFunctionRef in der Fehlermeldungs-Berechnung (Validation_Message_Calc_Hash)
@@ -1306,6 +1344,7 @@ FROM FieldsForTables f
 JOIN _ddr_chunks_by_hash d ON f.Validation_Message_Calc_Hash = d.Calc_Hash AND f.File_Name = d.File_Name
 WHERE d.Chunk_Type = 'CustomFunctionRef'
   AND f.Validation_Message_Calc_Hash IS NOT NULL
+  AND COALESCE(f.Validation_Message_Calc_Enabled, TRUE)  -- dormante Fehlermeldungs-Formel (FM 26): keine Kanten
   AND TRUE;
 
 -- ============================================
@@ -1790,6 +1829,7 @@ LEFT JOIN MBS_SubnameMap m
       AND m.Plugin_Chunk_Index = d.Chunk_Index
 WHERE d.Chunk_Type = 'PluginFunctionRef'
   AND f.AE_Calc_Hash IS NOT NULL
+  AND COALESCE(f.AE_Calc_Enabled, TRUE)  -- dormante Auto-Enter-Formel (FM 26): keine Kanten
   AND TRUE;
 
 -- A.6.4 VariableReference in AutoEnter-Calc — Subrole 'auto_enter' (1.22.0;
@@ -1816,6 +1856,7 @@ FROM FieldsForTables f
 JOIN _ddr_chunks_by_hash d ON f.AE_Calc_Hash = d.Calc_Hash AND f.File_Name = d.File_Name
 WHERE d.Chunk_Type = 'VariableReference'
   AND f.AE_Calc_Hash IS NOT NULL
+  AND COALESCE(f.AE_Calc_Enabled, TRUE)  -- dormante Auto-Enter-Formel (FM 26): keine Kanten
   AND TRUE;
 
 -- A.6.5 PluginFunctionRef in CustomFunctions
@@ -2105,6 +2146,7 @@ LEFT JOIN GetSubparameterMap g
       AND g.Get_Chunk_Index = d.Chunk_Index
 WHERE d.Chunk_Type = 'FunctionRef'
   AND f.AE_Calc_Hash IS NOT NULL
+  AND COALESCE(f.AE_Calc_Enabled, TRUE)  -- dormante Auto-Enter-Formel (FM 26): keine Kanten
   AND TRUE;
 
 -- A.7.3 FunctionRef in CustomFunctions

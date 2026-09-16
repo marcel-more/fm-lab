@@ -1,6 +1,6 @@
 {
   "id": "sort_records_in_loop",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "title": "Sort Records inside Loop",
   "description": "Performance rule — Sort Records executed inside a Loop; sorting per iteration is rarely intended.",
   "author": "fm-lab rules",

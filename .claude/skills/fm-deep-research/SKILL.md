@@ -101,7 +101,7 @@ not gates. Keep `engine`, `resolution`, `modularity_q`, `n_nodes`, `n_edges`, `k
 
 ```bash
 duckdb db/fm_catalog.duckdb -readonly -markdown -c "SET VARIABLE engine='<engine>';" \
-  -c ".read .claude/skills/fm-deep-research/scripts/solution_profile.sql"      # 11 result sets
+  -c ".read .claude/skills/fm-deep-research/scripts/solution_profile.sql"      # 12 result sets
 duckdb db/fm_catalog.duckdb -readonly -markdown -c ".read .claude/skills/fm-deep-research/scripts/duplication.sql"
 duckdb db/fm_catalog.duckdb -readonly -markdown -c "SET VARIABLE engine='<engine>'; SET VARIABLE \"limit\"=20;" \
   -c ".read .claude/skills/fm-graph-cluster/scripts/hubs.sql"
@@ -111,7 +111,9 @@ sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' version.json | head -n1             
 Profile sets: #1 files/versions/DDR · #2 object counts · #3 data core + totals · #4 external
 sources · #5 security (privilege sets, full-access/hidden scripts) · #6 plugins · #7 folders
 (intended structure) · #8 triggers per file · #9 cross-cutting nodes (`ClusterGodNodes`) ·
-#10 partition shape · #11 folder↔community alignment. Duplication: same name in several files
+#10 partition shape · #11 folder↔community alignment · #12 trigger entry points × runtime
+compatibility (WebDirect/Go No/Partial per file, fm_spec `trigger_compat`; attaches the reference
+read-only, 0 on references < 2.8.0). Duplication: same name in several files
 = per-file copies (node key `(uuid, file)`), never a shared hub — quantify, do not merge.
 
 ### R2. Segment scan (bounded, sequential)

@@ -477,7 +477,85 @@ const VALUELIST_SEARCH_BRANCH = `
  * @param {Object} opts - {name, dbType, file, limit, offset, countOnly?}
  * @returns {{sql: string, params: Array}}
  */
-function buildSearchSql({ name, dbType, file, limit, offset, countOnly = false }) {
+/**
+ * BuiltinFunction-Branch über die LOKALISIERTEN Schreibweisen.
+ *
+ * Warum es ihn braucht: seit Katalog-Schema 1.32.0 trägt ein Built-in nur noch
+ * seinen kanonischen englischen Namen (`Get(PageNumber)`), weil das seine
+ * Identität ist. Eine Suche nach `Seitennummer` fand ihn damit nicht mehr —
+ * und das ist für eine deutschsprachige Lösung der Normalfall, nicht der
+ * Randfall (gemessen: 126 von 140 Get-Parameter-Schreibweisen dort lokalisiert).
+ * Verwendungen in Script-Steps blieben über den Step_Text-Branch auffindbar,
+ * alle anderen (Feld, CustomFunction, Menü, Layoutobjekt) hatten den
+ * Funktionsknoten als einzigen Einstieg — genau den.
+ *
+ * `v_builtin_token_lookup` ist die beim Import gebaute Abbildung
+ * Schreibweise → Knoten (alle Referenzsprachen, beide Namensräume). Gesucht
+ * wird in `Name_Decoded`; die entity-kodierte Achse derselben View liefert
+ * dieselbe dekodierte Schreibweise und fällt per DISTINCT zusammen.
+ *
+ * `Matched_Values` trägt die Schreibweise(n), die getroffen haben — dasselbe
+ * Muster wie der Werteliste-Branch: der Treffer erklärt sich selbst, statt dass
+ * ein englischer Name ohne ersichtlichen Grund in der Liste steht.
+ *
+ * Dedup: der Namens-Branch findet Built-ins schon per `Object_Name ILIKE`.
+ * Dieser Branch schließt solche Zeilen aus, sonst käme der Knoten doppelt.
+ *
+ * Drei `?`-Parameter in Textreihenfolge: 1. Schreibweisen-Match,
+ * 2. Namens-Match (Ausschluss), 3./optional File-Filter beim Aufrufer.
+ */
+const BUILTIN_LOCALIZED_SEARCH_BRANCH = `
+  SELECT
+    oc.Object_UUID, oc.Object_Type, oc.Object_Name, oc.File_Name,
+    oc.Source_Table, oc.Object_ID,
+    CAST(NULL AS VARCHAR) AS Step_Text,
+    CAST(NULL AS VARCHAR) AS Script_Name,
+    CAST(NULL AS INTEGER) AS Step_Index,
+    m.Matched_Values
+  FROM ObjectCatalog oc
+  JOIN LATERAL (
+    SELECT string_agg(DISTINCT l.Name_Decoded, ', ') AS Matched_Values
+    FROM v_builtin_token_lookup l
+    WHERE l.Object_UUID = oc.Object_UUID
+      AND l.Name_Decoded ILIKE ?
+  ) m ON m.Matched_Values IS NOT NULL
+  WHERE oc.Object_Type = 'BuiltinFunction'
+    AND NOT (oc.Object_Name ILIKE ?)
+`;
+
+// Verfügbarkeit von v_builtin_token_lookup je Lösung (Katalog < Schema 1.32.0
+// hat sie nicht). Einmal pro Lösung geprüft statt per Suche — und beim
+// Reload geleert, weil ein Re-Import das Schema hebt.
+const builtinLookupAvailable = new Map();
+
+function clearObjectServiceCaches() {
+  builtinLookupAvailable.clear();
+}
+
+/**
+ * Prüft (und cached), ob die Lösung die Nachschlage-View trägt. Bewusst
+ * explizit statt „SQL versuchen, bei Fehler ohne Branch wiederholen": so bleibt
+ * ein echter Fehler im Branch sichtbar, statt still zu einer Suche ohne
+ * lokalisierte Treffer zu degradieren.
+ */
+async function hasBuiltinTokenLookup(ctx) {
+  const key = ctx?.solution ?? '';
+  if (builtinLookupAvailable.has(key)) return builtinLookupAvailable.get(key);
+  let ok = false;
+  try {
+    const r = await db.executeQuery(
+      ctx,
+      "SELECT 1 AS ok FROM duckdb_views() WHERE view_name = 'v_builtin_token_lookup' LIMIT 1"
+    );
+    ok = r.rows.length > 0;
+  } catch {
+    ok = false;
+  }
+  builtinLookupAvailable.set(key, ok);
+  return ok;
+}
+
+function buildSearchSql({ name, dbType, file, limit, offset, countOnly = false, builtinLocalized = false }) {
   const params = [];
 
   // Pfad A0: expliziter ValueList-Filter → Wert-Branch (Name ODER Custom-Value).
@@ -518,10 +596,19 @@ function buildSearchSql({ name, dbType, file, limit, offset, countOnly = false }
       inner += ' AND File_Name = ?';
       params.push(file);
     }
+    // Typ-Filter BuiltinFunction: die lokalisierten Schreibweisen mitsuchen,
+    // sonst findet gerade der explizit auf Built-ins eingeschränkte Blick die
+    // deutsche Schreibweise nicht. Built-ins sind lösungsunabhängig
+    // (File_Name IS NULL), der File-Filter trifft sie ohnehin nie — dann bleibt
+    // der Branch weg, statt einen Filter zu unterlaufen.
+    if (builtinLocalized && dbType === 'BuiltinFunction' && !file) {
+      inner = `(${inner}) UNION ALL (${BUILTIN_LOCALIZED_SEARCH_BRANCH})`;
+      params.push(name, name);
+    }
     if (countOnly) {
       return { sql: `SELECT COUNT(*) AS count FROM (${inner}) c`, params };
     }
-    let sql = `${inner} ORDER BY Object_Name`;
+    let sql = `SELECT * FROM (${inner}) c ORDER BY Object_Name`;
     if (limit > 0) {
       sql += ' LIMIT ? OFFSET ?';
       params.push(limit, offset);
@@ -600,7 +687,14 @@ function buildSearchSql({ name, dbType, file, limit, offset, countOnly = false }
     params.push(file);
   }
 
-  const combined = `(${nonStepInner}) UNION ALL (${vlInner}) UNION ALL (${stepInner})`;
+  // Built-in-Branch über die lokalisierten Schreibweisen (s. Konstante). Nur im
+  // Volltext-Pfad: der Wildcard-only-Initial-Load ist oben schon zurück und
+  // schließt teure Zweige bewusst aus.
+  let combined = `(${nonStepInner}) UNION ALL (${vlInner}) UNION ALL (${stepInner})`;
+  if (builtinLocalized) {
+    combined += ` UNION ALL (${BUILTIN_LOCALIZED_SEARCH_BRANCH})`;
+    params.push(name, name);
+  }
   if (countOnly) {
     return { sql: `SELECT COUNT(*) AS count FROM (${combined}) c`, params };
   }
@@ -646,7 +740,11 @@ async function searchObjects(ctx, searchOptions) {
     //      Wildcard-only-Suche ('%') überspringt (b)+(c), weil dann sonst 196k
     //      Steps bzw. teure Wert-Scans in die Initial-Liste flössen (ValueLists
     //      erscheinen im Wildcard-Modus per Name über (a)).
-    const { sql, params } = buildSearchSql({ name, dbType, file, limit, offset });
+    // Lokalisierte Built-in-Schreibweisen mitsuchen, wenn der Katalog die
+    // Nachschlage-View trägt (Schema 1.32.0+). Wildcard-only-Suchen brauchen
+    // den Zweig nicht — buildSearchSql lässt ihn dort weg.
+    const builtinLocalized = await hasBuiltinTokenLookup(ctx);
+    const { sql, params } = buildSearchSql({ name, dbType, file, limit, offset, builtinLocalized });
 
     const result = await db.executeQuery(ctx, sql, params);
 
@@ -767,8 +865,12 @@ async function countSearchResults(ctx, searchOptions) {
     }
 
     // Identische Filterlogik wie searchObjects (UNION ALL bei Volltextsuche
-    // ohne Type-Filter). Gemeinsamer Builder, damit Count == List-Total.
-    const { sql, params } = buildSearchSql({ name, dbType, file, countOnly: true });
+    // ohne Type-Filter). Gemeinsamer Builder, damit Count == List-Total —
+    // einschliesslich des Built-in-Branches über die lokalisierten
+    // Schreibweisen: ohne dasselbe Flag zählte der Count weniger als die Liste
+    // zeigt.
+    const builtinLocalized = await hasBuiltinTokenLookup(ctx);
+    const { sql, params } = buildSearchSql({ name, dbType, file, countOnly: true, builtinLocalized });
 
     const result = await db.executeQuery(ctx, sql, params);
 
@@ -797,7 +899,10 @@ async function countSearchResults(ctx, searchOptions) {
  *     bedeutungslose Slot-Zeilen.
  *   - alles andere (primary/left/Total/Part-Typen/Trigger-Events/calc_kinds/…)
  *     → Durchreichung roh. Die Anzeige-Labels im Frontend sind Politur,
- *     kein Gatekeeper — Unbekanntes wird nie verschluckt.
+ *     kein Gatekeeper — Unbekanntes wird nie verschluckt. Dazu zählt
+ *     `field_entry`: die Kanten der Feld-Eingabeformel tragen seit Konverter
+ *     2.30.0 den calc_kind selbst (P4 retaggt den kollidierenden DDR-Schlüssel
+ *     'Hide'); `Hide` bleibt allein der Ausblendungsformel.
  * `PopoverPanel` → `popover_title` (NICHT panel_title): das Suffix hängt am
  * Popover-Titel-Calc (CalculationsCatalog: Calc_Kind_Raw='PopoverPanel' →
  * Calc_Role='popover_title'); Tab-Panel-Titel haben das eigene Raw-Kind
@@ -1655,7 +1760,7 @@ ${CONTAINER_SELECT},
  * @param {string} uuid - Object UUID
  * @returns {Promise<Object>} Detail data with metadata
  */
-async function getDetails(ctx, uuid, file) {
+async function getDetails(ctx, uuid, file, lang) {
   try {
     // 1. Look up object type from ObjectCatalog (clone-aware, see resolveByUUID)
     const lookupResult = await resolveByUUID(
@@ -1679,7 +1784,12 @@ async function getDetails(ctx, uuid, file) {
     const hasDedicatedTemplate = objectType in DETAIL_TEMPLATE_MAP;
 
     // 3. Execute the detail template (templates/sql/ = 'report' source)
-    const result = await templateService.executeTemplate(ctx, templateName, { uuid, file: resolvedFile }, 'report');
+    // `lang` = aktive UI-Sprache. Detail-Templates, die eine lokalisierte
+    // Schreibweise NEBEN dem Katalognamen zeigen (BuiltinFunction seit
+    // Katalog-Schema 1.32.0, wo der Katalogname sprachunabhängig kanonisch ist),
+    // lesen sie per getvariable('lang'); alle anderen ignorieren den Parameter.
+    const result = await templateService.executeTemplate(
+      ctx, templateName, { uuid, file: resolvedFile, lang: lang ?? null }, 'report');
 
     return {
       data: result.data,
@@ -1700,6 +1810,7 @@ async function getDetails(ctx, uuid, file) {
 }
 
 module.exports = {
+  clearObjectServiceCaches,
   resolveByUUID,
   getByUUID,
   getDetails,

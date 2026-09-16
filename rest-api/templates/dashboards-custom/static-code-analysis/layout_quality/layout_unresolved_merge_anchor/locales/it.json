@@ -1,0 +1,25 @@
+{
+  "manifest": {
+    "title": "Ancora di unione non risolta",
+    "description": "Regola di qualità dei layout — un oggetto di testo contiene un'ancora di campo unito (<<Campo>>) che FileMaker non riesce a risolvere. Tale ancora non viene scartata: è resa LETTERALMENTE in modalità usa e anteprima, quindi l'utente vede il <<Campo>> grezzo dove dovrebbe esserci un valore. Inoltre non lascia traccia nel catalogo — nessun arco displays_field, nessun oggetto proprio — ed è per questo che tale regola è l'unico punto in cui diventa visibile. Il rilevamento confronta le ancore nel testo (escluse le variabili di unione <<$…>> e le formule di layout <<ƒ:…>>; una ripetizione o una qualificazione tramite occorrenza tabella contano come una sola ancora) con le voci FieldReference della FieldList strutturale dell'oggetto, che contiene esattamente una voce per ogni ancora risolta. È il conteggio a decidere il rilievo; i nomi sospetti sono un extra e restano vuoti quando non possono essere attribuiti con sicurezza.",
+    "messages.unresolved-anchor": "Ancora di unione senza risoluzione del campo — viene resa letteralmente"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Risultati",
+    "summary_kpi.props.items[1].label": "Ancore non risolte",
+    "summary_kpi.props.items[2].label": "Layout interessati",
+    "summary_kpi.props.items[3].label": "File interessati",
+    "findings_card.props.title": "Ancora di unione non risolta",
+    "findings_table.props.searchPlaceholder": "Cerca file, layout, oggetto o ancora…",
+    "findings_table.props.empty.message": "Nessuna ancora di unione non risolta trovata.",
+    "findings_table.props.columns[0].label": "File",
+    "findings_table.props.columns[1].label": "Layout",
+    "findings_table.props.columns[2].label": "Oggetto",
+    "findings_table.props.columns[3].label": "Resa letteralmente",
+    "findings_table.props.columns[4].label": "Tutte le ancore",
+    "findings_table.props.columns[5].label": "Non risolte",
+    "findings_table.props.columns[6].label": "Ancore",
+    "findings_table.props.columns[9].label": "Larghezza",
+    "findings_table.props.columns[10].label": "Altezza"
+  }
+}

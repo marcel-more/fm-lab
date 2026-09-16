@@ -43,6 +43,58 @@ async function getMeta(ctx) {
 }
 
 /**
+ * Doku-Querlinks einer Plugin-Funktion — das Gegenstück zu `buildDocsEntryRef`
+ * der Claris-Referenz (reference.service.js):
+ *
+ *   `docsEntry`  → Seite im Doku-Browser (`/docs/<set>/<category>/<entry>`),
+ *                  NULL wenn das Docset nicht installiert ist oder die Funktion
+ *                  im Doku-Index fehlt. Der Link wird nur gerendert, wenn das
+ *                  Ziel wirklich existiert.
+ *   `online_url` → Herstellerseite der Funktion. Rein aus dem Namen abgeleitet
+ *                  (`plugin-docs.config.js` → `sources.<id>.externalUrl`), also
+ *                  auch ohne installiertes Docset verfügbar — genau der Fall,
+ *                  in dem sie als Fallback gebraucht wird. In plugin_spec.duckdb
+ *                  steht keine URL; die Namensregel des Herstellers ist die
+ *                  einzige Quelle.
+ *
+ * Doku-Quelle und Plugin teilen sich die Hersteller-ID ('mbs'); eine ID ohne
+ * passende Doku-Quelle liefert schlicht keine Links.
+ */
+function buildDocsLinks(pluginId, fnName) {
+  // eslint-disable-next-line global-require
+  const pluginDocs = require('./plugin-docs');
+  // eslint-disable-next-line global-require
+  const docsManifest = require('./docs-manifest');
+
+  const online_url = pluginDocs.externalUrl(pluginId, fnName);
+  if (!docsManifest.isInstalled(pluginId)) return { online_url, docsEntry: null };
+  const ref = pluginDocs.resolveEntryRef(pluginId, fnName);
+  return {
+    online_url,
+    docsEntry: ref ? { set: pluginId, category: ref.category, entry: ref.entry } : null,
+  };
+}
+
+/**
+ * Dasselbe eine Ebene höher: Rubrikseite einer Komponente. `docsCategory` trägt
+ * nur `set` + `category` (eine Rubrik hat keinen Eintragsnamen).
+ */
+function buildComponentDocsLinks(pluginId, componentName) {
+  // eslint-disable-next-line global-require
+  const pluginDocs = require('./plugin-docs');
+  // eslint-disable-next-line global-require
+  const docsManifest = require('./docs-manifest');
+
+  const online_url = pluginDocs.externalCategoryUrl(pluginId, componentName);
+  if (!docsManifest.isInstalled(pluginId)) return { online_url, docsCategory: null };
+  const ref = pluginDocs.resolveCategoryRef(pluginId, componentName);
+  return {
+    online_url,
+    docsCategory: ref ? { set: pluginId, category: ref.category } : null,
+  };
+}
+
+/**
  * Platform spec for one plug-in function. `prefix` is the catalog plugin
  * prefix (e.g. 'MBS', matched against plugins.detect_prefix), `name` the
  * qualified function name — old names resolve via the alias table and are
@@ -94,10 +146,82 @@ async function getFunctionSpec(ctx, prefix, name) {
     [fn.plugin_id, fn.function_name]
   );
   fn.platforms = platforms.rows.map(normalizeRow);
+  // Querlinks auf Basis des AUFGELÖSTEN Namens (nicht des angefragten): bei
+  // einem Alias zeigt die Doku-Seite auf den heutigen Namen.
+  Object.assign(fn, buildDocsLinks(fn.plugin_id, fn.function_name));
   return fn;
+}
+
+/**
+ * Referenz-Schicht einer Plugin-KOMPONENTE (Rubrik des Herstellers). `prefix`
+ * ist das Katalog-Präfix ('MBS'), `component` der Komponentenname ohne
+ * Namespace ('Archive'). Liefert die Größe der Komponente laut Plattform-Map
+ * plus die beiden Doku-Querlinks.
+ *
+ * Eine Komponente, die die Map nicht kennt (Tippfehler, Alt-Bestand), ist kein
+ * Fehler: `documented_functions` ist dann 0 und die Links bleiben trotzdem
+ * nutzbar, solange die Doku sie führt.
+ */
+async function getComponentSpec(ctx, prefix, component, { viaFunction = null } = {}) {
+  assertAttached();
+  const plugins = await db.executeQuery(
+    ctx,
+    `SELECT plugin_id, name AS plugin_name, doc_version
+     FROM plugref.plugins WHERE lower(detect_prefix) = lower(?) LIMIT 1`,
+    [String(prefix)]
+  );
+  if (plugins.rows.length === 0) {
+    const err = new Error(`No plugin-spec entry for prefix '${prefix}'`);
+    err.code = 'PLUGSPEC_FN_NOT_FOUND';
+    throw err;
+  }
+  const row = normalizeRow(plugins.rows[0]);
+  row.component = String(component);
+
+  // Der KATALOG-Komponentenname ist der Funktions-Namenspräfix ('GMImage') und
+  // deckt sich nicht immer mit der Komponente des Herstellers
+  // ('GraphicsMagick'). Zuerst den Katalognamen gegen die Map prüfen; greift er
+  // nicht, verrät ihn eine Mitglieds-Funktion (`viaFunction`). Nur der
+  // aufgelöste Name trägt danach Doku-Link und Hersteller-URL — sonst zeigten
+  // beide auf eine Seite, die es beim Hersteller nicht gibt.
+  const direct = await db.executeQuery(
+    ctx,
+    `SELECT COUNT(*) AS n FROM plugref.plugin_functions
+     WHERE plugin_id = ? AND lower(component) = lower(?)`,
+    [row.plugin_id, row.component]
+  );
+  let vendorComponent = Number(direct.rows[0]?.n ?? 0) > 0 ? row.component : null;
+  let documented = Number(direct.rows[0]?.n ?? 0);
+
+  if (!vendorComponent && viaFunction) {
+    const viaRow = await db.executeQuery(
+      ctx,
+      `SELECT f.component,
+              (SELECT COUNT(*) FROM plugref.plugin_functions g
+                WHERE g.plugin_id = f.plugin_id AND g.component = f.component) AS n
+       FROM plugref.plugin_functions f
+       WHERE f.plugin_id = ? AND lower(f.function_name) = lower(?)
+       LIMIT 1`,
+      [row.plugin_id, String(viaFunction)]
+    );
+    if (viaRow.rows.length > 0 && viaRow.rows[0].component) {
+      vendorComponent = viaRow.rows[0].component;
+      documented = Number(viaRow.rows[0].n ?? 0);
+    }
+  }
+
+  row.vendor_component = vendorComponent;
+  row.documented_functions = documented;
+  // Bewusst NUR aus dem aufgelösten Namen: bleibt er null, kennt der Hersteller
+  // weder die Komponente noch eine ihrer Funktionen (z. B. gelöschte Custom
+  // Functions, die als Plugin-Referenz im Katalog landen). Dann gibt es keinen
+  // belegten Link — lieber gar keiner als einer ins Leere.
+  Object.assign(row, buildComponentDocsLinks(row.plugin_id, vendorComponent));
+  return row;
 }
 
 module.exports = {
   getMeta,
   getFunctionSpec,
+  getComponentSpec,
 };

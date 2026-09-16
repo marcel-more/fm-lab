@@ -27,7 +27,10 @@
     "BaseTable": "Table details",
     "CustomFunction": "Function details",
     "ValueList": "Value list details",
-    "Calculation": "Calculation Details"
+    "Calculation": "Calculation Details",
+    "BuiltinFunction": "Built-in function details",
+    "PluginFunction": "Plug-in function details",
+    "PluginComponent": "Plug-in component details"
   },
   "layoutCanvas": {
     "searchPlaceholder": "Search layout object…",
@@ -166,6 +169,10 @@
         "short": "Hide",
         "long": "Hide condition"
       },
+      "field_entry": {
+        "short": "Entry",
+        "long": "Field-entry condition"
+      },
       "conditional_format": {
         "short": "CF",
         "long": "Conditional formatting"
@@ -284,7 +291,17 @@
     "summaryRestartGroup": "Restart for each group",
     "summaryRepMode": "Summarize repetitions",
     "calcEvaluatesWhenEmpty": "Evaluates even if fields empty",
-    "validationMessageCalc": "Message calculation"
+    "validationMessageCalc": "Message calculation",
+    "disabled": "disabled",
+    "sectionExtended": "Extended options (FileMaker 26)",
+    "annotation": "Annotation (DDL)",
+    "displayNames": "Display names",
+    "displayNamesEnabled": "Custom display names enabled",
+    "displayNamesDisabled": "Not customized",
+    "displayNameElements": "Elements",
+    "displayNameKey": "Element",
+    "displayNameValue": "Label / formula",
+    "displayNamesFormula": "Display-names formula"
   },
   "typeDetail": {
     "loading": "Loading…",
@@ -318,7 +335,8 @@
     "noName": "(no name)",
     "filterByCategory": "Filter by {{category}}",
     "graphButton": "Graph",
-    "valueListMatch": "Values"
+    "valueListMatch": "Values",
+    "spellingMatch": "Spelling"
   },
   "scriptSearchFilter": {
     "searchAria": "Search references",
@@ -546,6 +564,7 @@
     "ariaLabel": "Table details",
     "metaName": "Name",
     "metaFile": "File",
+    "metaComment": "Comment",
     "fields": "Fields",
     "count": "Count",
     "total": "Total",
@@ -716,7 +735,13 @@
     "layoutFormula": "Layout calculation",
     "resultType": "Result type",
     "resultTypeTooltip": "Result type: {{type}}",
-    "resultTypes": { "Text": "Text", "Number": "Number", "Date": "Date", "Time": "Time", "Timestamp": "Timestamp" },
+    "resultTypes": {
+      "Text": "Text",
+      "Number": "Number",
+      "Date": "Date",
+      "Time": "Time",
+      "Timestamp": "Timestamp"
+    },
     "targets": "Resolved targets",
     "slotsHeading": "Calculations",
     "ddrlessHint": "Plain text only — this instance has no DDR chunk data, so tokens, tooltips and cross-navigation are unavailable.",
@@ -732,6 +757,7 @@
       "step_xslt": "XSLT stylesheet",
       "record_access": "Record access calculation",
       "hide": "Hide condition",
+      "field_entry": "Field-entry condition",
       "tooltip": "Tooltip",
       "placeholder": "Placeholder",
       "conditional_format": "Conditional formatting",
@@ -766,7 +792,12 @@
     "paramFieldLabel": "Parameter field",
     "paramFieldCandidates": "Candidates:",
     "paramFieldOrphan": "No matching field in this file (orphaned name)",
-    "openParamCalc": "Open calculation details"
+    "openParamCalc": "Open calculation details",
+    "platformsLabel": "Platforms",
+    "compatPartial": "partial",
+    "compatNo": "no",
+    "compatPartialHint": "Partial — conditionally supported; see the Claris help page of the event",
+    "compatNoHint": "This event does not fire on that runtime"
   },
   "layoutObjectDetail": {
     "showInLayout": "Show in layout: {{name}}",
@@ -839,5 +870,40 @@
     "propPosition": "Position/size",
     "propNesting": "Nesting",
     "nestingLevel": "Level {{level}}"
+  },
+  "pseudoFunction": {
+    "metaFunction": "Function",
+    "metaType": "Type",
+    "metaScope": "Scope",
+    "scopeValue": "Solution-independent – belongs to no file",
+    "usageHeading": "Usage",
+    "usageEmpty": "Not used in this solution.",
+    "colRole": "Role",
+    "colType": "Object type",
+    "colObjects": "Objects",
+    "colFiles": "Files",
+    "colOccurrences": "Occurrences",
+    "totalRow": "Total"
+  },
+  "builtinFunction": {
+    "clarisHelpOnline": "Claris Help ↗",
+    "typeValue": "FileMaker built-in function"
+  },
+  "pluginFunction": {
+    "docsetLink": "{{plugin}} docs →",
+    "docsOnline": "{{plugin}} docs ↗",
+    "typeValue": "Plug-in function",
+    "metaCatalogName": "Catalog name",
+    "metaComponent": "Component",
+    "metaPlugin": "Plug-in"
+  },
+  "pluginComponent": {
+    "typeValue": "Plug-in component",
+    "documentedFunctions": "Functions in the reference",
+    "vendorComponent": "Vendor component",
+    "functionsInSolution": "Functions in this solution",
+    "usedSuffix": "{{used}} used",
+    "functionsHeading": "Functions",
+    "colFunction": "Function"
   }
 }

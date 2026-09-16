@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Activadores específicos de plataforma: FileMaker Go (iOS)",
+    "analysis.defaultResult.meaning": "Scripts en el alcance vinculados a eventos de activador que solo se disparan en FileMaker Go (iOS)"
+  },
+  "layout": {}
+}

@@ -27,7 +27,10 @@
     "BaseTable": "Detalles de la tabla",
     "CustomFunction": "Detalles de la función",
     "ValueList": "Detalles de la lista de valores",
-    "Calculation": "Detalles del cálculo"
+    "Calculation": "Detalles del cálculo",
+    "BuiltinFunction": "Detalles de la función integrada",
+    "PluginFunction": "Detalles de la función de plug-in",
+    "PluginComponent": "Detalles del componente de plug-in"
   },
   "layoutCanvas": {
     "searchPlaceholder": "Buscar objeto del layout…",
@@ -160,6 +163,10 @@
       "hide": {
         "short": "Hide",
         "long": "Condición de ocultar"
+      },
+      "field_entry": {
+        "short": "Entry",
+        "long": "Condición de entrada de campo"
       },
       "conditional_format": {
         "short": "CF",
@@ -312,7 +319,8 @@
     "noName": "(sin nombre)",
     "filterByCategory": "Filtrar por {{category}}",
     "graphButton": "Grafo",
-    "valueListMatch": "Valores"
+    "valueListMatch": "Valores",
+    "spellingMatch": "Grafía"
   },
   "scriptSearchFilter": {
     "searchAria": "Buscar referencias",
@@ -513,6 +521,7 @@
     "ariaLabel": "Detalles de la tabla",
     "metaName": "Nombre",
     "metaFile": "Archivo",
+    "metaComment": "Comentario",
     "fields": "Campos",
     "count": "Cantidad",
     "total": "Total",
@@ -705,6 +714,7 @@
       "step_xslt": "Hoja de estilos XSLT",
       "record_access": "Cálculo de acceso a registros",
       "hide": "Condición de ocultación",
+      "field_entry": "Condición de entrada de campo",
       "tooltip": "Información sobre herramientas",
       "placeholder": "Marcador de posición",
       "conditional_format": "Formato condicional",
@@ -739,7 +749,12 @@
     "paramFieldLabel": "Campo de parámetro",
     "paramFieldCandidates": "Candidatos:",
     "paramFieldOrphan": "Ningún campo con ese nombre en este archivo (nombre huérfano)",
-    "openParamCalc": "Abrir detalles del cálculo"
+    "openParamCalc": "Abrir detalles del cálculo",
+    "platformsLabel": "Plataformas",
+    "compatPartial": "parcial",
+    "compatNo": "no",
+    "compatPartialHint": "Parcial — compatible con condiciones; véase la página de ayuda de Claris del evento",
+    "compatNoHint": "Este evento no se dispara en ese entorno de ejecución"
   },
   "layoutObjectDetail": {
     "showInLayout": "Mostrar en el layout: {{name}}",
@@ -812,5 +827,40 @@
     "propPosition": "Posición/tamaño",
     "propNesting": "Anidamiento",
     "nestingLevel": "Nivel {{level}}"
+  },
+  "pseudoFunction": {
+    "metaFunction": "Función",
+    "metaType": "Tipo",
+    "metaScope": "Ámbito",
+    "scopeValue": "Independiente de la solución: no pertenece a ningún archivo",
+    "usageHeading": "Uso",
+    "usageEmpty": "No se usa en esta solución.",
+    "colRole": "Rol",
+    "colType": "Tipo de objeto",
+    "colObjects": "Objetos",
+    "colFiles": "Archivos",
+    "colOccurrences": "Apariciones",
+    "totalRow": "Total"
+  },
+  "builtinFunction": {
+    "clarisHelpOnline": "Ayuda de Claris ↗",
+    "typeValue": "Función integrada de FileMaker"
+  },
+  "pluginFunction": {
+    "docsetLink": "Documentación de {{plugin}} →",
+    "docsOnline": "Documentación de {{plugin}} ↗",
+    "typeValue": "Función de plug-in",
+    "metaCatalogName": "Nombre en el catálogo",
+    "metaComponent": "Componente",
+    "metaPlugin": "Plug-in"
+  },
+  "pluginComponent": {
+    "typeValue": "Componente de plug-in",
+    "documentedFunctions": "Funciones en la referencia",
+    "vendorComponent": "Componente del proveedor",
+    "functionsInSolution": "Funciones en esta solución",
+    "usedSuffix": "{{used}} en uso",
+    "functionsHeading": "Funciones",
+    "colFunction": "Función"
   }
 }

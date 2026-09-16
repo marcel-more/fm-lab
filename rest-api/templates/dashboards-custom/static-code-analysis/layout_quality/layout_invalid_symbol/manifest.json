@@ -1,0 +1,92 @@
+{
+  "id": "layout_invalid_symbol",
+  "version": "1.0.0",
+  "title": "Invalid layout symbol",
+  "description": "Layout-quality rule — a text object carries a {{Symbol}} that is not a Get parameter. A symbol is the value of Get(<Symbol>) at display time; an unknown one is not dropped but rendered LITERALLY in browse and preview mode, so the raw {{Text}} shows up in the layout. Validity is decided against the standard reference (function_name_lookup, chunk_role 'getparameter') over all languages it covers — FileMaker also accepts the localized parameter name, so a localized symbol is valid, not a defect. Two limits keep this a warning: the reference's localized coverage is uneven (Spanish and Portuguese Get-parameter names are absent, German only partly covered), and bracket forms such as {{Get(FoundCount)}} never enter the symbol inventory at all, so the rule is blind to them.",
+  "author": "fm-lab rules",
+  "icon": "text-quote",
+  "category": "layout_quality",
+  "tags": [
+    "rule",
+    "layout_quality",
+    "merge",
+    "symbols"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "warning",
+    "category": "layout_quality",
+    "rationale": "An unresolvable symbol renders as its own source text. The layout shows {{FooBar}} to the user instead of a value — visible, but silent: nothing errors, nothing logs.",
+    "remediation": "Fix the spelling to a Get parameter FileMaker knows (the layout editor's \"Other Symbol…\" dialog lists them), or remove the placeholder if the value is no longer wanted.",
+    "meta": {
+      "name": "Invalid layout symbol",
+      "author": "fm-lab rules",
+      "source": "fm-lab",
+      "url": null,
+      "description": "A {{Symbol}} on a layout text object that is not a Get parameter of the standard reference. Unknown symbols render literally at runtime.",
+      "created": "2026-09-12",
+      "references": []
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Layout"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "summary": "native",
+        "findings": "native"
+      }
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Invalid layout symbol"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql"
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "limit",
+      "type": "number",
+      "required": false,
+      "description": "Maximum number of findings returned (default 500)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  },
+  "messages": {
+    "unknown-symbol": "Symbol is not a known Get parameter — it renders literally"
+  }
+}

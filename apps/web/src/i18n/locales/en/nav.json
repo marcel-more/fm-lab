@@ -128,6 +128,7 @@
   "docs": {
     "langFallback": "This documentation is not available in the selected language — showing {{lang}}.",
     "openOnline": "Open online ↗",
+    "openInFmSpec": "fm-spec →",
     "openInBrowser": "Open in browser",
     "edit": "Edit ↗",
     "source": "Source",

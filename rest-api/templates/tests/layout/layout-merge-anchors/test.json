@@ -1,0 +1,131 @@
+{
+  "id": "layout-merge-anchors",
+  "version": "1.0.0",
+  "title": "Layout Merge Anchors",
+  "description": "Checks a layout's merge family for anchors that render literally at runtime: {{symbols}} the standard reference does not know as Get parameters, and <<Field>> anchors with no field resolution. Neither case is an error to FileMaker — the raw text simply stays in the layout, visible to the user and silent to every log. The symbol inventory ships alongside as the neutral overview.",
+  "keywords": [
+    "layout",
+    "merge",
+    "symbols",
+    "fields",
+    "literal",
+    "reference"
+  ],
+  "testType": "error-check",
+  "objectTypes": [
+    "Layout"
+  ],
+  "scopes": [
+    "solution",
+    "file",
+    "object",
+    "object-list",
+    "cluster"
+  ],
+  "outputs": [
+    "count",
+    "findings-table",
+    "inventory-table"
+  ],
+  "members": [
+    {
+      "kind": "dashboard",
+      "ref": "layout_invalid_symbol"
+    },
+    {
+      "kind": "dashboard",
+      "ref": "layout_unresolved_merge_anchor"
+    },
+    {
+      "kind": "query",
+      "ref": "layout_symbol_inventory"
+    }
+  ],
+  "profiles": [
+    {
+      "id": "rules",
+      "title": "Rules only",
+      "description": "The two finding rules, without the symbol inventory.",
+      "members": [
+        "layout_invalid_symbol",
+        "layout_unresolved_merge_anchor"
+      ]
+    },
+    {
+      "id": "full",
+      "title": "Full Check"
+    }
+  ],
+  "locales": {
+    "de": {
+      "title": "Layout-Merge-Anker",
+      "description": "Prüft die Merge-Familie eines Layouts auf Anker, die zur Laufzeit literal rendern: {{Symbole}}, die die Standard-Referenz nicht als Get-Parameter kennt, und <<Feld>>-Anker ohne Feldauflösung. Beide Fälle sind für FileMaker kein Fehler — der Rohtext bleibt schlicht im Layout stehen, sichtbar für den Benutzer und stumm für jedes Log. Das Symbol-Inventar liegt als neutraler Überblick bei.",
+      "profiles.rules.title": "Nur Regeln",
+      "profiles.rules.description": "Die beiden Befundregeln ohne das Symbol-Inventar.",
+      "profiles.full.title": "Vollprüfung"
+    },
+    "es": {
+      "title": "Anclas de combinación en layouts",
+      "description": "Comprueba la familia de combinación de un layout en busca de anclas que se muestran literalmente en tiempo de ejecución: {{símbolos}} que la referencia estándar no conoce como parámetros de Get y anclas <<Campo>> sin resolución de campo. Para FileMaker ninguno de los dos casos es un error — el texto en bruto simplemente permanece en el layout, visible para el usuario y mudo para cualquier registro. El inventario de símbolos se incluye como visión general neutra.",
+      "profiles.rules.title": "Solo reglas",
+      "profiles.rules.description": "Las dos reglas de hallazgos, sin el inventario de símbolos.",
+      "profiles.full.title": "Comprobación completa"
+    },
+    "fr": {
+      "title": "Ancres de fusion des layouts",
+      "description": "Vérifie la famille de fusion d'un layout à la recherche d'ancres rendues littéralement à l'exécution : les {{symboles}} que la référence standard ne connaît pas comme paramètres de Get et les ancres <<Rubrique>> sans résolution de rubrique. Pour FileMaker, aucun des deux cas n'est une erreur — le texte brut reste simplement dans le layout, visible pour l'utilisateur et muet pour tout journal. L'inventaire des symboles est fourni comme vue d'ensemble neutre.",
+      "profiles.rules.title": "Règles seules",
+      "profiles.rules.description": "Les deux règles de constat, sans l’inventaire des symboles.",
+      "profiles.full.title": "Vérification complète"
+    },
+    "it": {
+      "title": "Ancore di unione dei layout",
+      "description": "Controlla la famiglia di unione di un layout alla ricerca di ancore che vengono rese letteralmente a runtime: i {{simboli}} che la referenza standard non conosce come parametri di Get e le ancore <<Campo>> senza risoluzione del campo. Per FileMaker nessuno dei due casi è un errore — il testo grezzo resta semplicemente nel layout, visibile all'utente e muto per qualsiasi log. L'inventario dei simboli è incluso come panoramica neutra.",
+      "profiles.rules.title": "Solo regole",
+      "profiles.rules.description": "Le due regole di rilievo, senza l’inventario dei simboli.",
+      "profiles.full.title": "Controllo completo"
+    },
+    "ja": {
+      "title": "レイアウトのマージアンカー",
+      "description": "レイアウトのマージ系要素のうち、実行時に「文字どおり」描画されるアンカーを検査します — 標準リファレンスが Get 関数の引数として知らない {{シンボル}} と、フィールドが解決されない <<フィールド>> アンカーです。どちらも FileMaker にとってはエラーではなく、生のテキストがレイアウトにそのまま残るだけ。ユーザーの目には見え、ログには何も残りません。中立的な全体像としてシンボル目録も同梱しています。",
+      "profiles.rules.title": "ルールのみ",
+      "profiles.rules.description": "シンボル目録を除いた 2 つの検出ルール。",
+      "profiles.full.title": "フルチェック"
+    },
+    "ko": {
+      "title": "레이아웃 병합 앵커",
+      "description": "레이아웃의 병합 계열 요소 중 런타임에 그대로 렌더링되는 앵커를 검사합니다 — 표준 참조가 Get 매개변수로 알지 못하는 {{기호}}와 필드가 해결되지 않는 <<필드>> 앵커입니다. FileMaker에게는 둘 다 오류가 아니며, 원본 텍스트가 레이아웃에 그대로 남을 뿐입니다. 사용자 눈에는 보이지만 로그에는 아무것도 남지 않습니다. 중립적인 개요로 기호 목록도 함께 제공합니다.",
+      "profiles.rules.title": "규칙만",
+      "profiles.rules.description": "기호 목록을 뺀 두 가지 발견 규칙.",
+      "profiles.full.title": "전체 검사"
+    },
+    "nl": {
+      "title": "Samenvoegankers in layouts",
+      "description": "Controleert de samenvoegfamilie van een layout op ankers die tijdens runtime letterlijk worden weergegeven: {{symbolen}} die de standaardreferentie niet als Get-parameter kent en <<Veld>>-ankers zonder veldoplossing. Voor FileMaker is geen van beide een fout — de ruwe tekst blijft gewoon in de layout staan, zichtbaar voor de gebruiker en stil voor elk logboek. De symboolinventaris zit erbij als neutraal overzicht.",
+      "profiles.rules.title": "Alleen regels",
+      "profiles.rules.description": "De twee bevindingsregels, zonder de symboolinventaris.",
+      "profiles.full.title": "Volledige controle"
+    },
+    "pt": {
+      "title": "Âncoras de combinação em layouts",
+      "description": "Verifica a família de combinação de um layout à procura de âncoras que são apresentadas literalmente em tempo de execução: {{símbolos}} que a referência padrão não conhece como parâmetros de Get e âncoras <<Campo>> sem resolução de campo. Para o FileMaker nenhum dos casos é um erro — o texto em bruto fica simplesmente no layout, visível para o utilizador e mudo para qualquer registo. O inventário de símbolos vem junto como visão geral neutra.",
+      "profiles.rules.title": "Apenas regras",
+      "profiles.rules.description": "As duas regras de ocorrências, sem o inventário de símbolos.",
+      "profiles.full.title": "Verificação completa"
+    },
+    "sv": {
+      "title": "Sammanfogningsankare i layouter",
+      "description": "Kontrollerar en layouts sammanfogningsfamilj efter ankare som återges bokstavligt vid körning: {{symboler}} som standardreferensen inte känner som Get-parametrar och <<Fält>>-ankare utan fältupplösning. För FileMaker är inget av fallen ett fel — råtexten står helt enkelt kvar i layouten, synlig för användaren och tyst för varje logg. Symbolinventariet följer med som neutral översikt.",
+      "profiles.rules.title": "Endast regler",
+      "profiles.rules.description": "De två träffreglerna, utan symbolinventariet.",
+      "profiles.full.title": "Fullständig kontroll"
+    },
+    "zh-Hans": {
+      "title": "布局合并锚点",
+      "description": "检查布局中合并家族里在运行时按「原样」呈现的锚点：标准参考库不认识的 {{符号}}（并非 Get 函数参数），以及没有字段解析的 <<字段>> 锚点。对 FileMaker 而言两者都不算错误 — 原始文本只是留在布局上，用户看得见，日志里却毫无记录。中立的符号清单一并附上。",
+      "profiles.rules.title": "仅规则",
+      "profiles.rules.description": "两条发现规则，不含符号清单。",
+      "profiles.full.title": "完整检查"
+    }
+  }
+}

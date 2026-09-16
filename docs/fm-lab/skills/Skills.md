@@ -64,9 +64,6 @@ FM-Lab ships the following skills with every release under `.claude/skills/`. Ea
 ### Ingestion
 
 - [convert-xml](Skill%20convert-xml.md) — Convert FileMaker XML exports into the DuckDB object catalog
-- [test-convert-xml](Skill%20test-convert-xml.md) — Run the conversion against the reference corpus into a separate test database
-- [install-ooe-fm](Skill%20install-ooe-fm.md) — Clone the "One of Everything" reference solution — the converter's test corpus
-- [install-fm-xml-export-exploder](Skill%20install-fm-xml-export-exploder.md) — Clone the XML exploder reference tool
 
 ### Reference lookup
 

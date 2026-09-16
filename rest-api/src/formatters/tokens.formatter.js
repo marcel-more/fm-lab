@@ -182,15 +182,16 @@ function tokenFromChunk(chunk, idx, allChunks) {
   }
 
   // Synthetische ObjectCatalog-UUIDs für Cross-Navigation.
-  // BuiltinFunction: deterministisch via md5('BuiltinFunction::' + name).
-  //                  Boolean-Operatoren (and/or/not/xor) haben keinen Catalog-
-  //                  Eintrag — wir setzen die UUID trotzdem; das Frontend filtert
-  //                  Tot-Links per Link-Validierung gegen das ObjectCatalog
-  //                  (Routing zur Detail-Seite würde sonst 404 liefern).
-  //                  Pragmatisch: bei diesen vier bleiben wir uuidlos.
-  if (apiType === 'function' && !['and', 'or', 'not', 'xor'].includes(content)) {
-    tok.uuid = md5(`BuiltinFunction::${content}`);
-  }
+  // BuiltinFunction: BEWUSST NICHT hier. Der Formatter hat keine DB, konnte die
+  // UUID also nur aus dem Token-Namen RECHNEN (md5('BuiltinFunction::' + name))
+  // — eine dritte Kopie der Identitätsregel des Imports, die bei lokalisierten
+  // Autorensprachen zwangsläufig daneben lag (`Länge` ergab eine UUID, die es
+  // nicht gibt; nur die nachgelagerte Tot-Link-Bereinigung verhinderte den 404).
+  // Seit Katalog-Schema 1.32.0 ist die Identität eines Built-ins der kanonische
+  // englische Name der Referenz und im Katalog NACHSCHLAGBAR
+  // (BuiltinFunctionIdentity): der Controller löst die Token-Namen gegen den
+  // Katalog auf (object.controller.resolveBuiltinLinks) und setzt `uuid` danach —
+  // der Formatter bleibt DB-frei und trägt keine Identitätsregel mehr.
   if (apiType === 'pluginFunction' && (tok.subFunction || !isContainerPlugin(content))) {
     // Der Katalog-UUID basiert auf dem vollen Plugin_Function_Name. Bei
     // Container-Plugins (MBS) ist das `<Plugin>:<SubName>` (EINFACHER Doppelpunkt),
@@ -711,6 +712,8 @@ function formatField(rows, { object }) {
         to:             nn(head.lookup_to_name),
         dontCopyIfEmpty: toBool(head.lookup_dont_copy_if_empty),
         noMatch:        nn(head.lookup_no_match_option),
+        // FileMaker 26 exports disabled lookups with enable="False" (null = active).
+        enabled:        head.lookup_enabled == null ? true : toBool(head.lookup_enabled),
       }
     : null;
 
@@ -719,6 +722,8 @@ function formatField(rows, { object }) {
     ? {
         overwriteExisting: toBool(head.ae_calc_overwrite_existing),
         alwaysEvaluate:    toBool(head.ae_calc_always_evaluate),
+        // FileMaker 26 exports disabled auto-enter calculations (enable="False"; null = active).
+        enabled:           head.ae_calc_enabled == null ? true : toBool(head.ae_calc_enabled),
       }
     : null;
 
@@ -757,10 +762,45 @@ function formatField(rows, { object }) {
         rangeTo:       vRangeTo,
         calcText:      vCalcText,                          // „Überprüfung durch Berechnung" (Klartext)
         calcUuid:      vCalcUuid,                          // Instanz-UUID für Token-Rendering
+        // FileMaker 26: disabled validation calculation (enable="False"; null = active)
+        calcEnabled:   head.validation_calc_enabled == null ? true : toBool(head.validation_calc_enabled),
         message:       vMessage,                           // eigene Fehlermeldung (statisch)
         messageCalc:   (vMsgCalcUuid || vMsgCalcText)
-          ? { uuid: vMsgCalcUuid, text: vMsgCalcText }     // Fehlermeldungs-FORMEL (validation_message)
+          ? { uuid: vMsgCalcUuid, text: vMsgCalcText,      // Fehlermeldungs-FORMEL (validation_message)
+              enabled: head.validation_message_calc_enabled == null ? true : toBool(head.validation_message_calc_enabled) }
           : null,
+      }
+    : null;
+
+  // FileMaker 26 — extended field options: annotation (DDL comment) and the
+  // display-names formula with its parsed JSON elements (P3 FieldDisplayNames).
+  const annotation = nn(head.field_annotation);
+  const dnEnabledRaw = head.display_names_enabled;
+  const dnCalcText = nn(head.display_names_calc_text);
+  const dnCalcUuid = nn(head.display_names_calc_uuid);
+  let dnElements = [];
+  if (head.display_name_elements != null) {
+    try {
+      const parsed = typeof head.display_name_elements === 'string'
+        ? JSON.parse(head.display_name_elements)
+        : head.display_name_elements;
+      if (Array.isArray(parsed)) {
+        dnElements = parsed.map(e => ({
+          seq:      e.seq != null ? Number(e.seq) : 0,
+          key:      e.key ?? '',
+          value:    e.value ?? null,
+          kind:     e.kind === 'formula' ? 'formula' : 'literal',
+          jsonType: e.jsonType ?? null,
+        }));
+      }
+    } catch { dnElements = []; }
+  }
+  const displayNames = (dnEnabledRaw != null || dnCalcText || dnCalcUuid)
+    ? {
+        enabled:  dnEnabledRaw == null ? false : toBool(dnEnabledRaw),
+        calcText: dnCalcText,
+        calcUuid: dnCalcUuid,
+        elements: dnElements,
       }
     : null;
 
@@ -818,6 +858,8 @@ function formatField(rows, { object }) {
     validation,
     storage,
     summary,
+    annotation,
+    displayNames,
   };
 
   const chunkRows = rows

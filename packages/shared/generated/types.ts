@@ -103,6 +103,8 @@ export interface paths {
                     debug?: components["parameters"]["Debug"];
                     /** @description Include metadata in response */
                     meta?: components["parameters"]["Meta"];
+                    /** @description Active UI language. BuiltinFunction rows additionally carry `Localized_Name` — the localized spelling next to the canonical reference name, which is what the catalog stores as their identity. Other object types ignore the parameter. */
+                    lang?: components["parameters"]["UiLang"];
                 };
                 header?: never;
                 path?: never;
@@ -156,6 +158,8 @@ export interface paths {
                     debug?: components["parameters"]["Debug"];
                     /** @description Include metadata in response */
                     meta?: components["parameters"]["Meta"];
+                    /** @description Active UI language. BuiltinFunction rows additionally carry `Localized_Name` — the localized spelling next to the canonical reference name, which is what the catalog stores as their identity. Other object types ignore the parameter. */
+                    lang?: components["parameters"]["UiLang"];
                 };
                 header?: never;
                 path?: never;
@@ -211,6 +215,8 @@ export interface paths {
                     debug?: components["parameters"]["Debug"];
                     /** @description Include metadata in response */
                     meta?: components["parameters"]["Meta"];
+                    /** @description Active UI language. BuiltinFunction rows additionally carry `Localized_Name` — the localized spelling next to the canonical reference name, which is what the catalog stores as their identity. Other object types ignore the parameter. */
+                    lang?: components["parameters"]["UiLang"];
                 };
                 header?: never;
                 path?: never;
@@ -1128,12 +1134,21 @@ export interface components {
              */
             Step_Index?: number | null;
             /**
-             * @description Comma-separated list of the custom values that matched the search
-             *     term (ValueList results only, max. 20). Set only when a value list
-             *     was hit through its stored values rather than its name; the
-             *     search-result UI displays it below the value-list name.
+             * @description What matched the search term, when it was not the object's name.
+             *     ValueList: the stored custom values that matched (max. 20).
+             *     BuiltinFunction: the localized spelling(s) that matched — a built-in
+             *     is catalogued under its canonical English name, so a search for
+             *     `Seitennummer` finds `Get(PageNumber)` and this field says why.
+             *     The search-result UI displays it below the object name.
              */
             Matched_Values?: string | null;
+            /**
+             * @description Localized spelling of a BuiltinFunction in the requested `lang`
+             *     (e.g. `Hole ( Seitennummer )` for `Get(PageNumber)`). Present only
+             *     with `?lang=` and only when it differs from the canonical name,
+             *     which stays the object's identity in `Object_Name`.
+             */
+            Localized_Name?: string | null;
         };
         ObjectReference: {
             Target_UUID?: string;
@@ -1339,6 +1354,8 @@ export interface components {
         Debug: boolean;
         /** @description Include metadata in response */
         Meta: boolean;
+        /** @description Active UI language. BuiltinFunction rows additionally carry `Localized_Name` — the localized spelling next to the canonical reference name, which is what the catalog stores as their identity. Other object types ignore the parameter. */
+        UiLang: string;
     };
     requestBodies: never;
     headers: never;

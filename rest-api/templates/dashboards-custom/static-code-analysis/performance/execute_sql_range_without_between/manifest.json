@@ -1,6 +1,6 @@
 {
   "id": "execute_sql_range_without_between",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "title": "ExecuteSQL range without BETWEEN",
   "description": "Performance rule — ExecuteSQL range conditions written as >=/<= instead of BETWEEN make the engine evaluate two separate conditions and intersect the results; the BETWEEN construct runs the range once and is many times faster than the two single comparisons.",
   "author": "fm-lab rules",

@@ -7,12 +7,14 @@
   "help": {
     "open": "Help"
   },
+  "clarisHelp": "Claris Help →",
   "search": {
     "placeholder": "Filter…",
     "platformAll": "All platforms",
     "platformLabel": "Platform",
     "platformStepHint": "Show steps that run on this platform (incl. partial support)",
-    "platformFnHint": "Show functions built for this platform (platform binding)"
+    "platformFnHint": "Show functions built for this platform (platform binding)",
+    "platformTriggerHint": "Show trigger events that fire on this platform (incl. partial support)"
   },
   "list": {
     "count": "{{shown}} / {{total}}"
@@ -20,11 +22,14 @@
   "tabs": {
     "steps": "ScriptSteps",
     "functions": "Functions",
-    "locales": "Locales"
+    "locales": "Locales",
+    "triggers": "Triggers",
+    "errorCodes": "Error Codes"
   },
   "header": {
     "schemaVersion": "Schema",
-    "coverage": "FM version",
+    "coverage": "FM version (shapes)",
+    "docCoverage": "FM version (docs)",
     "built": "Built at",
     "steps": "ScriptSteps",
     "functions": "Functions",
@@ -32,7 +37,9 @@
     "localesValue": "{{steps}} / {{functions}}",
     "grammar": "Grammar coverage",
     "grammarValue": "{{covered}}/{{total}} steps",
-    "attribution": "Documentation content © Claris International Inc. FileMaker and Claris are trademarks of Claris International Inc. This project is not affiliated with or endorsed by Claris. See SOURCES for full attribution."
+    "attribution": "Documentation content © Claris International Inc. FileMaker and Claris are trademarks of Claris International Inc. This project is not affiliated with or endorsed by Claris. See SOURCES for full attribution.",
+    "triggers": "Triggers",
+    "errorCodes": "Error codes"
   },
   "steps": {
     "col": {
@@ -52,7 +59,8 @@
       "name": "Name",
       "category": "Category",
       "returnType": "Return type",
-      "originVersion": "Origin version"
+      "originVersion": "Origin version",
+      "removedInVersion": "Removed in"
     },
     "detail": {
       "returnType": "Return type",
@@ -120,7 +128,14 @@
         "evidence": "Evidence",
         "values": "Values",
         "invertedHint": "Label semantics are inverted relative to the XML state — true_text/false_text already carry the complete text-to-XML mapping; never invert again.",
-        "docOnly": "Documented by Claris, but not roundtrip-verified — verify behaviour after paste."
+        "docOnly": "Documented by Claris, but not roundtrip-verified — verify behaviour after paste.",
+        "slotKind": "Slot",
+        "xmlDomain": "XML domain",
+        "slot_field_only": "field only",
+        "slot_field_or_var": "field or variable",
+        "slot_variable_only": "variable only",
+        "pasteDropped": "dropped on paste",
+        "pasteDroppedHint": "FileMaker discards this option on paste whatever its value — a generator leaves it out, the reference keeps the placeholder for reading."
       },
       "repeatGroups": "Repeat groups (lists)",
       "rg": {
@@ -132,6 +147,8 @@
         "countAttr": "count attribute {{attr}}"
       },
       "knownBugHint": "Known FileMaker bug — a warning class, not a validity rule: the step is valid, FileMaker's own serialization is the risk.",
+      "saxmlGapHint": "SaXML export gap — the export never carries this slot, so a catalog built from it cannot show it; only a clipboard copy does. Not a defect of the snippet.",
+      "constraintCoverageHint": "Applies to the FileMaker {{coverage}} serialization only",
       "variableTargetMarker": "Variable-target marker",
       "variableTargetMarkerHint": "Carries an empty <Text/> step-level marker exactly when the target slot holds a variable instead of a field reference.",
       "consumerNote": "Consumer note",
@@ -140,7 +157,8 @@
         "in": "in {{parent}}",
         "hull": "hull — persists with default content even unconfigured",
         "hull_strip_children": "hull — keeps its attributes, unfilled children are stripped",
-        "condition": "only with {{cond}}"
+        "condition": "only with {{cond}}",
+        "help": "Elements FileMaker keeps in the snippet even when nothing inside them is configured; shown as the tree they form, in template order. A generator restores them after pruning unfilled content, a reader may drop their default content."
       },
       "bindings": "Option-bound elements",
       "bd": {
@@ -148,7 +166,13 @@
         "excludes": "dropped with {{cond}}",
         "requiresOption": "exists only while {{option}} is set",
         "excludesOption": "dropped while {{option}} is set",
-        "suppressEmpty": "empty element is never emitted deterministically (dialog residue)"
+        "suppressEmpty": "empty element is never emitted deterministically (dialog residue)",
+        "help": "Elements whose presence depends on another option. Several values of one option form the set at which the element exists (or is dropped): the element is written for any of them and pruned for every other value."
+      },
+      "mirrors": "Mirrored values",
+      "mr": {
+        "source_present": "copy of {{option}} — written by FileMaker whenever the source is set",
+        "help": "Values FileMaker writes a second time at another place of the step and keeps in sync on paste. The source option is the truth: a generator copies it, a reader treats the copy as redundancy."
       },
       "implications": "Notation implications",
       "imp": {
@@ -156,8 +180,16 @@
         "value_form": "reference form",
         "keyword": "keyword",
         "mode_switch": "mode switch",
-        "default": "default mode (switch label absent)"
-      }
+        "default": "default mode (switch label absent)",
+        "help": "Options the canonical text notation leaves implicit: a keyword, a reference form or a labeled mode implies the value of another option when the step is parsed."
+      },
+      "coverage": "Shape coverage",
+      "coverageHint": "FileMaker version whose paired export and clipboard evidence this shape is verified against. A row tagged with a version is an override of that coverage and replaces the standard row of the same key.",
+      "coverageBase": "base",
+      "overrideBadge": "FM {{coverage}}",
+      "overrideHint": "Override row of coverage {{coverage}} — replaces the standard row of the same key.",
+      "noOverrides": "No override rows for this coverage — the standard shape applies.",
+      "targetSlotKind": "Target slot kind"
     },
     "saxml": {
       "paramTypes": "Parameter type sequence",
@@ -169,7 +201,8 @@
     "compat": {
       "label": "Platform compatibility",
       "partial": "partial",
-      "partialHint": "Partial — conditionally supported; see the step's Claris help page"
+      "partialHint": "Partial — conditionally supported; see the step's Claris help page",
+      "none": "No platform — Claris lists this event as not supported anywhere"
     }
   },
   "osAffinity": {
@@ -182,5 +215,56 @@
     "hint_unsupported": "Claris explicitly names this OS as not supported (source-true inverse statement)",
     "hint_variant": "Runs everywhere — behavior or result depends on the OS",
     "hint_os_probe": "Returns the platform/OS at runtime — guard idiom, not a binding"
+  },
+  "triggers": {
+    "col": {
+      "id": "Slot ID",
+      "event": "Event",
+      "label": "Label",
+      "level": "Level",
+      "since": "Since",
+      "parameter": "Parameter",
+      "platforms": "Platforms"
+    },
+    "level": {
+      "object": "object",
+      "layout": "layout",
+      "file": "file"
+    },
+    "paramYes": "yes",
+    "paramNo": "no",
+    "unavailable": "This reference carries no script-trigger table (fm-spec < 1.18.0)."
+  },
+  "errorCodes": {
+    "col": {
+      "code": "Code",
+      "message": "Message",
+      "scope": "Scope"
+    },
+    "scope": {
+      "core": "core",
+      "web": "web"
+    },
+    "scopeHint": {
+      "core": "Returned by the FileMaker clients and hosts",
+      "web": "Returned by the web publishing engine or a FileMaker REST API (marked (*) by Claris)"
+    },
+    "search": {
+      "hint": "A number finds the code or the range it falls into (5123 → 5000-5499); text searches the message"
+    },
+    "unavailable": "This reference carries no error-code table (fm-spec < 2.8.0)."
+  },
+  "trigger": {
+    "section": {
+      "labels": "Localized labels",
+      "platforms": "Platform compatibility"
+    },
+    "localized": {
+      "label": "Dialog label"
+    },
+    "parameterField": "with parameter field attribute",
+    "compat": {
+      "unavailable": "No published compatibility statement — reference older than fm-spec 2.8.0"
+    }
   }
 }

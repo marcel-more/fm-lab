@@ -139,6 +139,10 @@ const FmSpecPanel: React.FC = () => {
             <span className="fmspec-panel__kpi-value">{rm?.filemaker_coverage ?? dash}</span>
           </div>
           <div className="fmspec-panel__kpi">
+            <span className="fmspec-panel__kpi-label">{t('fmSpec:header.docCoverage')}</span>
+            <span className="fmspec-panel__kpi-value">{rm?.doc_coverage ?? dash}</span>
+          </div>
+          <div className="fmspec-panel__kpi">
             <span className="fmspec-panel__kpi-label">{t('fmSpec:header.built')}</span>
             <span className="fmspec-panel__kpi-value">{builtAt}</span>
           </div>

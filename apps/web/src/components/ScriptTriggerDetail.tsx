@@ -5,7 +5,8 @@ import { useScriptTriggerDetail } from '../hooks/useScriptTriggerDetail';
 import { useCalcTokens } from '../hooks/useCalcTokens';
 import { useApiLang } from '../hooks/useApiLang';
 import { useCurrentFile } from '../lib/currentFileContext';
-import { useTriggerEventFormat } from '../lib/triggerEvents';
+import { useTriggerEventFormat, useTriggerCompat } from '../lib/triggerEvents';
+import { PlatformTags } from './PlatformTags';
 import { buildObjectPath } from '../lib/navigation';
 import { CalcTokenList, normalizeCalcWhitespace } from './CalcTokenSpan';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -81,6 +82,7 @@ export const ScriptTriggerDetail: React.FC<ScriptTriggerDetailProps> = ({ uuid }
   const currentFile = useCurrentFile();
   const { data, loading, error, retry } = useScriptTriggerDetail(uuid, currentFile);
   const fmtEvent = useTriggerEventFormat();
+  const compatOf = useTriggerCompat();
 
   if (loading) return <LoadingSpinner message={t('common:loading') as string} />;
   if (error) return <ErrorMessage message={error} onRetry={retry} />;
@@ -127,6 +129,15 @@ export const ScriptTriggerDetail: React.FC<ScriptTriggerDetailProps> = ({ uuid }
               {trigger.action ? fmtEvent(trigger.action) : <span className="fm-layout-muted">—</span>}
             </td>
           </tr>
+          {/* Runtime compatibility of the EVENT (fm_spec trigger_compat ≥ 2.8.0,
+              tri-state: Partial marked, No omitted). Row absent on older
+              references — never a guessed value. */}
+          {compatOf(trigger.triggerId) && (
+            <tr>
+              <th scope="row">{t('detail:scriptTriggerDetail.platformsLabel', { defaultValue: 'Platforms' })}</th>
+              <td><PlatformTags compat={compatOf(trigger.triggerId)!} /></td>
+            </tr>
+          )}
           <tr>
             <th scope="row">{t('detail:scriptTriggerDetail.modesLabel', { defaultValue: 'Active in' })}</th>
             <td>

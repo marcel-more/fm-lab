@@ -71,6 +71,7 @@ paths:
         - $ref: '#/components/parameters/Format'
         - $ref: '#/components/parameters/Debug'
         - $ref: '#/components/parameters/Meta'
+        - $ref: '#/components/parameters/UiLang'
       responses:
         '200':
           description: Object details
@@ -97,6 +98,7 @@ paths:
         - $ref: '#/components/parameters/Format'
         - $ref: '#/components/parameters/Debug'
         - $ref: '#/components/parameters/Meta'
+        - $ref: '#/components/parameters/UiLang'
       responses:
         '200':
           description: List of objects
@@ -126,6 +128,7 @@ paths:
         - $ref: '#/components/parameters/Format'
         - $ref: '#/components/parameters/Debug'
         - $ref: '#/components/parameters/Meta'
+        - $ref: '#/components/parameters/UiLang'
       responses:
         '200':
           description: Search results
@@ -823,6 +826,17 @@ components:
         default: false
       description: Include metadata in response
 
+    UiLang:
+      name: lang
+      in: query
+      schema:
+        type: string
+      description: >-
+        Active UI language. BuiltinFunction rows additionally carry
+        `Localized_Name` — the localized spelling next to the canonical
+        reference name, which is what the catalog stores as their identity.
+        Other object types ignore the parameter.
+
   schemas:
     ObjectType:
       type: string
@@ -938,10 +952,20 @@ components:
           type: string
           nullable: true
           description: |
-            Comma-separated list of the custom values that matched the search
-            term (ValueList results only, max. 20). Set only when a value list
-            was hit through its stored values rather than its name; the
-            search-result UI displays it below the value-list name.
+            What matched the search term, when it was not the object's name.
+            ValueList: the stored custom values that matched (max. 20).
+            BuiltinFunction: the localized spelling(s) that matched — a built-in
+            is catalogued under its canonical English name, so a search for
+            `Seitennummer` finds `Get(PageNumber)` and this field says why.
+            The search-result UI displays it below the object name.
+        Localized_Name:
+          type: string
+          nullable: true
+          description: |
+            Localized spelling of a BuiltinFunction in the requested `lang`
+            (e.g. `Hole ( Seitennummer )` for `Get(PageNumber)`). Present only
+            with `?lang=` and only when it differs from the canonical name,
+            which stays the object's identity in `Object_Name`.
 
     ObjectReference:
       type: object

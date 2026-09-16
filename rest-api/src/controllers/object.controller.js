@@ -94,9 +94,14 @@ async function recoveredDisplayTokens(ctx, inst) {
 async function get(req, res, next) {
   try {
     const ctx = req.solutionContext;
-    const { uuid, file, format = 'json', meta, debug } = req.query;
+    const { uuid, file, format = 'json', meta, debug, lang } = req.query;
 
     const result = await objectService.getByUUID(ctx, uuid, file);
+
+    // ?lang=<code> — lokalisierte Fassung des Namens NEBEN dem kanonischen.
+    // Betrifft BuiltinFunction, dessen Katalogname seit Schema 1.32.0
+    // sprachunabhängig kanonisch ist; alle anderen Typen bleiben unberührt.
+    if (lang) await referenceService.enrichBuiltinLocalizedNames(ctx, [result.data], lang);
 
     const formattedData = formatters.format([result.data], format);
 
@@ -124,13 +129,17 @@ async function list(req, res, next) {
     const {
       type, file, limit,
       with_usage, with_category, category, sort,
-      format = 'json', meta, debug,
+      format = 'json', meta, debug, lang,
     } = req.query;
 
     const result = await objectService.listObjects(ctx, {
       type, file, limit,
       withUsage: with_usage, withCategory: with_category, category, sort,
     });
+
+    // Lokalisierte Namen der Built-ins mitliefern (s. /api/get) — damit
+    // Objektliste und Detailseite denselben Namen zeigen.
+    if (lang) await referenceService.enrichBuiltinLocalizedNames(ctx, result.data, lang);
 
     const formattedData = formatters.format(result.data, format);
 
@@ -238,9 +247,14 @@ async function count(req, res, next) {
 async function search(req, res, next) {
   try {
     const ctx = req.solutionContext;
-    const { name, type, file, limit, offset, format = 'json', meta, debug } = req.query;
+    const { name, type, file, limit, offset, format = 'json', meta, debug, lang } = req.query;
 
     const result = await objectService.searchObjects(ctx, { name, type, file, limit, offset });
+
+    // Lokalisierte Namen in der Trefferliste (s. /api/get). Ergänzt den
+    // Such-Zweig, der Built-ins auch unter ihrer lokalisierten Schreibweise
+    // FINDET (Matched_Spelling) — Finden und Anzeigen gehören zusammen.
+    if (lang) await referenceService.enrichBuiltinLocalizedNames(ctx, result.data, lang);
 
     const formattedData = formatters.format(result.data, format);
 
@@ -318,7 +332,7 @@ async function references(req, res, next) {
 async function getDetails(req, res, next) {
   try {
     const ctx = req.solutionContext;
-    const { uuid, file, format = 'json', meta, debug } = req.query;
+    const { uuid, file, format = 'json', meta, debug, lang } = req.query;
 
     // format=tokens has its own dispatch path with type-specific templates and
     // dedicated post-processing. Use a per-type look-up plus the tokens formatter
@@ -327,7 +341,9 @@ async function getDetails(req, res, next) {
       return await respondWithTokens(req, res, { uuid, file, meta, debug, enrich: req.query.enrich });
     }
 
-    const result = await objectService.getDetails(ctx, uuid, file);
+    // ?lang=<code> — aktive UI-Sprache für Detail-Templates, die eine
+    // lokalisierte Schreibweise neben dem (kanonischen) Katalognamen zeigen.
+    const result = await objectService.getDetails(ctx, uuid, file, lang);
 
     // Content templates auto-override to content formatter (except JSON)
     let effectiveFormat = format;
@@ -903,8 +919,13 @@ async function respondWithTokens(req, res, { uuid, file, meta, debug, enrich }) 
     // bleiben Pass-through, ihre Formeln zeigen die calcSlots. Nur Text-
     // Objekte (displays_field existiert auch an Feld-Platzierungen!), DDR-
     // unabhängig, Best-Effort: Fehler → Feld fehlt. Symbol-Gültigkeit prüft
-    // die Standard-Referenz (kanonischer EN-Namensraum der Get-Parameter);
-    // ohne ATTACH bleiben Symbole literal — LayoutObjectSymbols inventarisiert
+    // die Standard-Referenz über den GESAMTEN Get-Parameter-Namensraum, ohne
+    // match_source-Filter: FileMaker akzeptiert und rendert auch den
+    // lokalisierten Parameternamen ({{Seitennummer}}), und ein Export kann
+    // beide Formen tragen — ein canonical_en-Filter erklärte gültige Symbole
+    // fälschlich für literal. Dieselbe Vergleichsmenge nutzen die Regel
+    // layout_invalid_symbol und der Konverter (GetParameterNames).
+    // Ohne ATTACH bleiben Symbole literal — LayoutObjectSymbols inventarisiert
     // auch ungültige, unvalidiert wäre Get(…) eine falsche Aussage.
     try {
       const lo = payload.layoutObject;
@@ -966,7 +987,6 @@ async function respondWithTokens(req, res, { uuid, file, meta, debug, enrich }) 
               `SELECT DISTINCT lower(lookup_name) AS norm
                FROM ref.function_name_lookup
                WHERE chunk_role = 'getparameter'
-                 AND match_source = 'canonical_en'
                  AND lower(lookup_name) IN (${placeholders})`,
               norms
             );
@@ -1569,60 +1589,107 @@ async function respondWithTokens(req, res, { uuid, file, meta, debug, enrich }) 
     );
   }
 
-  // Tote Cross-Nav-Links auf nicht-registrierte BuiltinFunctions entfernen
-  // (betrifft alle Token-Views: CF/Field/CustomMenu).
-  await pruneDeadBuiltinLinks(ctx, payload);
+  // Cross-Nav-Links der BuiltinFunction-Tokens gegen den Katalog auflösen
+  // (betrifft alle Token-Views: Script/ScriptStep/LayoutObject/CF/Field/
+  // CustomMenu/Calculation).
+  await resolveBuiltinLinks(ctx, payload);
 
   return sendFormatted(res, payload, 'tokens', meta ? metaInfo : null, debugSql);
 }
 
 /**
- * Entfernt tote Cross-Navigation-Links auf BuiltinFunctions, die NICHT im
- * ObjectCatalog registriert sind. Der Tokenizer (tokens.formatter.js) minted für
- * JEDES `function`-Token deterministisch `md5('BuiltinFunction::' + name)` — aber
- * nur tatsächlich registrierte Builtins existieren als Objekt. Nicht registriert
- * sind u.a. der bloße `Get`-Wrapper von `Get(<param>)` (das Objekt liegt unter dem
- * Parameternamen) sowie diverse Operatoren. Ohne diese Bereinigung führt ein Klick
- * auf ein solches Token auf eine 404-Detailseite. Greift auf payload.tokens
- * (CustomFunction/Field/Calculation) UND payload.calcs[].tokens (CustomMenu).
+ * Setzt die Cross-Navigation-UUID der BuiltinFunction-Tokens — per NACHSCHLAGEN
+ * im Katalog, nicht per Rechnen aus dem Namen.
+ *
+ * Vorgeschichte: der Tokenizer (tokens.formatter.js) mintete für jedes
+ * `function`-Token `md5('BuiltinFunction::' + name)` und war damit eine dritte
+ * Kopie der Identitätsregel des Imports. Das ging nur auf, solange Katalog-
+ * Identität und Formel-Token derselbe Text waren — bei einer lokalisierten
+ * Autorensprache erzeugte es eine UUID, die es nicht gibt, und diese Funktion
+ * musste sie hinterher wieder wegräumen. Seit Katalog-Schema 1.32.0 normalisiert
+ * der Import die Built-ins auf den kanonischen englischen Namen der Referenz und
+ * schreibt die Identität mit (BuiltinFunctionIdentity) — die Auflösung ist
+ * seither ein Lookup gegen die dafür gebaute Katalog-Fläche
+ * `v_builtin_token_lookup`: Token-Name (in JEDER Referenzsprache, beide
+ * Namensräume, plus die Rohnamen der Namens-Fallback-Knoten) → Knoten. Die
+ * Vorrangregel steckt in der View, nicht hier — der Consumer schlägt nur nach.
+ *
+ * Ein Token ohne Treffer bleibt uuidlos (kein Link statt 404) — die frühere
+ * Tot-Link-Bereinigung ist damit strukturell erledigt statt nachgelagert.
+ * Ausnahme wie bisher: die Boolean-Operatoren `and/or/not/xor` bleiben bewusst
+ * unverlinkt, auch wenn der Import sie als Knoten führt (ob Operatoren und
+ * Konstanten überhaupt BuiltinFunction-Objekte sein sollten, ist eine eigene
+ * Frage — hier wird die bisherige Darstellung nicht verändert).
+ *
+ * Erfasst die Tokens REKURSIV über den ganzen Payload, nicht über eine Liste
+ * bekannter Pfade. Grund ist eine real getroffene Falle: die Token-Container
+ * liegen je Objekttyp anders (`payload.tokens` bei CF/Field, `payload.calcs[]
+ * .tokens` bei CustomMenu, `payload.mergeText.tokens` bei den aufgelösten
+ * Platzhaltern eines LayoutObjects) — eine Pfadliste vergisst genau den, der
+ * später dazukommt, und das Symptom ist ein still unverlinktes Token.
+ *
+ * Nur Tokens mit `content` werden angefasst. Die Script-Referenzliste
+ * (`payload.lines[].refs`) trägt `name` statt `content` und ihre UUID kommt
+ * bereits aus dem SQL-Template (object_references_script.sql, Lookup gegen
+ * v_builtin_token_lookup) — sie muss hier unberührt bleiben, sonst würde die
+ * Bereinigung unten eine korrekte UUID wieder wegräumen.
  */
-async function pruneDeadBuiltinLinks(ctx, payload) {
+const BUILTIN_LINK_EXCLUDED = new Set(['and', 'or', 'not', 'xor']);
+
+/** Sammelt jedes `function`-Token MIT `content` rekursiv aus dem Payload. */
+function collectFunctionTokens(node, out = [], depth = 0) {
+  if (!node || depth > 12) return out;
+  if (Array.isArray(node)) {
+    for (const v of node) collectFunctionTokens(v, out, depth + 1);
+    return out;
+  }
+  if (typeof node !== 'object') return out;
+  if (node.type === 'function' && typeof node.content === 'string') out.push(node);
+  for (const v of Object.values(node)) collectFunctionTokens(v, out, depth + 1);
+  return out;
+}
+
+async function resolveBuiltinLinks(ctx, payload) {
   if (!payload) return;
-  const tokenLists = [];
-  if (Array.isArray(payload.tokens)) tokenLists.push(payload.tokens);
-  if (Array.isArray(payload.calcs)) {
-    for (const c of payload.calcs) {
-      if (c && Array.isArray(c.tokens)) tokenLists.push(c.tokens);
-    }
-  }
-  if (tokenLists.length === 0) return;
+  const tokens = collectFunctionTokens(payload);
+  if (tokens.length === 0) return;
 
-  // Kandidaten-UUIDs sammeln (nur function-Tokens mit gesetzter uuid).
-  const candidateUuids = new Set();
-  for (const list of tokenLists) {
-    for (const t of list) {
-      if (t && t.type === 'function' && t.uuid) candidateUuids.add(t.uuid);
-    }
+  const names = new Set();
+  for (const t of tokens) {
+    if (t.content.length > 0 && !BUILTIN_LINK_EXCLUDED.has(t.content)) names.add(t.content);
   }
-  if (candidateUuids.size === 0) return;
+  if (names.size === 0) return;
 
+  // Bulk-Lookup über den Vergleichsschlüssel der View (lower(<Name>)) — eine
+  // IN-Liste wie in reference.service.enrichFunctionTokens, nicht eine
+  // VALUES-Zeile: `VALUES (?,?)` wäre EINE Zeile mit zwei Spalten und würde
+  // alle Namen bis auf den ersten still verschlucken.
+  const normList = Array.from(new Set(Array.from(names, n => n.toLowerCase())));
+  const placeholders = normList.map(() => '?').join(',');
   const database = require('../config/database');
-  const ids = Array.from(candidateUuids);
-  const placeholders = ids.map(() => '?').join(',');
-  const r = await database.executeQuery(
-    ctx,
-    `SELECT Object_UUID FROM ObjectCatalog
-      WHERE Object_Type = 'BuiltinFunction' AND Object_UUID IN (${placeholders})`,
-    ids
-  );
-  const valid = new Set(r.rows.map(row => String(row.Object_UUID)));
+  let rows = [];
+  try {
+    const r = await database.executeQuery(
+      ctx,
+      `SELECT l.Name_Norm, l.Object_UUID
+       FROM v_builtin_token_lookup l
+       WHERE l.Name_Norm IN (${placeholders})`,
+      normList
+    );
+    rows = r.rows;
+  } catch (e) {
+    // Katalog vor Schema 1.32.0 (keine v_builtin_token_lookup): lieber alle
+    // Built-in-Tokens unverlinkt ausliefern als geratene 404-Links. Der
+    // zentrale Drift-Erkenner meldet den Re-Import-Bedarf ohnehin am nächsten
+    // Template-Aufruf; ein Token ohne Link bleibt lesbar.
+    rows = [];
+  }
 
-  for (const list of tokenLists) {
-    for (const t of list) {
-      if (t && t.type === 'function' && t.uuid && !valid.has(t.uuid)) {
-        delete t.uuid;
-      }
-    }
+  const byNorm = new Map(rows.map(row => [String(row.Name_Norm), String(row.Object_UUID)]));
+  for (const t of tokens) {
+    const uuid = byNorm.get(t.content.toLowerCase());
+    if (uuid) t.uuid = uuid;
+    else if (t.uuid) delete t.uuid;
   }
 }
 
@@ -1716,6 +1783,12 @@ async function getCalc(req, res, next) {
         metaInfo.instances_unavailable = true;
       }
     }
+
+    // Built-in-Cross-Nav-Links auflösen — wie im zentralen Token-Pfad. Vorher
+    // fehlte dieser Schritt hier, weil der Formatter die UUID selbst mintete;
+    // seit der Katalog die Identität trägt, braucht auch dieser Endpunkt den
+    // Lookup (und liefert dadurch nebenbei keine toten Links mehr).
+    await resolveBuiltinLinks(ctx, payload);
 
     // ?enrich=<lang> — Calc-Token-Anreicherung via function_name_lookup
     if (enrich) {

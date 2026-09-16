@@ -1,0 +1,83 @@
+{
+  "id": "platform_specific_triggers_ios",
+  "version": "1.0.0",
+  "title": "Platform-specific triggers: FileMaker Go (iOS)",
+  "description": "Scripts in scope attached to a script-trigger event that fires only in FileMaker Go (iOS) - the AV-player and external-command events - derived from the Claris trigger-compatibility table (fm_spec trigger_compat, fm-spec 2.8.0+) with a strict exclusivity predicate. Inventory, not defects: findings are neutral properties. Complements the step and function evidence of platform_specific_ios.",
+  "author": "fm-lab rules",
+  "icon": "server",
+  "category": "platform",
+  "tags": [
+    "rule",
+    "platform"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "info",
+    "category": "platform",
+    "rationale": "A trigger that exists only on iOS binds the attached script to FileMaker Go: on every other runtime the event never occurs and the script never runs from it. That is a property of the script, not a defect.",
+    "remediation": "Nothing to fix. Use the inventory to see the iOS layer of the solution; the other environments' trigger-compatibility members show the same events as 'does not fire'."
+  },
+  "analysis": {
+    "objectTypes": [
+      "Script",
+      "Layout"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
+    },
+    "requires": [
+      "fm-spec-diagnostics"
+    ],
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Scripts in scope attached to iOS-only trigger events",
+      "unit": "triggers"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql"
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "limit",
+      "type": "number",
+      "required": false,
+      "description": "Maximum number of findings returned (default 500)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

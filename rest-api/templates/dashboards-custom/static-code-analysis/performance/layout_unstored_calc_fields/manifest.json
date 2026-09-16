@@ -1,6 +1,6 @@
 {
   "id": "layout_unstored_calc_fields",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "title": "Layouts with unstored calculations",
   "description": "Performance rule — layouts ranked by how many unstored calculation fields they display. Each unstored calculation is re-evaluated for every visible record, so layouts that show many records at once and carry a high count are the most expensive to render.",
   "author": "fm-lab rules",
@@ -27,7 +27,9 @@
     }
   },
   "analysis": {
-    "objectTypes": [],
+    "objectTypes": [
+      "Layout"
+    ],
     "outputTypes": [
       "count",
       "findings-table"
@@ -35,10 +37,16 @@
     "scope": {
       "supported": [
         "solution",
-        "file"
+        "file",
+        "object",
+        "object-list",
+        "cluster"
       ],
       "anchor": "nav_uuid",
-      "mode": {}
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
     },
     "defaultResult": {
       "dataset": "summary",

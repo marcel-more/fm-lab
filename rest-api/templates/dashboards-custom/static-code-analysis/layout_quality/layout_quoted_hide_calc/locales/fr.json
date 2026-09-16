@@ -1,21 +1,23 @@
 {
   "manifest": {
-    "title": "Condition de masquage constante (entre guillemets)",
-    "description": "Règle de qualité de Layout — la condition de masquage d'un objet est un unique littéral de chaîne entre guillemets. La formule a probablement été collée avec ses guillemets ; elle agit comme une constante au lieu du calcul prévu.\n\nD’après le contrôle fmCheckMate « ReportBrokenCalculationQuoted » — https://github.com/mrwatson-de/fmCheckMate-XSLT",
-    "messages.quoted": "La condition de masquage est une constante de chaîne entre guillemets, pas un calcul"
+    "title": "Condition de masquage ou de saisie constante (entre guillemets)",
+    "description": "Règle de qualité de Layout — la condition de masquage ou de saisie du champ d'un objet est un unique littéral de chaîne entre guillemets. La formule a probablement été collée avec ses guillemets ; elle agit comme une constante au lieu du calcul prévu.\n\nD’après le contrôle fmCheckMate « ReportBrokenCalculationQuoted » — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+    "messages.quoted": "La condition de masquage est une constante de chaîne entre guillemets, pas un calcul",
+    "messages.quoted_entry": "La condition de saisie du champ est une constante de chaîne entre guillemets, pas un calcul"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Résultats",
     "summary_kpi.props.items[1].label": "Layouts concernés",
     "summary_kpi.props.items[2].label": "Fichiers concernés",
-    "findings_card.props.title": "Condition de masquage constante (entre guillemets)",
+    "findings_card.props.title": "Condition de masquage ou de saisie constante (entre guillemets)",
     "findings_table.props.searchPlaceholder": "Rechercher un fichier, un Layout ou un objet…",
-    "findings_table.props.empty.message": "Aucune condition de masquage entre guillemets trouvée.",
+    "findings_table.props.empty.message": "Aucune condition de masquage ou de saisie entre guillemets trouvée.",
     "findings_table.props.columns[0].label": "Fichier",
     "findings_table.props.columns[1].label": "Layout",
     "findings_table.props.columns[2].label": "Type d'objet",
     "findings_table.props.columns[3].label": "Objet",
-    "findings_table.props.columns[6].label": "Largeur",
-    "findings_table.props.columns[7].label": "Hauteur"
+    "findings_table.props.columns[4].label": "Slot",
+    "findings_table.props.columns[7].label": "Largeur",
+    "findings_table.props.columns[8].label": "Hauteur"
   }
 }

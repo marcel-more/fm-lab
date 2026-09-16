@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Okänd felkodsliteral",
+    "analysis.defaultResult.meaning": "Jämförelser av Get(LastError) med en kod som FileMakers felkodstabell inte tar upp"
+  },
+  "layout": {}
+}

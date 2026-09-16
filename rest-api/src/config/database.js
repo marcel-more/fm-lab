@@ -28,6 +28,8 @@ let referenceAttached = false;
 // function_os_affinity / runtime_os_matrix); older reference DBs stay valid —
 // OS members degrade to 'skipped' instead of erroring (checked at attach time).
 let referenceHasOsAffinity = false;
+let referenceHasDiagnostics = false; // trigger_compat + error_codes (fm_spec >= 2.8.0)
+let referenceHasVersionKeys = false; // numeric version canon (fm_spec >= 2.9.0)
 let pluginSpecAttached = false;
 
 /**
@@ -295,6 +297,46 @@ async function attachReferenceDb(entry) {
   } catch {
     referenceHasOsAffinity = false;
   }
+  // Runtime & diagnostics tables (fm_spec >= 2.8.0): trigger compatibility and
+  // error codes. Members declaring `requires: ["fm-spec-diagnostics"]` skip
+  // with a version-state reason on an older reference (pattern: fm-spec-os).
+  try {
+    const probe = await entry.connection.prepare(
+      `SELECT COUNT(*) AS n FROM information_schema.tables
+        WHERE table_catalog = 'ref'
+          AND table_name IN ('trigger_compat', 'error_codes')`
+    );
+    const res = await probe.run();
+    const rows = await res.getRowObjectsJS();
+    try { probe.destroySync(); } catch { /* freigegeben */ }
+    referenceHasDiagnostics = Number(rows[0]?.n || 0) === 2;
+    if (!referenceHasDiagnostics) {
+      console.warn('Reference-DB predates schema 2.8.0 — trigger-compatibility and error-code members will be skipped (re-run pull-reference.sh).');
+    }
+  } catch {
+    referenceHasDiagnostics = false;
+  }
+  // Version canon (fm_spec >= 2.9.0): the numeric comparison keys of the two
+  // version axes a solution can be measured against. Members declaring
+  // `requires: ["fm-spec-version-keys"]` skip on an older reference rather
+  // than failing on an unknown column (pattern: fm-spec-diagnostics).
+  try {
+    const probe = await entry.connection.prepare(
+      `SELECT COUNT(*) AS n FROM information_schema.columns
+        WHERE table_catalog = 'ref'
+          AND ((table_name = 'step_compat' AND column_name = 'originated_in_version_num')
+            OR (table_name = 'functions'   AND column_name = 'origin_version_num'))`
+    );
+    const res = await probe.run();
+    const rows = await res.getRowObjectsJS();
+    try { probe.destroySync(); } catch { /* freigegeben */ }
+    referenceHasVersionKeys = Number(rows[0]?.n || 0) === 2;
+    if (!referenceHasVersionKeys) {
+      console.warn('Reference-DB predates schema 2.9.0 — version-floor members will be skipped (re-run pull-reference.sh).');
+    }
+  } catch {
+    referenceHasVersionKeys = false;
+  }
   return true;
 }
 
@@ -304,6 +346,14 @@ function isReferenceAttached() {
 
 function hasOsAffinityTables() {
   return referenceAttached && referenceHasOsAffinity;
+}
+
+function hasDiagnosticsTables() {
+  return referenceAttached && referenceHasDiagnostics;
+}
+
+function hasVersionKeys() {
+  return referenceAttached && referenceHasVersionKeys;
 }
 
 async function attachPluginSpecDb(entry) {
@@ -500,6 +550,7 @@ async function close() {
   }
   referenceAttached = false;
   referenceHasOsAffinity = false;
+  referenceHasDiagnostics = false;
   pluginSpecAttached = false;
 }
 
@@ -593,6 +644,8 @@ module.exports = {
   getDatabaseStats,
   isReferenceAttached,
   hasOsAffinityTables,
+  hasDiagnosticsTables,
+  hasVersionKeys,
   isPluginSpecAttached,
   classifyPluginSpecMissing, // exportiert für Unit-Tests
 };

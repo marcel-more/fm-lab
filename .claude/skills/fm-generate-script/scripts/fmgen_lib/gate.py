@@ -28,6 +28,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 
 from .db import Reference
+from .read_tolerance import read_boolean_state
 
 IF_OPEN, IF_CLOSE, LOOP_OPEN, LOOP_CLOSE = 68, 70, 71, 73
 SET_VARIABLE = 141
@@ -129,6 +130,7 @@ def run_gate(xml_text: str, ref: Reference, resolution: dict | None = None,
                 "grammar tables not installed — structure not checked")
     else:
         problems = []
+        tolerated = _tolerated_elements(ref)
         for st in steps:
             sid = int(st.get("id", "-1"))
             xmap = ref.xml_map(sid)
@@ -136,10 +138,14 @@ def run_gate(xml_text: str, ref: Reference, resolution: dict | None = None,
                 problems.append(f"id={sid}: no template in step_xml_map")
                 continue
             order = [e.strip() for e in (xmap.get("element_order") or "").split(",") if e.strip()]
-            children = [c.tag for c in st]
+            # chrome/editor-state elements of the target coverage are tolerated
+            # in INPUT (a snippet copied from FileMaker) but never emitted
+            children = [c.tag for c in st if c.tag not in tolerated]
             unknown = [c for c in children if order and c not in order]
             if unknown:
                 problems.append(f"id={sid}: unexpected child element(s) {unknown}")
+            problems += _deep_shape_problems(st, sid, xmap.get("snippet_template") or "",
+                                             tolerated, ref)
             if order:
                 # greedy subsequence match: element_order may repeat an element
                 # name (mixed-content quirk — e.g. step 202 emits Field before AND
@@ -198,18 +204,23 @@ def run_gate(xml_text: str, ref: Reference, resolution: dict | None = None,
                 else "no doc-only enum values used")
 
     # G110: value domains of boolean state attributes. Class check: every
-    # attribute a boolean option maps to must carry True|False in the XML —
-    # the domain is derived from the reference (option_type='boolean' +
-    # attribute-shaped xml_path, fixed slots via [n]), no attribute names are
-    # hardcoded. Catches any parse/emit path that lets a display spelling
-    # (On/Off) through into the emission.
+    # attribute a boolean option maps to must carry its value domain in the
+    # XML — True|False, or the option's curated xml_true|xml_false (fm_spec
+    # 2.2.0: 74/122 NewWndStyles take Yes|No). The domain is derived from the
+    # reference (option_type='boolean' + attribute-shaped xml_path, fixed
+    # slots via [n]), no attribute names are hardcoded. Catches any parse/emit
+    # path that lets a display spelling (On/Off) through into the emission.
+    # A localized-build spelling of the same state (a German build writes
+    # Ja/Nein there — step_constraints localized_build_defect) is FileMaker's
+    # own output, not a defect of the snippet: warning, not fail.
     if not ref.grammar_available():
         res.add("G110-state-domains", 1, "skipped",
                 "grammar tables not installed — state domains not checked")
     else:
-        problems110 = []
+        problems110, localized110 = [], []
         for st in steps:
             sid = int(st.get("id", "-1"))
+            domains = ref.bool_domain(sid)
             for o in ref.options(sid):
                 if o["option_type"] != "boolean":
                     continue
@@ -217,16 +228,28 @@ def run_gate(xml_text: str, ref: Reference, resolution: dict | None = None,
                 if "/@" not in path:
                     continue
                 epath, _, attr = path.rpartition("/@")
+                domain = domains.get(o["option_key"], ("True", "False"))
                 for node in _nodes_at(st, epath):
                     val = node.get(attr)
-                    if val is not None and val not in ("True", "False"):
+                    if val is None or val in domain:
+                        continue
+                    state = read_boolean_state(val, domain)
+                    if state is not None:
+                        localized110.append(
+                            f"id={sid}: {epath}/@{attr}='{val}' is a localized-build "
+                            f"spelling of {domain[0] if state else domain[1]} — option "
+                            f"'{o['option_key']}' (step_constraints "
+                            "localized_build_defect; pastes into a build of that language)")
+                    else:
                         problems110.append(
                             f"id={sid}: {epath}/@{attr}='{val}' is not a "
-                            f"valid boolean state (True|False) — option "
+                            f"valid boolean state ({domain[0]}|{domain[1]}) — option "
                             f"'{o['option_key']}'")
-        res.add("G110-state-domains", 1, "fail" if problems110 else "pass",
-                "; ".join(problems110)
-                or "all boolean state attributes carry True/False")
+        status110 = "fail" if problems110 else ("warning" if localized110 else "pass")
+        res.add("G110-state-domains", 1, status110,
+                "; ".join(problems110 + localized110)
+                or "all boolean state attributes carry their reference domain "
+                   "(True/False, or the option's xml_true/xml_false)")
 
     # ---- Layer 2: save validity --------------------------------------------
     constraints = ref.constraints() if ref.grammar_available() else []
@@ -351,9 +374,150 @@ def run_gate(xml_text: str, ref: Reference, resolution: dict | None = None,
         res.add("G303-version-gate", 3, "fail" if too_new else "pass",
                 "; ".join(too_new) or f"all steps available in FM {target_version}")
 
+    _function_version_gate(res, root, ref, target_version)
     _options_preserved(res, steps, ir_steps, ref)
+    _value_forms(res, steps, ir_steps, ref)
     _var_init_check(res, ir_steps, check_var_init)
     return res
+
+
+def _function_version_gate(res: GateResult, root: ET.Element, ref: Reference,
+                           target_version: str | None) -> None:
+    """G303b: built-in functions called in any calculation must exist in the
+    target FileMaker version — in both directions. Too young: a formula with
+    `Get ( WindowUUID )` pasted into a 22 file evaluates to an error
+    (functions.origin_version, F-8). Retired: `SetPersistentData ( … )` pasted
+    into a 26 file arrives as `<function missing>` — FileMaker 26 no longer
+    resolves it (functions.removed_in_version, fm_spec 2.2.0; on an older
+    reference that direction stands down and the message says so)."""
+    tv = _version_num(target_version)
+    if tv is None:
+        res.add("G303b-function-versions", 3, "skipped",
+                "target file version unknown — function origin not checked")
+        return
+    from .textform import CALL_RE, call_name_candidates, strip_comments, strip_strings
+    lookup = ref.function_lookup()
+    names = {fid: v["canonical_name"] for fid, v in ref.function_arity().items()}
+    versions = ref.function_versions()
+    too_new: dict[str, str] = {}
+    retired: dict[str, str] = {}
+
+    def judge(fid: int, fallback_name: str) -> None:
+        v = versions.get(fid)
+        if not v:
+            return
+        name = names.get(fid, fallback_name)
+        ov = _version_num(v.get("origin_version"))
+        if ov is not None and ov > tv:
+            too_new[name] = v["origin_version"]
+        rv = _version_num(v.get("removed_in_version"))
+        if rv is not None and rv <= tv:
+            retired[name] = v["removed_in_version"]
+
+    get_re = re.compile(r"\b(\w+)\s*\(\s*(\w+)\s*\)")
+    for calc in root.iter("Calculation"):
+        scanned = strip_strings(strip_comments(calc.text or ""))
+        # Get ( Keyword ) functions are stored decomposed ('get ( windowuuid )')
+        for m in get_re.finditer(scanned):
+            # lookup names carry both spellings ('Get(WindowUUID)', 'Hole ( FensterUUID )')
+            hit = lookup.get(f"{m.group(1)}({m.group(2)})".casefold()) \
+                or lookup.get(f"{m.group(1)} ( {m.group(2)} )".casefold())
+            if hit:
+                judge(hit["function_id"], m.group(0))
+        for m in CALL_RE.finditer(scanned):
+            for cand in call_name_candidates(m.group(1)):
+                hit = lookup.get(cand.casefold())
+                if not hit:
+                    continue
+                judge(hit["function_id"], cand)
+                break
+    problems = [f"'{n}' needs FM {v}, target is {target_version}"
+                for n, v in sorted(too_new.items())]
+    problems += [f"'{n}' was removed in FM {v} — FileMaker {target_version} no longer "
+                 "resolves it (functions.removed_in_version)"
+                 for n, v in sorted(retired.items())]
+    if problems:
+        res.add("G303b-function-versions", 3, "fail", "; ".join(problems))
+    else:
+        res.add("G303b-function-versions", 3, "pass",
+                f"all built-in functions available in FM {target_version}"
+                + (" and none retired by it" if ref.function_retirement_available()
+                   else " (retired-function direction: no retirement data in the reference)"))
+
+
+def _tolerated_elements(ref: Reference) -> set[str]:
+    """Step-level chrome/state element names of the target coverage
+    (coverage_step_rules) plus the read-tolerance constants."""
+    names = {r["element"] for r in ref.coverage_rules()}
+    try:
+        from .read_tolerance import FM26_CHROME, FM26_STATE
+        names |= {tag for _ids, tag, _a in FM26_CHROME} | {tag for _ids, tag, _a in FM26_STATE}
+    except ImportError:  # pragma: no cover
+        pass
+    return names
+
+
+def _template_shape(template: str) -> dict[str, set[str]]:
+    """element path (below Step) -> attribute names, over the whole template
+    tree — the shape of the target coverage including nested elements and
+    attributes (F-7: 26 attributes BlanksLast/IncludeToolCalls/KeepOriginalData,
+    nested PDFSaveType/LightMode/Parameters)."""
+    shape: dict[str, set[str]] = {}
+    try:
+        tpl = ET.fromstring(template)
+    except ET.ParseError:
+        return shape
+
+    def walk(el: ET.Element, path: str) -> None:
+        for child in el:
+            p = f"{path}/{child.tag}" if path else child.tag
+            attrs = set(child.attrib.keys())
+            if not attrs and not len(child) and re.fullmatch(r"\{[a-z0-9_]+\}", (child.text or "").strip()):
+                # a text-form target slot (<Field>{target}</Field>): the
+                # emitter writes the FIELD form with reference attributes
+                # when the value is a field (emit._expand_field_targets)
+                attrs |= {"table", "id", "name", "repetition"}
+            shape.setdefault(p, set()).update(attrs)
+            walk(child, p)
+
+    walk(tpl, "")
+    return shape
+
+
+def _deep_shape_problems(st: ET.Element, sid: int, template: str,
+                         tolerated: set[str], ref: Reference) -> list[str]:
+    """Every element path and attribute of the instance must exist in the
+    resolved template of the target coverage. Repeat-group items and the
+    structural <Text/> marker are template elements too, so they pass;
+    calculation text is content, not shape."""
+    shape = _template_shape(template)
+    if not shape:
+        return []
+    known_paths = set(shape)
+    # element_order may name elements the template does not carry (the
+    # structural Text marker) — accept them at Step level
+    order = {e.strip() for e in ((ref.xml_map(sid) or {}).get("element_order") or "").split(",")}
+    problems: list[str] = []
+
+    def walk(el: ET.Element, path: str) -> None:
+        for child in el:
+            if not path and child.tag in tolerated:
+                continue
+            p = f"{path}/{child.tag}" if path else child.tag
+            if p not in known_paths:
+                if not path and child.tag in order:
+                    continue
+                if path and (path in known_paths or any(k.startswith(path + "/") for k in known_paths)):
+                    problems.append(f"id={sid}: element <{p}> not in the FM {ref.target_coverage()} shape")
+                continue
+            extra = set(child.attrib) - shape[p]
+            if extra:
+                problems.append(f"id={sid}: <{p}> attribute(s) {sorted(extra)} not in the "
+                                f"FM {ref.target_coverage()} shape")
+            walk(child, p)
+
+    walk(st, "")
+    return problems
 
 
 def _nodes_at(st: ET.Element, epath: str) -> list[ET.Element]:
@@ -373,9 +537,15 @@ def _options_preserved(res: GateResult, steps: list[ET.Element],
     """G306: every parsed option must materialize in the emission — element or
     attribute at its reference xml_path, repeat groups via their container —
     or its absence must be explained by a reference rule (element bindings for
-    mode-scoped prunes, omit_when_false presence booleans). Class check behind
+    mode-scoped prunes, omit_when_false presence booleans, paste_dropped
+    options FileMaker discards anyway — fm_spec 2.6.0). Class check behind
     the silent WebScript prune: user data that vanishes without a finding is a
     fail. Presence only — value fidelity is G109/G110 territory.
+
+    Mirror rules sharpen the check the other way round (step_mirror_elements,
+    fm_spec 2.6.0): a set source option (144 title) must have its copy at the
+    target path (the Step-level Calculation) — FileMaker writes it there on
+    paste, an emission without it is not canonical.
     """
     if ir_steps is None:
         res.add("G306-option-preservation", 3, "skipped",
@@ -401,7 +571,10 @@ def _options_preserved(res: GateResult, steps: list[ET.Element],
         # prunes); skeleton rules never do — they strip UNFILLED children,
         # a set option's node always survives them
         explained = [r["element_path"] for r in ref.element_bindings(sid)]
+        dropped = ref.paste_dropped_options(sid)
         for key, val in (ir.get("options") or {}).items():
+            if key in dropped:
+                continue  # FileMaker discards the option on paste — the emitter leaves it out by rule
             epath, attr, text_mode = None, None, False
             if key in groups:
                 epath = groups[key]["container_path"]
@@ -441,9 +614,97 @@ def _options_preserved(res: GateResult, steps: list[ET.Element],
                 f"line {ir.get('line', '?')} id={sid}: option '{key}' was "
                 f"parsed but nothing materialized at '{epath or '@' + str(attr)}'"
                 " and no reference rule explains the absence")
+        for r in ref.mirror_elements(sid):
+            src, tpath = r["source_option"], r["target_path"]
+            sval = (ir.get("options") or {}).get(src)
+            if sval is None or isinstance(sval, (dict, list)):
+                continue
+            texts = [(nd.text or "").strip() for nd in _nodes_at(st, tpath)]
+            if str(sval).strip() not in texts:
+                problems.append(
+                    f"line {ir.get('line', '?')} id={sid}: '{src}' is set but its mirror at "
+                    f"'{tpath}' is {'missing' if not texts else 'different (' + ', '.join(texts) + ')'}"
+                    " — FileMaker writes the source value there on paste (step_mirror_elements)")
     res.add("G306-option-preservation", 3, "fail" if problems else "pass",
             "; ".join(problems)
             or "every parsed option materialized (or is rule-explained)")
+
+
+_VAR_TEXT_RE = re.compile(r"^\$\$?[A-Za-z_][\w.]*$")
+
+
+def _value_forms(res: GateResult, steps: list[ET.Element],
+                 ir_steps: list[dict] | None, ref: Reference) -> None:
+    """G307: the VALUE FORM of every target slot, judged on the emitted
+    snippet alone — no IR (the parsed step structure) needed (successor of
+    the presence-only G306; fm_spec 2.2.0 `step_options.slot_kind`).
+
+    A target element carries either the field form (table/id/name attributes)
+    or a variable as element text. Three things are data loss on paste and
+    fail here whatever produced the snippet:
+      * bare text that is no variable — FileMaker stores it as a variable of
+        that name (paste-verified 26.0.2), so a field name written as text
+        silently changes meaning;
+      * the attribute form in a `variable_only` slot — FileMaker discards it
+        without a diagnostic;
+      * a variable in a `field_only` slot.
+    With the IR (`--resolved`) one cross-check is added: a resolved field
+    reference whose element exists must carry the attribute form
+    (table/id/name) — a pruned element is G306's presence question.
+    """
+    if not ref.grammar_available():
+        res.add("G307-value-form", 3, "skipped",
+                "grammar tables not installed — value forms not checked")
+        return
+    paired = ir_steps if ir_steps is not None and len(ir_steps) == len(steps) else None
+    problems: list[str] = []
+    for i, st in enumerate(steps):
+        sid = int(st.get("id", "-1"))
+        for o in ref.options(sid):
+            if o["option_type"] != "target":
+                continue
+            path = o.get("xml_path") or ""
+            if not path or "/@" in path:
+                continue
+            kind = ref.slot_kind(sid, o["option_key"])
+            slot = f"id={sid}: '{o['option_key']}'"
+            nodes = _nodes_at(st, path)
+            for nd in nodes:
+                has_ref = any(a in nd.attrib for a in ("table", "id", "name"))
+                text = (nd.text or "").strip()
+                if not has_ref and not text:
+                    continue  # unset slot
+                if has_ref:
+                    if kind == "variable_only":
+                        problems.append(
+                            f"{slot} carries the attribute form (table/id/name) in a "
+                            "variable-only slot — FileMaker discards it on paste "
+                            "without a diagnostic")
+                elif _VAR_TEXT_RE.match(text):
+                    if kind == "field_only":
+                        problems.append(
+                            f"{slot} holds the variable '{text}' but takes a field "
+                            "reference only")
+                else:
+                    problems.append(
+                        f"{slot} holds the text '{text}', which is neither a variable "
+                        "($x/$$x) nor a field reference — FileMaker would store it "
+                        "as a variable name")
+            if paired is not None:
+                ir = paired[i]
+                val = (ir.get("options") or {}).get(o["option_key"]) if isinstance(ir, dict) else None
+                # only the FORM of nodes that exist is judged here — an
+                # element a binding rule pruned (245 target container in
+                # File mode) is G306's presence question, not a form error
+                if isinstance(val, dict) and val.get("_form") == "field" \
+                        and kind != "variable_only" and nodes \
+                        and not any(nd.get("name") is not None for nd in nodes):
+                    problems.append(
+                        f"{slot}: the IR holds the field reference "
+                        f"'{val.get('table', '?')}::{val.get('name', '?')}' but no "
+                        "attribute form reached the XML")
+    res.add("G307-value-form", 3, "fail" if problems else "pass",
+            "; ".join(problems) or "every target slot carries a form its slot accepts")
 
 
 def _var_init_check(res: GateResult, ir_steps: list[dict] | None,

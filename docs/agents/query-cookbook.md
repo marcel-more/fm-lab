@@ -230,3 +230,54 @@ sequences (`analysis-patterns.md` → `control-flow-reachability`).
 ⚠️ **Locale caveat:** `Step_Name` is written in the exporting client's UI language.
 Never gate logic on `Step_Name` literals — use `Step_ID` (via `ScriptStepRoleMap` /
 `step_metadata`) for locale-independent step matching.
+
+## Reference cross-checks (fm_spec ≥ 2.8.0)
+
+Both recipes read the language reference next to the catalog. Attach it
+read-only as `ref` (the REST API does this automatically; on the direct path
+it is one extra statement in the same call):
+
+```sql
+ATTACH 'reference/fm_spec.duckdb' AS ref (READ_ONLY);
+```
+
+**Trigger compatibility of a layout — which events do not (fully) fire on a runtime?**
+Join over the slot id, never over the raw event name. Tri-state: `false` = No,
+`NULL` = Partial (conditionally supported — never "undocumented"), `true` = Yes.
+
+```sql
+SELECT st.event_name, t.Owner_Type, t.Script_Name,
+       c.webdirect, c.go                       -- true / false / NULL = Partial
+FROM ScriptTriggers t
+JOIN ref.script_triggers st ON st.trigger_id = t.Trigger_ID
+LEFT JOIN ref.trigger_compat c ON c.trigger_id = t.Trigger_ID
+LEFT JOIN Layouts l ON t.Owner_Type = 'Layout' AND l.L_UUID = t.Owner_UUID AND l.File_Name = t.File_Name
+LEFT JOIN LayoutObjects lo ON t.Owner_Type = 'LayoutObject' AND lo.Object_UUID = t.Owner_UUID AND lo.File_Name = t.File_Name
+LEFT JOIN Layouts lol ON lo.Layout_ID = lol.L_ID AND lol.File_Name = lo.File_Name
+WHERE COALESCE(l.L_Name, lol.L_Name) = '<Layout>' AND t.File_Name = '<File>'
+  AND (c.webdirect IS DISTINCT FROM true OR c.go IS DISTINCT FROM true)
+ORDER BY st.event_name;
+```
+
+**Error-code literals of a script — what does each compared code mean?**
+Literals carry no where-used edge, so the calculation text is the source
+(plain `Calc_Text`, never `*_XML`). Codes are spans: `BETWEEN`, not `=`.
+
+```sql
+WITH pattern AS (                         -- every spelling of Get(LastError) the reference knows
+  SELECT '(?i)(?:' || (SELECT string_agg(DISTINCT regexp_extract(lookup_name, '^([^\s(]+)', 1), '|')
+                        FROM ref.function_name_lookup WHERE function_id = 139 AND chunk_role = 'getfunction')
+      || ')\s*\(\s*(?:' || (SELECT string_agg(DISTINCT lookup_name, '|')
+                               FROM ref.function_name_lookup WHERE function_id = 139 AND chunk_role = 'getparameter')
+      || ')\s*\)\s*(?:=|≠|<>|<=|>=|≤|≥|<|>)\s*(-?\d+)' AS re)
+SELECT s.Step_Index + 1 AS step_no, CAST(u.lit AS INTEGER) AS code,
+       e.code_text, e.scope, COALESCE(e.message_en, '(not a documented FileMaker error code)') AS meaning
+FROM StepCalculations s, pattern p, UNNEST(regexp_extract_all(s.Calc_Text, p.re, 1)) AS u(lit)
+LEFT JOIN ref.error_codes e ON CAST(u.lit AS INTEGER) BETWEEN e.code_from AND e.code_to
+WHERE s.File_Name = '<File>' AND s.Script_Name = '<Script>' AND s.Is_Enabled
+ORDER BY step_no;
+```
+
+`scope = 'web'` codes are returned only by the web publishing engine or a
+REST API; a `NULL` join is a code the table does not list (the rule
+`error_code_unknown_literal` reports exactly these).

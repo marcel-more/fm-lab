@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "触发器兼容性：FileMaker Go (iOS)",
+    "analysis.defaultResult.meaning": "范围内其事件在 FileMaker Go (iOS) 中不触发或仅部分触发的脚本触发器"
+  },
+  "layout": {}
+}

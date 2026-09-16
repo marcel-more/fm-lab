@@ -1,0 +1,25 @@
+{
+  "manifest": {
+    "title": "解決されないマージアンカー",
+    "description": "レイアウト品質ルール — テキストオブジェクトに、FileMaker が解決できないマージフィールドアンカー（<<フィールド>>）が含まれています。このアンカーは破棄されず、ブラウズモードとプレビューモードでそのまま「文字どおり」描画されるため、値が表示されるはずの場所に生の <<フィールド>> が見えます。さらにカタログには痕跡が残りません（displays_field 辺も独自のオブジェクトも生成されない）。だからこそ、このルールがそれを可視化する唯一の場所になります。検出はテキスト中のアンカー（マージ変数 <<$…>> とレイアウト計算式 <<ƒ:…>> を除外。繰り返しや TO 修飾は 1 つのアンカーとして数える）と、オブジェクトの構造的な FieldList にある FieldReference エントリ（解決済みアンカー 1 つにつき厳密に 1 エントリ）の比較で行います。判定を決めるのは件数であり、名指しした候補は補助情報で、安全に対応付けできない場合は空になります。",
+    "messages.unresolved-anchor": "フィールドが解決されないマージアンカー — 文字どおり描画されます"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "検出数",
+    "summary_kpi.props.items[1].label": "未解決アンカー数",
+    "summary_kpi.props.items[2].label": "対象レイアウト数",
+    "summary_kpi.props.items[3].label": "対象ファイル数",
+    "findings_card.props.title": "解決されないマージアンカー",
+    "findings_table.props.searchPlaceholder": "ファイル・レイアウト・オブジェクト・アンカーを検索…",
+    "findings_table.props.empty.message": "解決されないマージアンカーは見つかりませんでした。",
+    "findings_table.props.columns[0].label": "ファイル",
+    "findings_table.props.columns[1].label": "レイアウト",
+    "findings_table.props.columns[2].label": "オブジェクト",
+    "findings_table.props.columns[3].label": "文字どおり描画",
+    "findings_table.props.columns[4].label": "すべてのアンカー",
+    "findings_table.props.columns[5].label": "未解決",
+    "findings_table.props.columns[6].label": "アンカー",
+    "findings_table.props.columns[9].label": "幅",
+    "findings_table.props.columns[10].label": "高さ"
+  }
+}

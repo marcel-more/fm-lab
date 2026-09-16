@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "プラットフォーム固有トリガ: FileMaker Go (iOS)",
+    "analysis.defaultResult.meaning": "FileMaker Go (iOS) でのみ発生するトリガイベントに割り当てられた対象範囲内のスクリプト"
+  },
+  "layout": {}
+}

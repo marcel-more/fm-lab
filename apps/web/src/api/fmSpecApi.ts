@@ -1,4 +1,5 @@
 import { API_BASE } from '../config/apiBase';
+import type { DocsEntryRef } from './docsApi';
 
 /**
  * fm-spec Schema-Viewer API-Client.
@@ -17,6 +18,11 @@ export function resolveHelpHref(localHelpUrl: string | null, helpUrl: string | n
   return helpUrl;
 }
 
+// Doku-Seiten-Adresse: definiert in docsApi (sie gehört zum Doku-Browser, nicht
+// zur Referenz) und hier re-exportiert, weil die Step-/Function-Payloads sie tragen.
+export { buildDocsEntryPath } from './docsApi';
+export type { DocsEntryRef } from './docsApi';
+
 type Envelope<T> = { success: boolean; data: T; meta?: Record<string, unknown>; error?: { message?: string } };
 
 async function getJson<T>(url: string): Promise<Envelope<T>> {
@@ -33,8 +39,22 @@ async function getJson<T>(url: string): Promise<Envelope<T>> {
 export interface ReferenceMeta {
   schema_version: string | null;
   filemaker_coverage: string | null;
+  /** Documentation-layer coverage (Claris help version) — since fm_spec 1.19.0; null on older builds. */
+  doc_coverage?: string | null;
+  doc_help_build?: string | null;
+  doc_source?: string | null;
+  /** Shape coverages of the build, comma-separated ("22,26") — since fm_spec 2.0.0; null on older builds. */
+  shape_coverages?: string | null;
   built_at: string | null;
   source_commit: string | null;
+}
+
+/** One shape coverage of the reference (fm_spec ≥ 2.0.0 `coverages` vocabulary). */
+export interface ShapeCoverage {
+  coverage: string;
+  pairedVersion: string | null;
+  saxmlVersion: string | null;
+  isBase: boolean;
 }
 
 export interface FmSpecLocale {
@@ -52,9 +72,18 @@ export interface FmSpecMeta {
     stepLocales: number;
     functionLocales: number;
     grammarSteps: number;
+    /** Runtime & diagnostics counts (fm_spec ≥ 2.8.0); 0 on older builds / older API. */
+    triggers?: number;
+    errorCodes?: number;
+    featureVersions?: number;
+    constants?: number;
   };
   locales: FmSpecLocale[];
+  /** Shape coverages, base first (fm_spec ≥ 2.0.0); empty/missing on older builds. */
+  coverages?: ShapeCoverage[];
   grammarAvailable: boolean;
+  /** error_codes / feature_versions / trigger_compat shipped (fm_spec ≥ 2.8.0). */
+  diagnosticsAvailable?: boolean;
 }
 
 export function fetchFmSpecMeta(): Promise<FmSpecMeta> {
@@ -149,6 +178,8 @@ export interface FmSpecFunction {
   opcode: string | null;
   returnType: string | null;
   originVersion: string | null;
+  /** First FileMaker version without the function (fm_spec ≥ 2.2.0); null/missing on older builds. */
+  removedInVersion?: string | null;
   isGetFunction: boolean;
   urlSlug: string;
   displayName: string;
@@ -170,6 +201,71 @@ export function fetchFmSpecFunctions(lang: string): Promise<FmSpecFunctionsResul
   return getJson<{ functions: FmSpecFunction[]; categories: RefCategory[] }>(
     `${API}/reference/functions?lang=${encodeURIComponent(lang)}`,
   ).then((j) => ({ functions: j.data.functions, categories: j.data.categories }));
+}
+
+// ── Script-Trigger (fm_spec ≥ 1.18.0; compat ≥ 2.8.0) ────────────────────────
+
+export type TriggerLevel = 'object' | 'layout' | 'file';
+
+export interface FmSpecTrigger {
+  triggerId: number;
+  eventName: string;
+  level: TriggerLevel | string;
+  /** Localized dialog label of the requested language (EN = canonical name). */
+  label: string;
+  parameterCapable: boolean;
+  hasParameterFieldAttr: boolean;
+  sinceVersion: string | null;
+  sinceVersionNum: number | null;
+  /**
+   * Tri-state like step_compat (true = Yes, false = No, null = Partial).
+   * null on the whole field = no trigger_compat table (fm_spec < 2.8.0).
+   */
+  compat: StepCompat | null;
+  urlSlug: string;
+  helpUrl: string | null;
+  localHelpUrl: string | null;
+}
+
+export interface TriggerDetail extends FmSpecTrigger {
+  /** Labels of every language the reference carries (11 locales). */
+  labels: { language: string; label: string }[];
+}
+
+export function fetchFmSpecTriggers(lang: string): Promise<FmSpecTrigger[]> {
+  return getJson<FmSpecTrigger[]>(
+    `${API}/reference/triggers?lang=${encodeURIComponent(lang)}`,
+  ).then((j) => j.data);
+}
+
+export function fetchTriggerDetail(idOrName: string | number, lang: string): Promise<TriggerDetail> {
+  return getJson<TriggerDetail>(
+    `${API}/reference/triggers/${encodeURIComponent(String(idOrName))}?lang=${encodeURIComponent(lang)}`,
+  ).then((j) => j.data);
+}
+
+// ── Error codes (fm_spec ≥ 2.8.0) ────────────────────────────────────────────
+
+/**
+ * One FileMaker error code or code RANGE (Claris lists `1552-1559` and
+ * `5000-5499` as single rows): `codeFrom`…`codeTo` span it, `codeText` keeps
+ * the Claris spelling. `scope` 'web' = returned by the web publishing engine
+ * or a FileMaker REST API (the "(*)" marker of the Claris page).
+ */
+export interface FmSpecErrorCode {
+  codeFrom: number;
+  codeTo: number;
+  codeText: string;
+  scope: 'core' | 'web' | string;
+  /** Localized message (EN fallback). */
+  message: string;
+  messageEn: string;
+}
+
+export function fetchFmSpecErrorCodes(lang: string): Promise<FmSpecErrorCode[]> {
+  return getJson<FmSpecErrorCode[]>(
+    `${API}/reference/error-codes?lang=${encodeURIComponent(lang)}`,
+  ).then((j) => j.data);
 }
 
 // ── Abschnitte 1+2: lokalisierte Step-Daten + Parameter (alle Sprachen) ───────
@@ -200,6 +296,8 @@ export interface StepAllLangs {
   compat?: StepCompat | null;
   /** Leer bei Referenzen < 1.13.0. */
   osAffinity?: OsAffinityEntry[];
+  /** Claris docs page of this step; null/missing when unavailable. */
+  docsEntry?: DocsEntryRef | null;
   langs: StepLangEntry[];
 }
 
@@ -216,6 +314,8 @@ export interface StepOptionValue {
   displayTextEn: string | null;
   /** Per-value evidence (fm_spec ≥ 1.7.0); null on older references. */
   evidence: string | null;
+  /** '*' = standard row, '<NN>' = override of that coverage (fm_spec ≥ 2.0.0). */
+  coverage?: string | null;
 }
 
 export interface StepOption {
@@ -232,7 +332,26 @@ export interface StepOption {
   sortOrder: number | null;
   evidence: string | null;
   verifiedVersion: string | null;
+  /** Value form of a target slot (fm_spec ≥ 2.2.0): field_only | field_or_var | variable_only; null = not curated per option. */
+  slotKind?: string | null;
+  /** XML value domain of a boolean attribute (fm_spec ≥ 2.2.0); null = True/False. */
+  xmlTrue?: string | null;
+  xmlFalse?: string | null;
+  /** Discarded by FileMaker on paste whatever its value (fm_spec ≥ 2.6.0); false on older builds. */
+  pasteDropped?: boolean;
+  /** '*' = standard row, '<NN>' = override of that coverage (fm_spec ≥ 2.0.0); null on older builds. */
+  coverage?: string | null;
   values: StepOptionValue[];
+}
+
+/** Value-copy rule (fm_spec ≥ 2.6.0): the value of `sourceOption` is written a second time at `targetPath`. */
+export interface StepMirrorElement {
+  coverage?: string | null;
+  sourceOption: string;
+  targetPath: string;
+  trigger: string;
+  evidence: string | null;
+  verifiedVersion: string | null;
 }
 
 export interface StepConstraint {
@@ -242,9 +361,13 @@ export interface StepConstraint {
   verifiedVersion: string | null;
   /** Lead text of the constraint kind (fm_spec ≥ 1.17.0 constraint_kinds registry). */
   consumerNote?: string | null;
+  /** Scope of the row (fm_spec ≥ 2.7.0): '*' = every coverage, a coverage id = that coverage's serialization only (saxml_omission). */
+  coverage?: string | null;
 }
 
 export interface StepRepeatGroup {
+  /** '*' = standard row, '<NN>' = override of that coverage (fm_spec ≥ 2.0.0). */
+  coverage?: string | null;
   groupKey: string;
   groupLabel: string;
   parentGroup: string | null;
@@ -260,6 +383,8 @@ export interface StepRepeatGroup {
 }
 
 export interface StepSkeletonElement {
+  /** '*' = standard row, '<NN>' = override of that coverage (fm_spec ≥ 2.0.0). */
+  coverage?: string | null;
   parentTag: string;
   childTag: string;
   conditionOption: string | null;
@@ -270,6 +395,8 @@ export interface StepSkeletonElement {
 }
 
 export interface StepElementBinding {
+  /** '*' = standard row, '<NN>' = override of that coverage (fm_spec ≥ 2.0.0). */
+  coverage?: string | null;
   optionKey: string | null;
   optionValue: string | null;
   elementPath: string;
@@ -290,6 +417,10 @@ export interface StepOptionImplication {
 }
 
 export interface StepXmlMap {
+  /** '*' = standard shape, '<NN>' = override shape of that coverage (fm_spec ≥ 2.0.0); null on older builds. */
+  coverage?: string | null;
+  /** Step-level value form of the target slot(s) (fm_spec ≥ 1.17.0): field_only | field_or_var | variable_only. */
+  targetSlotKind?: string | null;
   snippetTemplate: string;
   saxmlParamTypes: string | null;
   saxmlExample: string | null;
@@ -305,6 +436,14 @@ export interface StepGrammar {
   stepId: number;
   canonicalName: string;
   available: boolean;
+  /** Shape coverage the rows are resolved for (fm_spec ≥ 2.0.0); null on older builds. */
+  coverage?: string | null;
+  /** 'query' (explicit ?coverage=), 'base' (reference default) or 'none' (unversioned reference). */
+  coverageSource?: 'query' | 'base' | 'none' | null;
+  /** All shape coverages of the reference, base first. */
+  coverages?: ShapeCoverage[];
+  /** Coverages (other than '*') that carry override rows for this step. */
+  overrideCoverages?: string[];
   xmlMap: StepXmlMap | null;
   options: StepOption[];
   constraints: StepConstraint[];
@@ -314,12 +453,19 @@ export interface StepGrammar {
   skeletonElements?: StepSkeletonElement[];
   elementBindings?: StepElementBinding[];
   optionImplications?: StepOptionImplication[];
+  /** Mirror rules (fm_spec ≥ 2.6.0); empty on older references. */
+  mirrorElements?: StepMirrorElement[];
 }
 
-/** Returns `null` when no grammar row exists (or reference < 1.2.0). */
-export function fetchStepGrammar(idOrSlug: string | number): Promise<StepGrammar | null> {
+/**
+ * Returns `null` when no grammar row exists (or reference < 1.2.0).
+ * `coverage` selects the shape coverage (fm_spec ≥ 2.0.0, e.g. '26'); omitted
+ * = the reference's base coverage.
+ */
+export function fetchStepGrammar(idOrSlug: string | number, coverage?: string | null): Promise<StepGrammar | null> {
+  const q = coverage ? `?coverage=${encodeURIComponent(coverage)}` : '';
   return getJson<StepGrammar | null>(
-    `${API}/reference/steps/${encodeURIComponent(String(idOrSlug))}/grammar`,
+    `${API}/reference/steps/${encodeURIComponent(String(idOrSlug))}/grammar${q}`,
   ).then((j) => j.data);
 }
 
@@ -348,6 +494,8 @@ export interface FunctionDetail {
   returnType: string | null;
   returnTypeDisplay: string | null;
   originVersion: string | null;
+  /** First FileMaker version without the function (fm_spec ≥ 2.2.0); null/missing on older builds. */
+  removedInVersion?: string | null;
   displayName: string;
   signature: string | null;
   description: string | null;
@@ -363,10 +511,35 @@ export interface FunctionDetail {
   osAffinity?: OsAffinityEntry[];
   helpUrl: string | null;
   localHelpUrl: string | null;
+  /** Claris docs page of this function; null/missing when unavailable. */
+  docsEntry?: DocsEntryRef | null;
 }
 
-export function fetchFunctionDetail(idOrName: string | number, lang: string): Promise<FunctionDetail> {
+/**
+ * Function detail. `content` selects how much help HTML travels along:
+ * 'full' (default) carries the rendered `embedHtml` of the help page,
+ * 'none' leaves it out — enough for the metadata line and the cross-links,
+ * and several kilobytes lighter per call.
+ */
+export function fetchFunctionDetail(
+  idOrName: string | number,
+  lang: string,
+  opts: { content?: 'full' | 'summary' | 'none' } = {},
+): Promise<FunctionDetail> {
+  const content = opts.content ?? 'full';
+  const q = new URLSearchParams({ lang });
+  if (content !== 'none') q.set('content', content);
   return getJson<FunctionDetail>(
-    `${API}/reference/functions/${encodeURIComponent(String(idOrName))}?content=full&lang=${encodeURIComponent(lang)}`,
+    `${API}/reference/functions/${encodeURIComponent(String(idOrName))}?${q}`,
   ).then((j) => j.data);
+}
+
+/**
+ * Die Functions-Domäne der Referenz kennt zh-Hans nicht — jede Ansicht, die
+ * eine Funktion in der UI-Sprache anfragt, fällt dafür auf Englisch zurück.
+ */
+const FUNCTION_LANGS = new Set(['en', 'de', 'es', 'fr', 'it', 'nl', 'pt', 'sv', 'ja', 'ko']);
+
+export function resolveFunctionLang(uiLang: string): string {
+  return FUNCTION_LANGS.has(uiLang) ? uiLang : 'en';
 }

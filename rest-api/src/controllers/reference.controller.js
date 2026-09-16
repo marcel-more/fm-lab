@@ -12,6 +12,7 @@ const { REFERENCE_CONTENT_LEVELS } = require('../config/constants');
  *   /api/reference/categories?lang=de
  *   /api/reference/steps?lang=de
  *   /api/reference/steps/:idOrSlug?lang=de&content=meta|summary|full
+ *   /api/reference/steps/:idOrSlug/grammar?coverage=22|26
  *   /api/reference/steps/:idOrSlug/embed?lang=de
  *   /api/reference/functions?lang=de
  *   /api/reference/functions/:nameOrId?lang=de&content=meta|summary|full
@@ -30,6 +31,9 @@ const ERROR_STATUS = {
   REF_STEP_NOT_FOUND:     404,
   REF_FUNCTION_NOT_FOUND: 404,
   REF_HELP_NOT_FOUND:     404,
+  REF_COVERAGE_INVALID:   400,
+  REF_TRIGGER_NOT_FOUND:  404,
+  REF_ERROR_CODE_NOT_FOUND: 404,
   VALIDATION_ERROR:       400,
 };
 
@@ -142,6 +146,71 @@ const getTriggerEvents = asyncWrap(async (req, res) => {
 });
 
 /**
+ * Runtime & diagnostics (fm_spec >= 2.8.0). Every list degrades to `data: []`
+ * (detail: 404) on references without the tables — never a 500.
+ */
+
+/** GET /api/reference/triggers?lang=de — all script triggers with label, since-version and compat. */
+const listTriggers = asyncWrap(async (req, res) => {
+  const ctx = req.solutionContext;
+  const lang = referenceService.resolveStepLang(pickLang(req));
+  const triggers = await referenceService.listTriggers(ctx, lang);
+  res.json({
+    success: true,
+    data: triggers,
+    meta: { language: lang, count: triggers.length, compatAvailable: triggers.some((t) => t.compat !== null) },
+  });
+});
+
+/** GET /api/reference/triggers/:idOrName?lang=de — one trigger with the labels of all languages. */
+const getTrigger = asyncWrap(async (req, res) => {
+  const ctx = req.solutionContext;
+  const lang = referenceService.resolveStepLang(pickLang(req));
+  const detail = await referenceService.getTriggerDetail(ctx, req.params.idOrName, lang);
+  if (!detail) {
+    return sendErr(res, 'REF_TRIGGER_NOT_FOUND', `No script trigger with id/name '${req.params.idOrName}'.`);
+  }
+  res.json({ success: true, data: detail, meta: { language: lang } });
+});
+
+/** GET /api/reference/error-codes?lang=de&q=101 — FileMaker error codes (q: number = span lookup, text = message search). */
+const listErrorCodes = asyncWrap(async (req, res) => {
+  const ctx = req.solutionContext;
+  const lang = referenceService.resolveStepLang(pickLang(req));
+  const rows = await referenceService.listErrorCodes(ctx, lang, req.query.q);
+  res.json({ success: true, data: rows, meta: { language: lang, count: rows.length, q: req.query.q ?? null } });
+});
+
+/** GET /api/reference/error-codes/:code?lang=de — exact code or the range it falls into. */
+const getErrorCode = asyncWrap(async (req, res) => {
+  const ctx = req.solutionContext;
+  const lang = referenceService.resolveStepLang(pickLang(req));
+  const raw = String(req.params.code || '').trim();
+  if (!/^-?\d+$/.test(raw)) {
+    return sendErr(res, 'VALIDATION_ERROR', `Error code must be an integer, got '${raw}'.`);
+  }
+  const row = await referenceService.getErrorCode(ctx, Number(raw), lang);
+  if (!row) {
+    return sendErr(res, 'REF_ERROR_CODE_NOT_FOUND', `No FileMaker error code ${raw} in the reference.`);
+  }
+  res.json({ success: true, data: row, meta: { language: lang } });
+});
+
+/** GET /api/reference/feature-versions?lang=de — features with their introduction version. */
+const listFeatureVersions = asyncWrap(async (req, res) => {
+  const ctx = req.solutionContext;
+  const lang = referenceService.resolveStepLang(pickLang(req));
+  const rows = await referenceService.listFeatureVersions(ctx, lang);
+  res.json({ success: true, data: rows, meta: { language: lang, count: rows.length } });
+});
+
+/** GET /api/reference/constants — language constants with used_with context. */
+const listConstants = asyncWrap(async (req, res) => {
+  const rows = await referenceService.listLanguageConstants(req.solutionContext);
+  res.json({ success: true, data: rows, meta: { count: rows.length } });
+});
+
+/**
  * GET /api/reference/steps/:idOrSlug/langs — lokalisierte Step-Daten +
  * Parameter über alle Sprachen in einem Call.
  */
@@ -163,11 +232,16 @@ const getStepLangs = asyncWrap(async (req, res) => {
  * meta.grammarAvailable=false.
  */
 const getStepGrammar = asyncWrap(async (req, res) => {
-  const data = await referenceService.getStepGrammar(req.solutionContext, req.params.idOrSlug);
+  // ?coverage=22|26 — shape coverage to resolve the grammar for (fm_spec
+  // >= 2.0.0); empty = the reference's base coverage. Unknown value -> 400
+  // REF_COVERAGE_INVALID with the known coverages in details.known.
+  const data = await referenceService.getStepGrammar(
+    req.solutionContext, req.params.idOrSlug, req.query.coverage);
+  const covMeta = { coverage: data.coverage ?? null, coverageSource: data.coverageSource ?? null };
   if (!data.available) {
-    return res.json({ success: true, data: null, meta: { grammarAvailable: false } });
+    return res.json({ success: true, data: null, meta: { grammarAvailable: false, ...covMeta } });
   }
-  res.json({ success: true, data, meta: { grammarAvailable: true } });
+  res.json({ success: true, data, meta: { grammarAvailable: true, ...covMeta } });
 });
 
 /**
@@ -395,6 +469,12 @@ module.exports = {
   getCategories,
   getMeta,
   getTriggerEvents,
+  listTriggers,
+  getTrigger,
+  listErrorCodes,
+  getErrorCode,
+  listFeatureVersions,
+  listConstants,
   listSteps,
   getStepLangs,
   getStepGrammar,

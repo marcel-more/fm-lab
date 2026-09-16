@@ -1,10 +1,11 @@
 {
   "manifest": {
     "title": "被注释掉的 Layout 计算公式",
-    "description": "Layout 质量规则 — Layout 对象的隐藏、工具提示或标签计算公式整体是一段注释。公式永远不会被求值，预期行为被悄悄禁用。\n\n基于 fmCheckMate 检查“Broken Calculation /*Commented Out*/” — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+    "description": "Layout 质量规则 — Layout 对象的隐藏、字段输入、工具提示或标签计算公式整体是一段注释。公式永远不会被求值，预期行为被悄悄禁用。\n\n基于 fmCheckMate 检查“Broken Calculation /*Commented Out*/” — https://github.com/mrwatson-de/fmCheckMate-XSLT",
     "messages.hide": "隐藏计算公式已被完全注释掉",
     "messages.tooltip": "工具提示计算公式已被完全注释掉",
-    "messages.label": "标签计算公式已被完全注释掉"
+    "messages.label": "标签计算公式已被完全注释掉",
+    "messages.entry": "字段输入计算公式已被完全注释掉"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "结果数",
@@ -22,6 +23,7 @@
     "calc_slot_filter.props.options[1].label": "隐藏",
     "calc_slot_filter.props.options[2].label": "工具提示",
     "calc_slot_filter.props.options[3].label": "标签",
+    "calc_slot_filter.props.options[4].label": "字段输入",
     "object_type_select.props.label": "对象类型",
     "object_type_select.props.emptyOptionLabel": "所有对象类型",
     "findings_table.props.columns[7].label": "宽度",

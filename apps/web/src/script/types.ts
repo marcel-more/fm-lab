@@ -33,6 +33,8 @@ export interface ScriptRef {
   functionId?: number;
   functionCanonical?: string;
   functionSubParameter?: string;
+  /** Ungeteilter kanonischer Name = Katalog-Identität, z.B. 'Get(FileName)'. */
+  functionCanonicalFull?: string;
   functionDisplayName?: string;
   functionSignature?: string;
   functionPurpose?: string;

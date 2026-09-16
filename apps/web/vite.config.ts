@@ -8,6 +8,11 @@ import { fileURLToPath } from 'node:url';
 // *tatsächlich gebaute* Frontend-Version zeigt (wahrheitsgetreu zum laufenden
 // Build, nicht nur die im Manifest gespiegelte Repo-Version). Ermöglicht später
 // eine Drift-Anzeige „Bundle ≠ Manifest = Frontend nicht neu gebaut".
+// Repo-Root (zwei Ebenen über apps/web) — Anker für die Watch-Excludes der
+// GB-Datenverzeichnisse, damit gleichnamige Quellordner (z. B. src/docs/) NICHT
+// mit ausgeschlossen werden.
+const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
+
 const pkg = JSON.parse(
   readFileSync(fileURLToPath(new URL('./package.json', import.meta.url)), 'utf-8'),
 );
@@ -49,21 +54,21 @@ export default defineConfig({
     // FS-Watcher entlasten (Docker-Desktop-Stabilität auf macOS, s. .vscode/
     // settings.json). Vite-Root ist apps/web, daher sieht der Dev-Server die
     // GB-Datenverzeichnisse im Repo-Root normalerweise gar nicht — diese Liste
-    // ist defensiv (deckt dist/.vite + den Fall „Vite vom Repo-Root gestartet"):
+    // ist defensiv (deckt dist/.vite + den Fall „Vite vom Repo-Root gestartet").
+    // Die Datenverzeichnisse sind ABSOLUT auf den Repo-Root verankert: ein
+    // nacktes `**/docs/**` schloss auch `src/docs/` aus — Änderungen an der
+    // DocsEntryView wurden dann nie invalidiert (Vite servierte den alten
+    // Transform bis zum Neustart).
     watch: {
       ignored: [
         '**/node_modules/**',
         '**/.git/**',
         '**/dist/**',
         '**/.vite/**',
-        '**/db/**',
-        '**/output/**',
-        '**/logs/**',
-        '**/.fmlab/**',
-        '**/xml/**',
-        '**/docs/**',
-        '**/_Backup/**',
         '**/*.duckdb',
+        ...['db', 'output', 'logs', '.fmlab', 'xml', 'docs', '_Backup'].map(
+          (dir) => `${repoRoot}${dir}/**`,
+        ),
       ],
     },
     // open nur lokal auf dem Host sinnvoll; im Container (kein Browser) leise aus.

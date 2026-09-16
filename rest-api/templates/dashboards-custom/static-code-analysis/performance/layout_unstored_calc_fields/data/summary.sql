@@ -4,6 +4,7 @@
 --   across how many files, and the worst single-layout count. The per-view counts back the
 --   clickable Form/List/Table KPIs and ignore the 'view' filter so they always show totals.
 -- @params: file (optional)
+--   Scope: file filter + S-Block on the layout UUID — keep in sync with data/findings.sql.
 WITH unstored AS (
     SELECT Field_UUID, File_Name
     FROM FieldsForTables
@@ -17,6 +18,8 @@ per_layout AS (
     JOIN Layouts l  ON l.L_UUID = ol.Source_UUID AND l.File_Name = ol.Source_File
     WHERE ol.Link_Role = 'displays_field'
       AND (getvariable('file') IS NULL OR l.File_Name = getvariable('file'))
+      AND (getvariable('scope_uuids') IS NULL
+           OR l.L_UUID IN (SELECT unnest(string_split(getvariable('scope_uuids'), ','))))
     GROUP BY l.File_Name, l.L_UUID, l.Default_View
     HAVING COUNT(DISTINCT ol.Target_UUID || '|' || COALESCE(ol.Target_File, '')) > 0
 )

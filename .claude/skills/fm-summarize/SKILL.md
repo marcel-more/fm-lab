@@ -236,6 +236,7 @@ Print the Markdown summary in chat. Do NOT write a file.
 - **No speculation**: If the data is incomplete, note that honestly instead of guessing.
 - **Read vs. write**: This skill only reads. Never execute UPDATE/INSERT/DELETE on the database.
 - **Order of actions**: identification → confirmation (if ambiguous) → type-specific queries → dependencies → output. Do not cut corners.
+- **Error-code literals**: in the flow of a script, resolve numeric literals compared with `Get(LastError)` to their documented meaning via `reference/fm_spec.duckdb` → `error_codes` (`WHERE n BETWEEN code_from AND code_to`; fm_spec ≥ 2.8.0 — leave the number alone if the table is missing).
 - **Analysis Tests & patterns**: If the user's real question is "is something wrong with this object?" (or a symptom like "hangs"/"slow"), a curated Analysis Test may serve them better than a description — mention `fm-test` (and the patterns in `docs/agents/analysis-patterns.md`) as a follow-up option after the summary.
 
 ## Examples

@@ -21,15 +21,16 @@ Summary block for the reference database: schema version, FileMaker coverage, en
 {
   "success": true,
   "data": {
-    "referenceMeta": { "schema_version": "1.17.1", "filemaker_coverage": "22", "built_at": "…", "source_commit": "…" },
-    "counts": { "scriptSteps": 207, "functions": 367, "stepLocales": 11, "functionLocales": 10, "grammarSteps": 207 },
+    "referenceMeta": { "schema_version": "2.3.0", "filemaker_coverage": "22", "shape_coverages": "22,26", "doc_coverage": "26", "built_at": "…", "source_commit": "…" },
+    "coverages": [ { "coverage": "22", "pairedVersion": "22.0.6", "saxmlVersion": "2.2.3.0", "isBase": true }, { "coverage": "26", "pairedVersion": "26.0.2", "saxmlVersion": "2.3.0.0", "isBase": false } ],
+    "counts": { "scriptSteps": 216, "functions": 375, "stepLocales": 11, "functionLocales": 10, "grammarSteps": 216 },
     "locales": [ { "code": "de", "steps": 206, "functions": 367, "stepParameters": 690 } ],
     "grammarAvailable": true
   }
 }
 ```
 
-Older reference builds without grammar tables degrade gracefully (`grammarAvailable: false`). The same tolerance applies inside the grammar payload: blocks added by newer fm-spec schema versions simply come back empty/`null` on older builds (see the grammar endpoint below).
+`coverages[]` lists the shape coverages of the build, base first ([coverages](../../schema/fm-spec-tables/coverages.md), fm-spec ≥ 2.0.0; empty on older builds). Older reference builds without grammar tables degrade gracefully (`grammarAvailable: false`). The same tolerance applies inside the grammar payload: blocks added by newer fm-spec schema versions simply come back empty/`null` on older builds (see the grammar endpoint below).
 
 ## GET /api/reference/categories
 
@@ -82,17 +83,25 @@ Detail view of a single step. `idOrSlug` accepts the numeric `step_id`, the URL 
 | `lang` | string | `en` | Display language |
 | `content` | enum | `meta` | `meta` (DB only) · `summary` (adds help lookup) · `full` (adds `embedHtml` fragment) |
 
-Response includes localized name/description, `parameters[]` (`index`, `name`, `description`), category, `compat` (same tri-state platform object as in the list route), `osAffinity[]` — the curated [step_os_affinity](../../schema/fm-spec-tables/step_os_affinity.md) entries (`os`, `affinity`, `provenance`, `note`; empty on reference builds older than fm-spec schema 1.13.0) — and help URLs. `meta.source` reports where content came from (`db`, `html-cache:<lang>`, `html-cache:fallback:<lang>`, `db-only`).
+Response includes localized name/description, `parameters[]` (`index`, `name`, `description`), category, `compat` (same tri-state platform object as in the list route), `osAffinity[]` — the curated [step_os_affinity](../../schema/fm-spec-tables/step_os_affinity.md) entries (`os`, `affinity`, `provenance`, `note`; empty on reference builds older than fm-spec schema 1.13.0) — help URLs and `docsEntry`. `docsEntry` is the step's page in the docs browser (`{ set: "claris-help", category: "ss:<categoryId>", entry: "ss:<stepId>" }`, i.e. `/docs/claris-help/ss:4/ss:160`); it is `null` unless the [Doc Set claris-help](../../docsets/Doc%20Set%20claris-help.md) is installed **and** the help mirror holds the page in at least one language, so a client can render the cross-link only when the target exists. `meta.source` reports where content came from (`db`, `html-cache:<lang>`, `html-cache:fallback:<lang>`, `db-only`).
 
 Errors: `404 REF_STEP_NOT_FOUND` (with suggestions), `400 VALIDATION_ERROR` for an invalid `content` value.
 
 ## GET /api/reference/steps/:idOrSlug/langs
 
-All localized variants of one step across every available language, each with its localized parameter list, plus the language-neutral `compat` object and `osAffinity[]` (see the detail route). No `lang` parameter — always returns everything.
+All localized variants of one step across every available language, each with its localized parameter list, plus the language-neutral `compat` object, `osAffinity[]` and `docsEntry` (see the detail route). No `lang` parameter — always returns everything.
 
 ## GET /api/reference/steps/:idOrSlug/grammar
 
-XML grammar for snippet generation: snippet template, SaXML example, element order, options with allowed values, and constraints. Newer reference builds add further grammar blocks — `repeatGroups[]` (fm-spec ≥ 1.15.0), `skeletonElements[]`, `elementBindings[]`, `optionImplications[]` and per-constraint consumer notes (≥ 1.17.0); on older builds these degrade to empty arrays / `null` instead of erroring. Details of the underlying tables: [step_repeat_groups](../../schema/fm-spec-tables/step_repeat_groups.md), [step_skeleton_elements](../../schema/fm-spec-tables/step_skeleton_elements.md), [step_option_element_bindings](../../schema/fm-spec-tables/step_option_element_bindings.md), [step_option_implications](../../schema/fm-spec-tables/step_option_implications.md), [constraint_kinds](../../schema/fm-spec-tables/constraint_kinds.md).
+XML grammar for snippet generation: snippet template, SaXML example, element order, options with allowed values, and constraints. Newer reference builds add further grammar blocks — `repeatGroups[]` (fm-spec ≥ 1.15.0), `skeletonElements[]`, `elementBindings[]`, `optionImplications[]` and per-constraint consumer notes (≥ 1.17.0), `mirrorElements[]` and the `pasteDropped` flag on option rows (≥ 2.6.0); on older builds these degrade to empty arrays / `null` / `false` instead of erroring. Details of the underlying tables: [step_repeat_groups](../../schema/fm-spec-tables/step_repeat_groups.md), [step_skeleton_elements](../../schema/fm-spec-tables/step_skeleton_elements.md), [step_option_element_bindings](../../schema/fm-spec-tables/step_option_element_bindings.md), [step_option_implications](../../schema/fm-spec-tables/step_option_implications.md), [step_mirror_elements](../../schema/fm-spec-tables/step_mirror_elements.md), [constraint_kinds](../../schema/fm-spec-tables/constraint_kinds.md).
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `coverage` | string | base coverage | Shape coverage to resolve the grammar for (fm-spec ≥ 2.0.0, e.g. `26`). Must be one of the build's coverages; an unknown value is `400 REF_COVERAGE_INVALID` with `details.known[]`. Ignored (and refused when given) on builds without shape coverages. |
+
+The grammar is **resolved** for one coverage ([Coverage resolution](../../schema/Coverage%20resolution.md)): rows of the requested coverage replace the standard rows of the same key, everything else is the standard shape. `data.coverage` and `meta.coverage` name the resolved coverage, `coverageSource` how it was chosen (`query`, `base`, or `none` on an unversioned build), `coverages[]` the build's coverages and `overrideCoverages[]` the coverages that carry override rows for this step. Every row of `xmlMap`, `options[]` (and their `values[]`), `repeatGroups[]`, `skeletonElements[]` and `elementBindings[]` carries `coverage` — `"*"` for a standard row, the coverage for an override.
+
+Option rows also carry `slotKind` (value form of a target slot: `field_only`, `field_or_var`, `variable_only`; fm-spec ≥ 2.2.0, `null` when not curated per option) and `xmlTrue`/`xmlFalse` (the XML spellings of a boolean attribute when they are not `True`/`False`; `null` otherwise); `xmlMap.targetSlotKind` is the step-level classification.
 
 A valid step **without** grammar data returns `200` with `data: null` and `meta.grammarAvailable: false` — not a 404. Language-neutral.
 
@@ -108,11 +117,11 @@ Complete function list for one language.
 |---|---|---|---|
 | `lang` | string | `en` | Function display language |
 
-Response: `data.functions[]` with `functionId`, `name` (canonical), `opcode`, `returnType`, `isGetFunction`, `displayName`, `signature`, `purpose`, `platformAffinity[]`, category and help URLs. `platformAffinity` lists the curated [function_platform_affinity](../../schema/fm-spec-tables/function_platform_affinity.md) entries (`platform`, `affinity`) — platform *binding*, not compatibility; empty for most functions and on reference builds without the table.
+Response: `data.functions[]` with `functionId`, `name` (canonical), `opcode`, `returnType`, `originVersion`, `removedInVersion` (first FileMaker version that no longer resolves the function — [functions](../../schema/fm-spec-tables/functions.md) `removed_in_version`, fm-spec ≥ 2.2.0; `null` otherwise), `isGetFunction`, `displayName`, `signature`, `purpose`, `platformAffinity[]`, category and help URLs. `platformAffinity` lists the curated [function_platform_affinity](../../schema/fm-spec-tables/function_platform_affinity.md) entries (`platform`, `affinity`) — platform *binding*, not compatibility; empty for most functions and on reference builds without the table.
 
 ## GET /api/reference/functions/:nameOrId
 
-Detail view of a single function. `nameOrId` accepts the numeric `function_id`, the canonical name, or the URL slug. Same `lang`/`content` semantics as the step detail route; response additionally includes `notes`, `example1`, `parameters[]` with `optional`/`variadic` flags, `platformAffinity[]` (here with `provenance` and the evidence `note` per entry) and `osAffinity[]` — the curated [function_os_affinity](../../schema/fm-spec-tables/function_os_affinity.md) entries (`os`, `affinity`, `provenance`, `note`; `os` is `null` on `os_probe` rows). `osAffinity` is empty for most functions and on reference builds older than fm-spec schema 1.13.0. Errors: `404 REF_FUNCTION_NOT_FOUND` (with suggestions).
+Detail view of a single function. `nameOrId` accepts the numeric `function_id`, the canonical name, or the URL slug. Same `lang`/`content` semantics as the step detail route; response additionally includes `notes`, `example1`, `parameters[]` with `optional`/`variadic` flags, `platformAffinity[]` (here with `provenance` and the evidence `note` per entry) and `osAffinity[]` — the curated [function_os_affinity](../../schema/fm-spec-tables/function_os_affinity.md) entries (`os`, `affinity`, `provenance`, `note`; `os` is `null` on `os_probe` rows). `osAffinity` is empty for most functions and on reference builds older than fm-spec schema 1.13.0. `docsEntry` names the function's docs-browser page (`fn:<categoryId>` / `fn:<functionId>`) under the same existence rule as for steps. Errors: `404 REF_FUNCTION_NOT_FOUND` (with suggestions).
 
 ## GET /api/reference/functions/:nameOrId/embed
 

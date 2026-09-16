@@ -43,6 +43,16 @@ const FunctionRefSpan: React.FC<RefSpanProps & { className: string; navPath: str
     ? `${apiBase}${reference.functionLocalHelpUrl}`
     : reference.functionHelpUrl;
 
+  // Popover-Titel: genau eine Sprachfassung — siehe FunctionTokenSpan, dieselbe
+  // Herleitung. Bei einem Get-Parameter trägt der lokalisierte Anzeigename die
+  // Signatur bereits vollständig; der SubParameter-Anhang (immer kanonisch
+  // englisch) bleibt nur als Fallback ohne lokalisierten Namen.
+  const canonicalName = reference.functionCanonicalFull || reference.functionCanonical;
+  const popoverTitle = reference.functionDisplayName
+    || `${reference.functionCanonical ?? reference.name}${reference.functionSubParameter ? ` ( ${reference.functionSubParameter} )` : ''}`;
+  const norm = (v: string) => v.replace(/\s+/g, '').toLowerCase();
+  const sameAsTitle = (v: string) => norm(v) === norm(popoverTitle);
+
   const clickable = !!navPath;
   const handleClick = () => {
     if (navPath) navigate(navPath);
@@ -70,15 +80,12 @@ const FunctionRefSpan: React.FC<RefSpanProps & { className: string; navPath: str
           onMouseLeave={cancelHover}
         >
           <span className="fm-stepname-popover-header">
-            <strong>
-              {reference.functionDisplayName || reference.functionCanonical}
-              {reference.functionSubParameter && ` ( ${reference.functionSubParameter} )`}
-            </strong>
+            <strong>{popoverTitle}</strong>
             {reference.functionReturnType && (
               <span className="fm-stepname-popover-canonical"> → {reference.functionReturnType}</span>
             )}
           </span>
-          {reference.functionSignature && (
+          {reference.functionSignature && !sameAsTitle(reference.functionSignature) && (
             <code className="fm-stepname-popover-canonical" style={{ display: 'block', padding: '0.2rem 0.4rem' }}>
               {reference.functionSignature}
             </code>
@@ -96,10 +103,9 @@ const FunctionRefSpan: React.FC<RefSpanProps & { className: string; navPath: str
               {reference.functionLocalHelpUrl ? t('detail:helpLinks.openLocalClarisHelp') : t('detail:helpLinks.openOnlineClarisHelp')}
             </a>
           )}
-          {reference.functionCanonical && reference.functionDisplayName
-            && reference.functionCanonical !== reference.functionDisplayName && (
+          {canonicalName && !sameAsTitle(canonicalName) && (
             <span className="fm-stepname-popover-canonical">
-              {t('detail:helpLinks.canonical')} {reference.functionCanonical}
+              {t('detail:helpLinks.canonical')} {canonicalName}
             </span>
           )}
         </PopoverPortal>

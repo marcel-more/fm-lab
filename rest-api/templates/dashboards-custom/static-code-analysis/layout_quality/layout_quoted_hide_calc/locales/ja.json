@@ -1,21 +1,23 @@
 {
   "manifest": {
-    "title": "引用符で囲まれた非表示条件",
-    "description": "Layout 品質ルール — オブジェクトの非表示条件が引用符で囲まれた 1 つの文字列リテラルです。数式が引用符ごと貼り付けられた可能性が高く、計算式ではなく定数として扱われます。\n\nfmCheckMate チェック「ReportBrokenCalculationQuoted」 — https://github.com/mrwatson-de/fmCheckMate-XSLT",
-    "messages.quoted": "非表示条件が引用符付きの文字列定数であり、計算式ではありません"
+    "title": "引用符で囲まれた非表示条件またはフィールド入力条件",
+    "description": "Layout 品質ルール — オブジェクトの非表示条件またはフィールド入力条件が引用符で囲まれた 1 つの文字列リテラルです。数式が引用符ごと貼り付けられた可能性が高く、計算式ではなく定数として扱われます。\n\nfmCheckMate チェック「ReportBrokenCalculationQuoted」 — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+    "messages.quoted": "非表示条件が引用符付きの文字列定数であり、計算式ではありません",
+    "messages.quoted_entry": "フィールド入力条件が引用符付きの文字列定数であり、計算式ではありません"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "検出数",
     "summary_kpi.props.items[1].label": "対象 Layout 数",
     "summary_kpi.props.items[2].label": "対象ファイル数",
-    "findings_card.props.title": "引用符で囲まれた非表示条件",
+    "findings_card.props.title": "引用符で囲まれた非表示条件またはフィールド入力条件",
     "findings_table.props.searchPlaceholder": "ファイル、Layout、オブジェクトを検索…",
-    "findings_table.props.empty.message": "引用符で囲まれた非表示条件は見つかりませんでした。",
+    "findings_table.props.empty.message": "引用符で囲まれた非表示条件またはフィールド入力条件は見つかりませんでした。",
     "findings_table.props.columns[0].label": "ファイル",
     "findings_table.props.columns[1].label": "Layout",
     "findings_table.props.columns[2].label": "オブジェクトタイプ",
     "findings_table.props.columns[3].label": "オブジェクト",
-    "findings_table.props.columns[6].label": "幅",
-    "findings_table.props.columns[7].label": "高さ"
+    "findings_table.props.columns[4].label": "スロット",
+    "findings_table.props.columns[7].label": "幅",
+    "findings_table.props.columns[8].label": "高さ"
   }
 }

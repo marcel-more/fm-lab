@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { fetchObjectDetails, type ObjectDetailsMeta } from '../api/detailsApi';
+import { useApiLang } from './useApiLang';
 
 interface UseObjectDetailsResult {
   data: Array<Record<string, unknown>> | null;
@@ -9,9 +10,12 @@ interface UseObjectDetailsResult {
   retry: () => void;
 }
 
-// Session-scoped cache. Key = `details:${uuid}::${file ?? ''}` — Klon-
+// Session-scoped cache. Key = `details:${uuid}::${file ?? ''}::${lang}` — Klon-
 // Disambiguierung: geteilte UUIDs aus verschiedenen Dateien dürfen sich den
-// Detail-Cache nicht teilen (sonst mischt der Detail-Inhalt zwei Klone).
+// Detail-Cache nicht teilen (sonst mischt der Detail-Inhalt zwei Klone). Die
+// Sprache gehört in den Schlüssel, weil der Detail-Inhalt sie trägt (die
+// lokalisierte Schreibweise neben dem Katalognamen) — ohne sie bliebe nach
+// einem Sprachwechsel der zuerst geladene Name stehen.
 const cache = new Map<string, { data: Array<Record<string, unknown>>; meta: ObjectDetailsMeta }>();
 
 /**
@@ -31,11 +35,12 @@ export const useObjectDetails = (
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isFetchingRef = useRef(false);
+  const lang = useApiLang();
 
   const fetchData = useCallback(async () => {
     if (!uuid || isFetchingRef.current) return;
 
-    const cacheKey = `details:${uuid}::${file ?? ''}`;
+    const cacheKey = `details:${uuid}::${file ?? ''}::${lang}`;
     const cached = cache.get(cacheKey);
     if (cached) {
       setData(cached.data);
@@ -50,7 +55,7 @@ export const useObjectDetails = (
     setError(null);
 
     try {
-      const response = await fetchObjectDetails(uuid, file);
+      const response = await fetchObjectDetails(uuid, file, lang);
       const resultMeta = response.meta || {};
       cache.set(cacheKey, { data: response.data, meta: resultMeta });
       setData(response.data);
@@ -62,7 +67,10 @@ export const useObjectDetails = (
       isFetchingRef.current = false;
       setLoading(false);
     }
-  }, [uuid, file]);
+    // `lang` MUSS in der Liste stehen: ohne sie wird fetchData beim
+    // Sprachwechsel nicht neu erzeugt, der Effekt unten feuert nicht und der
+    // zuerst geladene Name bleibt stehen — der Sprachwechsel wäre unwirksam.
+  }, [uuid, file, lang]);
 
   useEffect(() => {
     if (uuid) {

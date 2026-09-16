@@ -348,6 +348,17 @@ FROM (VALUES
 ) AS m(localized, canonical)
 WHERE lp.Part_Type = m.localized;
 
+-- Kind-basierte Kanonisierung (Schema 1.29.0): FileMaker ≤ 22 exportiert JEDEN
+-- kind=5-Part (Trailing Sub-summary) mit @type „Trailing Grand Summary" (Claris-
+-- Mislabel; die echte Trailing Grand Summary ist kind=6); FileMaker 26 schreibt
+-- den korrekten Typ. Part_Type und damit der ObjectCatalog-Name folgen dem
+-- kind, der Rohwert bleibt in Definition_Type/@type der Quelle erhalten.
+-- Korpus-Beleg: 273 Parts in einer 57-Datei-Lösung (22: Mislabel, 26: korrekt).
+UPDATE LayoutParts
+SET Part_Type = 'Trailing Sub-summary'
+WHERE Part_Kind = 5
+  AND Part_Type IS DISTINCT FROM 'Trailing Sub-summary';
+
 -- Relationship-Prädikatfelder (left_field/right_field): die Join-Feld-UUID im
 -- RelationshipCatalog ist ebenfalls kontext-synthetisch (das Feld wird über die Seiten-TO
 -- referenziert). Über den mitgelieferten Feld-TO-Kontext (Left/Right_Field_TO_UUID) +
@@ -438,6 +449,180 @@ WHERE ovl.Secondary_Field_UUID IS NOT NULL
 -- Referenzen direkt aus XMLStepReferences gelesen). Hier statt in P2, weil der P2-Merge
 -- (CREATE TABLE AS … LIMIT 0) keine Indizes der Slice-DBs überträgt.
 CREATE INDEX IF NOT EXISTS idx_xmlstepref_step ON XMLStepReferences(Step_UUID);
+
+-- ############################################################
+-- Phase A9: Built-in-Funktions-Identität (Konverter 2.29.0)
+-- ############################################################
+-- Ein Built-in bekam seine Katalog-Identität bisher aus dem Namen, WIE ER IN DER
+-- FORMEL STEHT — md5('BuiltinFunction::' || <Token>), ungeprüft und
+-- unkanonisiert. Weil FileMaker Get-Parameter im DDR LOKALISIERT schreibt und
+-- den Sub-Parameter zusätzlich als eigenen FunctionRef-Chunk ablegt, zerfiel ein
+-- einziger FileMaker-Get-Parameter damit in bis zu drei Katalogobjekte —
+-- 'Get(PageNumber)', 'Get(Seitennummer)' und der nackte 'Seitennummer': drei
+-- Antworten auf eine Where-used-Frage, und die Docset-Referenz traf nur den
+-- nackten Knoten.
+--
+-- Identitätsschlüssel ist daher der KANONISCHE ENGLISCHE NAME der
+-- Standard-Referenz — NICHT der Token und NICHT die function_id: die Referenz
+-- erklärt canonical_name selbst zum stabilen Lookup-Schlüssel, während
+-- function_id dort ein reiner PK ohne Stabilitätszusage ist (ein Referenz-
+-- Rebuild, der umnummeriert, verschöbe sonst SÄMTLICHE Built-in-UUIDs). Die
+-- UUID-Formel bleibt damit die bisherige, sie bekommt nur einen kanonisierten
+-- Eingang — weshalb jeder Knoten, dessen Token schon kanonisch englisch war,
+-- seine UUID BEHÄLT (gemessen: coverage-26 348 von 516, eine Produktivlösung
+-- 128 von 267).
+--
+-- Zweistufig: ein Token, den die Referenz nicht kennt, behält die heutige
+-- namensbasierte Identität — kein Informationsverlust, kein „unbekannt"-
+-- Sammelknoten. Dieser Rest ist klein und größtenteils gar keine Funktion:
+-- 'Get' selbst (der nackte Token dynamischer Aufrufe Get($var); die Referenz
+-- kennt keinen Eintrag 'Get'), die Keyword-/Konstanten-Tokens True/False/
+-- and/or/not/Bold, die JSON-Typkonstanten JSONArray/JSONString/… und
+-- Funktionen, die NEUER sind als die Referenz. Ob Konstanten und Operatoren
+-- überhaupt BuiltinFunction-Objekte sein sollten, ist eine eigene Frage.
+--
+-- Die Auflösung ist NAMENSRAUM-BEWUSST — die Referenz kennt genau eine
+-- mehrdeutige Schreibweise (italienisch 'NomeScript' = Design-Funktion
+-- ScriptNames UND Get-Parameter ScriptName), über den Namensraum ist sie
+-- kontextfrei eindeutig:
+--   * Sub-Parameter eines Get(…)-Paares → NUR der Get-Namensraum
+--   * freier Funktions-Token            → Funktions-Namensraum, sonst
+--                                         Get-Namensraum
+-- Der zweite Zweig ist der, der die konsumierte nackte Sub-Parameter-Zeile
+-- ('Seitennummer' ohne 'Get'-Zwilling) auf denselben Knoten kollabieren lässt.
+-- Er rettet zusätzlich die Fälle, in denen die Get-Paarung in P2 gar nicht
+-- zustande kam, weil zwischen Parameter und schließender Klammer ein
+-- Comment-Chunk steht — diese Knoten haben keinen Get-Zwilling und wären ohne
+-- den Fallback die einzigen unnormalisierten Get-Parameter.
+--
+-- Abbildungsquelle ist der committete Seed sql/generated/design_functions_seed.sql
+-- (Tabellen DesignFunctionNames + GetParameterNames, je mit Function_ID UND
+-- Canonical_Name, alle Referenzsprachen), den run_phase2() in DERSELBEN
+-- DuckDB-Session ausführt — der Import hängt die Referenz-DB nie an. Ohne Seed
+-- entstünde ein äußerlich unauffälliger Katalog mit namensbasiertem
+-- Identitätsschema; der Preflight in convert_fm_xml.sh bricht deshalb VOR P1
+-- ab, wenn der Seed fehlt. Die CREATE-IF-NOT-EXISTS-Hüllen unten halten die
+-- Datei allein lauffähig (Einzelaufruf per duckdb -f), sie sind KEIN
+-- Degradationspfad des Imports.
+--
+-- P4 arbeitet auf DEKODIERTEN Namen (ObjectCatalog.Object_Name trägt echte
+-- Umlaute) — der Join gegen den Seed braucht kein Name_XML. Das ist der
+-- Unterschied zum P1c-Retype, der auf Chunk-Rohtext läuft und Name_XML
+-- unverändert braucht. Die beiden Ebenen nicht verwechseln.
+
+CREATE TABLE IF NOT EXISTS DesignFunctionNames (
+    Function_ID    INTEGER,
+    Canonical_Name VARCHAR,
+    Category       VARCHAR,
+    Language       VARCHAR,
+    Name           VARCHAR,
+    Name_XML       VARCHAR
+);
+CREATE TABLE IF NOT EXISTS GetParameterNames (
+    Function_ID    INTEGER,
+    Canonical_Name VARCHAR,
+    Source         VARCHAR,
+    Name           VARCHAR
+);
+
+-- Die Identitätsformel — EINMAL, nicht an fünf Aufrufstellen. Eingang ist das
+-- aufgelöste Paar (Name, Namensraum): 'Get::<Parameter>' für den
+-- Get-Namensraum, der nackte Name für den Funktions-Namensraum. Genau die
+-- bisherige Formel, nur mit kanonisiertem Eingang — beim Namens-Fallback steht
+-- der Roh-Token drin und die UUID ist bit-identisch zu vorher.
+CREATE OR REPLACE MACRO fm_builtin_uuid(id_name, id_is_get) AS (
+    md5('BuiltinFunction::' || CASE WHEN id_is_get THEN 'Get::' || id_name
+                                    ELSE id_name END)
+);
+CREATE OR REPLACE MACRO fm_builtin_name(id_name, id_is_get) AS (
+    CASE WHEN id_is_get THEN 'Get(' || id_name || ')' ELSE id_name END
+);
+
+-- Namensmenge beider Namensräume, auf den Vergleichsschlüssel lower(Name)
+-- normalisiert. Der Seed-Generator garantiert JE NAMENSRAUM, dass eine
+-- Schreibweise auf genau eine Funktion zeigt (Invariante rc 3) — das min() ist
+-- nur Determinismus bei Case-Varianten derselben Funktion, keine Auswahl
+-- zwischen Kandidaten. Doppelte Verwendung: Auflösungsquelle der Formel-Tokens
+-- (unten) UND Gültigkeits-Gate der Layout-Symbole (Blöcke weiter unten) — ein
+-- Symbol {{X}} ist laut Claris-Doku der Wert von Get(X) zur Anzeigezeit.
+CREATE OR REPLACE TEMP TABLE _builtin_canon AS
+SELECT 'function' AS Namespace, lower(Name) AS Name_Norm,
+       min(Canonical_Name) AS Canonical_Name, min(Function_ID) AS Function_ID
+FROM DesignFunctionNames
+WHERE Name IS NOT NULL AND Name != ''
+GROUP BY 1, 2
+UNION ALL
+SELECT 'getparameter', lower(Name), min(Canonical_Name), min(Function_ID)
+FROM GetParameterNames
+WHERE Name IS NOT NULL AND Name != ''
+GROUP BY 1, 2;
+
+-- Auflösung je vorkommender Token-FORM — einmal für alle Formel-Aufrufstellen
+-- (Katalog-Block 25, calls_function-Block 33, Calculation-Spiegel (2c)).
+-- Schlüssel ist die BISHERIGE Identitätszeichenkette ('Get::<Sub>' bzw. der
+-- nackte Token), die jede Aufrufstelle ohnehin schon bildet: die Tabelle ist
+-- damit die Abbildung ALT → NEU, und die Aufrufstellen bleiben ein Equi-Join
+-- auf eine kleine Tabelle (eine Zeile je Token-Form, nicht je Vorkommen).
+--
+-- PERSISTENT, nicht TEMP: eine der Aufrufstellen ist der Calculation-Spiegel
+-- in der VIEW v_calculation_links — eine View über Session-Zustand wäre nach
+-- dem Import kaputt. Nebennutzen: die Tabelle macht nachträglich prüfbar, WIE
+-- ein konkreter Token aufgelöst wurde (Canonical_Name/Namespace gefüllt) oder
+-- dass er auf den Namens-Fallback lief (beide NULL).
+CREATE OR REPLACE TABLE BuiltinTokenResolution AS
+WITH tok AS (
+    SELECT DISTINCT
+        CASE WHEN Ref_Name = 'Get' AND Ref_SubName IS NOT NULL
+             THEN Ref_Name || '::' || Ref_SubName
+             ELSE Ref_Name END                             AS Token_Key,
+        CASE WHEN Ref_Name = 'Get' AND Ref_SubName IS NOT NULL
+             THEN Ref_SubName
+             ELSE Ref_Name END                             AS Token,
+        (Ref_Name = 'Get' AND Ref_SubName IS NOT NULL)     AS Is_Get_Pair
+    FROM XMLCalcReferences
+    WHERE Ref_Type = 'function'
+      AND Ref_Name IS NOT NULL
+      AND Ref_Name != ''
+),
+resolved AS (
+    SELECT
+        t.Token_Key, t.Token, t.Is_Get_Pair,
+        CASE WHEN t.Is_Get_Pair THEN g.Canonical_Name
+             ELSE COALESCE(f.Canonical_Name, g.Canonical_Name) END AS Canonical_Name,
+        CASE WHEN t.Is_Get_Pair THEN g.Function_ID
+             ELSE COALESCE(f.Function_ID, g.Function_ID) END       AS Function_ID,
+        -- Namensraum des Treffers: beim Paar immer Get, beim freien Token nur
+        -- dann, wenn der Funktions-Namensraum NICHT gegriffen hat
+        CASE WHEN t.Is_Get_Pair THEN TRUE
+             ELSE f.Canonical_Name IS NULL END                     AS Canon_Is_Get
+    FROM tok t
+    LEFT JOIN _builtin_canon f
+           ON f.Namespace = 'function'
+          AND f.Name_Norm = lower(t.Token)
+          AND NOT t.Is_Get_Pair
+    LEFT JOIN _builtin_canon g
+           ON g.Namespace = 'getparameter'
+          AND g.Name_Norm = lower(t.Token)
+),
+id AS (
+    SELECT *,
+           -- aufgelöst: der Namensraum des Treffers · Fallback: die
+           -- STRUKTURELLE Form des Tokens, damit UUID und Name eines nicht
+           -- auflösbaren Tokens bit-identisch zu vorher bleiben
+           CASE WHEN Canonical_Name IS NULL THEN Is_Get_Pair
+                ELSE Canon_Is_Get END AS Id_Is_Get
+    FROM resolved
+)
+SELECT
+    Token_Key,
+    fm_builtin_uuid(COALESCE(Canonical_Name, Token), Id_Is_Get) AS Object_UUID,
+    fm_builtin_name(COALESCE(Canonical_Name, Token), Id_Is_Get) AS Object_Name,
+    Canonical_Name,
+    Function_ID,
+    CASE WHEN Canonical_Name IS NULL THEN NULL
+         WHEN Id_Is_Get THEN 'getparameter'
+         ELSE 'function' END                                      AS Namespace
+FROM id;
 
 -- ############################################################
 -- Phase B: ObjectCatalog
@@ -797,30 +982,23 @@ WHERE subtype = 'Folder'
 UNION ALL
 
 -- 25. BuiltinFunction (synthetisch)
--- Ein Eintrag pro distinct FunctionRef-Token
--- aus XMLCalcReferences (Ref_Type='function'). Built-ins sind lösungs-unabhängig
--- → File_Name = NULL. Bei Get(<SubParameter>) erzeugt jeder SubParameter einen
--- eigenen Eintrag (Object_Name = 'Get(<SubParameter>)'); zusätzlich existiert der
--- nackte 'Get'-Eintrag (Ref_SubName IS NULL).
--- Lokalisierte Token-Schreibweisen erzeugen mehrere Einträge mit unterschiedlicher
--- Object_UUID (Reference-DB-Anreicherung mappt sie zur Query-Zeit auf canonical_name).
+-- Ein Eintrag pro NORMALISIERTER Built-in-Identität (Konverter 2.29.0).
+-- Built-ins sind lösungs-unabhängig → File_Name = NULL. Die Auflösung
+-- Token → kanonischer englischer Name liegt komplett in
+-- BuiltinTokenResolution (Phase A9), deren Zeilenmenge genau aus DIESEM
+-- Filter (XMLCalcReferences, Ref_Type='function') abgeleitet ist — hier bleibt
+-- nur noch die Projektion auf die distinct Knoten. Lokalisierte Schreibweisen
+-- und die konsumierte nackte Sub-Parameter-Zeile fallen dabei auf denselben
+-- Knoten zusammen; der lokalisierte ANZEIGEname bleibt Sache der Anreicherung
+-- (?enrich=<lang>), nicht der Identität.
 SELECT DISTINCT
-    md5('BuiltinFunction::' ||
-        CASE WHEN Ref_Name = 'Get' AND Ref_SubName IS NOT NULL
-             THEN Ref_Name || '::' || Ref_SubName
-             ELSE Ref_Name END
-    ) as Object_UUID,
+    Object_UUID,
     'BuiltinFunction' as Object_Type,
-    CASE WHEN Ref_Name = 'Get' AND Ref_SubName IS NOT NULL
-         THEN 'Get(' || Ref_SubName || ')'
-         ELSE Ref_Name END as Object_Name,
+    Object_Name,
     NULL as File_Name,
     'DDR_Calculations' as Source_Table,
     NULL as Object_ID
-FROM XMLCalcReferences
-WHERE Ref_Type = 'function'
-  AND Ref_Name IS NOT NULL
-  AND Ref_Name != ''
+FROM BuiltinTokenResolution
 
 UNION ALL
 
@@ -948,6 +1126,122 @@ WHERE component_name IS NOT NULL
   AND component_name != '';
 
 -- ========================================
+-- BuiltinFunction aus Layout-Symbolen (Converter 2.28.0)
+-- ========================================
+-- Ein Layout-Symbol {{X}} ist laut Claris-Doku der Wert von Get(X) zur
+-- Anzeigezeit — dieselbe Zielklasse wie ein Get(<Sub>)-Aufruf in einer Formel
+-- (Block 25). BuiltinFunctions werden LAZY registriert: ein Symbol, das in
+-- keiner Formel der Lösung vorkommt, hätte ohne diesen Block kein Ziel und die
+-- displays_symbol-Kante wäre ein Orphan (P6 v_check_orphan_links).
+--
+-- Gate ist die Referenz-Namensmenge GetParameterNames (Seed
+-- sql/generated/design_functions_seed.sql, alle Sprachen): NUR ein Symbol, das
+-- einen echten Get-Parameter benennt, bekommt ein Katalogobjekt. Ein unbekanntes
+-- Symbol rendert zur Laufzeit LITERAL und ist kein Objekt — es zu registrieren
+-- hieße, ein FileMaker-Objekt zu erfinden (sichtbar wird es über die
+-- Analysis-Test-Regel, nicht über den Katalog).
+--
+-- Schreibweise: Symbole sind case-insensitiv tippbar ({{currenttime}} ≡
+-- {{CurrentTime}}) — Symbol_Norm ist der Vergleichsschlüssel. Zielname und
+-- Ziel-UUID kommen seit Konverter 2.29.0 aus derselben Normalisierung wie die
+-- Formel-Tokens (Phase A9): ein lokalisiert getipptes Symbol {{Seitennummer}}
+-- landet auf demselben Knoten 'Get(PageNumber)' wie {{PageNumber}} und wie der
+-- Formel-Aufruf Hole(Seitennummer) — Gate und Identität sind hier per
+-- Konstruktion der Get-Namensraum.
+INSERT INTO ObjectCatalog (Object_UUID, Object_Type, Object_Name, File_Name, Source_Table, Object_ID)
+SELECT DISTINCT
+    fm_builtin_uuid(k.Canonical_Name, TRUE) as Object_UUID,
+    'BuiltinFunction' as Object_Type,
+    fm_builtin_name(k.Canonical_Name, TRUE) as Object_Name,
+    NULL as File_Name,
+    'LayoutObjectSymbols' as Source_Table,
+    NULL as Object_ID
+FROM LayoutObjectSymbols s
+JOIN _builtin_canon k
+  ON k.Namespace = 'getparameter'
+ AND k.Name_Norm = s.Symbol_Norm
+WHERE NOT EXISTS (
+    SELECT 1 FROM ObjectCatalog oc
+    WHERE oc.Object_UUID = fm_builtin_uuid(k.Canonical_Name, TRUE)
+);
+
+-- ========================================
+-- BuiltinFunctionIdentity (Konverter 2.29.0)
+-- ========================================
+-- Der explizite Beleg „dieser Built-in-Knoten IST normalisiert": eine Zeile je
+-- AUFGELÖSTEM Knoten, mit der Referenz-Identität, aus der sein Name und seine
+-- UUID gebildet wurden. Die Zeile wird MITGESCHRIEBEN und nicht aus dem Namen
+-- zurückgerechnet — eine namensbasierte Ableitung im Consumer wäre genau die
+-- vervielfachte Identitätsregel, die diese Umstellung beseitigt. Consumer
+-- schlagen nach, sie rechnen nicht.
+--
+-- Function_ID ist JOIN-SCHLÜSSEL INNERHALB EINES IMPORTS (die Docset-
+-- Referenz-Pill joint darauf statt über den Namen), NICHT Identitätsschlüssel —
+-- deshalb ist ihre Langzeit-Stabilität irrelevant, und deshalb ist sie auch
+-- NICHT in ObjectCatalog.Object_ID überladen: das Feld bedeutet
+-- „FileMaker-interne ID", eine Referenz-function_id ist etwas anderes.
+--
+-- Ein Knoten mit Namens-Fallback bekommt KEINE Zeile — die Abwesenheit ist die
+-- Aussage „nicht auflösbar" und per Anti-Join abfragbar:
+--   SELECT oc.Object_Name FROM ObjectCatalog oc
+--   WHERE oc.Object_Type = 'BuiltinFunction'
+--     AND oc.Object_UUID NOT IN (SELECT Object_UUID FROM BuiltinFunctionIdentity);
+--
+-- Zwei Quellen, weil ein Get-Parameter auch NUR als Layout-Symbol vorkommen
+-- kann (ohne jeden Formel-Aufruf). Semi-Join gegen ObjectCatalog: die Tabelle
+-- kann per Konstruktion keinen Knoten behaupten, den der Katalog nicht trägt.
+-- Object_UUID ist echter PK: canonical_name ↔ function_id ist je Namensraum
+-- 1:1, und die beiden Namensräume überschneiden sich in keinem kanonischen
+-- Namen (Seed-Invariante).
+CREATE OR REPLACE TABLE BuiltinFunctionIdentity AS
+WITH ident AS (
+    SELECT Object_UUID, Function_ID, Canonical_Name, Namespace
+    FROM BuiltinTokenResolution
+    WHERE Canonical_Name IS NOT NULL
+    UNION
+    SELECT DISTINCT
+        fm_builtin_uuid(k.Canonical_Name, TRUE) AS Object_UUID,
+        k.Function_ID,
+        k.Canonical_Name,
+        'getparameter' AS Namespace
+    FROM LayoutObjectSymbols s
+    JOIN _builtin_canon k
+      ON k.Namespace = 'getparameter'
+     AND k.Name_Norm = s.Symbol_Norm
+)
+SELECT i.Object_UUID, i.Function_ID, i.Canonical_Name, i.Namespace
+FROM ident i
+WHERE EXISTS (
+    SELECT 1 FROM ObjectCatalog oc
+    WHERE oc.Object_UUID = i.Object_UUID
+      AND oc.Object_Type = 'BuiltinFunction'
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_builtin_identity_uuid
+    ON BuiltinFunctionIdentity(Object_UUID);
+CREATE INDEX IF NOT EXISTS idx_builtin_identity_fid
+    ON BuiltinFunctionIdentity(Function_ID);
+
+-- Feld-Eingabeformel vs. Ausblendungsformel (Schema 1.31.0): FileMaker legt die
+-- Chunkliste von <CanEntryCalc> unter DEMSELBEN DDR-Schlüssel '_<ObjectUUID>_Hide'
+-- ab wie die der Ausblendungsformel und schreibt bei zwei Formeln nur EINE Liste
+-- (die der Eingabeformel; die Ausblendungs-Chunks fehlen dann ganz — belegt an der
+-- Coverage-Datei, FileMaker 26.0.2). Ohne Unterscheidung landet die Eingabeformel
+-- als „Hide Condition" im Katalog, samt ihrer Feld-/Funktionskanten. Das Makro
+-- entscheidet anhand des rekonstruierten Chunk-Textes, zu welchem Slot der Anker
+-- gehört: nur Eingabeformel vorhanden ⇒ Eingabe; beide vorhanden ⇒ Textvergleich.
+CREATE OR REPLACE MACRO fm_lo_ddr_is_entry(display_text, hide_text, entry_text) AS (
+    NULLIF(entry_text, '') IS NOT NULL
+    AND (
+        NULLIF(hide_text, '') IS NULL
+        OR (regexp_replace(trim(COALESCE(display_text, '')), '\s+', ' ', 'g')
+              = regexp_replace(trim(entry_text), '\s+', ' ', 'g')
+            AND regexp_replace(trim(COALESCE(display_text, '')), '\s+', ' ', 'g')
+              <> regexp_replace(trim(hide_text), '\s+', ' ', 'g'))
+    )
+);
+
+-- ========================================
 -- CalculationsCatalog — Berechnungs-Instanzen als Objekte (Schema 1.22.0)
 -- ========================================
 -- Eine Zeile pro Berechnungs-INSTANZ (Verwendungsort), NIE pro Formel-Inhalt:
@@ -1047,7 +1341,7 @@ pra_rep AS (
 ),
 lo_rep AS (
     SELECT Object_UUID, File_Name, Hide_Calculation_Text, Tooltip_Calculation_Text,
-           Label_Calculation_Text, ScriptTrigger_Parameter_Text,
+           Label_Calculation_Text, ScriptTrigger_Parameter_Text, Entry_Calculation_Text,
            ROW_NUMBER() OVER (PARTITION BY Object_UUID, File_Name ORDER BY Object_ID) AS rn
     FROM LayoutObjects
 ),
@@ -1058,7 +1352,19 @@ a_owner AS (
         di.File_Name,
         di.Calc_UUID                                AS DDR_Calc_UUID,
         di.Calc_Hash,
-        di.Calc_Kind_Raw,
+        -- Suffix-Normalisierung SaXML 2.3.0.0 (FileMaker 26, Schema 1.28.0): die
+        -- Feld-Prüfberechnung (<Validation><Calculated>) ankert in 26 als
+        -- '_<uuid>_4_2' statt '_<uuid>_2' (die Fehlermeldungs-Berechnung bleibt
+        -- '_4'). Auf den 22er-Slot-Code gefaltet, damit Rollen-Klassifikation,
+        -- b_field-Anti-Join und Konsumenten EINE Vokabel sehen; DDR_Calc_UUID
+        -- behält den Rohnamen. BEWUSST owner-gebunden (nur Field): Step-Anker
+        -- tragen dieselbe Form '<pos>_<sub>' (z. B. '_133_2' = Sub-Slot 2 des
+        -- Steps an Index 133) — eine owner-blinde Umbenennung an der Quelle
+        -- würde einen Multi-Slot-Step an Index 4 auf Position 2 verschieben.
+        -- Belegt an ingestion/fixtures/saxml/fmlab_coverage__saxml_v2_3_0_0__
+        -- fm_v26_0_2__ddr_info.xml (Feld ValCalc: Calculated → _4_2, MessageCalc → _4).
+        CASE WHEN oc.Object_Type = 'Field' AND di.Calc_Kind_Raw = '4_2' THEN '2'
+             ELSE di.Calc_Kind_Raw END                AS Calc_Kind_Raw,
         di.Chunk_Count,
         di.Ref_Count,
         di.Display_Text,
@@ -1083,7 +1389,11 @@ a_owner AS (
 a_rows AS (
     SELECT
         a.File_Name, a.Owner_UUID, a.Owner_Type, a.Owner_Name,
-        CAST(NULL AS VARCHAR)          AS Role_Override,
+        -- Schlüsselkollision Hide/CanEntryCalc (s. Makro-Kopf): trägt der Anker die
+        -- Eingabeformel, bekommt die Instanz deren Rolle statt 'hide'.
+        CASE WHEN a.Owner_Type = 'LayoutObject' AND a.Calc_Kind_Raw = 'Hide'
+                  AND fm_lo_ddr_is_entry(a.Display_Text, lo.Hide_Calculation_Text, lo.Entry_Calculation_Text)
+             THEN 'field_entry' END    AS Role_Override,
         a.Calc_Kind_Raw,
         a.DDR_Calc_UUID,
         a.Calc_Hash                    AS Formula_Hash,
@@ -1092,10 +1402,17 @@ a_rows AS (
         CASE
             WHEN a.Owner_Type = 'Field' AND a.Calc_Kind_Raw = '0' THEN ft.Calculation_Text
             WHEN a.Owner_Type = 'Field' AND a.Calc_Kind_Raw = '1' THEN ft.AE_Calc_Text
+            -- Prüfberechnung (Slot 2) und Anzeigenamen-Formel (Slot 5, FM 26):
+            -- Klartext aus den FieldsForTables-Slots (Schema 1.28.0)
+            WHEN a.Owner_Type = 'Field' AND a.Calc_Kind_Raw = '2' THEN ft.Validation_Calc_Text
+            WHEN a.Owner_Type = 'Field' AND a.Calc_Kind_Raw = '5' THEN ft.DisplayNames_Calc_Text
             WHEN a.Owner_Type = 'ScriptStep'                      THEN ss.Calc_Text
             WHEN a.Owner_Type = 'CustomFunction'                  THEN cfc.Calculation_Code
             WHEN a.Owner_Type = 'PrivilegeSet'                    THEN pra.Calculation_Text
-            WHEN a.Owner_Type = 'LayoutObject' AND a.Calc_Kind_Raw = 'Hide'    THEN lo.Hide_Calculation_Text
+            WHEN a.Owner_Type = 'LayoutObject' AND a.Calc_Kind_Raw = 'Hide'
+                 THEN CASE WHEN fm_lo_ddr_is_entry(a.Display_Text, lo.Hide_Calculation_Text, lo.Entry_Calculation_Text)
+                           THEN lo.Entry_Calculation_Text
+                           ELSE lo.Hide_Calculation_Text END
             WHEN a.Owner_Type = 'LayoutObject' AND a.Calc_Kind_Raw = 'Tooltip' THEN lo.Tooltip_Calculation_Text
             WHEN a.Owner_Type = 'LayoutObject' AND a.Calc_Kind_Raw = 'Label'   THEN lo.Label_Calculation_Text
             -- Trigger-Parameter (alle 3 Owner-Ebenen): Klartext aus
@@ -1108,12 +1425,16 @@ a_rows AS (
         CASE
             WHEN a.Owner_Type = 'Field' AND a.Calc_Kind_Raw = '0' THEN 'Field/Calculation'
             WHEN a.Owner_Type = 'Field' AND a.Calc_Kind_Raw = '1' THEN 'Field/AutoEnter/Calculated'
+            WHEN a.Owner_Type = 'Field' AND a.Calc_Kind_Raw = '2' THEN 'Field/Validation/Calculated'
+            WHEN a.Owner_Type = 'Field' AND a.Calc_Kind_Raw = '5' THEN 'Field/DisplayNames'
             WHEN a.Owner_Type = 'ScriptStep' AND ss.Slot IS NOT NULL THEN 'Step/' || ss.Slot
             WHEN a.Owner_Type = 'ScriptStep'                      THEN 'Step/@position=' || a.Calc_Kind_Raw
             WHEN a.Owner_Type = 'CustomFunction'                  THEN 'CustomFunction/Calculation'
             WHEN a.Owner_Type = 'PrivilegeSet' AND pra.Operation IS NOT NULL
                  THEN 'RecordAccess/' || pra.Operation || ':' || COALESCE(pra.BaseTable_Name, '?')
             WHEN a.Owner_Type = 'PrivilegeSet'                    THEN 'RecordAccess'
+            WHEN a.Owner_Type = 'LayoutObject' AND a.Calc_Kind_Raw = 'Hide'
+                 AND fm_lo_ddr_is_entry(a.Display_Text, lo.Hide_Calculation_Text, lo.Entry_Calculation_Text)                                           THEN 'LayoutObject/CanEntryCalc'
             ELSE a.Owner_Type || '/' || NULLIF(a.Calc_Kind_Raw, '')
         END                            AS Source_Path
     FROM a_owner a
@@ -1191,6 +1512,19 @@ b_field AS (
           AND NOT EXISTS (SELECT 1 FROM a_owner a
                            WHERE a.Owner_UUID = f.Field_UUID AND a.File_Name = f.File_Name
                              AND a.Owner_Type = 'Field' AND a.Calc_Kind_Raw = '4')
+        UNION ALL
+        -- Anzeigenamen-Formel (FM 26, Schema 1.28.0): Slot 5 — ankert mit DDR
+        -- ('_<uuid>_5'), ohne DDR strukturell aus DisplayNames_Calc_Text/-Hash.
+        SELECT f.File_Name, f.Field_UUID, 'Field',
+               f.Table_Name || '::' || f.Field_Name,
+               'display_names', '5',
+               f.DisplayNames_Calc_Hash, f.DisplayNames_Calc_Text,
+               'Field/DisplayNames'
+        FROM FieldsForTables f
+        WHERE (f.DisplayNames_Calc_Hash IS NOT NULL OR NULLIF(f.DisplayNames_Calc_Text, '') IS NOT NULL)
+          AND NOT EXISTS (SELECT 1 FROM a_owner a
+                           WHERE a.Owner_UUID = f.Field_UUID AND a.File_Name = f.File_Name
+                             AND a.Owner_Type = 'Field' AND a.Calc_Kind_Raw = '5')
     )
 ),
 -- (B2) Step-Slots ohne DDR-Anker (Dateien ohne DDR-Info bzw. anker-lose Slots)
@@ -1236,10 +1570,28 @@ b_lo AS (
                lo.Hide_Calculation_Text AS Formula_Text,
                'LayoutObject/HideCondition' AS Source_Path
         FROM lo_rep lo
+        -- Anti-Join rollenbewusst: ein 'Hide'-Anker, den das Makro der EINGABE-
+        -- formel zugeschlagen hat, deckt die Ausblendungsformel nicht ab — sie
+        -- bekommt dann hier ihre (chunklose) Instanz.
         WHERE lo.rn = 1 AND NULLIF(lo.Hide_Calculation_Text, '') IS NOT NULL
-          AND NOT EXISTS (SELECT 1 FROM a_owner a
-                           WHERE a.Owner_UUID = lo.Object_UUID AND a.File_Name = lo.File_Name
-                             AND a.Calc_Kind_Raw = 'Hide')
+          AND NOT EXISTS (SELECT 1 FROM a_rows ar
+                           WHERE ar.Owner_UUID = lo.Object_UUID AND ar.File_Name = lo.File_Name
+                             AND ar.Calc_Kind_Raw = 'Hide'
+                             AND ar.Role_Override IS NULL)
+        UNION ALL
+        -- Feld-Eingabeformel (<CanEntryCalc>, SaXML 2.3.0.0 / FileMaker 26; der
+        -- 22er Export lässt sie weg, die Options-Bits bleiben). Calc_Kind_Raw ist
+        -- hier der Elementname, NICHT der DDR-Suffix: diese Instanz hat keinen
+        -- Anker und damit keine chunk-projizierten Kanten.
+        SELECT lo.File_Name, lo.Object_UUID, 'LayoutObject', NULL,
+               'field_entry', 'CanEntryCalc', NULL, lo.Entry_Calculation_Text,
+               'LayoutObject/CanEntryCalc'
+        FROM lo_rep lo
+        WHERE lo.rn = 1 AND NULLIF(lo.Entry_Calculation_Text, '') IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM a_rows ar
+                           WHERE ar.Owner_UUID = lo.Object_UUID AND ar.File_Name = lo.File_Name
+                             AND ar.Calc_Kind_Raw = 'Hide'
+                             AND ar.Role_Override = 'field_entry')
         UNION ALL
         SELECT lo.File_Name, lo.Object_UUID, 'LayoutObject', NULL,
                'tooltip', 'Tooltip', NULL, lo.Tooltip_Calculation_Text,
@@ -1387,6 +1739,8 @@ classified AS (
                 WHEN cand.Owner_Type = 'Field' AND cand.Calc_Kind_Raw = '2' THEN 'validation'
                 WHEN cand.Owner_Type = 'Field' AND cand.Calc_Kind_Raw = '3' THEN 'container_path'
                 WHEN cand.Owner_Type = 'Field' AND cand.Calc_Kind_Raw = '4' THEN 'validation_message'
+                -- 5 = Anzeigenamen-Formel (<DisplayNames><Calculation>, SaXML 2.3.0.0 / FM 26)
+                WHEN cand.Owner_Type = 'Field' AND cand.Calc_Kind_Raw = '5' THEN 'display_names'
                 -- Step-Slots generisch: jedes Suffix außer den XSLT-Slots ist ein
                 -- positionierter Parameter (deckt auch benannte Wiederhol-Slots
                 -- wie Filter_0/Filter_1 und Text-Slots wie SQL ab)
@@ -1475,6 +1829,17 @@ SELECT
                 ELSE NULLIF(i.Calc_Kind_Raw, '')
             END
         WHEN i.Owner_Type = 'CustomFunction' THEN NULL
+        -- Hide/Feld-Eingabe ohne eigenen DDR-Anker: FileMaker führt beide Slots
+        -- unter demselben Chunk-Schlüssel und schreibt nur EINE Chunkliste — die
+        -- ankerlose Instanz hat keine Kanten und darf die der anderen nicht
+        -- über den Subrole-Join einsammeln (Schema 1.31.0).
+        WHEN i.Owner_Type = 'LayoutObject' AND i.Calc_Role IN ('hide', 'field_entry')
+             AND i.DDR_Calc_UUID IS NULL THEN NULL
+        -- Eingabeformel MIT Anker (Konverter 2.30.0): ihre Referenzzeilen werden
+        -- nach diesem CTAS von 'Hide' auf 'field_entry' retaggt (Block „Slot-Retag"
+        -- unten) — der Join-Schlüssel folgt dem Kantenwert, nicht dem Roh-Suffix.
+        WHEN i.Owner_Type = 'LayoutObject' AND i.Calc_Role = 'field_entry'
+             AND i.DDR_Calc_UUID IS NOT NULL THEN 'field_entry'
         ELSE NULLIF(i.Calc_Kind_Raw, '')
     END                                             AS Edge_Subrole,
     i.Formula_Text,
@@ -1487,8 +1852,23 @@ SELECT
     i.Ref_Count,
     i.Display_Text,
     i.Source_Path,
+    -- Dormante Felddefinitionen (Schema 1.29.0): FileMaker 26 exportiert
+    -- deaktivierte Auto-Enter-/Prüf-/Meldungs-Formeln (enable="False"). Die
+    -- Instanz bleibt sichtbar, trägt aber Is_Enabled = FALSE; P2/P3/P4 erzeugen
+    -- für sie keine operationalen Kanten. NULL-Flag (FM ≤ 22, Attribut fehlt) = aktiv.
+    CASE
+        WHEN i.Owner_Type = 'Field' AND i.Calc_Role = 'auto_enter'         THEN COALESCE(ft3.AE_Calc_Enabled, TRUE)
+        WHEN i.Owner_Type = 'Field' AND i.Calc_Role = 'validation'         THEN COALESCE(ft3.Validation_Calc_Enabled, TRUE)
+        WHEN i.Owner_Type = 'Field' AND i.Calc_Role = 'validation_message' THEN COALESCE(ft3.Validation_Message_Calc_Enabled, TRUE)
+        ELSE TRUE
+    END                                             AS Is_Enabled,
     i.File_Name
 FROM indexed i
+-- Feld-Flags für Is_Enabled: reiner Equi-Join auf den PK (Field_UUID, File_Name);
+-- Nicht-Feld-Owner matchen keine Zeile (UUID-Räume disjunkt) → CASE greift ELSE.
+LEFT JOIN FieldsForTables ft3
+       ON ft3.Field_UUID = i.Owner_UUID
+      AND ft3.File_Name  = i.File_Name
 -- Owner-Name-Fallback als reiner Equi-Join — bewusst OHNE i.Owner_Name-IS-NULL-
 -- Guard in der ON-Klausel (linksseitiges Prädikat → Blockwise-NL-Falle, s.
 -- Blockkopf). Semantischer Guard bleibt das COALESCE in der Projektion: bei
@@ -1580,6 +1960,42 @@ FROM (
 ) src
 WHERE cc.Calculation_UUID = src.Calculation_UUID;
 
+-- Slot-Retag der Eingabeformel-Kanten (Konverter 2.30.0). P2 extrahiert die
+-- Subrole roh aus dem DDRREF-Suffix — und FileMaker führt die Chunkliste der
+-- Feld-Eingabeformel unter demselben Schlüssel '_<UUID>_Hide' wie die der
+-- Ausblendungsformel (s. Makro fm_lo_ddr_is_entry). Welche der beiden Formeln
+-- der Anker trägt, steht erst HIER fest (CalculationsCatalog: Role_Override →
+-- Calc_Role = 'field_entry' bei Calc_Kind_Raw = 'Hide'). Die Referenzzeilen
+-- dieses Ankers bekommen den Slot 'field_entry', damit die owner-projizierten
+-- Kanten (Blöcke 30/31/33/34: Link_Subrole = Subrole) und Edge_Subrole
+-- denselben Wert tragen und Konsumenten (Referenzen-Tab, SCA-Regeln,
+-- v_calculation_links) die Eingabeformel nicht als „Hide" lesen; Anker der
+-- Ausblendungsformel bleiben 'Hide'. Bewusst in P4 statt P2: P2 läuft
+-- partitioniert und ohne Chunk-Text-Rekonstruktion, der Textvergleich lebt
+-- genau einmal im Makro. Idempotent (Filter auf 'Hide'; ein Re-Import
+-- unveränderter Dateien findet bereits retaggte Zeilen und lässt sie stehen).
+UPDATE XMLCalcReferences x
+SET Subrole = 'field_entry'
+WHERE x.Source_Type = 'LayoutObject'
+  AND x.Subrole = 'Hide'
+  AND EXISTS (SELECT 1 FROM CalculationsCatalog c
+               WHERE c.Owner_UUID    = x.Source_UUID
+                 AND c.File_Name     = x.File_Name
+                 AND c.Owner_Type    = 'LayoutObject'
+                 AND c.Calc_Role     = 'field_entry'
+                 AND c.Calc_Kind_Raw = 'Hide');
+
+UPDATE PluginFunctionUsages p
+SET Subrole = 'field_entry'
+WHERE p.Source_Type = 'LayoutObject'
+  AND p.Subrole = 'Hide'
+  AND EXISTS (SELECT 1 FROM CalculationsCatalog c
+               WHERE c.Owner_UUID    = p.Source_UUID
+                 AND c.File_Name     = p.File_Name
+                 AND c.Owner_Type    = 'LayoutObject'
+                 AND c.Calc_Role     = 'field_entry'
+                 AND c.Calc_Kind_Raw = 'Hide');
+
 -- Calculation-Zeilen in den ObjectCatalog (post-CTAS-INSERT, Muster
 -- PluginComponent — liest CalculationsCatalog + die Owner-Namen).
 -- Object_Name = '<Owner> › <Rollen-Label>[ <Index>]' (Index nur, wenn der
@@ -1602,6 +2018,7 @@ SELECT
                WHEN 'step_xslt'                THEN 'XSLT'
                WHEN 'record_access'            THEN 'Record Access'
                WHEN 'hide'                     THEN 'Hide Condition'
+               WHEN 'field_entry'              THEN 'Field Entry Condition'
                WHEN 'tooltip'                  THEN 'Tooltip'
                WHEN 'placeholder'              THEN 'Placeholder Text'
                WHEN 'button_label'             THEN 'Calculated Label'
@@ -1691,11 +2108,21 @@ INSERT INTO ScriptStepRoleMap VALUES
     -- KI-Steps mit genau EINER Feld-Option (Ergebnis-Ziel)
     (214, 'Perform SQL Query by Natural Language', 'sets_field'),
     (215, 'Insert Embedding',             'sets_field'),
+    (221, 'Perform Find by Natural Language', 'sets_field'),   -- Parameter type="Target": Ergebnisfeld
+    -- PDF-Familie (Konverter 2.24.0; Belege ingestion/fixtures/saxml/, 22 + 26):
+    -- der Container unter Parameter type="Target" EMPFÄNGT das PDF
+    (144, 'Save Records as PDF',          'sets_field'),       -- Target-Container (SaveResult "Currently open PDF"/Target)
+    (245, 'Close PDF',                    'sets_field'),       -- SaveTo Target
     -- Step liest aus dem Feld
     (47,  'Copy',                     'reads_field'),
-    (132, 'Export Field Contents',    'reads_field'),
     (18,  'Check Selection',          'reads_field'),
     (157, 'Install Plug-In File',     'reads_field'),
+    (219, 'Perform RAG Action',       'reads_field'),   -- FieldReference = RAG-Datenquelle (From Container/Field)
+    (246, 'Open PDF',                 'reads_field'),   -- Target-Container ist die PDF-QUELLE (wird geöffnet)
+    -- Export-Quelle: der Feldinhalt wird in eine Datei exportiert (Rolle wie
+    -- Export Records; vorher reads_field — die Where-used-Semantik „exportiert
+    -- aus Feld" ging verloren)
+    (132, 'Export Field Contents',    'exports_from_field'),
     -- Write to Data File: die Feld-Option heisst 'data_source' ("Data source") —
     -- option_type = 'target' beschreibt die XML-Form, NICHT die Datenrichtung.
     -- Das Feld wird gelesen und in die Datei geschrieben.
@@ -1736,7 +2163,11 @@ INSERT INTO ScriptStepRoleMap VALUES
     (216, 'Insert Embedding in Found Set', 'references_field'),
     (218, 'Perform Semantic Find',         'references_field'),
     (220, 'Generate Response from Model',  'references_field'),
-    (222, 'Configure Regression Model',    'references_field');
+    (222, 'Configure Regression Model',    'references_field'),
+    -- FileMaker 26 (SaXML 2.3.0.0): Quelle UND Ziel im selben Step
+    (240, 'Insert Image Captions in Found Set', 'references_field'),  -- LLMBulkEmbeddingField (Quelle) + Target
+    (242, 'Print PDF',                     'references_field'),  -- Source/Target (PDF-Quelle) + SavePrintOptionsTo/UsePrintOptionsFrom
+    (244, 'Append PDF',                    'references_field');  -- Ziel-Container + Quell-PDF, beide als Target
 
 -- ========================================
 -- DataSourceFileMap — deklarierte Datenquelle → importierte Datei
@@ -2312,6 +2743,30 @@ WHERE xsr.Ref_Type = 'field'
 
 UNION ALL
 
+-- 16b. Script → ExternalDataSource (data_source) — Re-Login (Step 138) mit
+-- expliziter Datenquelle (Konverter 2.24.0). SaXML 2.3.0.0 schreibt an Re-Login
+-- IMMER eine DataSourceReference (id 0 „Current File" oder eine externe Datenquelle
+-- mit UUID); FileMaker ≤ 22 nur bei externer Quelle. P2 registriert nur die
+-- externe Form (id ≠ 0, UUID gesetzt) als Ref_Type 'data_source' → dieselbe Rolle
+-- wie TableOccurrence/ValueList → ExternalDataSource. Ohne diese Kante blieb die
+-- Datenquelle eines Re-Login-Scripts in Where-used unsichtbar.
+SELECT DISTINCT
+    xsr.Script_UUID as Source_UUID,
+    'Script' as Source_Type,
+    xsr.Ref_UUID as Target_UUID,
+    'ExternalDataSource' as Target_Type,
+    'operational' as Link_Type,
+    'data_source' as Link_Role,
+    NULL as Link_Subrole,
+    xsr.File_Name as Source_File,
+    oc_target.File_Name as Target_File,
+    (xsr.File_Name != oc_target.File_Name) as Is_Cross_File
+FROM XMLStepReferences xsr
+LEFT JOIN ObjectCatalog oc_target ON xsr.Ref_UUID = oc_target.Object_UUID AND oc_target.Object_Type = 'ExternalDataSource'
+WHERE xsr.Ref_Type = 'data_source'
+
+UNION ALL
+
 -- 18. Script Triggers → Scripts
 SELECT
     -- Owner_UUID muss im Source_UUID stehen, damit der Link zum ObjectCatalog-
@@ -2734,6 +3189,7 @@ LEFT JOIN ObjectCatalog oc_target
    AND oc_target.Object_Type = 'Field'
 WHERE f.AutoEnter_Type = 'Looked_up'
   AND f.Lookup_Field_UUID IS NOT NULL
+  AND COALESCE(f.Lookup_Enabled, TRUE)   -- dormanter Lookup (FM 26 enable="False"): keine Kante
 QUALIFY ROW_NUMBER() OVER (
     PARTITION BY f.Field_UUID, f.File_Name
     ORDER BY (oc_target.File_Name = f.File_Name) DESC, oc_target.File_Name
@@ -3086,19 +3542,48 @@ WHERE xlr.Ref_Type = 'field'
 
 UNION ALL
 
+-- 32b. Layout → Field (displays_field, Subrole table_view_column) — SaXML 2.3.0.0 (FM 26+)
+-- Spalten der Tabellenansicht (LayoutTableViewColumns) sind keine LayoutObjects
+-- und laufen daher nicht durch Block 20/32. Dieselbe Rolle wie die aggregierte
+-- Layout-Kante (Layout zeigt Field), der Subrole-Wert diskriminiert die Quelle
+-- (Tabellenansichts-Spalte statt Feld-Element). saxml22-Dateien: 0 Zeilen → 0 Kanten.
+-- Kein Link aus NULL-UUID (Feld einer externen TO) — P6 v_check_table_view_columns.
+SELECT DISTINCT
+    tv.L_UUID as Source_UUID,
+    'Layout' as Source_Type,
+    tv.Field_UUID as Target_UUID,
+    'Field' as Target_Type,
+    'operational' as Link_Type,
+    'displays_field' as Link_Role,
+    'table_view_column' as Link_Subrole,
+    tv.File_Name as Source_File,
+    oc_field.File_Name as Target_File,
+    (tv.File_Name != oc_field.File_Name) as Is_Cross_File
+FROM LayoutTableViewColumns tv
+JOIN Layouts l
+    ON tv.L_UUID = l.L_UUID
+   AND tv.File_Name = l.File_Name
+   AND (l.Folder_Type IS NULL OR l.Folder_Type = 'False')
+   AND NOT COALESCE(l.Is_Separator, FALSE)
+JOIN ObjectCatalog oc_field
+    ON tv.Field_UUID = oc_field.Object_UUID
+   AND oc_field.Object_Type = 'Field'
+WHERE tv.Field_UUID IS NOT NULL
+
+UNION ALL
+
 -- 33. Calc-Source → BuiltinFunction (calls_function)
--- Built-in FunctionRef-Aufrufe als
--- Link-Tripel (dedupliziert). Target ist datei-unabhängig → Is_Cross_File=FALSE.
--- Für Get(<SubParameter>) zeigt der Link auf den SubParameter-Eintrag, sonst
--- auf den nackten Token.
+-- Built-in FunctionRef-Aufrufe als Link-Tripel (dedupliziert). Target ist
+-- datei-unabhängig → Is_Cross_File=FALSE. Ziel ist der normalisierte Knoten
+-- (Phase A9): Get(<Sub>)-Paar und die konsumierte nackte Sub-Parameter-Zeile
+-- desselben Aufrufs zeigen damit auf DENSELBEN Knoten und fallen im
+-- SELECT DISTINCT zu einer Kante zusammen — vorher waren es zwei Kanten an
+-- zwei Knoten. Der Join kann keine Zeile verlieren: BuiltinTokenResolution
+-- ist aus genau diesem Filter abgeleitet.
 SELECT DISTINCT
     xcr.Source_UUID as Source_UUID,
     xcr.Source_Type as Source_Type,
-    md5('BuiltinFunction::' ||
-        CASE WHEN xcr.Ref_Name = 'Get' AND xcr.Ref_SubName IS NOT NULL
-             THEN xcr.Ref_Name || '::' || xcr.Ref_SubName
-             ELSE xcr.Ref_Name END
-    ) as Target_UUID,
+    bti.Object_UUID as Target_UUID,
     'BuiltinFunction' as Target_Type,
     'operational' as Link_Type,
     'calls_function' as Link_Role,
@@ -3107,9 +3592,41 @@ SELECT DISTINCT
     NULL as Target_File,
     FALSE as Is_Cross_File
 FROM XMLCalcReferences xcr
+JOIN BuiltinTokenResolution bti
+  ON bti.Token_Key = CASE WHEN xcr.Ref_Name = 'Get' AND xcr.Ref_SubName IS NOT NULL
+                          THEN xcr.Ref_Name || '::' || xcr.Ref_SubName
+                          ELSE xcr.Ref_Name END
 WHERE xcr.Ref_Type = 'function'
   AND xcr.Ref_Name IS NOT NULL
   AND xcr.Ref_Name != ''
+
+UNION ALL
+
+-- 33b. LayoutObject → BuiltinFunction (displays_symbol, Converter 2.28.0)
+-- Layout-Symbole {{X}} im Textblock: laut Claris-Doku der Wert von Get(X) zur
+-- Anzeigezeit — also eine echte Verwendung des Get-Parameters (usage, zählt für
+-- Where-used: „welche Layouts zeigen {{PageNumber}}?"). Quelle ist das
+-- Symbol-Inventar LayoutObjectSymbols (P3 A.13), NICHT erneut Text_Content.
+-- Gate und Zielname wie im Katalog-Block „BuiltinFunction aus Layout-Symbolen":
+-- nur Symbole mit einem Get-Parameter-Namen der Referenz bekommen eine Kante;
+-- ein unbekanntes Symbol rendert literal und bleibt kantenlos (die Regel
+-- layout_invalid_symbol macht es sichtbar). Ziel ist datei-unabhängig
+-- → Is_Cross_File=FALSE.
+SELECT DISTINCT
+    s.Object_UUID as Source_UUID,
+    'LayoutObject' as Source_Type,
+    fm_builtin_uuid(k.Canonical_Name, TRUE) as Target_UUID,
+    'BuiltinFunction' as Target_Type,
+    'operational' as Link_Type,
+    'displays_symbol' as Link_Role,
+    NULL as Link_Subrole,
+    s.File_Name as Source_File,
+    NULL as Target_File,
+    FALSE as Is_Cross_File
+FROM LayoutObjectSymbols s
+JOIN _builtin_canon k
+  ON k.Namespace = 'getparameter'
+ AND k.Name_Norm = s.Symbol_Norm
 
 UNION ALL
 
@@ -3766,6 +4283,9 @@ INSERT INTO LinkRoleRegistry VALUES
     ('auto_login_account',   'usage',       TRUE),
     ('displays_field',       'usage',       TRUE),
     ('displays_variable',    'usage',       TRUE),
+    -- Layout-Symbol {{X}} → Get-Parameter (Block 33b). Echte Verwendung: das
+    -- Objekt zeigt zur Anzeigezeit den Wert von Get(X).
+    ('displays_symbol',      'usage',       TRUE),
     ('exports_from_field',   'usage',       TRUE),
     ('finds_in_field',       'usage',       TRUE),
     ('grants_privilege',     'usage',       TRUE),
@@ -3947,6 +4467,88 @@ DROP TABLE PreferDeclaredWinners;
 
 
 -- ========================================
+-- v_builtin_token_lookup — Formel-Token → Built-in-Knoten
+-- ========================================
+-- Die EINE Nachschlage-Fläche für Consumer, die einen Built-in nur als Namen
+-- kennen: ein Formel-Token, ein Layout-Symbol, ein Docset-Eintrag. Vergleichs-
+-- schlüssel ist `lower(<Name>)`, Ergebnis der Katalogknoten — damit muss kein
+-- Consumer die Identitätsregel des Imports nachbauen (genau das war vorher an
+-- drei Stellen der Fall: im Token-Formatter, im Script-Referenz-Template und
+-- implizit im Namens-Join der Docset-Pill).
+--
+-- Zwei Schichten, in dieser Vorrangordnung:
+--   1. jede Schreibweise, die die Referenz kennt — ALLE Sprachen, beide
+--      Namensräume; der Funktions-Namensraum gewinnt (prio 1) gegen den
+--      Get-Parameter-Namensraum (prio 2), genau wie beim Import. Deshalb
+--      landet das Token `PageNumber` aus `Get ( PageNumber )` — und `Seitennummer`
+--      aus `Hole ( Seitennummer )` — auf dem EINEN Knoten `Get(PageNumber)`,
+--      während die einzige mehrdeutige Schreibweise der Referenz
+--      (italienisch `NomeScript`) als freier Token die Design-Funktion trifft.
+--   2. die Knoten mit Namens-Fallback über ihren Rohnamen (`Get` selbst, die
+--      JSON-Typkonstanten, Operatoren, Funktionen neuer als die Referenz) —
+--      erkennbar an NULL in Function_ID/Canonical_Name/Namespace.
+--
+-- Zwei ACHSEN je Name, weil es zwei Consumer-Klassen gibt: der Katalog und die
+-- Referenz tragen den DEKODIERTEN Namen (echte Umlaute), der DDR-Chunk-Rohtext
+-- die entity-kodierte Form (`AnzahlGefundeneDatens&#xE4;tze` — so serialisiert
+-- FileMakers DOM-Pfad nach DDR_Calculations.Chunk_Content). Beide Schreibweisen
+-- stehen als Zeile in der View, damit ein Consumer, der nur Rohtext hat, nicht
+-- XML-Entities in SQL auflösen muss. Kollisionsfrei, weil kein Funktionsname
+-- die Zeichenkette einer Entity-Referenz enthält. `Name_Decoded` liefert
+-- solchen Consumern die lesbare Schreibweise nach — dieselbe Sprache wie der
+-- Token, nur dekodiert (der lokalisierte ANZEIGEname bleibt Sache von
+-- ?enrich=<lang>, die kanonische Identität steht in Canonical_Name).
+CREATE OR REPLACE VIEW v_builtin_token_lookup AS
+WITH seedname AS (
+    SELECT Name, lower(Name) AS Name_Norm, Canonical_Name, 1 AS prio, FALSE AS is_get
+    FROM DesignFunctionNames
+    WHERE Name IS NOT NULL AND Name != ''
+    UNION ALL
+    SELECT Name, lower(Name), Canonical_Name, 2, TRUE
+    FROM GetParameterNames
+    WHERE Name IS NOT NULL AND Name != ''
+),
+pick AS (
+    SELECT Name_Norm,
+           arg_min(Name, prio)           AS Name_Decoded,
+           arg_min(Canonical_Name, prio) AS Canonical_Name,
+           arg_min(is_get, prio)         AS Is_Get
+    FROM seedname
+    GROUP BY Name_Norm
+),
+resolved AS (
+    SELECT p.Name_Norm, p.Name_Decoded, b.Object_UUID, b.Function_ID,
+           b.Canonical_Name, b.Namespace
+    FROM pick p
+    JOIN BuiltinFunctionIdentity b
+      ON b.Canonical_Name = p.Canonical_Name
+     AND b.Namespace = CASE WHEN p.Is_Get THEN 'getparameter' ELSE 'function' END
+    UNION ALL
+    SELECT lower(oc.Object_Name), oc.Object_Name, oc.Object_UUID,
+           CAST(NULL AS INTEGER), CAST(NULL AS VARCHAR), CAST(NULL AS VARCHAR)
+    FROM ObjectCatalog oc
+    WHERE oc.Object_Type = 'BuiltinFunction'
+      AND NOT EXISTS (SELECT 1 FROM BuiltinFunctionIdentity b
+                      WHERE b.Object_UUID = oc.Object_UUID)
+)
+SELECT Name_Norm, Name_Decoded, Object_UUID, Function_ID, Canonical_Name, Namespace
+FROM resolved
+UNION ALL
+-- Rohtext-Achse: nur für Namen, deren kodierte Form abweicht (alles Nicht-ASCII).
+-- Kodierung identisch zu ingestion/gen_design_functions.sh (Name_XML): jedes
+-- Zeichen > U+007F als '&#xHH;'.
+SELECT xml_norm, Name_Decoded, Object_UUID, Function_ID, Canonical_Name, Namespace
+FROM (
+    SELECT lower(list_aggregate(list_transform(regexp_extract_all(Name_Decoded, '[\s\S]'),
+               lambda c: CASE WHEN unicode(c) > 127
+                              THEN '&#x' || hex(unicode(c)) || ';' ELSE c END),
+               'string_agg', '')) AS xml_norm,
+           Name_Decoded, Object_UUID, Function_ID, Canonical_Name, Namespace
+    FROM resolved
+)
+WHERE xml_norm <> lower(Name_Decoded);
+
+-- ========================================
 -- Statistik-Views für Monitoring
 -- ========================================
 
@@ -4087,14 +4689,12 @@ WHERE c.Owner_Type = 'ScriptStep'
 
 UNION ALL
 
--- (2c) ScriptStep → BuiltinFunction (Spiegel Block 33 inkl. Get(<Sub>))
+-- (2c) ScriptStep → BuiltinFunction (Spiegel Block 33 inkl. Get(<Sub>);
+-- dieselbe normalisierte Identität aus Phase A9)
 SELECT DISTINCT
     c.Calculation_UUID,
     'calls_function'       AS Link_Role,
-    md5('BuiltinFunction::' ||
-        CASE WHEN x.Ref_Name = 'Get' AND x.Ref_SubName IS NOT NULL
-             THEN x.Ref_Name || '::' || x.Ref_SubName
-             ELSE x.Ref_Name END) AS Target_UUID,
+    bti.Object_UUID        AS Target_UUID,
     'BuiltinFunction'      AS Target_Type,
     CAST(NULL AS VARCHAR)  AS Target_File,
     FALSE                  AS Is_Cross_File
@@ -4109,6 +4709,10 @@ JOIN XMLCalcReferences x
  AND x.Subrole IS NOT DISTINCT FROM c.Edge_Subrole
  AND x.Ref_Type = 'function'
  AND x.Ref_Name IS NOT NULL AND x.Ref_Name != ''
+JOIN BuiltinTokenResolution bti
+  ON bti.Token_Key = CASE WHEN x.Ref_Name = 'Get' AND x.Ref_SubName IS NOT NULL
+                          THEN x.Ref_Name || '::' || x.Ref_SubName
+                          ELSE x.Ref_Name END
 WHERE c.Owner_Type = 'ScriptStep'
 
 UNION ALL

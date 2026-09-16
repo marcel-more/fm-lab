@@ -42,7 +42,9 @@ Containment links never count as usage: whether a component is "used" is answere
 
 - **XML schema:** no catalog of its own — derived from plugin-call tokens in the [XML DDR_INFO](../../xml/catalogs/XML%20DDR_INFO.md) calculation chunks (requires the "Include details for analysis tools" export option)
 - **DB schema:** object rows in [ObjectCatalog](../object-catalog/ObjectCatalog.md); membership via [ObjectLinks](../object-catalog/ObjectLinks.md) (`groups_into`); call-level detail in [PluginFunctionUsages](../catalog-tables/PluginFunctionUsages.md)
-- **Detail view template:** `rest-api/templates/sql/object_details_plugincomponent.sql`, served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md)
-- **Frontend:** object list at `http://localhost:5173/?type=PluginComponent`
+- **Detail view template:** `rest-api/templates/sql/object_details_plugincomponent.sql` — a structured projection with three sections: `meta` (catalog name, plug-in namespace, how many member functions exist and how many are used, deduplicated where-used totals), `function` (one row per member function with its own counts) and `usage` (where-used per link role and source type, aggregated over all member functions). The two-level caller list is gone; each function's own references view holds the call sites. Served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md)
+- **Frontend:** object list at `http://localhost:5173/?type=PluginComponent`; the detail tab renders its own view (identity, the component size per [plugin-spec](../plugin-spec.md), a link to the vendor doc-set category page with the vendor's online page as fallback, the member functions and the aggregated usage summary)
+
+One counting note: the aggregated totals deduplicate across member functions — a script calling three functions of the same component is **one** using object, not three. The per-function rows keep the individual counts.
 
 **See also:** [Object Types](../object-catalog/Object%20Types.md) · [PluginFunction](PluginFunction.md) · [BuiltinFunction](BuiltinFunction.md) · [Link Roles and Subroles](../object-catalog/Link%20Roles%20and%20Subroles.md)

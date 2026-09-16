@@ -470,6 +470,81 @@ SELECT
     (SELECT string_agg(Canonical_Name, ', ' ORDER BY Canonical_Name)
        FROM (SELECT DISTINCT Canonical_Name FROM hit)) AS names;
 
+-- SaXML-Profile (Schema 1.28.0 / Konverter 2.24.0): Kennzahlen der versions-
+-- expliziten Pipeline. files_*: Dateien je Profil (FilesCatalog.SaXML_Profile;
+-- unknown = weder saxml22 noch saxml23 → WARN). promoted_anchors/padding_anchors:
+-- DisplayCalculations-Anker der saxml23-Dateien, die P1d in die DDR-Tabellen
+-- übernommen hat bzw. als FM-26-Polster im Staging belassen hat (informational).
+-- staging_rows_outside_saxml23 / table_view_rows_outside_saxml23: Soll 0 — nur
+-- saxml23 speist DDR_DisplayCalcAnchors23 und LayoutTableViewColumns (Dispatch-
+-- Drift). cf_calc_rows = cf_functions (Soll): jede echte Custom Function hat
+-- genau eine Calc-Zeile, Ordner/Trenner keine. display_anchor_violations:
+-- DisplayCalculations-Anker in DDR_Calculations mit Slot ≥ <<ƒ:…>>-Token-Zahl
+-- ihres Textobjekts (Soll 0 — > 0 heißt, P1d lief nicht oder das Muster hat
+-- sich geändert).
+CREATE OR REPLACE VIEW v_check_saxml_profile AS
+WITH owners AS (
+    SELECT upper(Object_UUID) AS Owner_UUID, File_Name,
+           MAX(len(regexp_extract_all(COALESCE(Text_Content, ''), '(?s)<<ƒ:(.*?)>>', 1))) AS Token_Count
+    FROM LayoutObjects
+    GROUP BY 1, 2
+),
+anchors AS (
+    SELECT DISTINCT File_Name, Calc_UUID FROM DDR_Calculations
+    WHERE Calc_UUID LIKE '%\_DisplayCalculations\_%' ESCAPE '\'
+),
+viol AS (
+    SELECT a.Calc_UUID
+    FROM anchors a
+    JOIN owners o
+      ON o.Owner_UUID = upper(regexp_extract(a.Calc_UUID, '_([0-9A-Fa-f-]{36})', 1))
+     AND o.File_Name  = a.File_Name
+    WHERE TRY_CAST(regexp_extract(a.Calc_UUID, '_DisplayCalculations_([0-9]+)$', 1) AS BIGINT) >= o.Token_Count
+),
+saxml23_files AS (SELECT File_Name FROM FilesCatalog WHERE SaXML_Profile = 'saxml23')
+SELECT
+    (SELECT COUNT(*) FROM FilesCatalog WHERE SaXML_Profile = 'saxml22')                          AS files_saxml22,
+    (SELECT COUNT(*) FROM FilesCatalog WHERE SaXML_Profile = 'saxml23')                          AS files_saxml23,
+    (SELECT COUNT(*) FROM FilesCatalog
+      WHERE SaXML_Profile IS NULL OR SaXML_Profile NOT IN ('saxml22', 'saxml23'))               AS files_unknown_profile,
+    (SELECT COUNT(*) FROM DDR_DisplayCalcAnchors23 WHERE Chunk_Index = 0)                        AS staged_anchors,
+    (SELECT COUNT(*) FROM DDR_DisplayCalcAnchors23 WHERE Chunk_Index = 0 AND Promoted)           AS promoted_anchors,
+    (SELECT COUNT(*) FROM DDR_DisplayCalcAnchors23 WHERE Chunk_Index = 0 AND NOT Promoted)       AS padding_anchors,
+    (SELECT COUNT(*) FROM DDR_DisplayCalcAnchors23
+      WHERE File_Name NOT IN (SELECT File_Name FROM saxml23_files))                              AS staging_rows_outside_saxml23,
+    (SELECT COUNT(*) FROM CalcsForCustomFunctions)                                              AS cf_calc_rows,
+    (SELECT COUNT(*) FROM CustomFunctionsCatalog
+      WHERE COALESCE(Folder_Type, 'False') = 'False' AND NOT COALESCE(Is_Separator, FALSE))      AS cf_functions,
+    (SELECT COUNT(*) FROM LayoutTableViewColumns
+      WHERE File_Name NOT IN (SELECT File_Name FROM saxml23_files))                              AS table_view_rows_outside_saxml23,
+    (SELECT COUNT(*) FROM viol)                                                                 AS display_anchor_violations,
+    -- Dormante Felddefinitionen (Schema 1.29.0): Felder mit mindestens einem
+    -- deaktivierten Slot (nur saxml23 kann sie tragen) und — Soll 0 — operationale
+    -- Kanten, die trotzdem aus einem deaktivierten Slot stammen.
+    (SELECT COUNT(*) FROM FieldsForTables
+      WHERE AE_Calc_Enabled = FALSE OR Lookup_Enabled = FALSE
+         OR Validation_Calc_Enabled = FALSE OR Validation_Message_Calc_Enabled = FALSE)          AS dormant_definitions,
+    (SELECT COUNT(*) FROM ObjectLinks ol
+      JOIN FieldsForTables f ON f.Field_UUID = ol.Source_UUID AND f.File_Name = ol.Source_File
+      WHERE ol.Link_Type = 'operational' AND ol.Source_Type = 'Field'
+        AND ((ol.Link_Subrole = 'auto_enter'         AND f.AE_Calc_Enabled = FALSE)
+          OR (ol.Link_Subrole = 'validation'         AND f.Validation_Calc_Enabled = FALSE)
+          OR (ol.Link_Subrole = 'validation_message' AND f.Validation_Message_Calc_Enabled = FALSE)
+          OR (ol.Link_Role = 'lookup_source'         AND f.Lookup_Enabled = FALSE)))                 AS dormant_operational_edges;
+
+-- Tabellenansichts-Spalten (Schema 1.28.0, SaXML 2.3.0.0 / FM 26+): Spalten mit
+-- Feldreferenz, deren Feld-UUID fehlt (externe TO) oder nicht im Katalog liegt →
+-- keine displays_field/table_view_column-Kante. Informational (Teilkorpus legitim).
+CREATE OR REPLACE VIEW v_check_table_view_columns AS
+SELECT
+    COUNT(*)                                                    AS columns_total,
+    COUNT(*) FILTER (WHERE Field_UUID IS NULL)                  AS field_uuid_missing,
+    COUNT(*) FILTER (WHERE Field_UUID IS NOT NULL
+                       AND Field_UUID NOT IN (SELECT Field_UUID FROM FieldsForTables
+                                              WHERE Field_UUID IS NOT NULL)) AS field_unresolved,
+    COUNT(DISTINCT L_UUID || '|' || File_Name)                  AS layouts
+FROM LayoutTableViewColumns;
+
 -- F-1b: Auflösungsquote der Relationship-Prädikat-Felder (left_field/right_field).
 -- Seit der strukturellen P1-Gültigkeitsprüfung tragen Prädikat-Felder auf externen
 -- TO-Seiten eine leere (→NULL) Feld-UUID; P4 löst sie über (Field_TO_UUID, Field_ID)
@@ -613,11 +688,11 @@ FROM CalculationsCatalog
 WHERE Owner_Type <> 'unresolved'
   AND Calc_Role NOT IN (
     'field_calculation', 'auto_enter', 'validation', 'validation_message',
-    'container_path',
+    'container_path', 'display_names',
     'custom_function',
     'step_parameter', 'step_xslt',
     'record_access',
-    'hide', 'tooltip', 'placeholder', 'conditional_format', 'portal_filter',
+    'hide', 'field_entry', 'tooltip', 'placeholder', 'conditional_format', 'portal_filter',
     'web_viewer_url', 'button_label', 'button_action', 'panel_title', 'popover_title',
     'display_calculation',
     'chart_series', 'chart_title', 'chart_xaxis_title', 'chart_yaxis_title',

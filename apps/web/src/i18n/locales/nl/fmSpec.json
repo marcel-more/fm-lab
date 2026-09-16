@@ -7,12 +7,14 @@
   "help": {
     "open": "Help"
   },
+  "clarisHelp": "Claris Help →",
   "search": {
     "placeholder": "Filteren…",
     "platformAll": "Alle platformen",
     "platformLabel": "Platform",
     "platformStepHint": "Toon stappen die op dit platform draaien (incl. gedeeltelijke ondersteuning)",
-    "platformFnHint": "Toon functies die voor dit platform zijn gebouwd (platformbinding)"
+    "platformFnHint": "Toon functies die voor dit platform zijn gebouwd (platformbinding)",
+    "platformTriggerHint": "Triggergebeurtenissen tonen die op dit platform afgaan (incl. gedeeltelijke ondersteuning)"
   },
   "list": {
     "count": "{{shown}} / {{total}}"
@@ -20,11 +22,14 @@
   "tabs": {
     "steps": "ScriptSteps",
     "functions": "Functies",
-    "locales": "Talen"
+    "locales": "Talen",
+    "triggers": "Triggers",
+    "errorCodes": "Foutcodes"
   },
   "header": {
     "schemaVersion": "Schema",
-    "coverage": "FM-versie",
+    "coverage": "FM-versie (vormen)",
+    "docCoverage": "FM-versie (documentatie)",
     "built": "Gebouwd op",
     "steps": "ScriptSteps",
     "functions": "Functies",
@@ -32,7 +37,9 @@
     "localesValue": "{{steps}} / {{functions}}",
     "grammar": "Grammaticadekking",
     "grammarValue": "{{covered}}/{{total}} stappen",
-    "attribution": "Documentatie-inhoud © Claris International Inc. FileMaker en Claris zijn handelsmerken van Claris International Inc. Dit project is niet verbonden aan of goedgekeurd door Claris. Zie SOURCES voor volledige attributie."
+    "attribution": "Documentatie-inhoud © Claris International Inc. FileMaker en Claris zijn handelsmerken van Claris International Inc. Dit project is niet verbonden aan of goedgekeurd door Claris. Zie SOURCES voor volledige attributie.",
+    "triggers": "Triggers",
+    "errorCodes": "Foutcodes"
   },
   "steps": {
     "col": {
@@ -52,7 +59,8 @@
       "name": "Naam",
       "category": "Categorie",
       "returnType": "Retourtype",
-      "originVersion": "Oorspronkelijke versie"
+      "originVersion": "Oorspronkelijke versie",
+      "removedInVersion": "Verwijderd in"
     },
     "detail": {
       "returnType": "Retourtype",
@@ -120,8 +128,22 @@
         "evidence": "Bewijs",
         "values": "Waarden",
         "invertedHint": "De labelsemantiek is omgekeerd ten opzichte van de XML-status — true_text/false_text bevatten al de volledige tekst→XML-toewijzing; nooit extra omkeren.",
-        "docOnly": "Gedocumenteerd door Claris, maar niet roundtrip-geverifieerd — gedrag na het plakken controleren."
-      }
+        "docOnly": "Gedocumenteerd door Claris, maar niet roundtrip-geverifieerd — gedrag na het plakken controleren.",
+        "slotKind": "Slot",
+        "xmlDomain": "XML-domein",
+        "slot_field_only": "alleen veld",
+        "slot_field_or_var": "veld of variabele",
+        "slot_variable_only": "alleen variabele",
+        "pasteDropped": "verworpen bij plakken",
+        "pasteDroppedHint": "FileMaker verwerpt deze optie bij het plakken ongeacht de waarde — een generator laat haar weg, de referentie behoudt de plaatshouder om te lezen."
+      },
+      "coverage": "Vormdekking",
+      "coverageHint": "FileMaker-versie waartegen deze vorm met gepaarde export- en klembordbewijzen is geverifieerd. Een rij met een versiemarkering is een override van die dekking en vervangt de standaardrij met dezelfde sleutel.",
+      "coverageBase": "basis",
+      "overrideBadge": "FM {{coverage}}",
+      "overrideHint": "Override-rij van dekking {{coverage}} — vervangt de standaardrij met dezelfde sleutel.",
+      "noOverrides": "Geen override-rijen voor deze dekking — de standaardvorm geldt.",
+      "targetSlotKind": "Soort doelslot"
     },
     "saxml": {
       "paramTypes": "Parametertypesequentie",
@@ -133,7 +155,8 @@
     "compat": {
       "label": "Platformcompatibiliteit",
       "partial": "gedeeltelijk",
-      "partialHint": "Gedeeltelijk — voorwaardelijk ondersteund; zie de Claris-helppagina van de stap"
+      "partialHint": "Gedeeltelijk — voorwaardelijk ondersteund; zie de Claris-helppagina van de stap",
+      "none": "Geen platform — Claris vermeldt deze gebeurtenis nergens als ondersteund"
     }
   },
   "osAffinity": {
@@ -146,5 +169,56 @@
     "hint_unsupported": "Claris noemt dit OS expliciet als niet ondersteund (brongetrouwe inverse uitspraak)",
     "hint_variant": "Werkt overal — gedrag of resultaat hangt af van het OS",
     "hint_os_probe": "Geeft het platform/OS terug tijdens runtime — guard-idioom, geen binding"
+  },
+  "triggers": {
+    "col": {
+      "id": "Slot-ID",
+      "event": "Gebeurtenis",
+      "label": "Label",
+      "level": "Niveau",
+      "since": "Sinds",
+      "parameter": "Parameter",
+      "platforms": "Platforms"
+    },
+    "level": {
+      "object": "object",
+      "layout": "lay-out",
+      "file": "bestand"
+    },
+    "paramYes": "ja",
+    "paramNo": "nee",
+    "unavailable": "Deze referentie bevat geen scripttriggertabel (fm-spec < 1.18.0)."
+  },
+  "errorCodes": {
+    "col": {
+      "code": "Code",
+      "message": "Melding",
+      "scope": "Bereik"
+    },
+    "scope": {
+      "core": "kern",
+      "web": "web"
+    },
+    "scopeHint": {
+      "core": "Geretourneerd door de FileMaker-clients en -hosts",
+      "web": "Geretourneerd door de Web Publishing Engine of een FileMaker REST-API (door Claris gemarkeerd met (*))"
+    },
+    "search": {
+      "hint": "Een getal vindt de code of het bereik waarin hij valt (5123 → 5000-5499); tekst doorzoekt de melding"
+    },
+    "unavailable": "Deze referentie bevat geen foutcodetabel (fm-spec < 2.8.0)."
+  },
+  "trigger": {
+    "section": {
+      "labels": "Gelokaliseerde labels",
+      "platforms": "Platformcompatibiliteit"
+    },
+    "localized": {
+      "label": "Dialooglabel"
+    },
+    "parameterField": "met parameterveld-attribuut",
+    "compat": {
+      "unavailable": "Geen gepubliceerde compatibiliteitsverklaring — referentie ouder dan fm-spec 2.8.0"
+    }
   }
 }

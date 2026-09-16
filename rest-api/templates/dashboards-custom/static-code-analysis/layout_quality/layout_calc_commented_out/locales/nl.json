@@ -1,10 +1,11 @@
 {
   "manifest": {
     "title": "Volledig uitgecommentarieerde Layout-berekening",
-    "description": "Layoutkwaliteitsregel — een verberg-, tooltip- of labelberekening van een Layout-object bestaat volledig uit een commentaar. De formule wordt nooit geëvalueerd; het bedoelde gedrag is stilletjes uitgeschakeld.\n\nGebaseerd op de fmCheckMate-controle “Broken Calculation /*Commented Out*/” — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+    "description": "Layoutkwaliteitsregel — een verberg-, veldinvoer-, tooltip- of labelberekening van een Layout-object bestaat volledig uit een commentaar. De formule wordt nooit geëvalueerd; het bedoelde gedrag is stilletjes uitgeschakeld.\n\nGebaseerd op de fmCheckMate-controle “Broken Calculation /*Commented Out*/” — https://github.com/mrwatson-de/fmCheckMate-XSLT",
     "messages.hide": "De verbergberekening is volledig uitgecommentarieerd",
     "messages.tooltip": "De tooltipberekening is volledig uitgecommentarieerd",
-    "messages.label": "De labelberekening is volledig uitgecommentarieerd"
+    "messages.label": "De labelberekening is volledig uitgecommentarieerd",
+    "messages.entry": "De veldinvoerberekening is volledig uitgecommentarieerd"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Bevindingen",
@@ -22,6 +23,7 @@
     "calc_slot_filter.props.options[1].label": "verbergen",
     "calc_slot_filter.props.options[2].label": "tooltip",
     "calc_slot_filter.props.options[3].label": "label",
+    "calc_slot_filter.props.options[4].label": "veldinvoer",
     "object_type_select.props.label": "Objecttype",
     "object_type_select.props.emptyOptionLabel": "alle objecttypen",
     "findings_table.props.columns[7].label": "Breedte",

@@ -199,7 +199,8 @@ SELECT
     vr.File_Name
 FROM _DDR_VarRefs_Distinct vr
 JOIN FieldsForTables f ON vr.Calc_Hash = f.AE_Calc_Hash AND vr.File_Name = f.File_Name
-WHERE f.AE_Calc_Hash IS NOT NULL;
+WHERE f.AE_Calc_Hash IS NOT NULL
+  AND COALESCE(f.AE_Calc_Enabled, TRUE);   -- dormante Auto-Enter-Formel (FM 26): keine VariableUsages
 
 -- 3c: Variablen in CustomFunctions (CustomFunctionsCatalog.DDR_Hash)
 INSERT INTO VariableUsages
@@ -1502,6 +1503,48 @@ CREATE INDEX idx_layoutobjectconditions_owner ON LayoutObjectConditions(Object_U
 -- laut Claris-Doku case-insensitiv tippbar ({{currenttime}} ≡ {{CurrentTime}}).
 -- Dedup analog A.12/P4 lo_rep: LayoutObjects kann Doppel-Zeilen je
 -- (Object_UUID, File_Name) tragen.
+-- FieldDisplayNames (Schema 1.29.0, SaXML 2.3.0.0 / FileMaker 26): die JSON-
+-- Elemente der Feld-Anzeigenamen-Formel (FieldsForTables.DisplayNames_Calc_Text),
+-- eine Zeile je Element. FileMaker schreibt die Formel im Dialog „Anzeigenamen"
+-- als JSONSetElement ( "{}" ; [ "<key>" ; <Etikett oder Formel> ; JSON<Typ> ] ; … );
+-- geparst wird genau diese Form (Elemente ohne verschachtelte eckige Klammern).
+-- Value_Kind 'literal' = Etikett als String-Literal (entquotet), 'formula' = ein
+-- Ausdruck (Rohtext). Freie Formeln, die nicht diesem Muster folgen, liefern keine
+-- Zeile — das Frontend zeigt dann die Rohformel. Nur Owner-Inventar, keine Kanten
+-- (die Formel-Referenzen laufen über die display_names-Instanz).
+DROP TABLE IF EXISTS FieldDisplayNames;
+CREATE TABLE FieldDisplayNames AS
+WITH src AS (
+    SELECT Field_UUID, File_Name,
+           regexp_extract_all(DisplayNames_Calc_Text, '\[\s*"(?:[^"\\]|\\.)*"\s*;[^\[\]]*\]') AS elems
+    FROM FieldsForTables
+    WHERE DisplayNames_Calc_Text IS NOT NULL
+      AND DisplayNames_Calc_Text LIKE '%JSONSetElement%'
+),
+ex AS (
+    SELECT Field_UUID, File_Name,
+           unnest(elems) AS elem,
+           generate_subscripts(elems, 1) AS Element_Seq
+    FROM src
+),
+parsed AS (
+    SELECT Field_UUID, File_Name, Element_Seq,
+           regexp_extract(elem, '(?s)^\[\s*"((?:[^"\\]|\\.)*)"\s*;\s*(.*?)\s*;\s*(JSON[A-Za-z]+)\s*\]$', ['k', 'v', 't']) AS m
+    FROM ex
+)
+SELECT
+    Field_UUID,
+    File_Name,
+    Element_Seq,
+    replace(m.k, '\"', '"')                                          AS Element_Key,
+    CASE WHEN regexp_matches(m.v, '^"(?:[^"\\]|\\.)*"$')
+         THEN replace(m.v[2:-2], '\"', '"')
+         ELSE m.v END                                                 AS Value_Text,
+    CASE WHEN regexp_matches(m.v, '^"(?:[^"\\]|\\.)*"$') THEN 'literal' ELSE 'formula' END AS Value_Kind,
+    m.t                                                               AS Json_Type
+FROM parsed
+WHERE m.k IS NOT NULL AND m.k <> '';
+
 DROP TABLE IF EXISTS LayoutObjectSymbols;
 CREATE TABLE LayoutObjectSymbols AS
 WITH lo_dedup AS (

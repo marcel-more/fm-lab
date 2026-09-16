@@ -232,6 +232,9 @@
   gap: 0.5rem;
   padding: 0.1rem 0;
   font-size: 0.8rem;
+  /* a row never collapses below one text line, even with an empty message */
+  min-height: 1.4em;
+  line-height: 1.4;
 }
 
 .tests-finding-step {

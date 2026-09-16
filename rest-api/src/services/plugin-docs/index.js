@@ -61,6 +61,50 @@ function getFunctionDoc(sourceId, fnName) {
 }
 
 /**
+ * Adresse der Doku-Seite einer Funktion im Doku-Browser (`{ category, entry }`)
+ * oder NULL — unbekannte Quelle, Adapter ohne Eintragsebene, Doku nicht
+ * installiert oder Funktion nicht im Index. Bewusst fehlertolerant: der
+ * Aufrufer entscheidet damit nur, ob er einen Link rendert.
+ */
+function resolveEntryRef(sourceId, fnName) {
+  const adapter = getSourceAdapter(sourceId);
+  if (!adapter || typeof adapter.resolveEntryRef !== 'function') return null;
+  try {
+    return adapter.resolveEntryRef(fnName);
+  } catch {
+    return null;
+  }
+}
+
+/** Externe Doku-URL einer Funktion beim Hersteller; NULL für unbekannte Quellen. */
+function externalUrl(sourceId, fnName) {
+  const cfg = getSourceConfig(sourceId);
+  if (!cfg || typeof cfg.externalUrl !== 'function' || !fnName) return null;
+  return cfg.externalUrl(fnName);
+}
+
+/**
+ * Adresse der Rubrikseite einer Komponente im Doku-Browser (`{ category }`)
+ * oder NULL — gleiche Fehlertoleranz wie `resolveEntryRef`.
+ */
+function resolveCategoryRef(sourceId, categoryName) {
+  const adapter = getSourceAdapter(sourceId);
+  if (!adapter || typeof adapter.resolveCategoryRef !== 'function') return null;
+  try {
+    return adapter.resolveCategoryRef(categoryName);
+  } catch {
+    return null;
+  }
+}
+
+/** Externe Rubrik-URL beim Hersteller; NULL für unbekannte Quellen. */
+function externalCategoryUrl(sourceId, categoryName) {
+  const cfg = getSourceConfig(sourceId);
+  if (!cfg || typeof cfg.externalCategoryUrl !== 'function' || !categoryName) return null;
+  return cfg.externalCategoryUrl(categoryName);
+}
+
+/**
  * Kategorien-Liste einer Quelle. Wirft einen Error mit `code` für unbekannte
  * Quellen oder wenn der Adapter `listCategories` nicht unterstützt.
  */
@@ -141,6 +185,10 @@ module.exports = {
   listSources,
   getSourceStatus,
   getFunctionDoc,
+  resolveEntryRef,
+  externalUrl,
+  resolveCategoryRef,
+  externalCategoryUrl,
   listCategories,
   listFunctionsInCategory,
   searchFunctions,

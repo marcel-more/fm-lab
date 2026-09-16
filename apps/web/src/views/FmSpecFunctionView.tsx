@@ -1,15 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SubNav } from '../components/SubNav';
 import { StatusBar } from '../components/StatusBar';
 import { buildBreadcrumb } from '../lib/navigation';
 import { useApiLang } from '../hooks/useApiLang';
-import { fetchFunctionDetail, resolveHelpHref, PLATFORM_LABELS, OS_LABELS, type FunctionDetail } from '../api/fmSpecApi';
+import { fetchFunctionDetail, resolveHelpHref, buildDocsEntryPath, resolveFunctionLang, PLATFORM_LABELS, OS_LABELS, type FunctionDetail } from '../api/fmSpecApi';
 import './FmSpecView.css';
-
-// Functions-Domäne kennt kein zh-Hans → auf Englisch zurückfallen (wie Liste).
-const FUNCTION_LANGS = new Set(['en', 'de', 'es', 'fr', 'it', 'nl', 'pt', 'sv', 'ja', 'ko']);
 
 /**
  * fm-spec Function-Detail (`/fm-spec/function/:functionId`).
@@ -21,7 +18,8 @@ export function FmSpecFunctionView() {
   const { functionId } = useParams();
   const { t } = useTranslation(['fmSpec', 'nav']);
   const uiLang = useApiLang();
-  const fnLang = FUNCTION_LANGS.has(uiLang) ? uiLang : 'en';
+  // Functions-Domäne kennt kein zh-Hans → auf Englisch zurückfallen (wie Liste).
+  const fnLang = resolveFunctionLang(uiLang);
   const dash = t('fmSpec:dash');
 
   const [data, setData] = useState<FunctionDetail | null>(null);
@@ -51,12 +49,24 @@ export function FmSpecFunctionView() {
           <h1 className="fmspec-title">
             {fnName}
             {data && <span className="fmspec-title__id">#{data.functionId}</span>}
+            {/* Gegenrichtung zur Claris-Doku-Seite — nur wenn das Docset
+                installiert ist und die Seite dort existiert (Server-Check).
+                Sprache = UI-Sprache, nicht fnLang: die Doku-Seite synchronisiert
+                ?lang= nach i18n und würde sonst die UI umschalten. */}
+            {data?.docsEntry && (
+              <Link className="fmspec-title__doclink" to={buildDocsEntryPath(data.docsEntry, uiLang)!}>
+                {t('fmSpec:clarisHelp')}
+              </Link>
+            )}
           </h1>
           {data && (
             <p className="fmspec-subtitle">
               {t('fmSpec:functions.col.category')}: {data.category?.name ?? String(data.categoryId)}
               {' · '}{t('fmSpec:functions.detail.returnType')}: {data.returnTypeDisplay || data.returnType || dash}
               {' · '}{t('fmSpec:functions.col.originVersion')}: {data.originVersion ?? dash}
+              {data.removedInVersion && (
+                <>{' · '}{t('fmSpec:functions.col.removedInVersion')}: <span className="fmspec-retired">{data.removedInVersion}</span></>
+              )}
             </p>
           )}
           {/* Plattform-Bindung (Referenz ≥ 1.12.0) — Affinität, nie

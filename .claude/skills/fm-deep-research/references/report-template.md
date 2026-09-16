@@ -62,7 +62,9 @@
      · Data — field types, auto-enter/validation/calculation practice, relationships, TO fan-out
      · APIs and plugins — plugin functions, Insert from URL, external data sources
      · Security model — accounts, privilege sets, extended privileges, full-access scripts
-     · Platform footprint — steps with Server/WebDirect/Go constraints (fm_spec step_compat)
+     · Platform footprint — steps with Server/WebDirect/Go constraints (fm_spec step_compat),
+       and the web/mobile readiness of the UI entry points: triggers whose event does not or
+       only partially fires in WebDirect/Go (profile #12, fm_spec trigger_compat — Partial ≠ unsupported)
      Sources: R1, R2, script_steps.sql for anchor scripts. -->
 <!-- /section -->
 

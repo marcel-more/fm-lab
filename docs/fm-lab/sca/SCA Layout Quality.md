@@ -21,8 +21,8 @@ The `error` tier is reference-level breakage: broken field and value-list refere
 | Broken field reference | error | Objects referencing a field or table occurrence that no longer exists (ID-resolved, cross-file aware) | fmCheckMate |
 | Broken value list reference | error | Objects referencing a value list missing from their file | fmCheckMate |
 | Field repetition out of range | error | Objects showing a repetition the field no longer has — empty at runtime | fmCheckMate |
-| Commented-out layout calculation | error | Hide/tooltip/label calculations that are one big comment — behavior silently disabled | fmCheckMate |
-| Hide condition is a quoted constant | error | Hide formulas pasted with their quotes — they evaluate as a constant | fmCheckMate |
+| Commented-out layout calculation | error | Hide/field-entry/tooltip/label calculations that are one big comment — behavior silently disabled | fmCheckMate |
+| Hide or field-entry condition is a quoted constant | error | Hide or field-entry formulas pasted with their quotes — they evaluate as a constant | fmCheckMate |
 | Popover inside a popover | error | Nested popovers — opening the inner closes the outer | fmCheckMate |
 | Object outside its parent | warning | Nested objects clipped or invisible beyond their portal/panel/group bounds | fmCheckMate |
 | Object hidden behind a container | warning | Objects fully covered by a portal, tab or slide control — unclickable in Browse mode | fmCheckMate |

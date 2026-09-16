@@ -105,4 +105,4 @@ FMLAB_DUCKDB_THREADS=4  # thread cap (raise on hosts with more cores)
 - **Docker (ways a / b):** only **[Docker](https://docs.docker.com/get-docker/)** on the host — everything else is in the image.
 - **Native (way c):** [DuckDB CLI](https://duckdb.org/docs/installation/) ≥ 1.5.4 + the **webbed** community extension (the XML reader; `init.sh` installs it when missing); Node.js ≥ 20, npm ≥ 10.
 - **AI agent (optional):** [Claude Code](https://docs.claude.com/en/docs/claude-code) (bundled in the Docker agent variant) + the [duckdb-skills](https://github.com/duckdb/duckdb-skills) plugin (recommended).
-- **XML export:** FileMaker Pro for the SaXML export (SaXML v2.1.0.0+ / FileMaker 19+). Future FileMaker versions may require parser adjustments.
+- **XML export:** FileMaker Pro for the SaXML export — SaXML v2.1.0.0+ (FileMaker 19–22) and v2.3.0.0 (FileMaker 26), each read under its own import profile (see [the SaXML version notes](../xml/XML.md#version-notes-saxml-v22-and-v23)). Later SaXML versions may require parser adjustments.

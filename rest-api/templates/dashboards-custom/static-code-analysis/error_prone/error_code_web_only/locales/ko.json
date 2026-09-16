@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "웹 전용 오류 코드 리터럴",
+    "analysis.defaultResult.meaning": "웹 게시 엔진 또는 REST API만 반환하는 코드와의 Get(LastError) 비교"
+  },
+  "layout": {}
+}

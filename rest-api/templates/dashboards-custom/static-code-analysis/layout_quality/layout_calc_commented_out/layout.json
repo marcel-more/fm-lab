@@ -88,6 +88,11 @@
                       "value": "label",
                       "label": "Label",
                       "countField": "label_count"
+                    },
+                    {
+                      "value": "entry",
+                      "label": "Field entry",
+                      "countField": "entry_count"
                     }
                   ]
                 },

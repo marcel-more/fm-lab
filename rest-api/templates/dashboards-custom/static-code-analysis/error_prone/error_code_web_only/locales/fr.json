@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Littéral de code d'erreur Web uniquement",
+    "analysis.defaultResult.meaning": "Comparaisons de Get(LastError) avec un code renvoyé uniquement par le moteur de publication Web ou une API REST"
+  },
+  "layout": {}
+}

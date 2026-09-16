@@ -1,16 +1,21 @@
 /*
 -- convert_xml_01c_design_function_retype.sql — Phase 1c of the XML conversion
--- pipeline: re-classify FileMaker design functions in the DDR chunk stream.
+-- pipeline: re-classify FileMaker built-in functions that the export tagged as
+-- plug-in references in the DDR chunk stream.
 --
--- Background: the SaXML export tags the design functions (DatabaseNames,
--- WindowNames, LayoutIDs, ValueListItems, ScriptNames, …) as
+-- Background: the SaXML export tags some built-in functions as
 -- <Chunk type="PluginFunctionRef"> — the chunk type otherwise used for plug-in
--- calls — and keeps their names in the language of the authoring client
--- (`Fensternamen`, `WindowNames`, …). Every other built-in function arrives as
--- FunctionRef with its canonical English name. Taken literally, each design
--- function became a synthetic PluginFunction object with calls_pluginfunction
--- edges: plug-in statistics, plug-in dashboards and the cluster god-node list
--- counted them as plug-ins.
+-- calls — and keeps their names in the language of the authoring client: the
+-- design functions (DatabaseNames, WindowNames, LayoutIDs, ValueListItems,
+-- ScriptNames, …: `Fensternamen`, `WindowNames`) and the mobile functions
+-- (Location, LocationValues, RangeBeacons: `Standort`, `Standortwerte`,
+-- `ReichweiteBeacons` — found on the coverage fixtures). Every other built-in
+-- function arrives as FunctionRef with its canonical English name. Taken
+-- literally, each such function became a synthetic PluginFunction object with
+-- calls_pluginfunction edges: plug-in statistics, plug-in dashboards and the
+-- cluster god-node list counted them as plug-ins. Since converter 2.24.0 the
+-- name list covers EVERY built-in function of every category (except the
+-- Get(…) selectors), so no further category can slip through.
 --
 -- This step retypes those chunks to FunctionRef BEFORE Phase 2 reads the chunk
 -- stream, so every downstream consumer follows without change: the FunctionRef
@@ -47,6 +52,7 @@
 CREATE TABLE IF NOT EXISTS DesignFunctionNames (
     Function_ID    INTEGER,
     Canonical_Name VARCHAR,
+    Category       VARCHAR,
     Language       VARCHAR,
     Name           VARCHAR,
     Name_XML       VARCHAR

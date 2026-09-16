@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "無効なレイアウトシンボル",
+    "description": "レイアウト品質ルール — テキストオブジェクトに Get 関数の引数ではない {{シンボル}} が含まれています。シンボルは表示時点の Get(<シンボル>) の値です。未知のシンボルは破棄されず、ブラウズモードとプレビューモードでそのまま「文字どおり」描画されるため、レイアウトには生の {{テキスト}} が表示されます。有効性は標準リファレンス（function_name_lookup、chunk_role「getparameter」）が収録するすべての言語に対して判定します。FileMaker はローカライズされた引数名も受け付けるため、ローカライズされたシンボルは欠陥ではありません。警告にとどめる理由は 2 つ — リファレンスのローカライズ収録は不均一で（スペイン語とポルトガル語の名前は完全に欠落、ドイツ語も部分的）、{{Get(FoundCount)}} のような括弧形式はシンボル目録に入らないため、このルールからは見えません。",
+    "messages.unknown-symbol": "このシンボルは既知の Get 引数ではありません — 文字どおり描画されます"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "検出数",
+    "summary_kpi.props.items[1].label": "固有シンボル数",
+    "summary_kpi.props.items[2].label": "対象レイアウト数",
+    "summary_kpi.props.items[3].label": "対象ファイル数",
+    "findings_card.props.title": "無効なレイアウトシンボル",
+    "findings_table.props.searchPlaceholder": "ファイル・レイアウト・オブジェクト・シンボルを検索…",
+    "findings_table.props.empty.message": "無効なレイアウトシンボルは見つかりませんでした。",
+    "findings_table.props.columns[0].label": "ファイル",
+    "findings_table.props.columns[1].label": "レイアウト",
+    "findings_table.props.columns[2].label": "オブジェクト",
+    "findings_table.props.columns[3].label": "シンボル",
+    "findings_table.props.columns[4].label": "出現回数",
+    "findings_table.props.columns[7].label": "幅",
+    "findings_table.props.columns[8].label": "高さ"
+  }
+}

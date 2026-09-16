@@ -57,6 +57,9 @@ const FmSpecStepView = lazy(() =>
 const FmSpecFunctionView = lazy(() =>
   import('./views/FmSpecFunctionView').then((m) => ({ default: m.FmSpecFunctionView })),
 );
+const FmSpecTriggerView = lazy(() =>
+  import('./views/FmSpecTriggerView').then((m) => ({ default: m.FmSpecTriggerView })),
+);
 
 /**
  * Wrapper, der DocsEntryView per `key` an die Route-Params bindet. Damit
@@ -637,6 +640,14 @@ function App() {
         element={
           <Suspense fallback={<div className="graph-explorer-placeholder">…</div>}>
             <FmSpecFunctionView />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/fm-spec/trigger/:triggerId"
+        element={
+          <Suspense fallback={<div className="graph-explorer-placeholder">…</div>}>
+            <FmSpecTriggerView />
           </Suspense>
         }
       />

@@ -1,10 +1,11 @@
 {
   "manifest": {
     "title": "주석 처리된 Layout 계산식",
-    "description": "Layout 품질 규칙 — Layout 개체의 숨기기·툴팁·레이블 계산식 전체가 주석으로 되어 있습니다. 수식이 평가되지 않아 의도한 동작이 조용히 비활성화됩니다.\n\nfmCheckMate 검사 “Broken Calculation /*Commented Out*/” — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+    "description": "Layout 품질 규칙 — Layout 개체의 숨기기·필드 입력·툴팁·레이블 계산식 전체가 주석으로 되어 있습니다. 수식이 평가되지 않아 의도한 동작이 조용히 비활성화됩니다.\n\nfmCheckMate 검사 “Broken Calculation /*Commented Out*/” — https://github.com/mrwatson-de/fmCheckMate-XSLT",
     "messages.hide": "숨기기 계산식이 완전히 주석 처리되어 있습니다",
     "messages.tooltip": "툴팁 계산식이 완전히 주석 처리되어 있습니다",
-    "messages.label": "레이블 계산식이 완전히 주석 처리되어 있습니다"
+    "messages.label": "레이블 계산식이 완전히 주석 처리되어 있습니다",
+    "messages.entry": "필드 입력 계산식이 완전히 주석 처리되어 있습니다"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "발견 수",
@@ -22,6 +23,7 @@
     "calc_slot_filter.props.options[1].label": "숨기기",
     "calc_slot_filter.props.options[2].label": "툴팁",
     "calc_slot_filter.props.options[3].label": "레이블",
+    "calc_slot_filter.props.options[4].label": "필드 입력",
     "object_type_select.props.label": "개체 유형",
     "object_type_select.props.emptyOptionLabel": "모든 개체 유형",
     "findings_table.props.columns[7].label": "너비",

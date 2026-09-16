@@ -1,0 +1,25 @@
+{
+  "manifest": {
+    "title": "Onopgeloste samenvoeganker",
+    "description": "Layoutkwaliteitsregel — een tekstobject bevat een samenvoegveld-anker (<<Veld>>) dat FileMaker niet kan oplossen. Zo’n anker wordt niet weggelaten: het wordt LETTERLIJK weergegeven in blader- en voorbeeldmodus, zodat de gebruiker het ruwe <<Veld>> ziet waar een waarde hoort. Het laat bovendien geen spoor na in de catalogus — geen displays_field-rand, geen eigen object —, waardoor deze regel de enige plek is waar het zichtbaar wordt. De detectie vergelijkt de ankers in de tekst (samenvoegvariabelen <<$…>> en layoutformules <<ƒ:…>> uitgesloten; een herhaling of een TO-kwalificatie telt als één anker) met de FieldReference-vermeldingen in de structurele FieldList van het object, die precies één vermelding per opgelost anker bevat. De telling bepaalt de bevinding; de bij naam genoemde verdachten zijn een extra en blijven leeg wanneer de namen niet veilig te koppelen zijn.",
+    "messages.unresolved-anchor": "Samenvoeganker zonder veldoplossing — het wordt letterlijk weergegeven"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Bevindingen",
+    "summary_kpi.props.items[1].label": "Onopgeloste ankers",
+    "summary_kpi.props.items[2].label": "Betrokken layouts",
+    "summary_kpi.props.items[3].label": "Betrokken bestanden",
+    "findings_card.props.title": "Onopgeloste samenvoeganker",
+    "findings_table.props.searchPlaceholder": "Zoek bestand, layout, object of anker…",
+    "findings_table.props.empty.message": "Geen onopgeloste samenvoegankers gevonden.",
+    "findings_table.props.columns[0].label": "Bestand",
+    "findings_table.props.columns[1].label": "Layout",
+    "findings_table.props.columns[2].label": "Object",
+    "findings_table.props.columns[3].label": "Letterlijk weergegeven",
+    "findings_table.props.columns[4].label": "Alle ankers",
+    "findings_table.props.columns[5].label": "Onopgelost",
+    "findings_table.props.columns[6].label": "Ankers",
+    "findings_table.props.columns[9].label": "Breedte",
+    "findings_table.props.columns[10].label": "Hoogte"
+  }
+}

@@ -286,10 +286,24 @@ export const DetailView: React.FC = () => {
   }
 
   const breadcrumbType = displayObjectType(object.Object_Type, object.Source_Table);
+  // Built-ins stehen im Katalog unter ihrem KANONISCHEN englischen Namen — das
+  // ist ihre Identität, sprachunabhängig. Für eine Lösung, deren Formeln
+  // lokalisiert geschrieben sind, ist dieser Name allein aber nicht der Name,
+  // den der Entwickler kennt: deshalb kanonisch + lokalisierte Fassung
+  // daneben, nicht statt. Localized_Name liefert die API nur mit ?lang= und nur
+  // bei echter Abweichung.
+  const localizedName = object.Object_Type === 'BuiltinFunction'
+    ? (object as Record<string, unknown>).Localized_Name
+    : null;
+  const titleName = object.Object_Name
+    ? (typeof localizedName === 'string' && localizedName
+        ? `${object.Object_Name} · ${localizedName}`
+        : object.Object_Name)
+    : (t('nav:detailView.noName') as string);
   const breadcrumbItems = buildBreadcrumb({
     kind: 'object',
     objectType: breadcrumbType,
-    objectName: object.Object_Name || (t('nav:detailView.noName') as string),
+    objectName: titleName,
     objectPath: buildObjectPath(uuid!, null, fileParam || null),
     tab: activeTab,
   }, t);

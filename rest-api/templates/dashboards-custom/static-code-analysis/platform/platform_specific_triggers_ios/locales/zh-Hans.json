@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "平台专属触发器：FileMaker Go (iOS)",
+    "analysis.defaultResult.meaning": "范围内绑定到仅在 FileMaker Go (iOS) 中触发的触发器事件的脚本"
+  },
+  "layout": {}
+}

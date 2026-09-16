@@ -1,8 +1,8 @@
 {
   "manifest_schema": "1.0",
-  "version": "0.9.11",
-  "generated_at": "2026-09-05T21:38:05.006Z",
-  "source_commit": "b80ce64e",
+  "version": "0.9.12",
+  "generated_at": "2026-09-16T21:16:10.632Z",
+  "source_commit": "58f94af5",
   "components": {
     "rest_api": {
       "scheme": "A",
@@ -30,20 +30,20 @@
     },
     "schema": {
       "scheme": "B",
-      "version": "1.27.0",
+      "version": "1.32.0",
       "source": "ingestion/sql/convert_xml_01_extract.sql",
       "on_change": "force_rebuild_db"
     },
     "xml_import": {
       "scheme": "B",
-      "version": "5.1.0",
-      "engine_version": "2.23.0",
+      "version": "5.5.0",
+      "engine_version": "2.30.0",
       "source": "ingestion/convert_fm_xml.sh",
       "on_change": "reconvert_xml"
     },
     "fm_spec": {
       "scheme": "B",
-      "version": "1.18.0",
+      "version": "2.9.0",
       "filemaker_coverage": "22",
       "source": "reference/fm_spec.meta.json",
       "on_change": "pull_reference_reload_api"
@@ -71,18 +71,6 @@
     {
       "name": "convert-xml",
       "version": "0.9.0"
-    },
-    {
-      "name": "test-convert-xml",
-      "version": "0.9.0"
-    },
-    {
-      "name": "install-ooe-fm",
-      "version": "0.8.5"
-    },
-    {
-      "name": "install-fm-xml-export-exploder",
-      "version": "0.8.5"
     },
     {
       "name": "install-claris-docs",
@@ -138,7 +126,7 @@
     },
     {
       "name": "fm-generate-script",
-      "version": "0.9.0"
+      "version": "0.9.12"
     },
     {
       "name": "fm-test",

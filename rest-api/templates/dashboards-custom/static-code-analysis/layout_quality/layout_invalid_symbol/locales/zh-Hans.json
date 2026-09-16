@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "无效的布局符号",
+    "description": "布局质量规则 — 文本对象中包含一个并非 Get 函数参数的 {{符号}}。符号是显示时 Get(<符号>) 的取值；未知符号不会被丢弃，而是在浏览和预览模式下按「原样」呈现，于是布局上显示的就是原始的 {{文本}}。有效性由标准参考库判定（function_name_lookup，chunk_role「getparameter」），覆盖其收录的全部语言：FileMaker 同样接受本地化的参数名，因此本地化的符号并非缺陷。两点局限使本规则保持为警告：参考库的本地化收录并不均衡（西班牙语和葡萄牙语名称完全缺失，德语仅部分收录），而 {{Get(FoundCount)}} 这类带括号的写法根本不会进入符号清单 — 本规则对其无感。",
+    "messages.unknown-symbol": "该符号不是已知的 Get 参数 — 会按原样显示"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "发现数",
+    "summary_kpi.props.items[1].label": "不同符号数",
+    "summary_kpi.props.items[2].label": "受影响布局",
+    "summary_kpi.props.items[3].label": "受影响文件",
+    "findings_card.props.title": "无效的布局符号",
+    "findings_table.props.searchPlaceholder": "搜索文件、布局、对象或符号…",
+    "findings_table.props.empty.message": "未发现无效的布局符号。",
+    "findings_table.props.columns[0].label": "文件",
+    "findings_table.props.columns[1].label": "布局",
+    "findings_table.props.columns[2].label": "对象",
+    "findings_table.props.columns[3].label": "符号",
+    "findings_table.props.columns[4].label": "出现次数",
+    "findings_table.props.columns[7].label": "宽度",
+    "findings_table.props.columns[8].label": "高度"
+  }
+}

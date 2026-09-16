@@ -1,21 +1,23 @@
 {
   "manifest": {
-    "title": "隐藏条件是带引号的常量",
-    "description": "Layout 质量规则 — 对象的隐藏条件是一个带引号的字符串字面量。公式很可能连同引号一起被粘贴，它作为常量而非预期的计算公式生效。\n\n基于 fmCheckMate 检查“ReportBrokenCalculationQuoted” — https://github.com/mrwatson-de/fmCheckMate-XSLT",
-    "messages.quoted": "隐藏条件是带引号的字符串常量，而非计算公式"
+    "title": "隐藏或字段输入条件是带引号的常量",
+    "description": "Layout 质量规则 — 对象的隐藏或字段输入条件是一个带引号的字符串字面量。公式很可能连同引号一起被粘贴，它作为常量而非预期的计算公式生效。\n\n基于 fmCheckMate 检查“ReportBrokenCalculationQuoted” — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+    "messages.quoted": "隐藏条件是带引号的字符串常量，而非计算公式",
+    "messages.quoted_entry": "字段输入条件是带引号的字符串常量，而非计算公式"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "结果数",
     "summary_kpi.props.items[1].label": "受影响的 Layout",
     "summary_kpi.props.items[2].label": "受影响文件",
-    "findings_card.props.title": "隐藏条件是带引号的常量",
+    "findings_card.props.title": "隐藏或字段输入条件是带引号的常量",
     "findings_table.props.searchPlaceholder": "搜索文件、Layout 或对象…",
-    "findings_table.props.empty.message": "未找到带引号的隐藏条件。",
+    "findings_table.props.empty.message": "未找到带引号的隐藏或字段输入条件。",
     "findings_table.props.columns[0].label": "文件",
     "findings_table.props.columns[1].label": "Layout",
     "findings_table.props.columns[2].label": "对象类型",
     "findings_table.props.columns[3].label": "对象",
-    "findings_table.props.columns[6].label": "宽度",
-    "findings_table.props.columns[7].label": "高度"
+    "findings_table.props.columns[4].label": "槽位",
+    "findings_table.props.columns[7].label": "宽度",
+    "findings_table.props.columns[8].label": "高度"
   }
 }

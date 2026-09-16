@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "トリガ互換性: FileMaker WebDirect",
+    "analysis.defaultResult.meaning": "FileMaker WebDirect でイベントが発生しない、または一部しか発生しない対象範囲内のスクリプトトリガ"
+  },
+  "layout": {}
+}

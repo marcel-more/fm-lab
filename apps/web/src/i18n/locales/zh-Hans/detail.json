@@ -27,7 +27,10 @@
     "BaseTable": "表详情",
     "CustomFunction": "函数详情",
     "ValueList": "值列表详情",
-    "Calculation": "计算公式详情"
+    "Calculation": "计算公式详情",
+    "BuiltinFunction": "内置函数详情",
+    "PluginFunction": "插件函数详情",
+    "PluginComponent": "插件组件详情"
   },
   "layoutCanvas": {
     "searchPlaceholder": "搜索布局对象…",
@@ -160,6 +163,10 @@
       "hide": {
         "short": "Hide",
         "long": "隐藏条件"
+      },
+      "field_entry": {
+        "short": "Entry",
+        "long": "字段输入条件"
       },
       "conditional_format": {
         "short": "CF",
@@ -312,7 +319,8 @@
     "noName": "(无名称)",
     "filterByCategory": "按 {{category}} 筛选",
     "graphButton": "关系图",
-    "valueListMatch": "值"
+    "valueListMatch": "值",
+    "spellingMatch": "写法"
   },
   "scriptSearchFilter": {
     "searchAria": "搜索引用",
@@ -513,6 +521,7 @@
     "ariaLabel": "数据表详情",
     "metaName": "名称",
     "metaFile": "文件",
+    "metaComment": "注释",
     "fields": "字段",
     "count": "数量",
     "total": "合计",
@@ -705,6 +714,7 @@
       "step_xslt": "XSLT 样式表",
       "record_access": "记录访问计算",
       "hide": "隐藏条件",
+      "field_entry": "字段输入条件",
       "tooltip": "工具提示",
       "placeholder": "占位符文本",
       "conditional_format": "条件格式",
@@ -739,7 +749,12 @@
     "paramFieldLabel": "参数字段",
     "paramFieldCandidates": "候选:",
     "paramFieldOrphan": "此文件中没有同名字段（孤立名称）",
-    "openParamCalc": "打开计算详情"
+    "openParamCalc": "打开计算详情",
+    "platformsLabel": "平台",
+    "compatPartial": "部分",
+    "compatNo": "否",
+    "compatPartialHint": "部分 — 有条件支持；请参阅该事件的 Claris 帮助页面",
+    "compatNoHint": "此事件不会在该运行环境中触发"
   },
   "layoutObjectDetail": {
     "showInLayout": "在布局中显示:{{name}}",
@@ -812,5 +827,40 @@
     "propPosition": "位置/大小",
     "propNesting": "嵌套",
     "nestingLevel": "层级 {{level}}"
+  },
+  "pseudoFunction": {
+    "metaFunction": "函数",
+    "metaType": "类型",
+    "metaScope": "作用范围",
+    "scopeValue": "与解决方案无关 — 不属于任何文件",
+    "usageHeading": "使用情况",
+    "usageEmpty": "此解决方案中未使用。",
+    "colRole": "角色",
+    "colType": "对象类型",
+    "colObjects": "对象",
+    "colFiles": "文件",
+    "colOccurrences": "出现次数",
+    "totalRow": "合计"
+  },
+  "builtinFunction": {
+    "clarisHelpOnline": "Claris 帮助 ↗",
+    "typeValue": "FileMaker 内置函数"
+  },
+  "pluginFunction": {
+    "docsetLink": "{{plugin}} 文档 →",
+    "docsOnline": "{{plugin}} 文档 ↗",
+    "typeValue": "插件函数",
+    "metaCatalogName": "目录名称",
+    "metaComponent": "组件",
+    "metaPlugin": "插件"
+  },
+  "pluginComponent": {
+    "typeValue": "插件组件",
+    "documentedFunctions": "参考库中的函数数",
+    "vendorComponent": "厂商组件",
+    "functionsInSolution": "本解决方案中的函数",
+    "usedSuffix": "已使用 {{used}} 个",
+    "functionsHeading": "函数",
+    "colFunction": "函数"
   }
 }

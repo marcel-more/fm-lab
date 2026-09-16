@@ -21,6 +21,8 @@ export type VersionComponent = {
   source: string;
   on_change: string;
   filemaker_coverage?: string | null;
+  doc_coverage?: string | null;
+  doc_help_build?: string | null;
 };
 
 export type VersionManifest = {

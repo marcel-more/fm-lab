@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "有效最低 FileMaker 版本",
+    "analysis.defaultResult.meaning": "范围内需要比文件声明的最低版本更新的 FileMaker 功能"
+  },
+  "layout": {}
+}

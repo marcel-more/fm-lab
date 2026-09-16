@@ -66,6 +66,11 @@ root_objects AS (
             xml_extract_text(object_xml, '/LayoutObject/ScriptTriggers/ScriptTrigger/ScriptReference/Calculation/Text'),
             E'\n'
         ) as ScriptTrigger_Parameter_Text,
+        -- Feld-Eingabeverhalten (Schema 1.31.0): Rohmaske + Formel-Slot.
+        -- Die Modus-Spalten werden im INSERT aus der Maske abgeleitet; die
+        -- Formel steht NUR im 26er Export (SaXML 2.2.3.0 lässt sie weg).
+        xml_extract_text(object_xml, '/LayoutObject/Field/Options')[1]::BIGINT as Entry_Options_Raw,
+        xml_extract_text(object_xml, '/LayoutObject/CanEntryCalc/Calculation/Text')[1] as Entry_Calculation_Text,
         xml_extract_text(object_xml, '/LayoutObject/Text/StyledText/Data')[1] as Text_Content,
         object_xml
     FROM parts_resolved
@@ -79,7 +84,8 @@ nested_objects AS (
         Object_Hash, Object_UUID, Bounds_Top, Bounds_Left, Bounds_Bottom, Bounds_Right,
         Parent_Object_ID, Nesting_Level, Z_Order,
         Hide_Calculation_Text, Tooltip_Calculation_Text, Label_Calculation_Text,
-        ScriptTrigger_Parameter_Text, Text_Content, object_xml
+        ScriptTrigger_Parameter_Text, Entry_Options_Raw, Entry_Calculation_Text,
+        Text_Content, object_xml
     FROM root_objects
 
     UNION ALL
@@ -114,6 +120,11 @@ nested_objects AS (
             xml_extract_text(child_xml, '/LayoutObject/ScriptTriggers/ScriptTrigger/ScriptReference/Calculation/Text'),
             E'\n'
         ) as ScriptTrigger_Parameter_Text,
+        -- Feld-Eingabeverhalten (Schema 1.31.0): Rohmaske + Formel-Slot.
+        -- Die Modus-Spalten werden im INSERT aus der Maske abgeleitet; die
+        -- Formel steht NUR im 26er Export (SaXML 2.2.3.0 lässt sie weg).
+        xml_extract_text(child_xml, '/LayoutObject/Field/Options')[1]::BIGINT as Entry_Options_Raw,
+        xml_extract_text(child_xml, '/LayoutObject/CanEntryCalc/Calculation/Text')[1] as Entry_Calculation_Text,
         COALESCE(
             xml_extract_text(child_xml, '/LayoutObject/Text/StyledText/Data')[1],
             xml_extract_text(child_xml, '/LayoutObject/Title/Text')[1]
@@ -173,6 +184,22 @@ SELECT
     ws_restore(Tooltip_Calculation_Text) as Tooltip_Calculation_Text,
     ws_restore(Label_Calculation_Text) as Label_Calculation_Text,
     ws_restore(ScriptTrigger_Parameter_Text) as ScriptTrigger_Parameter_Text,
+    Entry_Options_Raw,
+    -- Feld-Eingabe je Modus (Schema 1.31.0). Zwei Bits je Modus kodieren
+    -- vier Zustände; Beleg = 12 Proben der Coverage-Datei (22 und 26 wertgleich).
+    CASE WHEN Entry_Options_Raw IS NULL THEN NULL
+         WHEN ((Entry_Options_Raw >> 24) & 1) = 1 AND ((Entry_Options_Raw >> 2) & 1) = 1 THEN 'by_calculation'
+         WHEN ((Entry_Options_Raw >> 24) & 1) = 1 THEN 'select_only'
+         WHEN ((Entry_Options_Raw >> 2) & 1) = 1 THEN 'view_only'
+         ELSE 'allow' END as Entry_Browse,
+    -- Feld-Eingabe je Modus (Schema 1.31.0). Zwei Bits je Modus kodieren
+    -- vier Zustände; Beleg = 12 Proben der Coverage-Datei (22 und 26 wertgleich).
+    CASE WHEN Entry_Options_Raw IS NULL THEN NULL
+         WHEN ((Entry_Options_Raw >> 25) & 1) = 1 AND ((Entry_Options_Raw >> 4) & 1) = 1 THEN 'by_calculation'
+         WHEN ((Entry_Options_Raw >> 25) & 1) = 1 THEN 'select_only'
+         WHEN ((Entry_Options_Raw >> 4) & 1) = 1 THEN 'view_only'
+         ELSE 'allow' END as Entry_Find,
+    ws_restore(Entry_Calculation_Text) as Entry_Calculation_Text,
     ws_restore(Text_Content) as Text_Content,
     ws_restore(object_xml::VARCHAR) as Object_XML,
     fn.File_Name as File_Name
@@ -216,6 +243,10 @@ ON CONFLICT (Object_UUID, File_Name) DO UPDATE SET
     Tooltip_Calculation_Text = EXCLUDED.Tooltip_Calculation_Text,
     Label_Calculation_Text = EXCLUDED.Label_Calculation_Text,
     ScriptTrigger_Parameter_Text = EXCLUDED.ScriptTrigger_Parameter_Text,
+    Entry_Options_Raw = EXCLUDED.Entry_Options_Raw,
+    Entry_Browse = EXCLUDED.Entry_Browse,
+    Entry_Find = EXCLUDED.Entry_Find,
+    Entry_Calculation_Text = EXCLUDED.Entry_Calculation_Text,
     Text_Content = EXCLUDED.Text_Content,
     Object_XML = EXCLUDED.Object_XML;
 

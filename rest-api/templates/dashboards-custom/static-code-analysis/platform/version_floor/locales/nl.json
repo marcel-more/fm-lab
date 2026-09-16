@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Effectieve minimale FileMaker-versie",
+    "analysis.defaultResult.meaning": "Onderdelen in het bereik die een nieuwere FileMaker-versie vereisen dan het bestand opgeeft"
+  },
+  "layout": {}
+}

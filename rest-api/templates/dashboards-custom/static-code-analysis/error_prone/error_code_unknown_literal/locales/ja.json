@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "不明なエラーコードリテラル",
+    "analysis.defaultResult.meaning": "FileMaker エラーコード表に載っていないコードとの Get(LastError) 比較"
+  },
+  "layout": {}
+}

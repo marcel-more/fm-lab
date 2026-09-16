@@ -1,21 +1,23 @@
 {
   "manifest": {
-    "title": "따옴표로 묶인 숨기기 조건",
-    "description": "Layout 품질 규칙 — 개체의 숨기기 조건이 따옴표로 묶인 단일 문자열 리터럴입니다. 수식이 따옴표째 붙여넣어졌을 가능성이 높으며 계산식이 아닌 상수로 평가됩니다.\n\nfmCheckMate 검사 “ReportBrokenCalculationQuoted” — https://github.com/mrwatson-de/fmCheckMate-XSLT",
-    "messages.quoted": "숨기기 조건이 따옴표로 묶인 문자열 상수이며 계산식이 아닙니다"
+    "title": "따옴표로 묶인 숨기기 또는 필드 입력 조건",
+    "description": "Layout 품질 규칙 — 개체의 숨기기 또는 필드 입력 조건이 따옴표로 묶인 단일 문자열 리터럴입니다. 수식이 따옴표째 붙여넣어졌을 가능성이 높으며 계산식이 아닌 상수로 평가됩니다.\n\nfmCheckMate 검사 “ReportBrokenCalculationQuoted” — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+    "messages.quoted": "숨기기 조건이 따옴표로 묶인 문자열 상수이며 계산식이 아닙니다",
+    "messages.quoted_entry": "필드 입력 조건이 따옴표로 묶인 문자열 상수이며 계산식이 아닙니다"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "발견 수",
     "summary_kpi.props.items[1].label": "영향받는 Layout",
     "summary_kpi.props.items[2].label": "영향받는 파일",
-    "findings_card.props.title": "따옴표로 묶인 숨기기 조건",
+    "findings_card.props.title": "따옴표로 묶인 숨기기 또는 필드 입력 조건",
     "findings_table.props.searchPlaceholder": "파일, Layout 또는 개체 검색…",
-    "findings_table.props.empty.message": "따옴표로 묶인 숨기기 조건을 찾을 수 없습니다.",
+    "findings_table.props.empty.message": "따옴표로 묶인 숨기기 또는 필드 입력 조건을 찾을 수 없습니다.",
     "findings_table.props.columns[0].label": "파일",
     "findings_table.props.columns[1].label": "Layout",
     "findings_table.props.columns[2].label": "개체 유형",
     "findings_table.props.columns[3].label": "개체",
-    "findings_table.props.columns[6].label": "너비",
-    "findings_table.props.columns[7].label": "높이"
+    "findings_table.props.columns[4].label": "슬롯",
+    "findings_table.props.columns[7].label": "너비",
+    "findings_table.props.columns[8].label": "높이"
   }
 }

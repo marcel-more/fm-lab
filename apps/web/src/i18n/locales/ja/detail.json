@@ -27,7 +27,10 @@
     "BaseTable": "テーブル詳細",
     "CustomFunction": "関数の詳細",
     "ValueList": "値一覧の詳細",
-    "Calculation": "計算式の詳細"
+    "Calculation": "計算式の詳細",
+    "BuiltinFunction": "組み込み関数の詳細",
+    "PluginFunction": "プラグイン関数の詳細",
+    "PluginComponent": "プラグインコンポーネントの詳細"
   },
   "layoutCanvas": {
     "searchPlaceholder": "レイアウトオブジェクトを検索…",
@@ -160,6 +163,10 @@
       "hide": {
         "short": "Hide",
         "long": "非表示条件"
+      },
+      "field_entry": {
+        "short": "Entry",
+        "long": "フィールド入力条件"
       },
       "conditional_format": {
         "short": "CF",
@@ -312,7 +319,8 @@
     "noName": "(名前なし)",
     "filterByCategory": "{{category}} で絞り込む",
     "graphButton": "グラフ",
-    "valueListMatch": "値"
+    "valueListMatch": "値",
+    "spellingMatch": "表記"
   },
   "scriptSearchFilter": {
     "searchAria": "参照を検索",
@@ -513,6 +521,7 @@
     "ariaLabel": "テーブルの詳細",
     "metaName": "名前",
     "metaFile": "ファイル",
+    "metaComment": "コメント",
     "fields": "フィールド",
     "count": "数",
     "total": "合計",
@@ -705,6 +714,7 @@
       "step_xslt": "XSLT スタイルシート",
       "record_access": "レコードアクセスの計算式",
       "hide": "非表示条件",
+      "field_entry": "フィールド入力条件",
       "tooltip": "ツールチップ",
       "placeholder": "プレースホルダテキスト",
       "conditional_format": "条件付き書式",
@@ -739,7 +749,12 @@
     "paramFieldLabel": "引数フィールド",
     "paramFieldCandidates": "候補:",
     "paramFieldOrphan": "このファイルに同名のフィールドがありません（孤立した名前）",
-    "openParamCalc": "計算式の詳細を開く"
+    "openParamCalc": "計算式の詳細を開く",
+    "platformsLabel": "プラットフォーム",
+    "compatPartial": "一部",
+    "compatNo": "いいえ",
+    "compatPartialHint": "一部 — 条件付きで対応。イベントの Claris ヘルプページを参照",
+    "compatNoHint": "このイベントはそのランタイムでは発生しません"
   },
   "layoutObjectDetail": {
     "showInLayout": "レイアウトで表示: {{name}}",
@@ -812,5 +827,40 @@
     "propPosition": "位置/サイズ",
     "propNesting": "ネスト",
     "nestingLevel": "レベル {{level}}"
+  },
+  "pseudoFunction": {
+    "metaFunction": "関数",
+    "metaType": "種類",
+    "metaScope": "適用範囲",
+    "scopeValue": "ソリューション非依存 — どのファイルにも属しません",
+    "usageHeading": "使用状況",
+    "usageEmpty": "このソリューションでは使用されていません。",
+    "colRole": "役割",
+    "colType": "オブジェクトタイプ",
+    "colObjects": "オブジェクト",
+    "colFiles": "ファイル",
+    "colOccurrences": "出現回数",
+    "totalRow": "合計"
+  },
+  "builtinFunction": {
+    "clarisHelpOnline": "Claris ヘルプ ↗",
+    "typeValue": "FileMaker 組み込み関数"
+  },
+  "pluginFunction": {
+    "docsetLink": "{{plugin}} ドキュメント →",
+    "docsOnline": "{{plugin}} ドキュメント ↗",
+    "typeValue": "プラグイン関数",
+    "metaCatalogName": "カタログ名",
+    "metaComponent": "コンポーネント",
+    "metaPlugin": "プラグイン"
+  },
+  "pluginComponent": {
+    "typeValue": "プラグインコンポーネント",
+    "documentedFunctions": "リファレンス収録関数数",
+    "vendorComponent": "ベンダーのコンポーネント",
+    "functionsInSolution": "このソリューション内の関数",
+    "usedSuffix": "{{used}} 件使用",
+    "functionsHeading": "関数",
+    "colFunction": "関数"
   }
 }

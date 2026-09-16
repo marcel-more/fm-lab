@@ -59,21 +59,34 @@ def main() -> int:
     g.simplify(multiple=True, loops=True)
     t_parsed = time.time()
 
-    # Determinism: python-igraph's community_leiden() takes NO seed= kwarg — the
-    # algorithm draws from igraph's global RNG. We seed Python's random module and
-    # pin it as igraph's generator, so the partition is reproducible (same seed +
-    # resolution → identical membership), which the stable-colors guarantee relies on.
-    # Passing seed= to community_leiden raises TypeError on igraph 0.11.
-    random.seed(seed)
-    ig.set_random_number_generator(random)
+    # An edgeless graph is a legitimate input: a micro-solution whose only operational
+    # links are builtins or local variables is filtered down to zero edges by the
+    # logical export. igraph 0.11 does NOT terminate on it — community_leiden() with
+    # n_iterations=-1 (run to convergence) spins forever once ecount()==0, reproduced
+    # for vcount 0, 1 and 2 and independent of the RNG pinning below. Short-circuit to
+    # the trivial partition (every node its own community, modularity undefined),
+    # matching what cluster_louvain.mjs reports for the same input.
+    if g.ecount() == 0:
+        membership = list(range(g.vcount()))
+        modularity = float("nan")
+        t_clustered = time.time()
+    else:
+        # Determinism: python-igraph's community_leiden() takes NO seed= kwarg — the
+        # algorithm draws from igraph's global RNG. We seed Python's random module and
+        # pin it as igraph's generator, so the partition is reproducible (same seed +
+        # resolution → identical membership), which the stable-colors guarantee relies on.
+        # Passing seed= to community_leiden raises TypeError on igraph 0.11.
+        random.seed(seed)
+        ig.set_random_number_generator(random)
 
-    part = g.community_leiden(
-        objective_function="modularity",
-        resolution=resolution,
-        n_iterations=-1,
-    )
-    membership = part.membership
-    t_clustered = time.time()
+        part = g.community_leiden(
+            objective_function="modularity",
+            resolution=resolution,
+            n_iterations=-1,
+        )
+        membership = part.membership
+        modularity = part.modularity
+        t_clustered = time.time()
 
     rev = [None] * len(ids)
     for name, idx in ids.items():
@@ -86,7 +99,7 @@ def main() -> int:
 
     sys.stderr.write(
         f"[leiden] nodes={len(ids)} edges={len(edges)} "
-        f"communities={len(set(membership))} modularity={part.modularity:.6f} "
+        f"communities={len(set(membership))} modularity={modularity:.6f} "
         f"resolution={resolution} seed={seed} | "
         f"parse={(t_parsed - t0) * 1000:.0f}ms cluster={(t_clustered - t_parsed) * 1000:.0f}ms\n"
     )

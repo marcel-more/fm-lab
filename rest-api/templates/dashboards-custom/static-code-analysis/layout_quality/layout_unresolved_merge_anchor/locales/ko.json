@@ -1,0 +1,25 @@
+{
+  "manifest": {
+    "title": "해결되지 않은 병합 앵커",
+    "description": "레이아웃 품질 규칙 — 텍스트 개체에 FileMaker가 해결하지 못하는 병합 필드 앵커(<<필드>>)가 들어 있습니다. 이런 앵커는 무시되지 않고 브라우즈 모드와 미리보기에서 그대로 렌더링되므로, 값이 들어가야 할 자리에 원본 <<필드>>가 보입니다. 게다가 카탈로그에는 흔적이 남지 않습니다(displays_field 간선도, 자체 개체도 없음). 그래서 이 규칙이 그것을 드러내는 유일한 곳입니다. 탐지는 텍스트의 앵커(병합 변수 <<$…>>와 레이아웃 계산식 <<ƒ:…>>은 제외하며, 반복이나 TO 한정은 하나의 앵커로 계산)와 개체의 구조적 FieldList에 있는 FieldReference 항목(해결된 앵커마다 정확히 하나)을 비교합니다. 판정은 개수가 결정하며, 이름으로 지목한 후보는 부가 정보이고 안전하게 대응시킬 수 없으면 비워 둡니다.",
+    "messages.unresolved-anchor": "필드가 해결되지 않은 병합 앵커 — 그대로 렌더링됩니다"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "발견 수",
+    "summary_kpi.props.items[1].label": "미해결 앵커 수",
+    "summary_kpi.props.items[2].label": "영향받는 레이아웃",
+    "summary_kpi.props.items[3].label": "영향받는 파일",
+    "findings_card.props.title": "해결되지 않은 병합 앵커",
+    "findings_table.props.searchPlaceholder": "파일, 레이아웃, 개체 또는 앵커 검색…",
+    "findings_table.props.empty.message": "해결되지 않은 병합 앵커를 찾지 못했습니다.",
+    "findings_table.props.columns[0].label": "파일",
+    "findings_table.props.columns[1].label": "레이아웃",
+    "findings_table.props.columns[2].label": "개체",
+    "findings_table.props.columns[3].label": "그대로 렌더링",
+    "findings_table.props.columns[4].label": "전체 앵커",
+    "findings_table.props.columns[5].label": "미해결",
+    "findings_table.props.columns[6].label": "앵커",
+    "findings_table.props.columns[9].label": "너비",
+    "findings_table.props.columns[10].label": "높이"
+  }
+}

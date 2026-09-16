@@ -73,6 +73,24 @@ export const FunctionTokenSpan: React.FC<FunctionTokenSpanProps> = ({ token, tex
     ? `${apiBase}${token.functionLocalHelpUrl}`
     : token.functionHelpUrl;
 
+  // Popover-Titel: GENAU EINE Sprachfassung, die gewählte. Für einen
+  // Get-Parameter ist `functionDisplayName` bereits die vollständige
+  // lokalisierte Signatur ('Hole ( Seitennummer )') — ein zusätzlich
+  // angehängtes ` ( <SubParameter> )` ergab daraus die gemischte Form
+  // 'Hole ( Seitennummer ) ( PageNumber )', weil der SubParameter immer der
+  // kanonische englische Name ist. Der Anhang bleibt daher nur für den Fall,
+  // dass kein lokalisierter Name vorliegt und der Titel auf das nackte 'Get'
+  // der Aufspaltung zurückfällt.
+  const canonicalName = token.functionCanonicalFull || token.functionCanonical;
+  const popoverTitle = token.functionDisplayName
+    || `${token.functionCanonical ?? token.content}${token.functionSubParameter ? ` ( ${token.functionSubParameter} )` : ''}`;
+  // Redundanz-Filter: Signatur und „Kanonisch:"-Zeile nur zeigen, wenn sie dem
+  // Titel nicht ohnehin entsprechen (bei Get-Parametern sind Anzeigename und
+  // Signatur identisch). Whitespace-tolerant, weil die Referenz beide Formen
+  // führt — 'Get(PageNumber)' und 'Get ( PageNumber )'.
+  const norm = (v: string) => v.replace(/\s+/g, '').toLowerCase();
+  const sameAsTitle = (v: string) => norm(v) === norm(popoverTitle);
+
   return (
     <span
       className={`fm-ref fm-ref--function${navPath ? ' fm-ref-link' : ''}${highlighted ? ' fm-ref--highlighted' : ''}`}
@@ -98,15 +116,12 @@ export const FunctionTokenSpan: React.FC<FunctionTokenSpanProps> = ({ token, tex
           onMouseLeave={cancelHover}
         >
           <span className="fm-function-popover-header">
-            <strong>
-              {token.functionDisplayName || token.functionCanonical}
-              {token.functionSubParameter && ` ( ${token.functionSubParameter} )`}
-            </strong>
+            <strong>{popoverTitle}</strong>
             {token.functionReturnType && (
               <span className="fm-function-popover-return"> → {token.functionReturnType}</span>
             )}
           </span>
-          {token.functionSignature && (
+          {token.functionSignature && !sameAsTitle(token.functionSignature) && (
             <code className="fm-function-popover-signature">{token.functionSignature}</code>
           )}
           {token.functionPurpose && (
@@ -122,10 +137,9 @@ export const FunctionTokenSpan: React.FC<FunctionTokenSpanProps> = ({ token, tex
               {token.functionLocalHelpUrl ? t('detail:helpLinks.openLocalClarisHelp') : t('detail:helpLinks.openOnlineClarisHelp')}
             </a>
           )}
-          {token.functionCanonical && token.functionDisplayName
-            && token.functionCanonical !== token.functionDisplayName && (
+          {canonicalName && !sameAsTitle(canonicalName) && (
             <span className="fm-function-popover-canonical">
-              {t('detail:helpLinks.canonical')} <code>{token.functionCanonical}</code>
+              {t('detail:helpLinks.canonical')} <code>{canonicalName}</code>
             </span>
           )}
         </span>

@@ -18,4 +18,8 @@ The external data sources of the file (*Manage External Data Sources*): each ent
 </ExternalDataSourceCatalog>
 ```
 
+## Notes
+
+- **Version difference:** SaXML v2.3.0.0 (FileMaker 26) additionally writes a `<SortOrder>` per external data source. The attribute is read transparently and changes no existing extraction.
+
 **Extracted into:** [ExternalDataSourceCatalog](../../schema/catalog-tables/ExternalDataSourceCatalog.md) — column details in the [schema reference](../../schema/Schema.md).

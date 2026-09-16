@@ -58,6 +58,73 @@ def _ir_from_json(data: dict) -> list[textform.ParsedStep]:
     ]
 
 
+def _coverage_from_version(version: str | None, ref) -> str | None:
+    """FilesCatalog.FileMaker_Version -> shape coverage: the major version
+    must be a coverage the reference knows (22.x -> '22', 26.x -> '26')."""
+    if not version:
+        return None
+    major = str(version).strip().split(".")[0]
+    return major if major in ref.known_coverages() else None
+
+
+def determine_coverage(args, ref) -> tuple[str, str]:
+    """Target shape coverage for this invocation and where it came from.
+
+    Order (E7-C1): explicit --coverage; the FileMaker_Version of --file in
+    the catalog; the coverage recorded in an IR/RESOLVED input file; the
+    reference's base coverage for phases that carry no file context. A
+    target file whose version is unknown (not in the catalog, or a major
+    version the reference has no coverage for) is a hard error — pass
+    --coverage to override.
+    """
+    known = ref.known_coverages()
+    if getattr(args, "coverage", None):
+        cov = str(args.coverage)
+        if cov not in known:
+            raise db.DbError(f"--coverage {cov} is not a coverage of this reference "
+                             f"(known: {', '.join(known)})")
+        return cov, "option"
+    file = getattr(args, "file", None)
+    if file and args.cmd in ("run", "resolve", "decompile"):
+        try:
+            catalog = db.catalog_db(args.catalog_db)
+        except db.DbError:
+            catalog = None
+        if catalog is not None:
+            rows = catalog.query(
+                "SELECT FileMaker_Version FROM FilesCatalog "
+                f"WHERE File_Name = {db.sql_quote(file)}")
+            if rows:
+                cov = _coverage_from_version(rows[0]["FileMaker_Version"], ref)
+                if cov is None:
+                    raise db.DbError(
+                        f"target file '{file}' is FileMaker {rows[0]['FileMaker_Version']} — "
+                        f"the reference has no shape coverage for it (known: {', '.join(known)}); "
+                        "pass --coverage to choose one")
+                return cov, "catalog"
+        if args.cmd in ("run", "resolve"):
+            raise db.DbError(
+                f"target file '{file}' is not in FilesCatalog — its FileMaker version and "
+                "shape coverage are unknown; pass --coverage 22|26 (references then fall "
+                "back to name-only placeholders)")
+    tv = getattr(args, "target_version", None)
+    if tv and args.cmd in ("gate", "decompile"):
+        # a bare snippet gated for an explicit FileMaker version: the version's
+        # major is the coverage when the reference knows it
+        cov = _coverage_from_version(str(tv), ref)
+        if cov:
+            return cov, "target-version"
+    inp = getattr(args, "input", None) or getattr(args, "resolved", None)
+    if inp and args.cmd in ("emit", "gate", "actionscript") and str(inp).endswith(".json"):
+        try:
+            recorded = json.loads(Path(inp).read_text(encoding="utf-8")).get("coverage")
+        except (OSError, ValueError):
+            recorded = None
+        if recorded and str(recorded) in known:
+            return str(recorded), "input"
+    return ref.base_coverage(), "default"
+
+
 def do_parse(args, ref) -> tuple[int, dict]:
     text = Path(args.input).read_text(encoding="utf-8")
     normalized, notes = textform.normalize_text(text)
@@ -65,6 +132,7 @@ def do_parse(args, ref) -> tuple[int, dict]:
     parsed = [textform.parse_step(st, ref) for st in raw_steps if st.step_id is not None]
     result = lint.lint(raw_steps, parsed, ref)
     payload = _ir_to_json(parsed, notes, result)
+    payload["coverage"] = ref.target_coverage()
     n_err = len(result.errors)
     print(f"fmgen parse: {len(parsed)} step(s), {n_err} error(s), "
           f"{len(result.findings) - n_err} warning(s)/info", file=sys.stderr)
@@ -95,6 +163,11 @@ def do_emit(args, ref) -> tuple[int, dict | str]:
         for e in result.errors:
             print(f"fmgen emit: ERROR {e}", file=sys.stderr)
         return 2, {"errors": result.errors, "warnings": result.warnings}
+    # emit-side warnings (IR that did not pass parse: a mirror read option
+    # without its source, a paste-dropped option — fm_spec 2.6.0) are not
+    # errors, but never silent either
+    for w in result.warnings:
+        print(f"fmgen emit: WARNING {w}", file=sys.stderr)
     print(f"fmgen emit: {len(parsed)} step(s) emitted", file=sys.stderr)
     return 0, result.xml  # type: ignore[return-value]
 
@@ -111,7 +184,10 @@ def _flag(args, name: str, env: str) -> bool:
 def do_gate(args, ref) -> tuple[int, dict]:
     xml_text = Path(args.input).read_text(encoding="utf-8")
     resolution, ir_steps = None, None
-    target_version = args.target_version
+    # Target FileMaker version for the version gate (G303): an explicit
+    # --target-version wins, otherwise the FilesCatalog version of the target
+    # file as recorded by the resolver; the protocol names value and source.
+    target_version, tv_source = args.target_version, "option" if args.target_version else None
     if args.resolved:
         data = json.loads(Path(args.resolved).read_text(encoding="utf-8"))
         resolution = data.get("resolution")
@@ -119,7 +195,7 @@ def do_gate(args, ref) -> tuple[int, dict]:
         if not target_version and resolution:
             for a in resolution.get("assumptions", []):
                 if ", FM " in a:
-                    target_version = a.rsplit(", FM ", 1)[1]
+                    target_version, tv_source = a.rsplit(", FM ", 1)[1], "catalog"
     result = gate.run_gate(xml_text, ref, resolution, target_version, ir_steps,
                            _flag(args, "check_var_init", "FMGEN_CHECK_VAR_INIT"))
     n_fail = len([c for c in result.checks if c.status == "fail"])
@@ -128,7 +204,15 @@ def do_gate(args, ref) -> tuple[int, dict]:
     print(f"fmgen gate: {'PASS' if result.passed else 'FAIL'} "
           f"({len(result.checks)} checks, {n_fail} failed, {n_warn} warning, "
           f"{n_skip} skipped)", file=sys.stderr)
-    return (0 if result.passed else 2), result.as_dict()
+    # separate line: the summary line above is parsed by generator scripts
+    print(f"fmgen gate: target FM {target_version or 'unknown'}"
+          f"{' (' + tv_source + ')' if tv_source else ' — G303 skipped'}", file=sys.stderr)
+    protocol = result.as_dict()
+    protocol["target_version"] = target_version
+    protocol["target_version_source"] = tv_source
+    protocol["coverage"] = ref.target_coverage()
+    protocol["coverage_source"] = getattr(args, "_coverage_source", None)
+    return (0 if result.passed else 2), protocol
 
 
 def do_actionscript(args, ref) -> tuple[int, dict]:
@@ -168,8 +252,11 @@ def do_decompile(args, ref) -> tuple[int, dict | str]:
         for e in result.errors:
             print(f"fmgen decompile: ERROR {e}", file=sys.stderr)
         return 2, {"errors": result.errors}
+    fm26 = result.fm26_normalized_count
     print(f"fmgen decompile: {len(result.steps)} step(s), "
-          f"{result.lossy_count} lossy", file=sys.stderr)
+          f"{result.lossy_count} lossy"
+          + (f", {fm26} read through FM 26 tolerance" if fm26 else ""),
+          file=sys.stderr)
     if args.json:
         payload = {
             "text": result.text,
@@ -182,6 +269,7 @@ def do_decompile(args, ref) -> tuple[int, dict | str]:
                 for s in result.steps
             ],
             "lossy": result.lossy_count,
+            "fm26_normalized": result.fm26_normalized_count,
         }
         return (2 if result.lossy_count else 0), payload
     return (2 if result.lossy_count else 0), result.text
@@ -232,13 +320,21 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--reference-db", help="path to fm_spec.duckdb")
     ap.add_argument("--catalog-db", help="path to fm_catalog.duckdb")
+    ap.add_argument("--coverage", metavar="22|26",
+                    help="target shape coverage (FileMaker clipboard form) for emit, "
+                         "decompile and gate; default: derived from the FileMaker_Version "
+                         "of --file in the catalog, else the reference's base coverage")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     p = sub.add_parser("parse");  p.add_argument("input")
     p = sub.add_parser("resolve"); p.add_argument("input"); p.add_argument("--file", required=True)
     p = sub.add_parser("emit");   p.add_argument("input"); p.add_argument("--xml-decl", action="store_true")
+    tv_help = ("FileMaker version of the target file for the version gate (G303), "
+               "e.g. 22 or 26.0.2; default: FileMaker_Version of --file in the "
+               "catalog (FilesCatalog), read from the resolution report")
     p = sub.add_parser("gate")
-    p.add_argument("input"); p.add_argument("--resolved"); p.add_argument("--target-version")
+    p.add_argument("input"); p.add_argument("--resolved")
+    p.add_argument("--target-version", help=tv_help)
     p.add_argument("--check-var-init", action="store_true",
                    help="check the convention that a variable used as a step target "
                         "was initialised by a preceding Set Variable (G305); "
@@ -258,11 +354,15 @@ def main() -> int:
     p.add_argument("--check-var-init", action="store_true",
                    help="see 'gate --check-var-init'")
     p.add_argument("--resolved", help=argparse.SUPPRESS)
-    p.add_argument("--target-version", help=argparse.SUPPRESS)
+    p.add_argument("--target-version", help=tv_help)
 
     args = ap.parse_args()
     try:
         ref = db.Reference(db.reference_db(args.reference_db))
+        cov, cov_source = determine_coverage(args, ref)
+        ref.set_coverage(cov)
+        args._coverage_source = cov_source
+        print(f"fmgen: shape coverage {cov} ({cov_source})", file=sys.stderr)
     except db.DbError as e:
         return _fail_env(str(e))
 

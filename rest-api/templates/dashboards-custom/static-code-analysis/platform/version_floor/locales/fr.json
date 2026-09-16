@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Version minimale effective de FileMaker",
+    "analysis.defaultResult.meaning": "Éléments de la portée qui exigent une version de FileMaker plus récente que celle déclarée par leur fichier"
+  },
+  "layout": {}
+}

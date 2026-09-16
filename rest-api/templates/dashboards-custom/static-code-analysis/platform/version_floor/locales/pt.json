@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Versão mínima efetiva do FileMaker",
+    "analysis.defaultResult.meaning": "Elementos no escopo que exigem uma versão do FileMaker mais recente do que a declarada pelo arquivo"
+  },
+  "layout": {}
+}

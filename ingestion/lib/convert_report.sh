@@ -104,7 +104,7 @@ phase_label_txt() {
 # DDR_Calculations is counted separately as ddr_calc_chunks.
 P1_OBJECT_TABLES=(
     BaseTableCatalog TableOccurrenceCatalog RelationshipCatalog FieldsForTables
-    ScriptCatalog StepsForScripts Layouts LayoutObjects LayoutParts
+    ScriptCatalog StepsForScripts Layouts LayoutObjects LayoutParts LayoutTableViewColumns
     ValueListCatalog OptionsForValueLists CustomFunctionsCatalog CalcsForCustomFunctions
     AccountsCatalog PrivilegeSetsCatalog PrivilegeSetRecordAccess PrivilegeSetFieldAccess
     PrivilegeSetObjectAccess ThemeCatalog CustomMenuCatalog ExtendedPrivilegesCatalog

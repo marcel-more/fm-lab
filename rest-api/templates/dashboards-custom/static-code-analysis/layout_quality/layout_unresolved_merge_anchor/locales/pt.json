@@ -1,0 +1,25 @@
+{
+  "manifest": {
+    "title": "Âncora de combinação não resolvida",
+    "description": "Regra de qualidade de layouts — um objeto de texto contém uma âncora de campo combinado (<<Campo>>) que o FileMaker não consegue resolver. Essa âncora não é descartada: é apresentada LITERALMENTE nos modos navegar e pré-visualizar, pelo que o utilizador vê o <<Campo>> em bruto onde deveria estar um valor. Além disso não deixa rasto no catálogo — nem aresta displays_field nem objeto próprio —, o que faz desta regra o único sítio onde se torna visível. A deteção compara as âncoras do texto (excluindo variáveis de combinação <<$…>> e fórmulas de layout <<ƒ:…>>; uma repetição ou uma qualificação por ocorrência de tabela contam como uma só âncora) com as entradas FieldReference da FieldList estrutural do objeto, que tem exatamente uma entrada por âncora resolvida. É a contagem que decide a ocorrência; os nomes suspeitos são um extra e ficam vazios quando não podem ser atribuídos com segurança.",
+    "messages.unresolved-anchor": "Âncora de combinação sem resolução de campo — é apresentada literalmente"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Ocorrências",
+    "summary_kpi.props.items[1].label": "Âncoras não resolvidas",
+    "summary_kpi.props.items[2].label": "Layouts afetados",
+    "summary_kpi.props.items[3].label": "Ficheiros afetados",
+    "findings_card.props.title": "Âncora de combinação não resolvida",
+    "findings_table.props.searchPlaceholder": "Procurar ficheiro, layout, objeto ou âncora…",
+    "findings_table.props.empty.message": "Não foram encontradas âncoras de combinação não resolvidas.",
+    "findings_table.props.columns[0].label": "Ficheiro",
+    "findings_table.props.columns[1].label": "Layout",
+    "findings_table.props.columns[2].label": "Objeto",
+    "findings_table.props.columns[3].label": "Apresentada literalmente",
+    "findings_table.props.columns[4].label": "Todas as âncoras",
+    "findings_table.props.columns[5].label": "Não resolvidas",
+    "findings_table.props.columns[6].label": "Âncoras",
+    "findings_table.props.columns[9].label": "Largura",
+    "findings_table.props.columns[10].label": "Altura"
+  }
+}

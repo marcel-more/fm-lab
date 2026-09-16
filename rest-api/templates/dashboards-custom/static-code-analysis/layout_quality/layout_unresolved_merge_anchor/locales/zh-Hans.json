@@ -1,0 +1,25 @@
+{
+  "manifest": {
+    "title": "未解析的合并锚点",
+    "description": "布局质量规则 — 文本对象中含有 FileMaker 无法解析的合并字段锚点（<<字段>>）。这样的锚点不会被丢弃，而是在浏览和预览模式下按「原样」呈现，用户在本该出现数值的位置看到的是原始的 <<字段>>。它在对象目录中也不留痕迹（既无 displays_field 边，也没有自己的对象），因此本规则是唯一能让它现形的地方。检测方式是对比：文本中的锚点（排除合并变量 <<$…>> 与布局计算式 <<ƒ:…>>；重复次数或表实例限定均按一个锚点计）与对象结构化 FieldList 中的 FieldReference 条目 — 每个成功解析的锚点恰好对应一条。判定由计数决定；点名的可疑锚点只是附加信息，无法安全对应时留空。",
+    "messages.unresolved-anchor": "未解析到字段的合并锚点 — 会按原样显示"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "发现数",
+    "summary_kpi.props.items[1].label": "未解析锚点数",
+    "summary_kpi.props.items[2].label": "受影响布局",
+    "summary_kpi.props.items[3].label": "受影响文件",
+    "findings_card.props.title": "未解析的合并锚点",
+    "findings_table.props.searchPlaceholder": "搜索文件、布局、对象或锚点…",
+    "findings_table.props.empty.message": "未发现未解析的合并锚点。",
+    "findings_table.props.columns[0].label": "文件",
+    "findings_table.props.columns[1].label": "布局",
+    "findings_table.props.columns[2].label": "对象",
+    "findings_table.props.columns[3].label": "按原样显示",
+    "findings_table.props.columns[4].label": "全部锚点",
+    "findings_table.props.columns[5].label": "未解析",
+    "findings_table.props.columns[6].label": "锚点",
+    "findings_table.props.columns[9].label": "宽度",
+    "findings_table.props.columns[10].label": "高度"
+  }
+}

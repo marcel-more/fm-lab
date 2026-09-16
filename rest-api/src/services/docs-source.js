@@ -346,14 +346,18 @@ async function loadFunctionUuidMap(ctx, setId, fns) {
     }
     if (fnIds.length) {
       try {
+        // Der Import schreibt die Referenz-Identität jedes aufgelösten
+        // Built-in-Knotens mit (BuiltinFunctionIdentity, Katalog-Schema 1.32.0)
+        // — ein Knoten je function_id, sprachunabhängig. Vorher lief der Join
+        // namensbasiert über ref.function_name_lookup und traf eine
+        // lokalisierte Autorensprache nicht; MIN() war nötig, weil dieselbe
+        // function_id mehrere lokalisierte Knoten hatte. Beides ist mit der
+        // Normalisierung weg — und der Deep-Link nutzt nun DIESELBE Quelle wie
+        // der Pill-Count (docs-references.js), kann also nicht auseinanderlaufen.
         const sql = `
-          SELECT lk.function_id AS num_id, MIN(oc.Object_UUID) AS uuid
-          FROM ObjectCatalog oc
-          JOIN ref.function_name_lookup lk
-            ON lk.lookup_name = oc.Object_Name AND lk.is_primary = 1
-          WHERE oc.Object_Type = 'BuiltinFunction'
-            AND lk.function_id IN (${fnIds.join(',')})
-          GROUP BY lk.function_id
+          SELECT bfi.Function_ID AS num_id, bfi.Object_UUID AS uuid
+          FROM BuiltinFunctionIdentity bfi
+          WHERE bfi.Function_ID IN (${fnIds.join(',')})
         `;
         const r = await db.executeQuery(ctx, sql);
         for (const row of r.rows) map.set(`fn:${row.num_id}`, row.uuid);

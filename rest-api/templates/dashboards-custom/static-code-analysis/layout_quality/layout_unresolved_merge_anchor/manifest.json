@@ -1,0 +1,92 @@
+{
+  "id": "layout_unresolved_merge_anchor",
+  "version": "1.0.0",
+  "title": "Unresolved merge anchor",
+  "description": "Layout-quality rule — a text object carries a merge-field anchor (<<Field>>) that FileMaker cannot resolve. Such an anchor is not dropped: it renders LITERALLY in browse and preview mode, so the user sees the raw <<Field>> where a value belongs. It also leaves no trace in the catalog — no displays_field edge, no object of its own — which makes this rule the only place it becomes visible. Detection compares the anchors in the text (merge variables <<$…>> and layout calculations <<ƒ:…>> excluded, a repetition or a TO qualification counting as one anchor) against the FieldReference entries of the object's structural FieldList, which holds exactly one entry per resolved anchor. Counting decides the finding; the named suspects are a best effort and stay empty when the names cannot be matched safely.",
+  "author": "fm-lab rules",
+  "icon": "unlink",
+  "category": "layout_quality",
+  "tags": [
+    "rule",
+    "layout_quality",
+    "merge",
+    "fields"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "warning",
+    "category": "layout_quality",
+    "rationale": "The anchor shows its own source text to the user instead of data. Nothing errors and nothing logs — a renamed or deleted field leaves the layout looking broken in a way only a reader notices. Text deliberately written in angle brackets (<<see note>>) lands here too: FileMaker renders it literally for the same reason.",
+    "remediation": "Point the anchor at an existing field (watch the table occurrence: <<TO::Field>> needs a TO of this layout's graph), or remove it. If the angle brackets were meant as prose, reword them.",
+    "meta": {
+      "name": "Unresolved merge anchor",
+      "author": "fm-lab rules",
+      "source": "fm-lab",
+      "url": null,
+      "description": "A <<Field>> merge anchor on a layout text object with no entry in the object's structural FieldList. Unresolved anchors render literally at runtime and are invisible in the catalog.",
+      "created": "2026-09-12",
+      "references": []
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Layout"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "summary": "native",
+        "findings": "native"
+      }
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Unresolved merge anchor"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql"
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "limit",
+      "type": "number",
+      "required": false,
+      "description": "Maximum number of findings returned (default 500)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  },
+  "messages": {
+    "unresolved-anchor": "Merge anchor without a field resolution — it renders literally"
+  }
+}

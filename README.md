@@ -1,5 +1,7 @@
 # FM-Lab: AI Agent Coding Harness for FileMaker
 
+> 🏆 **Winner of the FileMaker Magazin Award 2026 — Best FileMaker Tool**
+
 Reliable FileMaker development starts with a shared understanding of FileMaker principles and the structure of the solution at hand — for both humans and AI agents.
 
 FM-Lab provides that foundation by converting **FileMaker SaXML exports** into a queryable **DuckDB** catalog. It turns the XML structure of a FileMaker solution into a fast, in-memory digital twin — covering all object types and their dependencies — for deep cross-reference analysis, documentation, and AI-assisted development at scale.
@@ -167,13 +169,17 @@ Refer to [Installation](/docs/fm-lab/Wiki/Installation.md) for a more detailed d
 - **Docker (ways a / b):** only **[Docker](https://docs.docker.com/get-docker/)** on the host — everything else is in the image.
 - **Native (way c):** [DuckDB CLI](https://duckdb.org/docs/installation/) ≥ 1.5.4 + the **webbed** community extension (the XML reader; `init.sh` installs it when missing); Node.js ≥ 20, npm ≥ 10.
 - **AI agent (optional):** [Claude Code](https://docs.claude.com/en/docs/claude-code) (bundled in the Docker agent variant) + the [duckdb-skills](https://github.com/duckdb/duckdb-skills) plugin (recommended).
-- **XML export:** FileMaker Pro for the SaXML export (SaXML v2.1.0.0+ / FileMaker 19+). Future FileMaker versions may require parser adjustments.
+- **XML export:** FileMaker Pro for the SaXML export — SaXML v2.1.0.0+ (FileMaker 19–22) and v2.3.0.0 (FileMaker 26), each read under its own import profile. Later SaXML versions may require parser adjustments.
+
 
 ## Preparing the XML export
 
 Export **each file** of your solution via `Tools > Save a Copy As XML` (SaXML) in FileMaker Pro. The export contains the full structure — scripts, fields, layouts, relationships, value lists, and more — which FM-Lab parses into the DuckDB catalog. Repeat for every file of a multi-file solution, and keep the exports current with your solution.
 
 **Important:** enable **“Include details for analysis tools”** when saving — it adds valuable metadata for analysis. You can automate the export with the [Save a Copy as XML script step](https://help.claris.com/en/pro-help/content/save-a-copy-as-xml.html).
+
+When you move a solution from FileMaker 22 to 26, re-export every file and replace the old exports — do not keep both versions of the same file in one solution bundle.
+
 
 ## Day-to-day
 
@@ -220,7 +226,8 @@ The project has grown along a clear arc — from a solid foundation toward an in
 - **v0.9.2** · _Multi-user & multi-session support_ — concurrent users, each on their own solution.
 - **v0.9.3 – v0.9.6** · _Robustness + documentation_ — hardening the setup and the processing, providing detailed docs for schema and backend.
 - **v0.9.7 – v0.9.8** · _Tests_ — providing structured tools for users and agents to apply static code analysis at different scopes. With a growing collection of rules and dashboards.
-- **v0.9.9** · _Closing gaps_ — calculations, script triggers, conditional-formatting rules, merge fields, and layout variables join the object catalog.
+- **v0.9.9 – v0.9.11** · _Closing gaps + flow analysis_ — calculations, script triggers, conditional-formatting rules, merge fields, and layout variables join the object catalog. A new Trace view and a research skill for enhanced analysis.
+- **v0.9.12** · _FileMaker 26 support_ — across the whole stack: XML import, object catalog, web client, FileMaker reference, and code generation.
 
 - More details in [`CHANGELOG.md`](CHANGELOG.md) — release history
 
@@ -257,6 +264,15 @@ _One interface to rule them all — in your personal style of workflow:_
 - All FileMaker-related docs and knowledge
 - All possible extensions
 - All in one Interface
+
+## Recognition
+
+![FM-Lab](FMM-Award.jpg)
+
+🏆 Winner of the [FileMaker Magazin Award 2026](https://filemaker-magazin.de/magazin/fmm-award-preistraeger/) — Best FileMaker Tool
+
+The award recognizes FM-Lab as an AI-assisted development and analysis tool for the FileMaker ecosystem.
+
 
 ## Fine Print
 

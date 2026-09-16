@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "트리거 호환성: FileMaker Go (iOS)",
+    "analysis.defaultResult.meaning": "FileMaker Go (iOS)에서 이벤트가 발생하지 않거나 부분적으로만 발생하는 범위 내 스크립트 트리거"
+  },
+  "layout": {}
+}

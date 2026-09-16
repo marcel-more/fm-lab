@@ -77,7 +77,16 @@ function worstRank(s: TestRunSummary | undefined): number {
  * `_`-Präfix ausblendet — die Zeile bleibt hier trotzdem lesbar.
  */
 function findingMessage(f: TestRunFinding): string {
-  return String(f.message ?? f._message ?? '');
+  const text = String(f.message ?? f._message ?? '').trim();
+  if (text) return text;
+  // Fallback for members without a text column (validation M5c warns about
+  // them): name the object the row points at, so the line stays readable and
+  // its click target is recognisable — never an empty, invisible row.
+  const subject = [f.layout_name, f.script_name, f.object_name, f.field_name, f.table_name, f.file_name]
+    .map(v => (v == null ? '' : String(v).trim()))
+    .find(v => v !== '');
+  const rule = f.rule_id != null ? String(f.rule_id) : '';
+  return [subject, rule].filter(Boolean).join(' · ') || '—';
 }
 
 function findingMatches(f: TestRunFinding, q: string): boolean {

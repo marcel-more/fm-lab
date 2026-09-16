@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "알 수 없는 오류 코드 리터럴",
+    "analysis.defaultResult.meaning": "FileMaker 오류 코드 표에 없는 코드와의 Get(LastError) 비교"
+  },
+  "layout": {}
+}

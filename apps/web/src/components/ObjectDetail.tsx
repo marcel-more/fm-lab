@@ -23,6 +23,9 @@ import { PrivilegeSetDetail } from './PrivilegeSetDetail';
 import { RelationshipDetail } from './RelationshipDetail';
 import { ValueListDetail } from './ValueListDetail';
 import { BaseTableDetail } from './BaseTableDetail';
+import { BuiltinFunctionDetail } from './BuiltinFunctionDetail';
+import { PluginFunctionDetail } from './PluginFunctionDetail';
+import { PluginComponentDetail } from './PluginComponentDetail';
 import '../views/LayoutView.css';
 
 interface ObjectDetailProps {
@@ -206,6 +209,15 @@ export const ObjectDetail: React.FC<ObjectDetailProps> = ({
   }
   if (objectType === 'ScriptTrigger') {
     return <ScriptTriggerDetail uuid={uuid} />;
+  }
+  if (objectType === 'BuiltinFunction') {
+    return <BuiltinFunctionDetail uuid={uuid} />;
+  }
+  if (objectType === 'PluginFunction') {
+    return <PluginFunctionDetail uuid={uuid} />;
+  }
+  if (objectType === 'PluginComponent') {
+    return <PluginComponentDetail uuid={uuid} />;
   }
   return (
     <GenericObjectDetail

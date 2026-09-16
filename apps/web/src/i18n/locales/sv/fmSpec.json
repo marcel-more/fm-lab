@@ -7,12 +7,14 @@
   "help": {
     "open": "Hjälp"
   },
+  "clarisHelp": "Claris-hjälp →",
   "search": {
     "placeholder": "Filtrera…",
     "platformAll": "Alla plattformar",
     "platformLabel": "Plattform",
     "platformStepHint": "Visa steg som körs på denna plattform (inkl. delvis stöd)",
-    "platformFnHint": "Visa funktioner byggda för denna plattform (plattformsbindning)"
+    "platformFnHint": "Visa funktioner byggda för denna plattform (plattformsbindning)",
+    "platformTriggerHint": "Visa utlösarhändelser som utlöses på den här plattformen (inkl. delvis stöd)"
   },
   "list": {
     "count": "{{shown}} / {{total}}"
@@ -20,11 +22,14 @@
   "tabs": {
     "steps": "ScriptSteps",
     "functions": "Funktioner",
-    "locales": "Språk"
+    "locales": "Språk",
+    "triggers": "Utlösare",
+    "errorCodes": "Felkoder"
   },
   "header": {
     "schemaVersion": "Schema",
-    "coverage": "FM-version",
+    "coverage": "FM-version (former)",
+    "docCoverage": "FM-version (dokumentation)",
     "built": "Byggd",
     "steps": "ScriptSteps",
     "functions": "Funktioner",
@@ -32,7 +37,9 @@
     "localesValue": "{{steps}} / {{functions}}",
     "grammar": "Grammatiktäckning",
     "grammarValue": "{{covered}}/{{total}} steg",
-    "attribution": "Dokumentationsinnehåll © Claris International Inc. FileMaker och Claris är varumärken som tillhör Claris International Inc. Detta projekt är inte anslutet till eller godkänt av Claris. Se SOURCES för fullständig tillskrivning."
+    "attribution": "Dokumentationsinnehåll © Claris International Inc. FileMaker och Claris är varumärken som tillhör Claris International Inc. Detta projekt är inte anslutet till eller godkänt av Claris. Se SOURCES för fullständig tillskrivning.",
+    "triggers": "Utlösare",
+    "errorCodes": "Felkoder"
   },
   "steps": {
     "col": {
@@ -52,7 +59,8 @@
       "name": "Namn",
       "category": "Kategori",
       "returnType": "Returtyp",
-      "originVersion": "Ursprungsversion"
+      "originVersion": "Ursprungsversion",
+      "removedInVersion": "Borttagen i"
     },
     "detail": {
       "returnType": "Returtyp",
@@ -120,8 +128,22 @@
         "evidence": "Bevis",
         "values": "Värden",
         "invertedHint": "Etikettens semantik är inverterad i förhållande till XML-tillståndet — true_text/false_text bär redan den fullständiga text→XML-mappningen; invertera aldrig igen.",
-        "docOnly": "Dokumenterat av Claris, men inte roundtrip-verifierat — kontrollera beteendet efter inklistring."
-      }
+        "docOnly": "Dokumenterat av Claris, men inte roundtrip-verifierat — kontrollera beteendet efter inklistring.",
+        "slotKind": "Plats",
+        "xmlDomain": "XML-domän",
+        "slot_field_only": "endast fält",
+        "slot_field_or_var": "fält eller variabel",
+        "slot_variable_only": "endast variabel",
+        "pasteDropped": "förkastas vid inklistring",
+        "pasteDroppedHint": "FileMaker förkastar det här alternativet vid inklistring oavsett värde — en generator utelämnar det, referensen behåller platshållaren för läsning."
+      },
+      "coverage": "Formtäckning",
+      "coverageHint": "FileMaker-version vars parade export- och urklippsbelägg denna form är verifierad mot. En rad märkt med en version är en override av den täckningen och ersätter standardraden med samma nyckel.",
+      "coverageBase": "bas",
+      "overrideBadge": "FM {{coverage}}",
+      "overrideHint": "Override-rad för täckning {{coverage}} — ersätter standardraden med samma nyckel.",
+      "noOverrides": "Inga override-rader för denna täckning — standardformen gäller.",
+      "targetSlotKind": "Typ av målplats"
     },
     "saxml": {
       "paramTypes": "Sekvens av parametertyper",
@@ -133,7 +155,8 @@
     "compat": {
       "label": "Plattformskompatibilitet",
       "partial": "delvis",
-      "partialHint": "Delvis — stöds villkorligt; se stegets Claris-hjälpsida"
+      "partialHint": "Delvis — stöds villkorligt; se stegets Claris-hjälpsida",
+      "none": "Ingen plattform — Claris anger inte händelsen som stödd någonstans"
     }
   },
   "osAffinity": {
@@ -146,5 +169,56 @@
     "hint_unsupported": "Claris anger uttryckligen detta OS som ej stött (källtrogen invers utsaga)",
     "hint_variant": "Fungerar överallt — beteende eller resultat beror på OS",
     "hint_os_probe": "Returnerar plattformen/OS vid körning — guard-idiom, ingen bindning"
+  },
+  "triggers": {
+    "col": {
+      "id": "Plats-ID",
+      "event": "Händelse",
+      "label": "Etikett",
+      "level": "Nivå",
+      "since": "Sedan",
+      "parameter": "Parameter",
+      "platforms": "Plattformar"
+    },
+    "level": {
+      "object": "objekt",
+      "layout": "layout",
+      "file": "fil"
+    },
+    "paramYes": "ja",
+    "paramNo": "nej",
+    "unavailable": "Den här referensen saknar tabellen över skriptutlösare (fm-spec < 1.18.0)."
+  },
+  "errorCodes": {
+    "col": {
+      "code": "Kod",
+      "message": "Meddelande",
+      "scope": "Omfång"
+    },
+    "scope": {
+      "core": "kärna",
+      "web": "webb"
+    },
+    "scopeHint": {
+      "core": "Returneras av FileMaker-klienter och -värdar",
+      "web": "Returneras av Web Publishing Engine eller ett FileMaker REST-API (markerat med (*) av Claris)"
+    },
+    "search": {
+      "hint": "Ett tal hittar koden eller intervallet den ingår i (5123 → 5000-5499); text söker i meddelandet"
+    },
+    "unavailable": "Den här referensen saknar felkodstabellen (fm-spec < 2.8.0)."
+  },
+  "trigger": {
+    "section": {
+      "labels": "Lokaliserade etiketter",
+      "platforms": "Plattformskompatibilitet"
+    },
+    "localized": {
+      "label": "Dialogetikett"
+    },
+    "parameterField": "med parameterfältattribut",
+    "compat": {
+      "unavailable": "Inget publicerat kompatibilitetsbesked — referensen är äldre än fm-spec 2.8.0"
+    }
   }
 }

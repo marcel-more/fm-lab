@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Compatibilidad de activadores: FileMaker Go (iOS)",
+    "analysis.defaultResult.meaning": "Activadores de script en el alcance cuyo evento no se dispara o solo se dispara parcialmente en FileMaker Go (iOS)"
+  },
+  "layout": {}
+}

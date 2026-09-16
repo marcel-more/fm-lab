@@ -25,6 +25,10 @@ Bug registry (warning class, since 1.14.4):
 
 Registry evidence is `external-report`, or `paired` where the defect has been reproduced and measured (step 221).
 
+Export gap (since fm-spec 2.7.0, informational class):
+
+- `saxml_omission` — a slot the SaXML export never carries, so a catalog built from the export cannot show it; only a clipboard copy does. Not a defect of the snippet — the clipboard form is complete. Rows are scoped by `coverage`: the XSLT stylesheet of an XML export (`Export Records`, FileMaker 22 export only), the *automatically open* / *create e-mail* flags of `Export Records`, `Save Records as PDF` and `Close PDF`, the zoom formula of `Set Zoom Level`, the `Option` flag of `Insert Embedding` (FileMaker 26). Evidence is always `paired` (clipboard against the SaXML export of the same step).
+
 Since schema 1.17.0 the kind vocabulary itself is registered in [constraint_kinds](constraint_kinds.md), which also carries the consumer-facing lead text of the bug-registry kinds.
 
 ## Columns
@@ -36,7 +40,10 @@ Since schema 1.17.0 the kind vocabulary itself is registered in [constraint_kind
 | `detail` | `VARCHAR` |
 | `evidence` | `VARCHAR` |
 | `verified_version` | `VARCHAR` |
+| `coverage` | `VARCHAR` |
+
+`coverage` (since fm-spec 2.7.0) is `*` for a constraint that holds in every coverage and a coverage id where the row speaks about that coverage's serialization only — the `saxml_omission` rows; the primary key is step, kind and coverage. Layout-object export gaps (the portal sort order FileMaker 22 omitted, the field-entry formula `CanEntryCalc`) are outside the step reference and recorded in fm-lab's SaXML shape baseline instead.
 
 `detail` is a payload column and carries the finding, the consumer doctrine and neutral version facts only; curation provenance lives in a source-side `notes` column that — like every curation column — is stripped from the consumer build (since schema 1.16.1, enforced by a build-time payload-hygiene guard).
 
-**See also:** [constraint_kinds](constraint_kinds.md) · [step_xml_map](step_xml_map.md) · [step_options](step_options.md)
+**See also:** [constraint_kinds](constraint_kinds.md) · [coverage_renames](coverage_renames.md) · [step_xml_map](step_xml_map.md) · [step_options](step_options.md)

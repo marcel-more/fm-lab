@@ -1,0 +1,139 @@
+/* Gemeinsames Stylesheet der funktions-artigen Pseudo-Objekte
+   (BuiltinFunction, PluginFunction): Identität + Referenz-Schicht oben,
+   verdichtete Verwendung unten. Beide Detailseiten sind strukturgleich und
+   teilen sich deshalb die Klassen; Aufbau bewusst wie die übrigen
+   Objekttyp-Detailseiten (vgl. ValueListViewer). */
+
+.fm-fn {
+  padding: 0.5rem 0.25rem;
+}
+
+/* ── Kopf: Überschrift + Querlink-Pillen ── */
+.fm-fn-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+/* Doppelte Klasse: .type-detail-heading (DetailView.css) bringt einen
+   margin-bottom mit — die Bündel-Reihenfolge der beiden Stylesheets ist nicht
+   garantiert, deshalb gewinnt hier die höhere Spezifität statt der Reihenfolge. */
+.fm-fn .fm-fn-title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin: 0;
+}
+/* Referenz-ID bzw. Namensraum der Funktion — dezent, wie im fm-spec-Browser. */
+.fm-fn-id {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.fm-fn-links {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+/* Querlink-Pille (Doku-Seite / fm-spec) — gleiche Optik wie die Pillen auf
+   den Docset- und fm-spec-Seiten (.docs-entry__meta-chip / .fmspec-title__doclink). */
+.fm-fn-pill {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: var(--color-accent-soft-bg);
+  color: var(--color-accent-soft-fg);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+.fm-fn-pill:hover,
+.fm-fn-pill:focus-visible {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-text-inverse, #fff);
+  text-decoration: none;
+}
+
+/* Metadaten-Zeile aus der Referenz-Schicht (fm_spec bzw. plugin_spec). */
+.fm-fn-subtitle {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+/* ── Metadaten (Key/Value) ── */
+.fm-fn-meta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.15rem 1rem;
+  margin: 1rem 0 1.25rem;
+  font-size: 0.85rem;
+}
+.fm-fn-meta dt { color: var(--color-text-muted); font-weight: 600; }
+.fm-fn-meta dd {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+/* ── Abschnitt „Verwendung" ── */
+.fm-fn-section { margin: 1.25rem 0; }
+.fm-fn-section-head {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin: 0 0 0.5rem;
+}
+.fm-fn-count { color: var(--color-text-muted); font-weight: 400; }
+.fm-fn-empty {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.fm-fn-table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 640px;
+  font-size: 0.88rem;
+}
+.fm-fn-table th,
+.fm-fn-table td {
+  text-align: left;
+  padding: 0.35rem 0.6rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.fm-fn-table thead th {
+  color: var(--color-text-muted);
+  font-weight: 600;
+  border-bottom: 1px solid var(--color-border-strong);
+  white-space: nowrap;
+}
+.fm-fn-table tbody tr:hover { background: var(--color-hover-bg); }
+.fm-fn-table tfoot th,
+.fm-fn-table tfoot td {
+  border-bottom: none;
+  border-top: 1px solid var(--color-border-strong);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.fm-fn-col-num {
+  text-align: right !important;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* Link-Rolle als technischer Token (Schreibweise wie im Referenzen-Tab). */
+.fm-fn-role {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+}

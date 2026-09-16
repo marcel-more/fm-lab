@@ -7,7 +7,7 @@ WITH slots AS (
            COALESCE(c.Formula_Text, c.Display_Text) AS calc_text
     FROM CalculationsCatalog c
     JOIN LayoutObjects lo ON lo.Object_UUID = c.Owner_UUID AND lo.File_Name = c.File_Name
-    WHERE c.Calc_Role IN ('hide', 'tooltip', 'button_label')
+    WHERE c.Calc_Role IN ('hide', 'field_entry', 'tooltip', 'button_label')
 )
 SELECT DISTINCT s.Object_Type AS value, s.Object_Type AS label
 FROM slots s

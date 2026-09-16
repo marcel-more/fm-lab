@@ -1,6 +1,6 @@
 {
   "id": "insert_from_url_in_loop",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "title": "Insert from URL inside Loop",
   "description": "Performance rule — Insert from URL inside a Loop fires a network request on every iteration.",
   "author": "fm-lab rules",

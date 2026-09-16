@@ -1,21 +1,23 @@
 {
   "manifest": {
-    "title": "Condizione di occultamento tra virgolette",
-    "description": "Regola di qualità del Layout — la condizione di occultamento di un oggetto è un unico letterale stringa tra virgolette. La formula è stata probabilmente incollata con le virgolette; agisce come costante anziché come calcolo.\n\nBasato sul controllo fmCheckMate «ReportBrokenCalculationQuoted» — https://github.com/mrwatson-de/fmCheckMate-XSLT",
-    "messages.quoted": "La condizione di occultamento è una costante stringa tra virgolette, non un calcolo"
+    "title": "Condizione di occultamento o di immissione tra virgolette",
+    "description": "Regola di qualità del Layout — la condizione di occultamento o di immissione campo di un oggetto è un unico letterale stringa tra virgolette. La formula è stata probabilmente incollata con le virgolette; agisce come costante anziché come calcolo.\n\nBasato sul controllo fmCheckMate «ReportBrokenCalculationQuoted» — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+    "messages.quoted": "La condizione di occultamento è una costante stringa tra virgolette, non un calcolo",
+    "messages.quoted_entry": "La condizione di immissione del campo è una costante stringa tra virgolette, non un calcolo"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Risultati",
     "summary_kpi.props.items[1].label": "Layout interessati",
     "summary_kpi.props.items[2].label": "File interessati",
-    "findings_card.props.title": "Condizione di occultamento tra virgolette",
+    "findings_card.props.title": "Condizione di occultamento o di immissione tra virgolette",
     "findings_table.props.searchPlaceholder": "Cerca file, Layout o oggetto…",
-    "findings_table.props.empty.message": "Nessuna condizione di occultamento tra virgolette trovata.",
+    "findings_table.props.empty.message": "Nessuna condizione di occultamento o di immissione tra virgolette trovata.",
     "findings_table.props.columns[0].label": "File",
     "findings_table.props.columns[1].label": "Layout",
     "findings_table.props.columns[2].label": "Tipo di oggetto",
     "findings_table.props.columns[3].label": "Oggetto",
-    "findings_table.props.columns[6].label": "Larghezza",
-    "findings_table.props.columns[7].label": "Altezza"
+    "findings_table.props.columns[4].label": "Slot",
+    "findings_table.props.columns[7].label": "Larghezza",
+    "findings_table.props.columns[8].label": "Altezza"
   }
 }

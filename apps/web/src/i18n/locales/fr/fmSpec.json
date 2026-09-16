@@ -7,12 +7,14 @@
   "help": {
     "open": "Aide"
   },
+  "clarisHelp": "Aide Claris →",
   "search": {
     "placeholder": "Filtrer…",
     "platformAll": "Toutes les plateformes",
     "platformLabel": "Plateforme",
     "platformStepHint": "Afficher les actions exécutables sur cette plateforme (support partiel inclus)",
-    "platformFnHint": "Afficher les fonctions conçues pour cette plateforme (liaison de plateforme)"
+    "platformFnHint": "Afficher les fonctions conçues pour cette plateforme (liaison de plateforme)",
+    "platformTriggerHint": "Afficher les événements déclencheurs qui se produisent sur cette plateforme (y c. prise en charge partielle)"
   },
   "list": {
     "count": "{{shown}} / {{total}}"
@@ -20,11 +22,14 @@
   "tabs": {
     "steps": "ScriptSteps",
     "functions": "Fonctions",
-    "locales": "Langues"
+    "locales": "Langues",
+    "triggers": "Déclencheurs",
+    "errorCodes": "Codes d'erreur"
   },
   "header": {
     "schemaVersion": "Schema",
-    "coverage": "Version FM",
+    "coverage": "Version FM (formes)",
+    "docCoverage": "Version FM (documentation)",
     "built": "Compilé le",
     "steps": "ScriptSteps",
     "functions": "Fonctions",
@@ -32,7 +37,9 @@
     "localesValue": "{{steps}} / {{functions}}",
     "grammar": "Couverture de grammaire",
     "grammarValue": "{{covered}}/{{total}} étapes",
-    "attribution": "Contenu de la documentation © Claris International Inc. FileMaker et Claris sont des marques de Claris International Inc. Ce projet n’est ni affilié à Claris ni approuvé par Claris. Voir SOURCES pour l’attribution complète."
+    "attribution": "Contenu de la documentation © Claris International Inc. FileMaker et Claris sont des marques de Claris International Inc. Ce projet n’est ni affilié à Claris ni approuvé par Claris. Voir SOURCES pour l’attribution complète.",
+    "triggers": "Déclencheurs",
+    "errorCodes": "Codes d'erreur"
   },
   "steps": {
     "col": {
@@ -52,7 +59,8 @@
       "name": "Nom",
       "category": "Catégorie",
       "returnType": "Type de retour",
-      "originVersion": "Version d'origine"
+      "originVersion": "Version d'origine",
+      "removedInVersion": "Supprimée dans"
     },
     "detail": {
       "returnType": "Type de retour",
@@ -120,8 +128,22 @@
         "evidence": "Preuve",
         "values": "Valeurs",
         "invertedHint": "La sémantique du libellé est inversée par rapport à l'état XML — true_text/false_text portent déjà la correspondance texte→XML complète ; ne jamais inverser à nouveau.",
-        "docOnly": "Documenté par Claris, mais non vérifié par aller-retour — vérifier le comportement après le collage."
-      }
+        "docOnly": "Documenté par Claris, mais non vérifié par aller-retour — vérifier le comportement après le collage.",
+        "slotKind": "Emplacement",
+        "xmlDomain": "Domaine XML",
+        "slot_field_only": "champ uniquement",
+        "slot_field_or_var": "champ ou variable",
+        "slot_variable_only": "variable uniquement",
+        "pasteDropped": "ignorée au collage",
+        "pasteDroppedHint": "FileMaker ignore cette option au collage quelle que soit sa valeur — un générateur l'omet, la référence conserve l'espace réservé pour la lecture."
+      },
+      "coverage": "Couverture de forme",
+      "coverageHint": "Version de FileMaker dont les preuves appariées d'export et de presse-papiers vérifient cette forme. Une ligne marquée d'une version est une surcharge de cette couverture et remplace la ligne standard de même clé.",
+      "coverageBase": "base",
+      "overrideBadge": "FM {{coverage}}",
+      "overrideHint": "Ligne de surcharge de la couverture {{coverage}} — remplace la ligne standard de même clé.",
+      "noOverrides": "Aucune ligne de surcharge pour cette couverture — la forme standard s'applique.",
+      "targetSlotKind": "Type d'emplacement cible"
     },
     "saxml": {
       "paramTypes": "Séquence de types de paramètres",
@@ -133,7 +155,8 @@
     "compat": {
       "label": "Compatibilité de plateforme",
       "partial": "partiel",
-      "partialHint": "Partiel — pris en charge sous conditions ; voir la page d'aide Claris de l'action"
+      "partialHint": "Partiel — pris en charge sous conditions ; voir la page d'aide Claris de l'action",
+      "none": "Aucune plateforme — Claris n’indique cet événement comme pris en charge nulle part"
     }
   },
   "osAffinity": {
@@ -146,5 +169,56 @@
     "hint_unsupported": "Claris nomme explicitement cet OS comme non pris en charge (déclaration inverse fidèle à la source)",
     "hint_variant": "Fonctionne partout — le comportement ou le résultat dépend de l'OS",
     "hint_os_probe": "Renvoie la plateforme/l'OS à l'exécution — idiome de garde, pas une liaison"
+  },
+  "triggers": {
+    "col": {
+      "id": "ID d’emplacement",
+      "event": "Événement",
+      "label": "Libellé",
+      "level": "Niveau",
+      "since": "Depuis",
+      "parameter": "Paramètre",
+      "platforms": "Plateformes"
+    },
+    "level": {
+      "object": "objet",
+      "layout": "modèle",
+      "file": "fichier"
+    },
+    "paramYes": "oui",
+    "paramNo": "non",
+    "unavailable": "Cette référence ne contient pas la table des déclencheurs de script (fm-spec < 1.18.0)."
+  },
+  "errorCodes": {
+    "col": {
+      "code": "Code",
+      "message": "Message",
+      "scope": "Portée"
+    },
+    "scope": {
+      "core": "noyau",
+      "web": "web"
+    },
+    "scopeHint": {
+      "core": "Renvoyé par les clients et hôtes FileMaker",
+      "web": "Renvoyé par le moteur de publication Web ou une API REST FileMaker (marqué (*) par Claris)"
+    },
+    "search": {
+      "hint": "Un nombre trouve le code ou la plage qui le contient (5123 → 5000-5499) ; un texte cherche dans le message"
+    },
+    "unavailable": "Cette référence ne contient pas la table des codes d’erreur (fm-spec < 2.8.0)."
+  },
+  "trigger": {
+    "section": {
+      "labels": "Libellés localisés",
+      "platforms": "Compatibilité des plateformes"
+    },
+    "localized": {
+      "label": "Libellé de la boîte de dialogue"
+    },
+    "parameterField": "avec attribut de rubrique de paramètre",
+    "compat": {
+      "unavailable": "Aucune déclaration de compatibilité publiée — référence antérieure à fm-spec 2.8.0"
+    }
   }
 }

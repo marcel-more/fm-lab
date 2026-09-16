@@ -36,6 +36,7 @@ generation time.
 | Comment language in generated scripts | `auto` | derive from existing script comments |
 | MBS plugin in use | yes | PluginFunctionUsages non-empty |
 | `variable_init_check` | `off` | maintainer decision — see below |
+| Target FileMaker version / shape coverage | `auto` — from `FilesCatalog.FileMaker_Version` of the target file (22.x → coverage 22, 26.x → 26) | catalog; explicit `--coverage`/`--target-version` only as a named override (`codegen-workflows.md` §A5) |
 
 `variable_init_check` is a **house convention**, not FileMaker semantics: a step
 that writes into `$x` / `$$x` creates the variable by itself, so requiring a

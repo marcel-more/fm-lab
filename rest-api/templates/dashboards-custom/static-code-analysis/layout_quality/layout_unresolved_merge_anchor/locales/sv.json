@@ -1,0 +1,25 @@
+{
+  "manifest": {
+    "title": "Oupplöst sammanfogningsankare",
+    "description": "Layoutkvalitetsregel — ett textobjekt innehåller ett sammanfogningsankare (<<Fält>>) som FileMaker inte kan lösa upp. Ett sådant ankare förkastas inte: det återges BOKSTAVLIGT i bläddrings- och förhandsgranskningsläge, så användaren ser det råa <<Fältet>> där ett värde hör hemma. Det lämnar dessutom inget spår i katalogen — ingen displays_field-båge, inget eget objekt — vilket gör den här regeln till den enda plats där det blir synligt. Upptäckten jämför ankarna i texten (sammanfogningsvariabler <<$…>> och layoutformler <<ƒ:…>> undantagna; en upprepning eller en TO-kvalificering räknas som ett ankare) mot FieldReference-posterna i objektets strukturella FieldList, som har exakt en post per upplöst ankare. Räkningen avgör träffen; de namngivna misstänkta är ett tillägg och lämnas tomma när namnen inte går att matcha säkert.",
+    "messages.unresolved-anchor": "Sammanfogningsankare utan fältupplösning — det återges bokstavligt"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Träffar",
+    "summary_kpi.props.items[1].label": "Oupplösta ankare",
+    "summary_kpi.props.items[2].label": "Berörda layouter",
+    "summary_kpi.props.items[3].label": "Berörda filer",
+    "findings_card.props.title": "Oupplöst sammanfogningsankare",
+    "findings_table.props.searchPlaceholder": "Sök fil, layout, objekt eller ankare…",
+    "findings_table.props.empty.message": "Inga oupplösta sammanfogningsankare hittades.",
+    "findings_table.props.columns[0].label": "Fil",
+    "findings_table.props.columns[1].label": "Layout",
+    "findings_table.props.columns[2].label": "Objekt",
+    "findings_table.props.columns[3].label": "Återges bokstavligt",
+    "findings_table.props.columns[4].label": "Alla ankare",
+    "findings_table.props.columns[5].label": "Oupplösta",
+    "findings_table.props.columns[6].label": "Ankare",
+    "findings_table.props.columns[9].label": "Bredd",
+    "findings_table.props.columns[10].label": "Höjd"
+  }
+}

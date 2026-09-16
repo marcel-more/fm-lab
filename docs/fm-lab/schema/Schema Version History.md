@@ -8,6 +8,11 @@ Two scope notes: this history covers the **solution catalog** (`db/fm_catalog.du
 
 | Schema version | fm-lab version | Date |
 |---|---|---|
+| [1.32.0](#1320) | 0.9.12 | 2026-09-12 |
+| [1.31.0](#1310) | 0.9.12 | 2026-09-12 |
+| [1.30.0](#1300) | 0.9.12 | 2026-09-10 |
+| [1.29.0](#1290) | 0.9.12 | 2026-09-10 |
+| [1.28.0](#1280) | 0.9.12 | 2026-09-10 |
 | [1.27.0](#1270) | 0.9.9 | 2026-09-02 |
 | [1.26.0](#1260) | 0.9.9 | 2026-09-01 |
 | [1.25.0](#1250) | 0.9.9 | 2026-08-29 |
@@ -43,6 +48,92 @@ Two scope notes: this history covers the **solution catalog** (`db/fm_catalog.du
 | [1.0.0](#100) | — | 2026-05-13 |
 
 ## Changes by version
+
+### 1.32.0
+
+Built-in functions normalized against the standard reference (converter 2.29.0).
+FileMaker writes `Get` parameters localized in DDR-Info and files the
+sub-parameter as a `FunctionRef` chunk of its own, so a single `Get` parameter
+fell apart into up to three catalog objects (`Get(PageNumber)` ·
+`Get(Seitennummer)` · `Seitennummer`) with three separate where-used answers.
+The identity of a built-in is no longer the token **as written in the formula**
+but the canonical English name of the reference: `Object_Name` is now
+language-independent (the localized display name stays a matter of
+`?enrich=<lang>`), and symbol and formula usages meet on the same node. Three
+additive structures carry it: [BuiltinFunctionIdentity](catalog-tables/BuiltinFunctionIdentity.md) (one row per resolved
+node — reference ID, canonical name, namespace), [BuiltinTokenResolution](catalog-tables/BuiltinTokenResolution.md) (one
+row per occurring token *form*, mapping the old identity string to the node) and
+the lookup view `v_builtin_token_lookup`. The UUID formula is unchanged and
+only gets a canonicalized input, so a node whose token was already canonical
+English keeps its UUID; a token the reference does not know (`Get` itself,
+`True`/`False`/`and`/`or`/`not`/`Bold`, the JSON type constants, functions newer
+than the bundled reference) keeps its name-based identity and gets no identity
+row.
+
+### 1.31.0
+
+Field entry behaviour and its formula (converter 2.27.0). [LayoutObjects](catalog-tables/LayoutObjects.md)
+gains `Entry_Options_Raw` (the raw mask from `<Field><Options>`), the derived
+per-mode columns `Entry_Browse` / `Entry_Find` with the vocabulary `allow` |
+`select_only` | `view_only` | `by_calculation`, and `Entry_Calculation_Text`
+from `<CanEntryCalc>` — only SaXML 2.3.0.0 writes that formula, v2.2.3.0 omits
+it while keeping the state bits. New calculation role `field_entry`: FileMaker
+files the chunk list of the entry formula under the **same** DDR key
+`_<ObjectUUID>_Hide` as the hide condition and writes only one of the two, which
+used to produce a "Hide Condition" without formula text that carried the entry
+formula's edges while the real hide condition lost its evidence. The anchor is
+now assigned by comparing the formula text; the anchorless formula keeps its
+instance without edges. Since converter 2.30.0 those edges are re-tagged to
+`field_entry` after the assignment (no DDL).
+
+### 1.30.0
+
+Table comment (converter 2.26.0): [BaseTableCatalog](catalog-tables/BaseTableCatalog.md) gains `BT_Comment` from
+`<BaseTable comment="…">` — both SaXML profiles, empty becomes NULL. It backs
+the `table_comment_inventory` custom query and the comment line of the base-table
+detail view.
+
+### 1.29.0
+
+Dormant field definitions (SaXML 2.3.0.0, converter 2.25.0). FileMaker 26
+exports **disabled** auto-enter calculations, lookups and validation
+calculations (`<Calculated enable="False">`, `<Looked_up … enable="False">`);
+FileMaker ≤ 22 omits them entirely. [FieldsForTables](catalog-tables/FieldsForTables.md) gains `AE_Calc_Enabled`,
+`Lookup_Enabled`, `Validation_Calc_Enabled` and
+`Validation_Message_Calc_Enabled` (NULL = attribute absent = active). A dormant
+slot keeps its calculation instance ([CalculationsCatalog](catalog-tables/CalculationsCatalog.md) `Is_Enabled =
+FALSE`, `has_calculation` stays) but produces **no** operational edges and no
+[VariableUsages](catalog-tables/VariableUsages.md) — where-used without phantoms, and parity with the
+FileMaker 22 export. New P3 table [FieldDisplayNames](catalog-tables/FieldDisplayNames.md) (the JSON elements of the
+display-names formula: key → label or formula). In
+[CalcsForCustomFunctions](catalog-tables/CalcsForCustomFunctions.md), a function without `<Calculation>` now gets a NULL
+row under **both** profiles (previously `saxml22` only). [LayoutParts](catalog-tables/LayoutParts.md)
+`Part_Type` for `kind=5` is canonicalized to `Trailing Sub-summary` — FileMaker
+≤ 22 exports the Claris mislabel `Trailing Grand Summary`, and `Definition_Type`
+keeps the raw value.
+
+### 1.28.0
+
+**SaXML profiles — the version-explicit import pipeline** (converter 2.24.0).
+The driver reads the root attribute `FMSaveAsXML/@version` of every file and
+derives a profile from it: `saxml22` for 2.1.0.0 – 2.2.x (FileMaker 19–22),
+`saxml23` from 2.3.0.0 on (FileMaker 26). The profile is persisted in
+[FilesCatalog](object-catalog/FilesCatalog.md) (`SaXML_Version`, `SaXML_Profile`) and [XMLMetadata](catalog-tables/XMLMetadata.md)
+(`SaXML_Profile`). Extractions that exist in only **one** SaXML form live in
+marker blocks of the Phase-1 template which the driver filters onto the file's
+profile in every mode — no double read, no extract-then-discard. This replaces
+the structure-tolerant dual extraction of [1.4.1](#141) with an explicit version
+switch. Carried by the same bump: [OptionsForValueLists](catalog-tables/OptionsForValueLists.md) per profile (top-level
+section vs. the embedded `<ValueList>` node), [CalcsForCustomFunctions](catalog-tables/CalcsForCustomFunctions.md) per
+profile (folders and separators no longer get a row under either),
+[FieldsForTables](catalog-tables/FieldsForTables.md) gains `Field_Annotation`, `Field_DisplayNames_Enabled`,
+`DisplayNames_Calc_Text` and `DisplayNames_Calc_Hash` (SaXML 2.3.0.0; new
+calculation role `display_names`, DDR suffix `_5`), the new table
+[LayoutTableViewColumns](catalog-tables/LayoutTableViewColumns.md) (`saxml23` only; edge Layout → Field
+`displays_field`/`table_view_column`), and the staging table
+`DDR_DisplayCalcAnchors23` — FileMaker 26 always pads the
+`DisplayCalculations` list to 12 anchors, and stage P1d promotes only the slots
+below the object's `<<ƒ:…>>` token count. See [the SaXML version notes](../xml/XML.md#version-notes-saxml-v22-and-v23).
 
 ### 1.27.0
 

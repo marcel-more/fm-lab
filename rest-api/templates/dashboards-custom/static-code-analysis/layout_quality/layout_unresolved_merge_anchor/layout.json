@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "type": "Grid",
+    "props": {
+      "columns": 12,
+      "gap": 16
+    },
+    "children": [
+      {
+        "type": "Card",
+        "id": "summary_card",
+        "props": {
+          "span": 12,
+          "variant": "hero"
+        },
+        "data": {
+          "dataset": "summary"
+        },
+        "children": [
+          {
+            "type": "KPIStrip",
+            "id": "summary_kpi",
+            "props": {
+              "items": [
+                {
+                  "label": "Findings",
+                  "field": "finding_count",
+                  "format": "number"
+                },
+                {
+                  "label": "Unresolved anchors",
+                  "field": "unresolved_anchors",
+                  "format": "number"
+                },
+                {
+                  "label": "Affected layouts",
+                  "field": "affected_layouts",
+                  "format": "number"
+                },
+                {
+                  "label": "Affected files",
+                  "field": "affected_files",
+                  "format": "number"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "findings_card",
+        "props": {
+          "span": 12,
+          "title": "Unresolved merge anchor"
+        },
+        "data": {
+          "dataset": "findings"
+        },
+        "children": [
+          {
+            "type": "Table",
+            "id": "findings_table",
+            "props": {
+              "rowKey": "row_key",
+              "density": "comfortable",
+              "sortable": true,
+              "searchable": true,
+              "searchPlaceholder": "Search file, layout, object or anchor…",
+              "columns": [
+                {
+                  "field": "file_name",
+                  "label": "File"
+                },
+                {
+                  "field": "layout_name",
+                  "label": "Layout"
+                },
+                {
+                  "field": "object_name",
+                  "label": "Object"
+                },
+                {
+                  "field": "unresolved_anchors",
+                  "label": "Renders literally"
+                },
+                {
+                  "field": "anchors",
+                  "label": "All anchors"
+                },
+                {
+                  "field": "unresolved_count",
+                  "label": "Unresolved"
+                },
+                {
+                  "field": "anchor_count",
+                  "label": "Anchors"
+                },
+                {
+                  "field": "x",
+                  "label": "X"
+                },
+                {
+                  "field": "y",
+                  "label": "Y"
+                },
+                {
+                  "field": "w",
+                  "label": "Width"
+                },
+                {
+                  "field": "h",
+                  "label": "Height"
+                }
+              ],
+              "onRowClick": {
+                "action": "openObject",
+                "args": {
+                  "uuid": "{{nav_uuid}}",
+                  "type": "Layout",
+                  "file": "{{file_name}}",
+                  "ref": "{{object_uuid}}",
+                  "ref_src": "layout_unresolved_merge_anchor",
+                  "ref_msgid": "{{defect}}"
+                }
+              },
+              "empty": {
+                "message": "No unresolved merge anchors found."
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

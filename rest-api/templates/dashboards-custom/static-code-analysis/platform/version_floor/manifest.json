@@ -1,0 +1,84 @@
+{
+  "id": "version_floor",
+  "version": "1.0.0",
+  "title": "Version floor: effective minimum FileMaker version",
+  "description": "Features in scope that require a NEWER FileMaker than their file declares as its minimum (SaXML AddAction/Minimum → FileOptionsCatalog.Min_Version). Three axes: script steps (fm_spec step_compat.originated_in_version_num), built-in functions (functions.origin_version_num) and script triggers (script_triggers.since_version_num, joined over the SaXML slot id). Comparison always runs on the numeric key, never on the version string ('8.5' sorts before '19.0' lexically). A feature the reference carries no version for is not counted — no published statement is not 'old'; '6.0 or earlier' is read as a floor, not an exact version. The summary also answers the neutral question: the effective minimum version of the whole scope, and how many files carry no readable declaration.",
+  "author": "fm-lab rules",
+  "icon": "server",
+  "category": "platform",
+  "tags": [
+    "rule",
+    "platform",
+    "version"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "warning",
+    "category": "platform",
+    "rationale": "The declared minimum version is what the file promises; it does not follow the features that were added later. A file that promises FileMaker 16 but uses a step introduced in 19 misleads everyone who plans a rollout, a client version or a server upgrade — and the mismatch only surfaces when an older client actually opens it.",
+    "remediation": "Decide which way the mismatch goes: either raise the declared minimum to the effective floor, or replace the features that push it (the findings name them per file, highest requirement first)."
+  },
+  "analysis": {
+    "objectTypes": [
+      "Script",
+      "CustomFunction",
+      "Layout"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
+    },
+    "requires": [
+      "fm-spec-version-keys"
+    ],
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Features in scope that require a newer FileMaker version than their file declares"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql"
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "limit",
+      "type": "number",
+      "required": false,
+      "description": "Maximum number of findings returned (default 500)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

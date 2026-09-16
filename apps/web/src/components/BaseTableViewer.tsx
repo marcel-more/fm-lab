@@ -17,6 +17,7 @@ export interface BaseTableRow {
   file_name: string | null;
   bt_uuid: string | null;
   bt_id: number | null;
+  bt_comment: string | null;
   total_fields: number | null;
   normal_fields: number | null;
   calc_fields: number | null;
@@ -306,6 +307,12 @@ export const BaseTableViewer: React.FC<BaseTableViewerProps> = ({ data }) => {
         <dt>{t('detail:baseTable.metaFile', { defaultValue: 'Datei' })}</dt><dd>{meta.file_name}</dd>
         <dt>UUID</dt><dd>{meta.bt_uuid}</dd>
         <dt>ID</dt><dd>{meta.bt_id}</dd>
+        {meta.bt_comment && (
+          <>
+            <dt>{t('detail:baseTable.metaComment', { defaultValue: 'Kommentar' })}</dt>
+            <dd style={{ whiteSpace: 'pre-wrap' }}>{meta.bt_comment}</dd>
+          </>
+        )}
       </dl>
 
       {/* ── Top-Block: Feld-Typ-Statistik (Total als letzte Zeile) ── */}

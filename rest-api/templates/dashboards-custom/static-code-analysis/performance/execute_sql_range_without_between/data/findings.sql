@@ -39,7 +39,7 @@ resolved AS (
         COALESCE(s.Script_UUID, h.Owner_UUID) AS nav_uuid,
         CASE WHEN h.Owner_Type = 'ScriptStep' THEN 'Script' ELSE h.Owner_Type END AS nav_type,
         COALESCE(s.Script_Name, h.Owner_Name) AS object_name,
-        CASE WHEN h.Owner_Type = 'ScriptStep' THEN s.Step_Index + 1 END AS step_index,
+        CASE WHEN h.Owner_Type = 'ScriptStep' THEN s.Step_Index + 1 END AS step_no,
         CASE WHEN h.Owner_Type = 'ScriptStep' THEN s.Step_UUID END AS step_uuid,
         regexp_extract(h.Formula_Text, '(?i)((fm\.)?execute(file)?sql[a-z]*)', 1) AS sql_function,
         replace(
@@ -61,14 +61,17 @@ SELECT
     nav_uuid,
     nav_type,
     object_name,
-    CAST(step_index AS INTEGER) AS step_index,
+    CAST(step_no AS INTEGER) AS step_no,
     step_uuid,
     sql_function,
     sql_excerpt,
-    row_number() OVER (ORDER BY File_Name, object_name, step_index) AS row_key
+    COALESCE(sql_function, 'ExecuteSQL') || ' in ' || object_name
+      || CASE WHEN step_no IS NOT NULL THEN ' at step ' || step_no ELSE '' END
+      || ' bounds a range with >= and <= instead of BETWEEN: ' || sql_excerpt AS message,
+    row_number() OVER (ORDER BY File_Name, object_name, step_no) AS row_key
 FROM resolved
 WHERE (getvariable('file') IS NULL OR File_Name = getvariable('file'))
   AND (getvariable('scope_uuids') IS NULL
        OR nav_uuid IN (SELECT unnest(string_split(getvariable('scope_uuids'), ','))))
-ORDER BY file_name, object_name, step_index
+ORDER BY file_name, object_name, step_no
 LIMIT CAST(COALESCE(getvariable('limit'), '500') AS INTEGER);

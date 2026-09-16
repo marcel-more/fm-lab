@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Plattformsspecifika utlösare: FileMaker Go (iOS)",
+    "analysis.defaultResult.meaning": "Skript inom omfånget kopplade till utlösarhändelser som bara utlöses i FileMaker Go (iOS)"
+  },
+  "layout": {}
+}

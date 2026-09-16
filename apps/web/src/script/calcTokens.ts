@@ -25,6 +25,8 @@ export interface CalcToken {
   functionId?: number;
   functionCanonical?: string;          // z.B. 'Average' oder 'Get' bei Get-Funktionen
   functionSubParameter?: string;       // z.B. 'FileName' bei Get(FileName)
+  /** Ungeteilter kanonischer Name = Katalog-Identität, z.B. 'Get(FileName)'. */
+  functionCanonicalFull?: string;
   functionDisplayName?: string;        // lokalisierter Name (z.B. 'Mittelwert')
   functionSignature?: string;          // lokalisierte Signatur
   functionPurpose?: string;            // Kurzbeschreibung (1-Zeiler)
@@ -289,12 +291,16 @@ export interface FieldLookup {
   to: string | null;
   dontCopyIfEmpty: boolean;
   noMatch: string | null;    // DoNotCopy | ConstantData
+  /** false = disabled lookup (FileMaker 26 exports it with enable="False"). */
+  enabled: boolean;
 }
 
 /** Flags einer AutoEnter-Berechnung (AutoEnter_Type='Calculated'). */
 export interface FieldAutoEnterCalc {
   overwriteExisting: boolean;
   alwaysEvaluate: boolean;
+  /** false = disabled auto-enter calculation (FileMaker 26 export, enable="False"). */
+  enabled: boolean;
 }
 
 /** Überprüfung / Validierung (nur wenn eine echte Regel gesetzt ist). */
@@ -312,9 +318,30 @@ export interface FieldValidation {
   calcText: string | null;   // „Überprüfung durch Berechnung"
   /** Calculation-Instanz-UUID der Validierungsformel (Token-Rendering); null = DDR-los. */
   calcUuid: string | null;
+  /** false = disabled validation calculation (FileMaker 26 export, enable="False"). */
+  calcEnabled: boolean;
   message: string | null;    // eigene Fehlermeldung
   /** Fehlermeldungs-FORMEL (validation_message-Slot); uuid null = DDR-los → text-Fallback. */
-  messageCalc: { uuid: string | null; text: string | null } | null;
+  messageCalc: { uuid: string | null; text: string | null; enabled: boolean } | null;
+}
+
+/** One JSON element of the display-names formula (FileMaker 26, "Feld-Anzeigenamen anpassen"). */
+export interface FieldDisplayNameElement {
+  seq: number;
+  key: string;
+  /** Label (kind 'literal', unquoted) or the raw expression (kind 'formula'). */
+  value: string | null;
+  kind: 'literal' | 'formula';
+  jsonType: string | null;   // JSONString | JSONNumber | …
+}
+
+/** FileMaker 26 display names of a field: the formula plus its parsed elements. */
+export interface FieldDisplayNames {
+  enabled: boolean;
+  calcText: string | null;
+  /** Calculation instance UUID (role display_names) for token rendering; null = DDR-less. */
+  calcUuid: string | null;
+  elements: FieldDisplayNameElement[];
 }
 
 /** Speicher / Indizierung. */
@@ -352,6 +379,10 @@ export interface FieldMeta {
   validation: FieldValidation | null;
   storage: FieldStorage | null;
   summary: FieldSummary | null;
+  /** FileMaker 26: free-text annotation of the field (DDL comment); null when unset. */
+  annotation: string | null;
+  /** FileMaker 26: display-names feature; null when the export predates it. */
+  displayNames: FieldDisplayNames | null;
 }
 
 export interface FieldTokens {

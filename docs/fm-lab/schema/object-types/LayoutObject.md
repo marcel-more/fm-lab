@@ -85,7 +85,7 @@ Layout objects carry more link roles than any other source type: display edges, 
 | `parent_object` | LayoutObject | containment | A nested child object points here |
 | `trigger_owner` | [ScriptTrigger](ScriptTrigger.md) | containment | Object-level trigger hangs on this object (subrole = event type) |
 
-For calculation-carried roles the `Link_Subrole` names the **calc slot** that contains the reference — the DDR calc-anchor suffix: `Hide`, `Tooltip`, `Placeholder`, `Condition_1` (conditional formatting), `Filter` (portal filter), `ScriptTrigger_<id>` (trigger parameter), `DisplayCalculations_<i>` (merge/layout calculation), chart series keys like `Series_Value` / `YSeriesList_0_Value` *(corpus)*. References of a button-embedded step carry the step index instead. This makes "which formula on this object touches that field?" answerable from the link table alone.
+For calculation-carried roles the `Link_Subrole` names the **calc slot** that contains the reference — the DDR calc-anchor suffix: `Hide`, `field_entry` (the field-entry formula — FileMaker files it under the hide condition's DDR key, the importer resolves the collision and tags its edges with the slot name), `Tooltip`, `Placeholder`, `Condition_1` (conditional formatting), `Filter` (portal filter), `ScriptTrigger_<id>` (trigger parameter), `DisplayCalculations_<i>` (merge/layout calculation), chart series keys like `Series_Value` / `YSeriesList_0_Value` *(corpus)*. References of a button-embedded step carry the step index instead. This makes "which formula on this object touches that field?" answerable from the link table alone.
 
 ## Enumerations
 

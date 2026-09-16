@@ -31,6 +31,10 @@ async function performReload(solutionId) {
     : require('../config/solutions').serverDefaultContext();
   const result = await db.reload(solutionId);
   referenceService.clearCaches();
+  // Feature-Cache der Objekt-Suche (Verfügbarkeit von v_builtin_token_lookup):
+  // ein Re-Import kann das Katalog-Schema heben, dann muss die Suche den
+  // lokalisierten Built-in-Branch wieder anbieten.
+  require('./object.service').clearObjectServiceCaches();
   helpService.clearCache();
   templateService.clearCache();
   graphService.clearCache();

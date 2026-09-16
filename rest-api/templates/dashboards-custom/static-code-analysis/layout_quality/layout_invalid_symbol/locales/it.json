@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "Simbolo di layout non valido",
+    "description": "Regola di qualità dei layout — un oggetto di testo contiene un {{Simbolo}} che non è un parametro di Get. Un simbolo è il valore di Get(<Simbolo>) al momento della visualizzazione; uno sconosciuto non viene scartato ma reso LETTERALMENTE in modalità usa e anteprima, così il layout mostra il {{Testo}} grezzo. La validità è decisa dalla referenza standard (function_name_lookup, chunk_role «getparameter») su tutte le lingue che copre: FileMaker accetta anche il nome localizzato del parametro, quindi un simbolo localizzato non è un difetto. Due limiti la mantengono un avviso: la copertura localizzata della referenza è disomogenea (i nomi spagnoli e portoghesi mancano del tutto, il tedesco è coperto solo in parte) e le forme con parentesi come {{Get(FoundCount)}} non entrano affatto nell'inventario dei simboli — la regola è cieca su di esse.",
+    "messages.unknown-symbol": "Il simbolo non è un parametro di Get noto — viene reso letteralmente"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Risultati",
+    "summary_kpi.props.items[1].label": "Simboli distinti",
+    "summary_kpi.props.items[2].label": "Layout interessati",
+    "summary_kpi.props.items[3].label": "File interessati",
+    "findings_card.props.title": "Simbolo di layout non valido",
+    "findings_table.props.searchPlaceholder": "Cerca file, layout, oggetto o simbolo…",
+    "findings_table.props.empty.message": "Nessun simbolo di layout non valido trovato.",
+    "findings_table.props.columns[0].label": "File",
+    "findings_table.props.columns[1].label": "Layout",
+    "findings_table.props.columns[2].label": "Oggetto",
+    "findings_table.props.columns[3].label": "Simbolo",
+    "findings_table.props.columns[4].label": "Occorrenze",
+    "findings_table.props.columns[7].label": "Larghezza",
+    "findings_table.props.columns[8].label": "Altezza"
+  }
+}

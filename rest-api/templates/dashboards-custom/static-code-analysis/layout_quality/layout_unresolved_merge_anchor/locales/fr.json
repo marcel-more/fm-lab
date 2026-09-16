@@ -1,0 +1,25 @@
+{
+  "manifest": {
+    "title": "Ancre de fusion non résolue",
+    "description": "Règle de qualité des layouts — un objet texte porte une ancre de rubrique fusionnée (<<Rubrique>>) que FileMaker ne peut pas résoudre. Cette ancre n'est pas ignorée : elle est rendue LITTÉRALEMENT en mode utilisation et aperçu, l'utilisateur voit donc la <<Rubrique>> brute là où une valeur devrait apparaître. Elle ne laisse en outre aucune trace dans le catalogue — ni arête displays_field ni objet propre —, ce qui fait de cette règle le seul endroit où elle devient visible. La détection compare les ancres du texte (variables de fusion <<$…>> et formules de layout <<ƒ:…>> exclues ; une répétition ou une qualification par occurrence de table compte pour une seule ancre) aux entrées FieldReference de la FieldList structurelle de l'objet, qui contient exactement une entrée par ancre résolue. C'est le comptage qui décide du constat ; les noms suspects sont un plus et restent vides lorsqu'ils ne peuvent pas être attribués de façon sûre.",
+    "messages.unresolved-anchor": "Ancre de fusion sans résolution de rubrique — elle est rendue littéralement"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Résultats",
+    "summary_kpi.props.items[1].label": "Ancres non résolues",
+    "summary_kpi.props.items[2].label": "Layouts concernés",
+    "summary_kpi.props.items[3].label": "Fichiers concernés",
+    "findings_card.props.title": "Ancre de fusion non résolue",
+    "findings_table.props.searchPlaceholder": "Rechercher un fichier, un layout, un objet ou une ancre…",
+    "findings_table.props.empty.message": "Aucune ancre de fusion non résolue trouvée.",
+    "findings_table.props.columns[0].label": "Fichier",
+    "findings_table.props.columns[1].label": "Layout",
+    "findings_table.props.columns[2].label": "Objet",
+    "findings_table.props.columns[3].label": "Rendu littéral",
+    "findings_table.props.columns[4].label": "Toutes les ancres",
+    "findings_table.props.columns[5].label": "Non résolues",
+    "findings_table.props.columns[6].label": "Ancres",
+    "findings_table.props.columns[9].label": "Largeur",
+    "findings_table.props.columns[10].label": "Hauteur"
+  }
+}

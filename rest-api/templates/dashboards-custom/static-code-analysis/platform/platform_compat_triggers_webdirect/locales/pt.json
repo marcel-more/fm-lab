@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Compatibilidade de acionadores: FileMaker WebDirect",
+    "analysis.defaultResult.meaning": "Acionadores de script no escopo cujo evento não dispara ou dispara apenas parcialmente no FileMaker WebDirect"
+  },
+  "layout": {}
+}

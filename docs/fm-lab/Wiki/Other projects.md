@@ -23,7 +23,6 @@ This page highlights a selection of open-source projects that complement FM-Lab 
 **ooe-fm**  
 [ooe-fm](https://github.com/mislavkos/ooe-fm) – Sample file with one of everything. Endeavors to have an example of one of every possible configuration of every kind of solution element.  
 MIT License – Copyright © 2025 Mislav Kos  
-➡️ Use Skill `/install-ooe-fm` to install it inside FM-Lab for reference.
 
 **FileMaker Script XML Specification**  
 [FileMaker-XMLsnippet-Claude-Skill](https://github.com/andykear/FileMaker-XMLsnippet-Claude-Skill) – Reverse-engineered specification of FileMaker's undocumented fmxmlsnippet clipboard format.  
@@ -44,7 +43,6 @@ Creative Commons Attribution License – Copyright © 2022 Matt Petrowsky
 **FileMaker XML-Export File Exploder**  
 [fm-xml-export-exploder](https://github.com/bc-m/fm-xml-export-exploder) – FileMaker XML-Export File Exploder is a fast Rust tool designed to parse XML files exported from FileMaker databases and extract relevant content into separate files.  
 MIT License – Copyright © 2024 Malte Bastian  
-➡️ Use Skill `/install-fm-xml-export-exploder` to install it inside FM-Lab for reference.
 
 **fmCheckMate-XSLT**  
 [fmCheckMate-XSLT Library](https://github.com/mrwatson-de/fmCheckMate-XSLT) – The fmCheckMate-XSLT Library is a whole bunch of XSL transformations and other functions to transform your FileMaker work … into something very much better!  

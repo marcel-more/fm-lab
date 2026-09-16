@@ -1,21 +1,23 @@
 {
   "manifest": {
-    "title": "Condição de ocultar é uma constante entre aspas",
-    "description": "Regra de qualidade de Layout — a condição de ocultar de um objeto é um único literal de texto entre aspas. A fórmula provavelmente foi colada com as aspas; atua como constante em vez do cálculo pretendido.\n\nBaseado na verificação fmCheckMate “ReportBrokenCalculationQuoted” — https://github.com/mrwatson-de/fmCheckMate-XSLT",
-    "messages.quoted": "A condição de ocultar é uma constante de texto entre aspas, não um cálculo"
+    "title": "Condição de ocultar ou de entrada de campo é uma constante entre aspas",
+    "description": "Regra de qualidade de Layout — a condição de ocultar ou de entrada de campo de um objeto é um único literal de texto entre aspas. A fórmula provavelmente foi colada com as aspas; atua como constante em vez do cálculo pretendido.\n\nBaseado na verificação fmCheckMate “ReportBrokenCalculationQuoted” — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+    "messages.quoted": "A condição de ocultar é uma constante de texto entre aspas, não um cálculo",
+    "messages.quoted_entry": "A condição de entrada de campo é uma constante de texto entre aspas, não um cálculo"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Ocorrências",
     "summary_kpi.props.items[1].label": "Layouts afetados",
     "summary_kpi.props.items[2].label": "Arquivos afetados",
-    "findings_card.props.title": "Condição de ocultar é uma constante entre aspas",
+    "findings_card.props.title": "Condição de ocultar ou de entrada de campo é uma constante entre aspas",
     "findings_table.props.searchPlaceholder": "Pesquisar arquivo, Layout ou objeto…",
-    "findings_table.props.empty.message": "Nenhuma condição de ocultar entre aspas encontrada.",
+    "findings_table.props.empty.message": "Nenhuma condição de ocultar ou de entrada de campo entre aspas encontrada.",
     "findings_table.props.columns[0].label": "Arquivo",
     "findings_table.props.columns[1].label": "Layout",
     "findings_table.props.columns[2].label": "Tipo de objeto",
     "findings_table.props.columns[3].label": "Objeto",
-    "findings_table.props.columns[6].label": "Largura",
-    "findings_table.props.columns[7].label": "Altura"
+    "findings_table.props.columns[4].label": "Slot",
+    "findings_table.props.columns[7].label": "Largura",
+    "findings_table.props.columns[8].label": "Altura"
   }
 }

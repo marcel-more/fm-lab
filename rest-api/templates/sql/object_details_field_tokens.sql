@@ -3,7 +3,7 @@
 -- @params: uuid (required)
 -- @output_format: tokens
 -- @author: Marcel
--- @version: 1.0
+-- @version: 1.1
 -- @tags: fields, ddr, tokens
 -- @note: Liefert Calculation-Tokens für Calculated- und AutoEnter-Calculated-Felder.
 --        Calc-Instanz robust über v_calc_anchors (Owner-UUID + Owner-Datei) aufgelöst
@@ -71,6 +71,25 @@ WITH fld AS (
     f.Summary_Field_UUID,
     f.Summary_RestartEachGroup,
     f.Summary_RepetitionMode,
+    -- FileMaker 26 (Schema 1.28.0/1.29.0): Anmerkung, Anzeigenamen, dormante Slots
+    f.Field_Annotation,
+    f.Field_DisplayNames_Enabled,
+    f.DisplayNames_Calc_Text,
+    f.AE_Calc_Enabled,
+    f.Lookup_Enabled,
+    f.Validation_Calc_Enabled,
+    f.Validation_Message_Calc_Enabled,
+    -- Calculation-Instanz der Anzeigenamen-Formel (Rolle display_names, nur DDR-verankert)
+    (SELECT cc.Calculation_UUID FROM CalculationsCatalog cc
+      WHERE cc.Owner_UUID = f.Field_UUID AND cc.File_Name = f.File_Name
+        AND cc.Calc_Role = 'display_names' AND cc.DDR_Calc_UUID IS NOT NULL
+      LIMIT 1) AS DisplayNames_Calc_UUID,
+    -- JSON-Elemente der Anzeigenamen-Formel (P3 FieldDisplayNames) als JSON-Liste
+    (SELECT to_json(list(struct_pack(seq := dn.Element_Seq, key := dn.Element_Key,
+                                     value := dn.Value_Text, kind := dn.Value_Kind,
+                                     jsonType := dn.Json_Type) ORDER BY dn.Element_Seq))
+       FROM FieldDisplayNames dn
+      WHERE dn.Field_UUID = f.Field_UUID AND dn.File_Name = f.File_Name) AS Display_Name_Elements,
     -- Calculation-Instanz-UUIDs der Validierungs-Slots (CalculationsCatalog):
     -- nur DDR-verankerte Instanzen (get-calc?uuid liefert sonst 404) — ohne
     -- Tokens bleibt der Klartext-Fallback (Validation_Calc_Text bzw. der
@@ -166,6 +185,15 @@ SELECT
   fld.Summary_Field_UUID       AS summary_field_uuid,
   fld.Summary_RestartEachGroup AS summary_restart_each_group,
   fld.Summary_RepetitionMode   AS summary_repetition_mode,
+  fld.Field_Annotation         AS field_annotation,
+  fld.Field_DisplayNames_Enabled AS display_names_enabled,
+  fld.DisplayNames_Calc_Text   AS display_names_calc_text,
+  fld.DisplayNames_Calc_UUID   AS display_names_calc_uuid,
+  fld.Display_Name_Elements    AS display_name_elements,
+  fld.AE_Calc_Enabled          AS ae_calc_enabled,
+  fld.Lookup_Enabled           AS lookup_enabled,
+  fld.Validation_Calc_Enabled  AS validation_calc_enabled,
+  fld.Validation_Message_Calc_Enabled AS validation_message_calc_enabled,
   fld.Effective_Text     AS plain_text,
   d.Chunk_Index          AS chunk_index,
   d.Chunk_Type           AS chunk_type,

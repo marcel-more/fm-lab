@@ -60,7 +60,7 @@ FM-Lab deliberately stays with the HTML mirror plus index for now. The reasons a
 
 - **Skill** — `filemaker-function-reference`: resolves a name in any language through the lookup tables, answers from the index, and opens the local HTML page for details (falling back local `en` → online → online `en`). Also supports thematic search across categories.
 - **CLI** — query `reference/fm_spec.duckdb` directly with the `duckdb` CLI; open the mirrored page under `docs/claris-help/<lang>/content/`.
-- **Web frontend** — the docs browser at `/docs/claris-help` (search, categories, localized entries with embedded help pages), plus the interactive [fm-spec](../Wiki/fm-spec.md) schema viewer at `/fm-spec`.
+- **Web frontend** — the docs browser at `/docs/claris-help` (search, categories, localized entries with embedded help pages), plus the interactive [fm-spec](../Wiki/fm-spec.md) schema viewer at `/fm-spec`. Both are linked per entry in either direction, resolved by the internal step/function id and therefore independent of the display language: a help page carries an "fm-spec" chip next to its online link, and a schema-viewer page carries a "Claris Help" link in its title. Each link appears only when its target exists — the doc set is installed and the mirror holds the page; topic pages, which have no schema entry, carry none.
 
 ## See also
 

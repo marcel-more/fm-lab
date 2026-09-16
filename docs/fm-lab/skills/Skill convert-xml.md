@@ -13,7 +13,7 @@ Converts FileMaker XML exports (SaXML) into the DuckDB object catalog of the act
 | **Prerequisites** | DuckDB CLI on the PATH; a SaXML export from FileMaker 19 or later; a solution bundle (the default one exists after installation) |
 | **Under the hood** | `ingestion/convert_fm_xml.sh` — the same script the web client's XML-conversion button runs |
 | **Skill directory** | `.claude/skills/convert-xml/` |
-| **Related** | [Skill test-convert-xml](Skill%20test-convert-xml.md) · [Skill select-solution](Skill%20select-solution.md) · [Skill fm-graph-cluster](Skill%20fm-graph-cluster.md) |
+| **Related** | [Skill select-solution](Skill%20select-solution.md) · [Skill fm-graph-cluster](Skill%20fm-graph-cluster.md) |
 
 ## What it does
 

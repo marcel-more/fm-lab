@@ -116,7 +116,14 @@ export const FieldViewer: React.FC<FieldViewerProps> = ({ data, highlightRefUuid
   // Identität und Optionen (leere Felder bekommen keinen Doppelstrich).
   const hasOptions = !!field && !!(
     field.autoEnterType || field.prohibitModification ||
-    field.validation || field.storage || field.summary
+    field.validation || field.storage || field.summary ||
+    field.annotation || field.displayNames
+  );
+  // "Deaktiviert"-Marke für dormante Slots (FileMaker 26 exportiert sie mit enable="False").
+  const disabledBadge = (
+    <span className="fm-field-disabled">
+      {t('detail:fieldViewer.disabled', { defaultValue: 'disabled' })}
+    </span>
   );
   const formulaLabel = field?.autoEnterType === 'Calculated'
     ? t('detail:fieldViewer.autoEnterCalculation')
@@ -217,6 +224,7 @@ export const FieldViewer: React.FC<FieldViewerProps> = ({ data, highlightRefUuid
                         {field.lookup.fieldTable && (
                           <span className="fm-field-origin"> ({field.lookup.fieldTable})</span>
                         )}
+                        {!field.lookup.enabled && disabledBadge}
                       </dd>
                       {field.lookup.to && (
                         <>
@@ -236,6 +244,12 @@ export const FieldViewer: React.FC<FieldViewerProps> = ({ data, highlightRefUuid
                           <dd>{enumLabel('noMatch', field.lookup.noMatch)}</dd>
                         </>
                       )}
+                    </>
+                  )}
+                  {field.autoEnterCalc && !field.autoEnterCalc.enabled && (
+                    <>
+                      <dt>{t('detail:fieldViewer.autoEnterCalculation')}</dt>
+                      <dd>{disabledBadge}</dd>
                     </>
                   )}
                   {field.autoEnterCalc?.overwriteExisting && (
@@ -309,6 +323,7 @@ export const FieldViewer: React.FC<FieldViewerProps> = ({ data, highlightRefUuid
                     <>
                       <dt>{t('detail:fieldViewer.validationByCalc', { defaultValue: 'Validated by calculation' })}</dt>
                       <dd>
+                        {!field.validation.calcEnabled && <div>{disabledBadge}</div>}
                         <FieldSlotCalc
                           uuid={field.validation.calcUuid}
                           fallbackText={field.validation.calcText}
@@ -326,6 +341,7 @@ export const FieldViewer: React.FC<FieldViewerProps> = ({ data, highlightRefUuid
                     <>
                       <dt>{t('detail:fieldViewer.validationMessageCalc', { defaultValue: 'Message calculation' })}</dt>
                       <dd>
+                        {!field.validation.messageCalc.enabled && <div>{disabledBadge}</div>}
                         <FieldSlotCalc
                           uuid={field.validation.messageCalc.uuid}
                           fallbackText={field.validation.messageCalc.text}
@@ -376,6 +392,72 @@ export const FieldViewer: React.FC<FieldViewerProps> = ({ data, highlightRefUuid
                     <>
                       <dt>{t('detail:fieldViewer.calcEvaluatesWhenEmpty', { defaultValue: 'Evaluates even if fields empty' })}</dt>
                       <dd>{yes}</dd>
+                    </>
+                  )}
+                </dl>
+              </section>
+            )}
+
+            {/* Erweiterte Feldoptionen (FileMaker 26): Anmerkung + Anzeigenamen */}
+            {(field.annotation || field.displayNames) && (
+              <section className="fm-field-section">
+                <h3 className="fm-field-section-title">{t('detail:fieldViewer.sectionExtended', { defaultValue: 'Extended options (FileMaker 26)' })}</h3>
+                <dl className="fm-field-props">
+                  {field.annotation && (
+                    <>
+                      <dt>{t('detail:fieldViewer.annotation', { defaultValue: 'Annotation (DDL)' })}</dt>
+                      <dd className="fm-field-comment">{field.annotation}</dd>
+                    </>
+                  )}
+                  {field.displayNames && (
+                    <>
+                      <dt>{t('detail:fieldViewer.displayNames', { defaultValue: 'Display names' })}</dt>
+                      <dd>
+                        {field.displayNames.enabled
+                          ? t('detail:fieldViewer.displayNamesEnabled', { defaultValue: 'Custom display names enabled' })
+                          : t('detail:fieldViewer.displayNamesDisabled', { defaultValue: 'Not customized' })}
+                      </dd>
+                      {field.displayNames.elements.length > 0 && (
+                        <>
+                          <dt>{t('detail:fieldViewer.displayNameElements', { defaultValue: 'Elements' })}</dt>
+                          <dd>
+                            <table className="fm-field-dn-table">
+                              <thead>
+                                <tr>
+                                  <th>{t('detail:fieldViewer.displayNameKey', { defaultValue: 'Element' })}</th>
+                                  <th>{t('detail:fieldViewer.displayNameValue', { defaultValue: 'Label / formula' })}</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {field.displayNames.elements.map(el => (
+                                  <tr key={el.seq}>
+                                    <td><code>{el.key}</code></td>
+                                    <td>
+                                      {el.kind === 'formula'
+                                        ? <code className="fm-field-dn-formula">{el.value ?? ''}</code>
+                                        : <span>{el.value ?? ''}</span>}
+                                      {el.jsonType && el.jsonType !== 'JSONString' && (
+                                        <span className="fm-field-origin"> ({el.jsonType})</span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </dd>
+                        </>
+                      )}
+                      {(field.displayNames.calcText || field.displayNames.calcUuid) && (
+                        <>
+                          <dt>{t('detail:fieldViewer.displayNamesFormula', { defaultValue: 'Display-names formula' })}</dt>
+                          <dd>
+                            <FieldSlotCalc
+                              uuid={field.displayNames.calcUuid}
+                              fallbackText={field.displayNames.calcText}
+                            />
+                          </dd>
+                        </>
+                      )}
                     </>
                   )}
                 </dl>

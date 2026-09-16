@@ -1,6 +1,6 @@
 #!/bin/bash
 # FileMaker XML to DuckDB Conversion Script
-# version 5.1.0 - 2026-07-08
+# version 5.5.0 - 2026-09-12
 #
 #
 #   *** KATANA XML Engine ***
@@ -124,6 +124,9 @@
 #   6 - Schema drift detected (single mode or --no-auto-heal): manual rebuild required
 #   7 - Concurrency lock collided (another convert is already running)
 #   8 - webbed/xml extension too old (no read_xml 'streaming' parameter — stage b version gate)
+#       / memory-induced clean abort (EXIT_INSUFFICIENT_MEMORY)
+#   9 - Reference seed missing (sql/generated/design_functions_seed.sql — regenerate
+#       with ingestion/gen_design_functions.sh; hard precondition since 2.29.0)
 
 # Constants
 # Converter version (SemVer): version of THIS ingestion script, independent of the
@@ -194,6 +197,87 @@ export LC_NUMERIC=C
 # on the next --changed-only run, a full re-conversion is triggered. Bump it as soon
 # as the CONVERSION RESULT can change (new columns, changed
 # extraction/normalization) — independent of the header or @SCHEMA_VERSION.
+#   2.30.0 — field-entry edges carry their slot (@SCHEMA_VERSION unchanged):
+#           the references of a field-entry formula kept the raw DDR suffix
+#           'Hide' as Link_Subrole (FileMaker files that formula under the hide
+#           condition's chunk key); P4 now retags XMLCalcReferences and
+#           PluginFunctionUsages to 'field_entry' once CalculationsCatalog has
+#           assigned the anchor, so ObjectLinks, Edge_Subrole and every consumer
+#           (references tab, SCA rules, v_calculation_links) read the slot, not
+#           the key. Hide-condition edges stay 'Hide'.
+#   2.29.0 — built-in identity is normalized against the standard reference
+#           (@SCHEMA_VERSION 1.32.0, master rebuild): a built-in used to get its
+#           catalog identity from the token AS WRITTEN IN THE FORMULA, so one
+#           FileMaker Get parameter fell apart into up to three objects —
+#           FileMaker writes Get parameters LOCALIZED in the DDR and files the
+#           sub-parameter as its own FunctionRef chunk on top ('Get(PageNumber)',
+#           'Get(Seitennummer)', bare 'Seitennummer': three answers to one
+#           where-used question). Identity is now the canonical English name of
+#           the reference (NOT the function_id, whose stability the reference
+#           does not promise), resolved namespace-aware against the seed tables
+#           DesignFunctionNames/GetParameterNames; Object_Name is the canonical
+#           name regardless of the authoring language, and the new tables
+#           BuiltinFunctionIdentity (per node: function_id/canonical_name/
+#           namespace) and BuiltinTokenResolution (per token form: the old
+#           identity string → the node) plus the view v_builtin_token_lookup let
+#           consumers look the reference up instead of recomputing it from the
+#           name. Same UUID formula as before with a canonicalized input — an
+#           already-canonical node KEEPS its UUID; an unresolvable token keeps
+#           the name-based identity and gets no identity row. The generated seed
+#           is a hard import precondition from here on (preflight before P1).
+#   2.28.0 — layout symbols become where-used (@SCHEMA_VERSION unchanged):
+#           the new link role displays_symbol connects a text LayoutObject to
+#           the BuiltinFunction Get(<Symbol>) its {{Symbol}} displays, and the
+#           BuiltinFunction targets are registered for symbol-only usage (they
+#           were lazy on calculations before). Validity gate is the reference
+#           name set GetParameterNames — a second table in the existing seed
+#           sql/generated/design_functions_seed.sql: a symbol that names no Get
+#           parameter renders literally, gets no edge and invents no object.
+#   2.27.0 — field entry behaviour (@SCHEMA_VERSION 1.31.0, master rebuild):
+#           LayoutObjects +Entry_Options_Raw/+Entry_Browse/+Entry_Find/
+#           +Entry_Calculation_Text (<CanEntryCalc>, SaXML 2.3.0.0 only) and the
+#           new calculation role field_entry — FileMaker stores the entry
+#           formula under the same DDR key as the hide condition, which used to
+#           turn it into a phantom "Hide Condition" and stole the hide
+#           formula's references.
+#   2.26.0 — base-table comments (@SCHEMA_VERSION 1.30.0, master rebuild):
+#           BaseTableCatalog +BT_Comment from <BaseTable comment="…"> (both SaXML
+#           profiles; empty → NULL) — feeds the table_comment_inventory custom
+#           query and the comment line of the base-table detail view.
+#   2.25.0 — dormant field definitions (@SCHEMA_VERSION 1.29.0, master rebuild):
+#           FileMaker 26 exports DISABLED auto-enter calculations, lookups and
+#           validation calculations (enable="False"; FileMaker <= 22 omits them).
+#           FieldsForTables +AE_Calc_Enabled/+Lookup_Enabled/+Validation_Calc_
+#           Enabled/+Validation_Message_Calc_Enabled; disabled slots keep their
+#           calculation instance (CalculationsCatalog.Is_Enabled = FALSE) but
+#           produce no operational links and no VariableUsages (where-used parity
+#           with the FileMaker 22 export; P6 dormant_operational_edges = 0). Also:
+#           new P3 table FieldDisplayNames (JSON elements of the display-names
+#           formula), CalcsForCustomFunctions NULL row for functions without a
+#           formula in both profiles, LayoutParts.Part_Type kind=5 canonical
+#           ('Trailing Sub-summary' — FileMaker <= 22 mislabels it).
+#   2.24.0 — SaXML profiles (version-explicit import pipeline, @SCHEMA_VERSION
+#           1.28.0, master rebuild): the driver probes FMSaveAsXML/@version per
+#           file AND per chunk (run_p1_on) and derives a profile — saxml22 =
+#           2.1.0.0–2.2.x (FileMaker 19–22), saxml23 = 2.3.0.0+ (FileMaker 26);
+#           persisted in FilesCatalog.SaXML_Version/SaXML_Profile (+ XMLMetadata).
+#           P1 extractions that exist in only one SaXML form live in marker
+#           blocks `-- @P1_PROFILE:<profile>@ … -- @END_P1_PROFILE@`, filtered
+#           by the driver in EVERY mode (DOM, split, turbo, streamify, --test) —
+#           no double reads, no extract-then-discard. Package contents on top
+#           (same bump): OptionsForValueLists per profile (section vs. embedded
+#           <ValueList> node), CalcsForCustomFunctions per profile (folders/
+#           separators no longer get a row in either profile), FieldsForTables
+#           +Field_Annotation/+Field_DisplayNames_Enabled/+DisplayNames_Calc_*
+#           (new calc role display_names, DDR suffix '_5'), DDR suffix '_4_2'
+#           (FM 26 field validation) folded onto slot '2' in P4, new table
+#           LayoutTableViewColumns (saxml23 only; Layout→Field displays_field/
+#           table_view_column), staging table DDR_DisplayCalcAnchors23 + master
+#           stage P1d (promotes only the DisplayCalculations slots below the
+#           <<ƒ:…>> token count of the text object — FM 26 pads to 12), P6
+#           v_check_saxml_profile. FileMaker <= 22 exports: row/edge counts
+#           identical to 2.23.0 except the new NULL columns and the dropped
+#           folder rows of CalcsForCustomFunctions.
 #   2.23.0 — design functions re-typed from plug-in references (new phase 1c,
 #           no DDL on existing tables, @SCHEMA_VERSION stays 1.27.0): FileMaker's
 #           SaXML export tags the design functions (WindowNames, DatabaseNames,
@@ -387,7 +471,7 @@ export LC_NUMERIC=C
 #           duplicates (same UUID, distinct object ids) separately from FileMaker's
 #           double serialization; the catmerge a2 dup report is persisted into the
 #           new MergeAbsorptions table (best-effort, s. convert_turbo.sh).
-CONVERTER_VERSION="2.23.0"
+CONVERTER_VERSION="2.30.0"
 PROJECT_ROOT="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || (cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd))"
 # Engine root: the ingestion/ directory this script lives in. ALL engine-internal
 # assets (sql/, engine/, lib/, fixtures/, version_check.json, gen_streamify_sql.sh)
@@ -566,6 +650,8 @@ MODE=""
 FILENAME=""
 FAIL_FAST=false
 TEST_MODE=false
+TEST_PROFILE="saxml22"   # --test-profile: saxml22 | saxml23
+TEST_VARIANT="ddr"       # --test-variant: ddr | noddr
 FORCE_REBUILD=false
 NO_AUTO_HEAL=false
 SPLIT_MODE=false
@@ -702,6 +788,19 @@ while [[ $# -gt 0 ]]; do
             MODE="batch"
             TEST_MODE=true
             shift
+            ;;
+        --test-profile)
+            # Coverage-fixture set of ONE SaXML profile (saxml22 | saxml23); see the
+            # test-mode block below. Implies --test.
+            [ $# -ge 2 ] || { echo "ERROR: $1 needs a value"; exit 1; }
+            MODE="batch"; TEST_MODE=true; TEST_PROFILE="$2"
+            shift 2
+            ;;
+        --test-variant)
+            # ddr (default: the __ddr_info exports) | noddr (the DDR-less export only)
+            [ $# -ge 2 ] || { echo "ERROR: $1 needs a value"; exit 1; }
+            MODE="batch"; TEST_MODE=true; TEST_VARIANT="$2"
+            shift 2
             ;;
         --solution)
             [ $# -ge 2 ] || { echo "ERROR: $1 needs a value"; exit 1; }
@@ -1478,13 +1577,62 @@ fi
 #                    path — never the db/ compat symlink)
 #   run state + logs solutions/<id>/state/{logs,streaming,xml_convert.lock,…}
 if $TEST_MODE; then
-    XML_DIR="$PROJECT_ROOT/tools/tests/fixtures/xml"
+    # Test mode (converter 2.24.0): ONE SaXML profile per run, fed from the
+    # coverage fixtures (ingestion/fixtures/saxml/ — fm-lab's own coverage
+    # solution exported from FileMaker 22 and 26). The two exports of the SAME
+    # file share every object UUID, so they must never meet in one catalog:
+    #   --test-profile saxml22 → *__saxml_v2_2_*  (FileMaker 22, SaXML 2.2.x)
+    #   --test-profile saxml23 → *__saxml_v2_3_*  (FileMaker 26, SaXML 2.3.0.0)
+    #   --test-variant ddr     → the __ddr_info exports (main + companion file)
+    #   --test-variant noddr   → the DDR-less export of the main file only
+    # The selected files are staged as symlinks under db/fm_test_xml/<set>/ and
+    # imported into the throwaway DB db/fm_test_<set>.duckdb (removed before the
+    # run — a test DB is never incremental). FM_TEST_FIXTURES_DIR overrides the
+    # fixture directory (internal harnesses); FM_TEST_XML_DIR skips the staging
+    # and imports an arbitrary directory as-is (legacy behavior).
+    case "$TEST_PROFILE" in saxml22|saxml23) ;; *) echo "ERROR: --test-profile must be saxml22 or saxml23 (got '$TEST_PROFILE')"; exit 1 ;; esac
+    case "$TEST_VARIANT" in ddr|noddr) ;; *) echo "ERROR: --test-variant must be ddr or noddr (got '$TEST_VARIANT')"; exit 1 ;; esac
+    TEST_SET="$TEST_PROFILE"; [ "$TEST_VARIANT" = "noddr" ] && TEST_SET="${TEST_PROFILE}_noddr"
+    TEST_FIXTURES_DIR="${FM_TEST_FIXTURES_DIR:-$ENGINE_ROOT/fixtures/saxml}"
     DB_DIR="$PROJECT_ROOT/db"
-    DB_FILE="$DB_DIR/fm_test.duckdb"
+    DB_FILE="$DB_DIR/fm_test_${TEST_SET}.duckdb"
     LOG_DIR="$PROJECT_ROOT/logs"
-    LOG_PREFIX="test_batch_import"
+    LOG_PREFIX="test_batch_import_${TEST_SET}"
     STREAMING_DIR="$DB_DIR/streaming"
     SOLUTION_STATE_DIR=""   # no solution context in test mode
+    if [ -n "${FM_TEST_XML_DIR:-}" ]; then
+        XML_DIR="$FM_TEST_XML_DIR"
+    else
+        XML_DIR="$DB_DIR/fm_test_xml/$TEST_SET"
+        [ -d "$TEST_FIXTURES_DIR" ] || { echo "ERROR: coverage fixtures not found: $TEST_FIXTURES_DIR"; exit 1; }
+        rm -rf "$XML_DIR"; mkdir -p "$XML_DIR"
+        # Stage the fixtures of the profile (unquoted globs → shell expansion) and
+        # filter the variant: ddr = only the __ddr_info exports, noddr = the rest.
+        _test_stage() {
+            local _f
+            for _f in "$@"; do
+                [ -f "$_f" ] || continue
+                case "$TEST_VARIANT" in
+                    ddr)   case "$_f" in *__ddr_info.xml) ;; *) continue ;; esac ;;
+                    noddr) case "$_f" in *__ddr_info.xml) continue ;; esac ;;
+                esac
+                ln -s "$_f" "$XML_DIR/$(basename "$_f")"
+            done
+        }
+        case "$TEST_PROFILE" in
+            saxml22) _test_stage "$TEST_FIXTURES_DIR"/*__saxml_v2_[12]_*.xml ;;
+            saxml23) _test_stage "$TEST_FIXTURES_DIR"/*__saxml_v2_[3-9]_*.xml \
+                                 "$TEST_FIXTURES_DIR"/*__saxml_v2_[1-9][0-9]_*.xml \
+                                 "$TEST_FIXTURES_DIR"/*__saxml_v[3-9]_*.xml ;;
+        esac
+        if ! ls "$XML_DIR"/*.xml >/dev/null 2>&1; then
+            echo "ERROR: no coverage fixture matches profile=$TEST_PROFILE variant=$TEST_VARIANT in $TEST_FIXTURES_DIR"
+            exit 1
+        fi
+    fi
+    # Throwaway DB: every test run starts from scratch (deterministic classic path).
+    rm -f "$DB_FILE" "$DB_FILE.wal"
+    mkdir -p "$DB_DIR"
 else
     SOLUTION_STATE_DIR="$SOLUTION_DIR/state"
     XML_DIR="$SOLUTION_DIR/xml"
@@ -1999,6 +2147,7 @@ stamp_solution_manifest() {
         SELECT to_json({
             filemaker_versions: (SELECT COALESCE(list(DISTINCT FileMaker_Version ORDER BY FileMaker_Version), []) FROM FilesCatalog WHERE FileMaker_Version IS NOT NULL),
             xml_versions:       (SELECT COALESCE(list(DISTINCT XML_Version ORDER BY XML_Version), []) FROM XMLMetadata WHERE XML_Version IS NOT NULL),
+            saxml_profiles:     (SELECT COALESCE(list(DISTINCT SaXML_Profile ORDER BY SaXML_Profile), []) FROM FilesCatalog WHERE SaXML_Profile IS NOT NULL),
             has_ddr_info:       (SELECT COALESCE(bool_or(Has_DDR_INFO), false) FROM FilesCatalog)
         });" 2>/dev/null)
     metrics_json=$("$DUCKDB_BIN" -readonly "$DB_FILE" -noheader -list -c "
@@ -2613,20 +2762,33 @@ run_phase2() {
     # the authoring client's language. Retype them to FunctionRef BEFORE P2
     # reads the chunk stream (see convert_xml_01c_design_function_retype.sql);
     # the generated seed (gen_design_functions.sh) runs in the same DuckDB
-    # session and provides the positive name list. Soft-fail by design: a
-    # missing seed or a failed step degrades to the previous classification
-    # (design functions counted as plug-in functions) with a visible WARNING —
-    # never an abort (unlike the heal cascade, no link would resolve wrongly).
+    # session and provides the positive name list — it also stays resident as
+    # DesignFunctionNames/GetParameterNames, which P4 resolves the built-in
+    # identities against (converter 2.29.0).
+    #
+    # The seed's EXISTENCE is a hard precondition checked by the preflight
+    # before P1, so there is no "seed missing" branch here any more. A FAILING
+    # step stays soft-fail: it degrades to the previous classification (design
+    # functions counted as plug-in functions) with a visible WARNING — unlike
+    # the heal cascade, no link would resolve wrongly.
     local dfn_seed="$ENGINE_ROOT/sql/generated/design_functions_seed.sql"
     local dfn_sql="$ENGINE_ROOT/sql/convert_xml_01c_design_function_retype.sql"
-    if [ -f "$dfn_seed" ]; then
-        run_pipeline_step "Design-Function Retype (P1c)" "$dfn_seed" "$dfn_sql"
-    else
-        echo "✗ WARNING: design-function seed missing ($dfn_seed) — design functions stay classified as plug-in functions (regenerate: ingestion/gen_design_functions.sh)"
-        run_pipeline_step "Design-Function Retype (P1c)" "$dfn_sql"
-    fi
+    run_pipeline_step "Design-Function Retype (P1c)" "$dfn_seed" "$dfn_sql"
     if ! $PIPELINE_STEP_OK; then
-        echo "✗ WARNING: Design-Function Retype failed — design functions stay classified as plug-in functions (Phase 2 continues)"
+        echo "✗ WARNING: Design-Function Retype failed — design/mobile functions stay classified as plug-in functions (Phase 2 continues)"
+    fi
+    # Phase 1d (display-calc promotion, SaXML 2.3.0.0 / profile saxml23):
+    # FileMaker 26 pads <DisplayCalculations> of every text object to 12
+    # anchors; P1 stages them (DDR_DisplayCalcAnchors23) and this master
+    # stage promotes only the slots below the <<ƒ:…>> token count of the text
+    # object into the DDR tables (needs LayoutObjects AND the DDR rows of a
+    # file → merged master, before P2 reads the chunk stream; see
+    # convert_xml_01d_display_calc_promote.sql). No-op without saxml23 files.
+    # Soft-fail: the real slots then stay staged (P6/report finding), never a
+    # wrong link.
+    run_pipeline_step "Display-Calc Promotion (P1d)" "$ENGINE_ROOT/sql/convert_xml_01d_display_calc_promote.sql"
+    if ! $PIPELINE_STEP_OK; then
+        echo "✗ WARNING: Display-Calc Promotion failed — FM 26 layout calculations stay in DDR_DisplayCalcAnchors23 (Phase 2 continues)"
     fi
     local K; K=$(_p2_effective_jobs)
     if [ "${K:-1}" -lt 2 ]; then
@@ -2686,9 +2848,46 @@ run_phase2() {
 }
 
 # ============================================================================
+# SaXML profile (converter 2.24.0 / schema 1.28.0)
+# ----------------------------------------------------------------------------
+# _saxml_profile_of <version>  → profile name for a FMSaveAsXML/@version value:
+#   2.1.0.0 – 2.2.x → saxml22 (FileMaker 19–22)
+#   2.3.0.0 and up  → saxml23 (FileMaker 26+; every later major too)
+#   empty/unknown   → saxml22 (conservative legacy profile; the caller warns)
+# _saxml_header_probe <file> → reads the root tag from the first 4 KB of a
+#   (UTF-8) SaXML document or chunk and sets SAXML_VERSION_DETECTED /
+#   SAXML_PROFILE_DETECTED. Split/turbo chunks carry the complete root tag
+#   (the splitter copies it verbatim), so one probe function serves the whole-
+#   file path and every chunk worker alike. The version attribute is read from
+#   the root TAG only — the XML declaration carries its own version="1.0".
+# FM_P1_PROFILE=<saxml22|saxml23> overrides the detected profile (test hook).
+# bash 3.2: no bash-4 syntax.
+# ============================================================================
+_saxml_profile_of() {
+    case "$1" in
+        2.1.*|2.2.*)                          echo saxml22 ;;
+        2.[3-9].*|2.[1-9][0-9].*|[3-9].*|[1-9][0-9].*) echo saxml23 ;;
+        *)                                    echo saxml22 ;;
+    esac
+}
+SAXML_VERSION_DETECTED=""
+SAXML_PROFILE_DETECTED=""
+_saxml_header_probe() {
+    local hdr
+    hdr=$(head -c 4096 "$1" 2>/dev/null | tr -d '\r\n' | grep -oE '<FMSaveAsXML[^>]*' | head -1)
+    SAXML_VERSION_DETECTED=$(printf '%s' "$hdr" | sed -n 's/.*[[:space:]]version="\([0-9.]*\)".*/\1/p')
+    if [ -n "${FM_P1_PROFILE:-}" ]; then
+        SAXML_PROFILE_DETECTED="$FM_P1_PROFILE"
+    else
+        SAXML_PROFILE_DETECTED=$(_saxml_profile_of "$SAXML_VERSION_DETECTED")
+    fi
+}
+
+# ============================================================================
 # Apply Phase 1 to ONE XML file (full file or chunk).
 # $1 = directory (FM_XML_DIR), $2 = filename, $3 = error log (appended to).
-# fm_xml + schema markers are injected into the template via sed as before.
+# fm_xml + schema markers + the SaXML profile are injected into the template
+# via sed; the @P1_PROFILE blocks are filtered per profile (always active).
 # Returns: DuckDB exit code.
 # ============================================================================
 run_p1_on() {
@@ -2710,11 +2909,44 @@ run_p1_on() {
     xfile_esc="${xfile_esc//\\/\\\\}"
     xfile_esc="${xfile_esc//&/\\&}"
     xfile_esc="${xfile_esc//\//\\/}"
+    # ---- SaXML profile (per file / per chunk) ----
+    # Probe the root tag of THIS input (whole file or chunk — both carry it) and
+    # inject version + profile as session variables. Unknown version → legacy
+    # profile with a note in the error log (never a silent guess without trace).
+    _saxml_header_probe "$xdir/$xfile"
+    local saxml_ver="$SAXML_VERSION_DETECTED" saxml_prof="$SAXML_PROFILE_DETECTED"
+    if [ -z "$saxml_ver" ]; then
+        echo "NOTE: SaXML version attribute not found in $xfile — defaulting to profile $saxml_prof" >> "$elog"
+    fi
     sed -e "s/SET VARIABLE fm_xml = '.*';/SET VARIABLE fm_xml = '$xfile_esc';/" \
         -e "s/SET VARIABLE schema_version = '.*';/SET VARIABLE schema_version = '$SCHEMA_VERSION_EXPECTED';/" \
         -e "s/SET VARIABLE schema_hash = '.*';/SET VARIABLE schema_hash = '$SCHEMA_HASH_EXPECTED';/" \
         -e "s/SET VARIABLE seq_offset = [0-9]*;/SET VARIABLE seq_offset = $seqoff;/" \
+        -e "s/SET VARIABLE saxml_version = '.*';/SET VARIABLE saxml_version = '$saxml_ver';/" \
+        -e "s/SET VARIABLE saxml_profile = '.*';/SET VARIABLE saxml_profile = '$saxml_prof';/" \
         "$SQL_TEMPLATE" > "$tsql"
+
+    # ---- Profile dispatch (ALWAYS active, every mode) ----
+    # `-- @P1_PROFILE:<p1[,p2]>@ … -- @END_P1_PROFILE@` blocks run only for the
+    # file's profile; untagged SQL runs for every profile. Unlike the catalog
+    # section dispatch below (turbo chunk workers only) this filter is
+    # unconditional — a saxml23 file must never execute a saxml22-only read and
+    # vice versa (no double reads, no extract-then-discard). The catalog section
+    # markers are passed through even inside a skipped profile block, so the two
+    # filters nest in either order without unbalancing each other.
+    awk -v prof="$saxml_prof" '
+        /^-- @P1_PROFILE:/ {
+            spec = $0
+            sub(/^-- @P1_PROFILE:/, "", spec); sub(/@.*/, "", spec)
+            skip = (index("," spec ",", "," prof ",") > 0) ? 0 : 1
+            next
+        }
+        /^-- @END_P1_PROFILE@/ { skip = 0; next }
+        skip && /^-- @(P1_SECTION:|END_P1_SECTION@)/ { print; next }
+        skip { next }
+        { print }
+    ' "$tsql" > "$tsql.2"
+    mv "$tsql.2" "$tsql"
 
     # ---- Section dispatch (parse amplification) ----
     # In turbo mode a chunk contains exactly ONE catalog branch (the chunk map knows
@@ -2981,6 +3213,10 @@ process_single_file() {
         echo "  WARNING: Skipped — could not detect XML root element (expected FMSaveAsXML)"
         return 4
     fi
+    # 4b. SaXML profile of the file (informational here; run_p1_on re-probes its
+    #     own input — whole file or chunk — and injects the profile into P1).
+    _saxml_header_probe "$PRE_OUTPUT"
+    echo "  SaXML: version=${SAXML_VERSION_DETECTED:-?} profile=$SAXML_PROFILE_DETECTED"
 
     # 5. Run Phase 1 (extraction) — optionally split (--split).
     # Phase 2 (resolution) no longer runs per file: it is table-only and is called
@@ -3318,7 +3554,13 @@ postprocess_db() {
         local dfn_names dfn_files
         dfn_names=$(pp_query "SELECT names FROM v_check_design_function_retype")
         dfn_files=$(pp_num "SELECT files FROM v_check_design_function_retype")
-        add_finding resolution info "Design functions re-typed from plug-in references: $dfn_chunks chunk(s) in $dfn_files file(s) — ${dfn_names:-?}" "Expected: the SaXML export tags design functions as PluginFunctionRef; they now resolve as BuiltinFunction (calls_function) — see convert_xml_01c_design_function_retype.sql"
+        local dfn_fn; dfn_fn=$(pp_num "SELECT distinct_functions FROM v_check_design_function_retype")
+        # Since converter 2.24.0 the name list covers every built-in function — cap
+        # the listing (first 10 names) so the report line stays readable.
+        if [ "${dfn_fn:-0}" -gt 12 ]; then
+            dfn_names="$dfn_fn functions, e.g. $(printf '%s' "$dfn_names" | awk -F', ' '{for(i=1;i<=10&&i<=NF;i++) printf "%s%s", (i>1?", ":""), $i}'), …"
+        fi
+        add_finding resolution info "Built-in functions re-typed from plug-in references: $dfn_chunks chunk(s) in $dfn_files file(s) — ${dfn_names:-?}" "Expected: the SaXML export tags design and mobile functions as PluginFunctionRef in the authoring language; they now resolve as BuiltinFunction (calls_function) — see convert_xml_01c_design_function_retype.sql"
     fi
 
     # Resolution rate of the relationship predicate fields (informational). External
@@ -3532,6 +3774,47 @@ postprocess_db() {
     fi
     if [ "$calc_uncov" -gt 0 ]; then
         add_finding consistency warn "$calc_uncov DDR anchor(s) without CalculationsCatalog row" "Coverage regression — the DDR side of the CalculationsCatalog union lost anchors"
+    fi
+
+    # SaXML profiles (converter 2.24.0): files per profile, staged display-calc
+    # anchors of saxml23 files (promoted = real slots, remaining = FM 26
+    # padding — informational), staging rows outside saxml23 / CF calc rows ≠
+    # functions / table-view rows outside saxml23 → warn (dispatch drift).
+    CHECKS_RUN=$((CHECKS_RUN + 1))
+    local sp_22 sp_23 sp_unknown sp_promoted sp_padding sp_stage22 sp_cfrows sp_cffn sp_tv22 sp_viol
+    sp_22=$(pp_num "SELECT files_saxml22 FROM v_check_saxml_profile")
+    sp_23=$(pp_num "SELECT files_saxml23 FROM v_check_saxml_profile")
+    sp_unknown=$(pp_num "SELECT files_unknown_profile FROM v_check_saxml_profile")
+    sp_promoted=$(pp_num "SELECT promoted_anchors FROM v_check_saxml_profile")
+    sp_padding=$(pp_num "SELECT padding_anchors FROM v_check_saxml_profile")
+    sp_stage22=$(pp_num "SELECT staging_rows_outside_saxml23 FROM v_check_saxml_profile")
+    sp_cfrows=$(pp_num "SELECT cf_calc_rows FROM v_check_saxml_profile")
+    sp_cffn=$(pp_num "SELECT cf_functions FROM v_check_saxml_profile")
+    sp_tv22=$(pp_num "SELECT table_view_rows_outside_saxml23 FROM v_check_saxml_profile")
+    sp_viol=$(pp_num "SELECT display_anchor_violations FROM v_check_saxml_profile")
+    if [ "$sp_unknown" -gt 0 ]; then
+        add_finding consistency warn "$sp_unknown file(s) without a recognized SaXML profile" "FilesCatalog.SaXML_Profile must be saxml22 or saxml23 — check the version probe in run_p1_on (convert_fm_xml.sh)"
+    fi
+    if [ "$sp_stage22" -gt 0 ] || [ "$sp_tv22" -gt 0 ]; then
+        add_finding consistency warn "SaXML profile dispatch drift: $sp_stage22 staged display-calc row(s) / $sp_tv22 table-view column(s) outside saxml23 files" "Only saxml23 files may feed DDR_DisplayCalcAnchors23 and LayoutTableViewColumns — check the @P1_PROFILE blocks in convert_xml_01_extract.sql"
+    fi
+    if [ "$sp_cfrows" -ne "$sp_cffn" ]; then
+        add_finding consistency warn "CalcsForCustomFunctions rows ($sp_cfrows) ≠ custom functions ($sp_cffn)" "Every real custom function has exactly one calc row, folders/separators none (schema 1.28.0) — check the profile blocks of CalcsForCustomFunctions in convert_xml_01_extract.sql"
+    fi
+    # Dormant field definitions (schema 1.29.0): informational count, and a
+    # warning when a disabled slot still produced operational links.
+    local sp_dormant sp_dormant_edges
+    sp_dormant=$(pp_num "SELECT dormant_definitions FROM v_check_saxml_profile")
+    sp_dormant_edges=$(pp_num "SELECT dormant_operational_edges FROM v_check_saxml_profile")
+    if [ "$sp_dormant_edges" -gt 0 ]; then
+        add_finding consistency warn "$sp_dormant_edges operational link(s) from disabled field definitions (auto-enter/validation/lookup with enable=\"False\")" "Disabled slots must not produce links — check the Enabled filters in convert_xml_02_resolve.sql (A.2.x/A.6.x/A.7.2), convert_xml_03_details.sql (3b) and convert_xml_04_catalog.sql (block 25)"
+    elif [ "$sp_dormant" -gt 0 ]; then
+        add_finding consistency info "$sp_dormant field(s) carry disabled definitions (FileMaker 26 export: auto-enter/lookup/validation with enable=\"False\") — instances kept with Is_Enabled = FALSE, no links" "Expected for SaXML 2.3.0.0; FileMaker <= 22 omits disabled definitions entirely"
+    fi
+    if [ "$sp_viol" -gt 0 ]; then
+        add_finding consistency warn "$sp_viol DisplayCalculations anchor(s) in DDR_Calculations exceed the <<ƒ:…>> token count of their text object" "Phase 1d (convert_xml_01d_display_calc_promote.sql) promotes only slots below the token count — check the P1d step in the log and the saxml23 staging block"
+    elif [ "$sp_23" -gt 0 ]; then
+        add_finding consistency info "SaXML profiles: saxml22=$sp_22 saxml23=$sp_23 — display-calc anchors promoted: $sp_promoted, FM 26 padding kept in staging: $sp_padding" "Expected for SaXML 2.3.0.0: membercount is always 12, real slots = <<ƒ:…>> tokens — see convert_xml_01d_display_calc_promote.sql"
     fi
 
     # Calc role vocabulary: roles outside the normalized set = unknown DDR
@@ -3939,6 +4222,44 @@ if $QUIET_MODE; then
 fi
 
 # ----------------------------------------------------------------------------
+# Reference-seed preflight (hard precondition since converter 2.29.0)
+# ----------------------------------------------------------------------------
+# The generated seed sql/generated/design_functions_seed.sql carries the two
+# reference name sets (DesignFunctionNames, GetParameterNames) that the import
+# resolves built-in function tokens against — the engine never attaches the
+# reference DB itself, so this generate is the ONLY way reference knowledge
+# reaches an import (and what makes imports reproducible).
+#
+# It used to be a soft-fail: without the seed, P1c degraded and design functions
+# stayed classified as plug-in functions — visible in the catalog. Since 2.29.0
+# the same situation is worse and INVISIBLE: the import would run through and
+# produce a catalog with a different IDENTITY SCHEME (every built-in name-based,
+# localized Get parameters split across up to three nodes), outwardly
+# indistinguishable from a correct one, and the docset reference pill would show
+# 0 solution-wide. So: abort, before the schema stage can delete a DB for
+# --force-rebuild.
+_DFN_SEED="$ENGINE_ROOT/sql/generated/design_functions_seed.sql"
+if [ ! -f "$_DFN_SEED" ]; then
+    echo ""
+    echo "ERROR: built-in function name seed missing:"
+    echo "       $_DFN_SEED"
+    echo ""
+    echo "       It maps the built-in function tokens of an export to the canonical"
+    echo "       names of the standard reference. Without it the import would build a"
+    echo "       catalog with name-based built-in identities — indistinguishable from"
+    echo "       a correct one from the outside, with a split where-used per Get"
+    echo "       parameter and an empty docset reference."
+    echo ""
+    echo "       Generate it:  bash ingestion/gen_design_functions.sh"
+    echo "       Check it:     bash ingestion/gen_design_functions.sh --check   (rc 0 = fresh)"
+    echo ""
+    emit_error "built-in function name seed missing: $_DFN_SEED"
+    finalize_logs
+    emit_done false "Reference seed missing (ingestion/gen_design_functions.sh)"
+    exit 9
+fi
+
+# ----------------------------------------------------------------------------
 # Schema detection & auto-heal (before every import)
 # ----------------------------------------------------------------------------
 compute_schema_state
@@ -4023,7 +4344,8 @@ if [[ "$MODE" == "batch" ]]; then
     echo "========================================="
     if $TEST_MODE; then
         echo "FileMaker XML TEST Import"
-        echo "Source: tools/tests/fixtures/xml/ → db/fm_test.duckdb"
+        echo "Set:    ${TEST_SET} (profile=$TEST_PROFILE variant=$TEST_VARIANT)"
+        echo "Source: ${XML_DIR#"$PROJECT_ROOT"/} → ${DB_FILE#"$PROJECT_ROOT"/}"
     else
         echo "FileMaker XML Batch Import"
     fi
@@ -4539,6 +4861,11 @@ if [[ "$MODE" == "batch" ]]; then
     [ "${UNCHANGED_COUNT:-0}" -gt 0 ] && echo "Unchanged (skipped): $UNCHANGED_COUNT"
     echo "Skipped: $SKIPPED_COUNT"
     echo "Failed: ${#FAILED_FILES[@]}"
+    # SaXML profiles of the imported files (FilesCatalog; converter 2.24.0).
+    if [ -f "$DB_FILE" ]; then
+        _prof_line=$("$DUCKDB_BIN" -readonly "$DB_FILE" -noheader -list -c "SELECT string_agg(p || '=' || n, ' ' ORDER BY p) FROM (SELECT COALESCE(SaXML_Profile, '?') AS p, COUNT(*) AS n FROM FilesCatalog GROUP BY 1);" 2>/dev/null)
+        [ -n "$_prof_line" ] && echo "SaXML profiles: $_prof_line"
+    fi
     awk -v m="$BATCH_MINUTES" -v s="$BATCH_SECONDS" -v d="$BATCH_DURATION" \
         'BEGIN { printf "Total duration: %dm %.3fs (%.3f seconds)\n", m, s+0, d+0 }'
 
