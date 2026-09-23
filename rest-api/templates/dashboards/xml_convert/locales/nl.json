@@ -5,9 +5,10 @@
   },
   "layout": {
     "files_table.props.columns[1].label": "Bestand",
-    "files_table.props.columns[2].label": "Datum",
-    "files_table.props.columns[3].label": "Grootte",
-    "files_table.props.columns[4].label": "Geïmporteerd",
+    "files_table.props.columns[2].label": "DDR",
+    "files_table.props.columns[3].label": "Datum",
+    "files_table.props.columns[4].label": "Grootte",
+    "files_table.props.columns[5].label": "Geïmporteerd",
     "files_table.props.empty.message": "Geen bestanden in de XML-map.",
     "last_run.props.title": "Laatste conversie",
     "import_integrity.props.title": "Import-integriteit",

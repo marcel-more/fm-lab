@@ -1,0 +1,161 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "type": "Grid",
+    "props": {
+      "columns": 12,
+      "gap": 16
+    },
+    "children": [
+      {
+        "type": "Card",
+        "id": "summary_card",
+        "props": {
+          "span": 12,
+          "variant": "hero"
+        },
+        "data": {
+          "dataset": "summary"
+        },
+        "children": [
+          {
+            "type": "KPIStrip",
+            "id": "summary_kpi",
+            "props": {
+              "items": [
+                {
+                  "label": "Findings",
+                  "field": "finding_count",
+                  "format": "number"
+                },
+                {
+                  "label": "Dynamic name (info)",
+                  "field": "dynamic_count",
+                  "format": "number"
+                },
+                {
+                  "label": "Unresolved (warning)",
+                  "field": "unresolved_count",
+                  "format": "number"
+                },
+                {
+                  "label": "Comment only",
+                  "field": "comment_only",
+                  "format": "number"
+                },
+                {
+                  "label": "Files without DDR info (excluded)",
+                  "field": "no_ddr_files",
+                  "format": "number",
+                  "tone": "warning",
+                  "toneWhen": "nonzero"
+                },
+                {
+                  "label": "Affected files",
+                  "field": "affected_files",
+                  "format": "number"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "findings_card",
+        "props": {
+          "span": 12,
+          "title": "Plug-in calls without reference"
+        },
+        "data": {
+          "dataset": "findings"
+        },
+        "children": [
+          {
+            "type": "Table",
+            "id": "findings_table",
+            "props": {
+              "rowKey": "row_key",
+              "density": "comfortable",
+              "sortable": true,
+              "searchable": "auto",
+              "searchAutoThreshold": 3,
+              "searchPlaceholder": "Search file, object or formula…",
+              "columns": [
+                {
+                  "field": "cause",
+                  "label": "Cause",
+                  "format": "badge"
+                },
+                {
+                  "field": "file",
+                  "label": "File"
+                },
+                {
+                  "field": "name",
+                  "label": "Object"
+                },
+                {
+                  "field": "type",
+                  "label": "Type",
+                  "format": "badge"
+                },
+                {
+                  "field": "calc_role",
+                  "label": "Calculation"
+                },
+                {
+                  "field": "step_no",
+                  "label": "Step",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "formula_excerpt",
+                  "label": "Formula"
+                }
+              ],
+              "onRowClick": {
+                "action": "openObject",
+                "args": {
+                  "uuid": "{{nav_uuid}}",
+                  "type": "{{type}}",
+                  "file": "{{file}}",
+                  "step": "{{step_uuid}}",
+                  "marks": "{{marks}}",
+                  "ref_src": "plugin_call_without_reference",
+                  "ref_msgid": "{{cause}}"
+                }
+              },
+              "empty": {
+                "message": "Every plug-in call in files with DDR info resolved to a reference."
+              },
+              "alwaysShowCount": true,
+              "chipFilter": {
+                "field": "cause",
+                "allLabel": "All causes"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "notes_card",
+        "props": {
+          "span": 12,
+          "title": "About this check"
+        },
+        "children": [
+          {
+            "type": "Markdown",
+            "id": "notes_md",
+            "props": {
+              "content": "The formula text contains a plug-in call, but the calculation instance carries no `calls_pluginfunction` link — the call is invisible to where-used, the plug-in inventory, platform tests and the docs counters. Only files exported **with** DDR info are examined: in a file exported without it every plug-in call is unresolved for the same file-level reason, which the companion rule **Export without DDR info** reports once per file; listing those calls here would repeat that finding hundreds of times. The summary counts the excluded files.\n\nTwo causes, shown as chips:\n\n- **dynamic-name** — `MBS($name; …)`: the function name is not a literal, so no target can be resolved and the converter drops the call from objects and edges. The formula may still carry a link from a sibling literal call — it is listed because one of its calls is lost. *Info*: a code style the static analysis cannot follow, not an export defect.\n- **unresolved** — DDR info present, no usage row, not dynamic: the chunk pairing failed. A converter blind spot — please report the formula. *Warning.*\n\nVocabulary: `MBS` plus every plug-in prefix the catalog itself knows. Calls inside `/* … */` or `//` comments do not count (*comment only* in the summary); a plug-in call inside a string literal (e.g. `Evaluate(\"MBS(…\")`) is the one known residual false positive."
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "type": "Grid",
+    "props": {
+      "columns": 12,
+      "gap": 16
+    },
+    "children": [
+      {
+        "type": "Card",
+        "id": "summary_card",
+        "props": {
+          "span": 12,
+          "variant": "hero"
+        },
+        "data": {
+          "dataset": "summary"
+        },
+        "children": [
+          {
+            "type": "KPIStrip",
+            "id": "summary_kpi",
+            "props": {
+              "items": [
+                {
+                  "label": "Formulas",
+                  "field": "finding_count",
+                  "format": "number"
+                },
+                {
+                  "label": "Placeholders",
+                  "field": "placeholders",
+                  "format": "number"
+                },
+                {
+                  "label": "Affected objects",
+                  "field": "affected_objects",
+                  "format": "number"
+                },
+                {
+                  "label": "Affected files",
+                  "field": "affected_files",
+                  "format": "number"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "findings_card",
+        "props": {
+          "span": 12,
+          "title": "Formulas with <Function Missing>"
+        },
+        "data": {
+          "dataset": "findings"
+        },
+        "children": [
+          {
+            "type": "Table",
+            "id": "findings_table",
+            "props": {
+              "rowKey": "row_key",
+              "density": "comfortable",
+              "sortable": true,
+              "searchable": "auto",
+              "searchAutoThreshold": 3,
+              "searchPlaceholder": "Search file, object or formula…",
+              "columns": [
+                {
+                  "field": "file",
+                  "label": "File"
+                },
+                {
+                  "field": "name",
+                  "label": "Object"
+                },
+                {
+                  "field": "type",
+                  "label": "Type",
+                  "format": "badge"
+                },
+                {
+                  "field": "calc_role",
+                  "label": "Calculation"
+                },
+                {
+                  "field": "step_no",
+                  "label": "Step",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "missing_count",
+                  "label": "Missing",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "formula_excerpt",
+                  "label": "Formula"
+                }
+              ],
+              "onRowClick": {
+                "action": "openObject",
+                "args": {
+                  "uuid": "{{nav_uuid}}",
+                  "type": "{{type}}",
+                  "file": "{{file}}",
+                  "step": "{{step_uuid}}",
+                  "marks": "{{marks}}",
+                  "ref_src": "plugin_function_missing_export",
+                  "ref_msgid": "function-missing"
+                }
+              },
+              "empty": {
+                "message": "No formula lost a plug-in function at export time."
+              },
+              "alwaysShowCount": true
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "notes_card",
+        "props": {
+          "span": 12,
+          "title": "About this check"
+        },
+        "children": [
+          {
+            "type": "Markdown",
+            "id": "notes_md",
+            "props": {
+              "content": "When a plug-in is **not loaded on the client that saves the XML**, FileMaker replaces the function name in the formula text itself with the placeholder `<Function Missing>` (and tags the DDR chunk as an unresolvable reference). The call is gone from the export: no plug-in object, no call edge — and the text no longer says which plug-in it was. The rule reads the formula **text**, so it works with and without DDR info.\n\n**No fix inside FM-Lab.** Save the file as XML again on a client with the plug-in installed and enabled. The *formula excerpt* keeps the arguments — often the only hint which plug-in is meant.\n\nThe import log reports the same defect as a warning (`Function Missing` chunks)."
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

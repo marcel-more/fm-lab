@@ -73,7 +73,7 @@ Learn how FM-Lab turns FileMaker XML exports into a structured Object Catalog an
 
 ## [Components](docs/fm-lab/Wiki/Components.md)
 
-- **SQL Templates** (`sql/`) — Conversion templates and parser templates for universal catalogs.
+- **SQL Templates** (`ingestion/sql/`) — Conversion templates and parser templates for universal catalogs.
 - **REST API** (`rest-api/`) — Express server for HTTP access to the analysis database.
 - **Web Client** (`apps/web/`) — React/Vite frontend
 - **Solution Bundles** (`solutions/`) — One or multiple FileMaker solutions to explore. Each solution lives in its own bundle `solutions/<id>/` (XML inbox, database, state); `default` exists out of the box.

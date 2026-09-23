@@ -5,9 +5,10 @@
   },
   "layout": {
     "files_table.props.columns[1].label": "Datei",
-    "files_table.props.columns[2].label": "Datum",
-    "files_table.props.columns[3].label": "Größe",
-    "files_table.props.columns[4].label": "Importiert",
+    "files_table.props.columns[2].label": "DDR",
+    "files_table.props.columns[3].label": "Datum",
+    "files_table.props.columns[4].label": "Größe",
+    "files_table.props.columns[5].label": "Importiert",
     "files_table.props.empty.message": "Keine Dateien im XML-Verzeichnis vorhanden.",
     "last_run.props.title": "Letzte Konvertierung",
     "import_integrity.props.title": "Import-Integrität",

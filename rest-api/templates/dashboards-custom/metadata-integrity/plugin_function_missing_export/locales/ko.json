@@ -1,0 +1,25 @@
+{
+  "manifest": {
+    "title": "내보내기 시 플러그인 함수 누락",
+    "description": "메타데이터 무결성 검사 — 내보내는 클라이언트에 플러그인이 로드되지 않아 FileMaker가 내보내기 시 플러그인 함수를 <Function Missing>으로 대체한 수식. 호출은 객체 그래프에 없고 텍스트에도 플러그인 이름이 남지 않습니다.",
+    "analysis.defaultResult.meaning": "내보내기 시 플러그인 함수가 <Function Missing>으로 대체된 수식 수"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "수식",
+    "summary_kpi.props.items[1].label": "자리표시자",
+    "summary_kpi.props.items[2].label": "영향받는 객체",
+    "summary_kpi.props.items[3].label": "영향받는 파일",
+    "findings_card.props.title": "<Function Missing>이 있는 수식",
+    "findings_table.props.columns[0].label": "파일",
+    "findings_table.props.columns[1].label": "객체",
+    "findings_table.props.columns[2].label": "유형",
+    "findings_table.props.columns[3].label": "계산",
+    "findings_table.props.columns[4].label": "단계",
+    "findings_table.props.columns[5].label": "누락",
+    "findings_table.props.columns[6].label": "수식",
+    "findings_table.props.searchPlaceholder": "파일, 객체 또는 수식 검색…",
+    "findings_table.props.empty.message": "내보내기 시 플러그인 함수를 잃은 수식이 없습니다.",
+    "notes_card.props.title": "이 검사에 대하여",
+    "notes_md.props.content": "XML을 저장하는 클라이언트에 **플러그인이 로드되어 있지 않으면**, FileMaker는 수식 텍스트 자체의 함수 이름을 자리표시자 `<Function Missing>`으로 대체합니다(DDR 청크는 해석 불가 참조로 표시됨). 호출은 내보내기에서 사라집니다. 플러그인 객체도 호출 간선도 없고, 텍스트는 더 이상 어떤 플러그인이었는지 말해 주지 않습니다. 이 규칙은 수식 **텍스트**를 읽으므로 DDR 정보 유무와 관계없이 동작합니다.\n\n**FM-Lab 안에서는 고칠 수 없습니다.** 플러그인이 설치되고 활성화된 클라이언트에서 파일을 XML로 다시 저장하세요. *수식 발췌*는 인수를 유지하며, 어떤 플러그인인지 알 수 있는 유일한 단서인 경우가 많습니다.\n\n가져오기 로그는 같은 결함을 경고로 보고합니다(`Function Missing` 청크)."
+  }
+}

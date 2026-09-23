@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "DDR 情報なしの書き出し",
+    "description": "メタデータ整合性チェック — DDR 情報なしで書き出されたファイル（「分析ツールの詳細を含める」 オプションがオフ）。インポートは完全に見えますが、これらのファイルについてカタログには計算式の参照（フィールド、関数、カスタム関数、プラグイン呼び出し）が一切ありません。",
+    "analysis.defaultResult.meaning": "DDR 情報なしで書き出されたファイル数（その計算式参照はカタログに存在しません）"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "DDR 情報のないファイル",
+    "summary_kpi.props.items[1].label": "影響を受ける計算式",
+    "summary_kpi.props.items[2].label": "影響を受けるプラグイン計算式",
+    "summary_kpi.props.items[3].label": "ソリューションのファイル",
+    "findings_card.props.title": "DDR 情報なしで書き出されたファイル",
+    "findings_table.props.columns[0].label": "ファイル",
+    "findings_table.props.columns[1].label": "FileMaker",
+    "findings_table.props.columns[2].label": "SaXML",
+    "findings_table.props.columns[3].label": "計算式",
+    "findings_table.props.columns[4].label": "プラグイン計算式",
+    "findings_table.props.searchPlaceholder": "ファイルを検索…",
+    "findings_table.props.empty.message": "すべてのファイルは DDR 情報付きで書き出されています。",
+    "notes_card.props.title": "このチェックについて",
+    "notes_md.props.content": "*分析ツールの詳細を含める* オプション**なし**で XML として保存された FileMaker ファイルには `DDR_INFO` ブロックがありません。インポートは成功し完全に見えます — スクリプト、フィールド、レイアウト、すべての計算式テキストが存在します — しかし DDR チャンクストリームは計算式参照の**唯一**の情報源です。そのファイルで定義されたものについては、計算式からのフィールド読み書き、関数・カスタム関数の呼び出し、プラグイン呼び出しが一切ありません。使用箇所、プラグイン一覧、オブジェクトグラフは静かに盲目になります。\n\n**FM-Lab 内で修復はできません。** 情報は書き出しに含まれていないため、オプションを有効にしてファイルを再保存し、再インポートしてください。計算式の件数は失われたものを示します。*プラグイン計算式* はルール **参照のないプラグイン呼び出し** と同じテキスト語彙（MBS とカタログが知る各プラグイン接頭辞）を使い、下限値です。\n\nXML インポートページはインポート前に同じ判定を表示し（ファイルごとのヘッダー検査）、インポートログは警告として報告します。"
+  }
+}

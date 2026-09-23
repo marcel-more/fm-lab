@@ -903,7 +903,8 @@ async function builtinDocsetFunctions(ctx, params = {}) {
 /**
  * builtin:xml_directory_status — Verzeichnis-Listing + Status-Spalte für das
  * Sub-Dashboard "xml_convert".
- * Liefert pro Datei: filename, size, mtime, status, emoji, imported_at.
+ * Liefert pro Datei: filename, size, mtime, status, emoji, imported_at,
+ * ddr_info (true|false|null — Header-Probe, Fallback Katalog).
  */
 /**
  * Kontext-Lösung der xml_convert-Datasets: das Bundle reicht

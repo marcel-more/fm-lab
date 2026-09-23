@@ -5,9 +5,10 @@
   },
   "layout": {
     "files_table.props.columns[1].label": "파일",
-    "files_table.props.columns[2].label": "날짜",
-    "files_table.props.columns[3].label": "크기",
-    "files_table.props.columns[4].label": "가져옴",
+    "files_table.props.columns[2].label": "DDR",
+    "files_table.props.columns[3].label": "날짜",
+    "files_table.props.columns[4].label": "크기",
+    "files_table.props.columns[5].label": "가져옴",
     "files_table.props.empty.message": "XML 디렉터리에 파일이 없습니다.",
     "last_run.props.title": "마지막 변환",
     "import_integrity.props.title": "가져오기 무결성",

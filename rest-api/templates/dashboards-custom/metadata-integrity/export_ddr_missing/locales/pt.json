@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "Exportação sem informações DDR",
+    "description": "Verificação de integridade de metadados — arquivos exportados sem informações DDR (a opção «Incluir detalhes para ferramentas de análise» estava desativada). A importação parece completa, mas o catálogo não contém referências de fórmulas (campos, funções, funções personalizadas, chamadas a plug-ins) para esses arquivos.",
+    "analysis.defaultResult.meaning": "Número de arquivos exportados sem informações DDR (suas referências de fórmulas faltam no catálogo)"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Arquivos sem informações DDR",
+    "summary_kpi.props.items[1].label": "Fórmulas afetadas",
+    "summary_kpi.props.items[2].label": "Fórmulas de plug-in afetadas",
+    "summary_kpi.props.items[3].label": "Arquivos da solução",
+    "findings_card.props.title": "Arquivos exportados sem informações DDR",
+    "findings_table.props.columns[0].label": "Arquivo",
+    "findings_table.props.columns[1].label": "FileMaker",
+    "findings_table.props.columns[2].label": "SaXML",
+    "findings_table.props.columns[3].label": "Fórmulas",
+    "findings_table.props.columns[4].label": "Fórmulas de plug-in",
+    "findings_table.props.searchPlaceholder": "Pesquisar arquivo…",
+    "findings_table.props.empty.message": "Todos os arquivos foram exportados com informações DDR.",
+    "notes_card.props.title": "Sobre esta verificação",
+    "notes_md.props.content": "Um arquivo FileMaker salvo como XML **sem** a opção *Incluir detalhes para ferramentas de análise* não traz o bloco `DDR_INFO`. A importação funciona e parece completa — scripts, campos, layouts e cada texto de fórmula estão lá — mas o fluxo de fragmentos DDR é a **única** fonte de referências de fórmulas: nenhuma leitura/gravação de campo a partir de cálculos, nenhuma chamada a funções ou funções personalizadas, nenhuma chamada a plug-in para tudo o que está definido nesse arquivo. Onde-é-usado, o inventário de plug-ins e o grafo de objetos ficam silenciosamente cegos.\n\n**Não há correção dentro do FM-Lab.** A informação está ausente da exportação: salve o arquivo novamente com a opção ativada e importe-o de novo. As contagens de fórmulas mostram o que se perde; *fórmulas de plug-in* usa o mesmo vocabulário de texto da regra **Chamada a plug-in sem referência** (MBS mais cada prefixo de plug-in que o catálogo conhece) e é um limite inferior.\n\nA página de importação XML mostra o mesmo veredicto antes da importação (sondagem de cabeçalho por arquivo); o registro de importação o reporta como aviso."
+  }
+}

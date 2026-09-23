@@ -29,8 +29,19 @@ db/*
 !reference/plugin_spec.duckdb
 !reference/SOURCES.md
 
-# XML inbox of the default solution (multi-solution layout). Ship the empty inbox
-# so a fresh clone has it before init ever runs; ignore any XML a user drops in.
+# Solution bundles (multi-solution layout) are per-user runtime data and none of it
+# is tracked: the XML inbox, the catalog DBs, the bundle manifest solution.json
+# (display name, contact, metrics — regenerated on every import) and everything
+# under state/ (cluster runs, last import, import logs). Tracking any of it breaks
+# `git pull` on a user's checkout as soon as the app rewrites it, and the inbox of a
+# non-default bundle would otherwise offer a customer's full structure export to
+# `git add -A`. Only the empty inbox of the 'default' bundle ships, so a fresh clone
+# has it before init ever runs — git does not descend into an excluded directory,
+# hence the re-include on every level down to that .gitkeep.
+solutions/*
+!solutions/default/
+solutions/default/*
+!solutions/default/xml/
 solutions/default/xml/*
 !solutions/default/xml/.gitkeep
 
@@ -82,5 +93,11 @@ apps/*/.env.production
 .fmlab/docs.installed.json
 .fmlab/user.local.json
 .fmlab/last_xml_run.json
+.fmlab/active_solution.json
+.fmlab/contexts/
+.fmlab/webbed_policy.state
+.fmlab/settings.json
+.fmlab/dashboards/
+.fmlab/workspace/
 .fmlab/stream_verify/*.snap
 .fmlab/open-requests/

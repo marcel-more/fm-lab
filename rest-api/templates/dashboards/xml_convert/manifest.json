@@ -1,6 +1,6 @@
 {
   "id": "xml_convert",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "title": "XML import",
   "description": "Imports XML exports from the xml/ directory into the DuckDB database.",
   "author": "fm-lab core",

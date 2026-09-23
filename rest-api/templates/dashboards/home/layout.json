@@ -83,7 +83,12 @@
                     {
                       "label": "DDR info",
                       "field": "ddr_status",
-                      "format": "badge"
+                      "format": "badge",
+                      "badgeTone": {
+                        "full": "ok",
+                        "partial": "warning",
+                        "none": "warning"
+                      }
                     },
                     {
                       "label": "Last import",
@@ -276,7 +281,11 @@
                 {
                   "field": "Has_DDR_INFO",
                   "label": "DDR",
-                  "format": "badge"
+                  "format": "badge",
+                  "badgeTone": {
+                    "yes": "ok",
+                    "no": "warning"
+                  }
                 },
                 {
                   "field": "Import_Timestamp",

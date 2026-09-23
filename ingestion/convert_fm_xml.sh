@@ -471,7 +471,7 @@ export LC_NUMERIC=C
 #           duplicates (same UUID, distinct object ids) separately from FileMaker's
 #           double serialization; the catmerge a2 dup report is persisted into the
 #           new MergeAbsorptions table (best-effort, s. convert_turbo.sh).
-CONVERTER_VERSION="2.30.0"
+CONVERTER_VERSION="2.31.0"
 PROJECT_ROOT="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || (cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd))"
 # Engine root: the ingestion/ directory this script lives in. ALL engine-internal
 # assets (sql/, engine/, lib/, fixtures/, version_check.json, gen_streamify_sql.sh)
@@ -2148,7 +2148,8 @@ stamp_solution_manifest() {
             filemaker_versions: (SELECT COALESCE(list(DISTINCT FileMaker_Version ORDER BY FileMaker_Version), []) FROM FilesCatalog WHERE FileMaker_Version IS NOT NULL),
             xml_versions:       (SELECT COALESCE(list(DISTINCT XML_Version ORDER BY XML_Version), []) FROM XMLMetadata WHERE XML_Version IS NOT NULL),
             saxml_profiles:     (SELECT COALESCE(list(DISTINCT SaXML_Profile ORDER BY SaXML_Profile), []) FROM FilesCatalog WHERE SaXML_Profile IS NOT NULL),
-            has_ddr_info:       (SELECT COALESCE(bool_or(Has_DDR_INFO), false) FROM FilesCatalog)
+            has_ddr_info:       (SELECT COALESCE(bool_or(Has_DDR_INFO), false) FROM FilesCatalog),
+            files_without_ddr_info: (SELECT COUNT(*) FROM FilesCatalog WHERE NOT COALESCE(Has_DDR_INFO, false))
         });" 2>/dev/null)
     metrics_json=$("$DUCKDB_BIN" -readonly "$DB_FILE" -noheader -list -c "
         SELECT to_json({
@@ -3699,15 +3700,30 @@ postprocess_db() {
     fi
 
     # „Function Missing" placeholder — a plugin function missing at export time.
-    # P3 discards the chunks from the variable extraction; make it visible here as info
-    # (export incomplete → the affected references are unresolvable).
+    # P3 discards the chunks from the variable extraction; make it visible here as a
+    # WARNING (export incomplete → the affected references are unresolvable, and the
+    # plug-in calls never reach the object graph — a silent reference loss, not a note).
     CHECKS_RUN=$((CHECKS_RUN + 1))
     local fm_missing
     fm_missing=$(pp_num "SELECT chunk_n FROM v_check_function_missing")
     if [ "$fm_missing" -gt 0 ]; then
         local fm_files
         fm_files=$(pp_query "SELECT files FROM v_check_function_missing")
-        add_finding plugin info "$fm_missing „Function Missing\" chunk(s) — plugin function not loaded at export time: ${fm_files:-?}" "A plugin is missing on the exporting client; the affected function references are unresolvable in the DDR (discarded from the variable extraction)"
+        add_finding plugin warn "$fm_missing „Function Missing\" chunk(s) — plugin function not loaded at export time: ${fm_files:-?}" "A plugin is missing on the exporting client; re-export with the plug-in installed — the affected function references are unresolvable in the DDR (discarded from the variable extraction) and the plug-in calls are missing from the object graph"
+    fi
+
+    # Files exported without DDR info ("Include details for analysis tools" was off):
+    # the import looks complete (objects, formula texts), but the DDR chunk stream is
+    # the only source of formula references — none exist for these files. Warn, so the
+    # blind spot is visible in the run log (the import page shows the same verdict
+    # from the XML header before the import).
+    CHECKS_RUN=$((CHECKS_RUN + 1))
+    local ddr_missing
+    ddr_missing=$(pp_num "SELECT file_n FROM v_check_ddr_missing")
+    if [ "$ddr_missing" -gt 0 ]; then
+        local ddr_files
+        ddr_files=$(pp_query "SELECT files FROM v_check_ddr_missing")
+        add_finding consistency warn "$ddr_missing file(s) exported without DDR info: ${ddr_files:-?}" "Re-export with 'Include details for analysis tools' — without it the catalog holds no formula references (fields, functions, custom functions, plug-in calls) for these files"
     fi
 
     # %X:-prefixed display-calculation chunks (FileMaker DDR defect): a TYPED layout

@@ -1,0 +1,28 @@
+{
+  "manifest": {
+    "title": "Plugin-anrop utan referens",
+    "description": "Metadataintegritetskontroll — plugin-anrop i filer som exporterats med DDR-info men ändå inte fick någon referens: ett dynamiskt funktionsnamn (MBS($name; …)) som konverteraren inte kan lösa upp, eller en oupplöst chunk-parning. Filer exporterade utan DDR-info är fyndet i ”Export utan DDR-info” och utesluts här.",
+    "analysis.defaultResult.meaning": "Antal formler i filer med DDR-info vars plugin-anrop saknar referens i katalogen: dynamiska funktionsnamn (info) och oupplösta parningar (varning)"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Fynd",
+    "summary_kpi.props.items[1].label": "Dynamiskt namn (info)",
+    "summary_kpi.props.items[2].label": "Oupplösta (varning)",
+    "summary_kpi.props.items[3].label": "Endast i kommentar",
+    "summary_kpi.props.items[4].label": "Filer utan DDR-info (uteslutna)",
+    "summary_kpi.props.items[5].label": "Berörda filer",
+    "findings_card.props.title": "Plugin-anrop utan referens",
+    "findings_table.props.chipFilter.allLabel": "Alla orsaker",
+    "findings_table.props.columns[0].label": "Orsak",
+    "findings_table.props.columns[1].label": "Fil",
+    "findings_table.props.columns[2].label": "Objekt",
+    "findings_table.props.columns[3].label": "Typ",
+    "findings_table.props.columns[4].label": "Beräkning",
+    "findings_table.props.columns[5].label": "Steg",
+    "findings_table.props.columns[6].label": "Formel",
+    "findings_table.props.searchPlaceholder": "Sök fil, objekt eller formel…",
+    "findings_table.props.empty.message": "Varje plugin-anrop i filer med DDR-info har lösts upp till en referens.",
+    "notes_card.props.title": "Om den här kontrollen",
+    "notes_md.props.content": "Formeltexten innehåller ett plugin-anrop, men beräkningsinstansen bär ingen `calls_pluginfunction`-kant — anropet är osynligt för var-används, plugin-inventeringen, plattformstesterna och dokumentationsräknarna. Endast filer exporterade **med** DDR-info granskas: i en fil exporterad utan är varje plugin-anrop oupplöst av samma orsak på filnivå, som systerregeln **Export utan DDR-info** rapporterar en gång per fil; att lista de anropen här skulle upprepa det fyndet hundratals gånger. Sammanfattningen räknar de uteslutna filerna.\n\nTvå orsaker, som chips:\n\n- **dynamic-name** — `MBS($name; …)`: funktionsnamnet är ingen literal, inget mål kan lösas upp och konverteraren utelämnar anropet ur objekt och kanter. Formeln kan ändå bära en kant via ett angränsande literal-anrop — den listas eftersom ett av dess anrop går förlorat. *Info*: en kodstil som den statiska analysen inte kan följa, inget exportfel.\n- **unresolved** — DDR-info finns, ingen användningsrad, inte dynamiskt: chunk-parningen misslyckades. En blind fläck i konverteraren — rapportera formeln. *Varning.*\n\nVokabulär: `MBS` plus varje plugin-prefix som katalogen känner till. Anrop inuti `/* … */`- eller `//`-kommentarer räknas inte (*endast i kommentar* i sammanfattningen); ett plugin-anrop inuti en stränglitteral (t.ex. `Evaluate(\"MBS(…\")`) är den enda kända kvarvarande falska träffen."
+  }
+}

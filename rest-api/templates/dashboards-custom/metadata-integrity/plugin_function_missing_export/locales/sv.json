@@ -1,0 +1,25 @@
+{
+  "manifest": {
+    "title": "Plugin-funktion saknas vid export",
+    "description": "Metadataintegritetskontroll — formler där FileMaker vid exporten ersatte en plugin-funktion med <Function Missing>, eftersom pluginet inte var laddat på den exporterande klienten. Anropen saknas i objektgrafen och texten namnger inte längre pluginet.",
+    "analysis.defaultResult.meaning": "Antal formler vars plugin-funktion ersattes av <Function Missing> vid exporten"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Formler",
+    "summary_kpi.props.items[1].label": "Platshållare",
+    "summary_kpi.props.items[2].label": "Berörda objekt",
+    "summary_kpi.props.items[3].label": "Berörda filer",
+    "findings_card.props.title": "Formler med <Function Missing>",
+    "findings_table.props.columns[0].label": "Fil",
+    "findings_table.props.columns[1].label": "Objekt",
+    "findings_table.props.columns[2].label": "Typ",
+    "findings_table.props.columns[3].label": "Beräkning",
+    "findings_table.props.columns[4].label": "Steg",
+    "findings_table.props.columns[5].label": "Saknade",
+    "findings_table.props.columns[6].label": "Formel",
+    "findings_table.props.searchPlaceholder": "Sök fil, objekt eller formel…",
+    "findings_table.props.empty.message": "Ingen formel förlorade en plugin-funktion vid exporten.",
+    "notes_card.props.title": "Om den här kontrollen",
+    "notes_md.props.content": "När ett plugin **inte är laddat på klienten som sparar XML-filen** ersätter FileMaker funktionsnamnet i själva formeltexten med platshållaren `<Function Missing>` (och märker DDR-chunken som en oupplösbar referens). Anropet är borta ur exporten: inget plugin-objekt, ingen anropskant — och texten säger inte längre vilket plugin det var. Regeln läser formel**texten** och fungerar därför med och utan DDR-info.\n\n**Ingen åtgärd inom FM-Lab.** Spara filen som XML igen på en klient där pluginet är installerat och aktiverat. *Formelutdraget* behåller argumenten — ofta den enda ledtråden till vilket plugin som avses.\n\nImportloggen rapporterar samma fel som en varning (`Function Missing`-chunkar)."
+  }
+}

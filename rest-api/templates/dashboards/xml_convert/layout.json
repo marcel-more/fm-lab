@@ -28,9 +28,15 @@
               "summaryNewField": "status",
               "summaryNewValue": "new",
               "summarySizeField": "size",
+              "summaryFlagField": "ddr_info",
+              "summaryFlagValue": false,
+              "summaryFlagLabelKey": "detail:autoTable.ddrMissing",
+              "summaryFlagHintKey": "detail:autoTable.ddrMissingHint",
               "columns": [
                 { "field": "emoji",       "label": "",          "align": "center" },
                 { "field": "filename",    "label": "File" },
+                { "field": "ddr_flag",    "label": "DDR",       "align": "center", "format": "badge",
+                  "badgeTone": { "missing": "warning" } },
                 { "field": "mtime",       "label": "Date",      "format": "date:relative" },
                 { "field": "size",        "label": "Size",      "format": "filesize", "align": "right" },
                 { "field": "imported_at", "label": "Imported",  "format": "date:relative" }

@@ -5,7 +5,10 @@
 SELECT
     f.File_Name,
     f.FileMaker_Version,
-    f.Has_DDR_INFO,
+    -- Token, not the raw boolean: the badge formatter translates strings via
+    -- `dashboard:cellValues`, but passes booleans through untouched — the cell
+    -- read "True"/"False" in every UI language.
+    CASE WHEN f.Has_DDR_INFO THEN 'yes' ELSE 'no' END AS Has_DDR_INFO,
     f.Import_Timestamp,
     COUNT(*) FILTER (WHERE oc.Object_Type = 'Script')          AS script_count,
     COUNT(*) FILTER (WHERE oc.Object_Type = 'BaseTable')       AS table_count,

@@ -1,0 +1,25 @@
+{
+  "manifest": {
+    "title": "Plugin-Funktion beim Export fehlend",
+    "description": "Metadaten-Integritätsprüfung — Formeln, in denen FileMaker beim Export eine Plugin-Funktion durch <Function Missing> ersetzt hat, weil das Plugin auf dem exportierenden Client nicht geladen war. Die Aufrufe fehlen im Objektgraphen, und der Text nennt das Plugin nicht mehr.",
+    "analysis.defaultResult.meaning": "Anzahl der Formeln, deren Plugin-Funktion beim Export durch <Function Missing> ersetzt wurde"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Formeln",
+    "summary_kpi.props.items[1].label": "Platzhalter",
+    "summary_kpi.props.items[2].label": "Betroffene Objekte",
+    "summary_kpi.props.items[3].label": "Betroffene Dateien",
+    "findings_card.props.title": "Formeln mit <Function Missing>",
+    "findings_table.props.columns[0].label": "Datei",
+    "findings_table.props.columns[1].label": "Objekt",
+    "findings_table.props.columns[2].label": "Typ",
+    "findings_table.props.columns[3].label": "Berechnung",
+    "findings_table.props.columns[4].label": "Schritt",
+    "findings_table.props.columns[5].label": "Fehlend",
+    "findings_table.props.columns[6].label": "Formel",
+    "findings_table.props.searchPlaceholder": "Datei, Objekt oder Formel suchen…",
+    "findings_table.props.empty.message": "Keine Formel hat beim Export eine Plugin-Funktion verloren.",
+    "notes_card.props.title": "Über diese Prüfung",
+    "notes_md.props.content": "Ist ein Plugin **auf dem Client, der die XML sichert, nicht geladen**, ersetzt FileMaker den Funktionsnamen im Formeltext selbst durch den Platzhalter `<Function Missing>` (und markiert den DDR-Chunk als unauflösbare Referenz). Der Aufruf ist aus dem Export verschwunden: kein Plugin-Objekt, keine Aufruf-Kante — und der Text sagt nicht mehr, welches Plugin es war. Die Regel liest den Formel-**Text** und funktioniert deshalb mit und ohne DDR-Info.\n\n**Kein Fix in FM-Lab.** Die Datei auf einem Client mit installiertem und aktiviertem Plugin erneut als XML sichern. Der *Formel-Auszug* behält die Argumente — oft der einzige Hinweis, welches Plugin gemeint ist.\n\nDas Import-Protokoll meldet denselben Defekt als Warnung (`Function Missing`-Chunks)."
+  }
+}

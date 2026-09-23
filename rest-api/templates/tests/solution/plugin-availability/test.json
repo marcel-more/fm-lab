@@ -1,0 +1,93 @@
+{
+  "id": "plugin-availability",
+  "version": "1.0.0",
+  "title": "Plug-in Reference Integrity",
+  "description": "Checks whether the plug-in calls of the solution actually reached the object graph. Three export defects make them invisible without failing the import: files exported without DDR info (\"Include details for analysis tools\" was off), functions replaced by <Function Missing> at export time (plug-in not loaded on the exporting client), and dynamic function names (MBS($name; …)) that carry no resolvable target. The census lists text against graph counts per file with a verdict.",
+  "keywords": [
+    "plugin",
+    "mbs",
+    "ddr",
+    "export",
+    "function-missing",
+    "import-census",
+    "integrity",
+    "where-used"
+  ],
+  "testType": "error-check",
+  "objectTypes": [
+    "Script",
+    "CustomFunction"
+  ],
+  "scopes": [
+    "solution",
+    "file",
+    "object",
+    "object-list",
+    "cluster"
+  ],
+  "outputs": [
+    "count",
+    "findings-table",
+    "inventory-table"
+  ],
+  "members": [
+    {
+      "kind": "dashboard",
+      "ref": "export_ddr_missing"
+    },
+    {
+      "kind": "dashboard",
+      "ref": "plugin_function_missing_export"
+    },
+    {
+      "kind": "dashboard",
+      "ref": "plugin_call_without_reference"
+    },
+    {
+      "kind": "query",
+      "ref": "plugin_reference_census"
+    }
+  ],
+  "locales": {
+    "de": {
+      "title": "Plugin-Referenz-Integrität",
+      "description": "Prüft, ob die Plugin-Aufrufe der Lösung tatsächlich im Objektgraphen angekommen sind. Drei Export-Defekte machen sie unsichtbar, ohne dass der Import fehlschlägt: Dateien ohne DDR-Info (Option „Details für Analysewerkzeuge einschließen“ war aus), beim Export durch <Function Missing> ersetzte Funktionen (Plugin auf dem exportierenden Client nicht geladen) und dynamische Funktionsnamen (MBS($name; …)) ohne auflösbares Ziel. Der Zensus stellt je Datei Text- und Graph-Zahlen mit einem Urteil gegenüber."
+    },
+    "es": {
+      "title": "Integridad de referencias de plug-ins",
+      "description": "Comprueba si las llamadas a plug-ins de la solución llegaron realmente al grafo de objetos. Tres defectos de exportación las hacen invisibles sin que la importación falle: archivos exportados sin información DDR (la opción «Incluir detalles para las herramientas de análisis» estaba desactivada), funciones sustituidas por <Function Missing> al exportar (plug-in no cargado en el cliente que exporta) y nombres de función dinámicos (MBS($name; …)) sin destino resoluble. El censo enfrenta, por archivo, los recuentos del texto y del grafo con un veredicto."
+    },
+    "fr": {
+      "title": "Intégrité des références de plug-ins",
+      "description": "Vérifie si les appels de plug-ins de la solution ont réellement atteint le graphe d'objets. Trois défauts d'export les rendent invisibles sans faire échouer l'import : fichiers exportés sans informations DDR (option « Inclure les détails pour les outils d'analyse » désactivée), fonctions remplacées par <Function Missing> à l'export (plug-in non chargé sur le client exportateur) et noms de fonction dynamiques (MBS($name; …)) sans cible résoluble. Le recensement confronte, par fichier, les comptages du texte et du graphe avec un verdict."
+    },
+    "it": {
+      "title": "Integrità dei riferimenti ai plug-in",
+      "description": "Verifica se le chiamate ai plug-in della soluzione sono davvero arrivate nel grafo degli oggetti. Tre difetti di esportazione le rendono invisibili senza far fallire l'importazione: file esportati senza informazioni DDR (opzione «Includi dettagli per gli strumenti di analisi» disattivata), funzioni sostituite da <Function Missing> all'esportazione (plug-in non caricato sul client che esporta) e nomi di funzione dinamici (MBS($name; …)) senza destinazione risolvibile. Il censimento confronta per file i conteggi del testo e del grafo con un verdetto."
+    },
+    "ja": {
+      "title": "プラグイン参照の整合性",
+      "description": "ソリューションのプラグイン呼び出しが実際にオブジェクトグラフに到達しているかを検査します。インポートは失敗しないまま、3 種類の書き出し不備が呼び出しを不可視にします。DDR 情報なしで書き出されたファイル（「分析ツールの詳細を含める」オプションがオフ）、書き出し時に <Function Missing> に置き換えられた関数（書き出し側クライアントでプラグインが未ロード）、解決できない対象を持つ動的な関数名（MBS($name; …)）です。センサスはファイルごとにテキスト側とグラフ側の件数を判定付きで対比します。"
+    },
+    "ko": {
+      "title": "플러그인 참조 무결성",
+      "description": "솔루션의 플러그인 호출이 실제로 객체 그래프에 도달했는지 검사합니다. 가져오기는 실패하지 않은 채 세 가지 내보내기 결함이 호출을 보이지 않게 만듭니다. DDR 정보 없이 내보낸 파일(“분석 도구용 세부 정보 포함” 옵션 꺼짐), 내보내기 시 <Function Missing>으로 대체된 함수(내보내는 클라이언트에 플러그인이 로드되지 않음), 해석할 수 없는 대상을 가진 동적 함수 이름(MBS($name; …))입니다. 센서스는 파일별로 텍스트 측과 그래프 측 수치를 판정과 함께 대조합니다."
+    },
+    "nl": {
+      "title": "Integriteit van plug-in-verwijzingen",
+      "description": "Controleert of de plug-in-aanroepen van de oplossing daadwerkelijk in de objectgraaf zijn aangekomen. Drie exportgebreken maken ze onzichtbaar zonder dat de import mislukt: bestanden geëxporteerd zonder DDR-info (optie „Details opnemen voor analysetools” stond uit), functies die bij de export door <Function Missing> zijn vervangen (plug-in niet geladen op de exporterende client) en dynamische functienamen (MBS($name; …)) zonder oplosbaar doel. De telling zet per bestand de tekst- en graafaantallen met een oordeel naast elkaar."
+    },
+    "pt": {
+      "title": "Integridade das referências a plug-ins",
+      "description": "Verifica se as chamadas a plug-ins da solução realmente chegaram ao grafo de objetos. Três defeitos de exportação as tornam invisíveis sem que a importação falhe: arquivos exportados sem informações DDR (opção «Incluir detalhes para ferramentas de análise» desativada), funções substituídas por <Function Missing> na exportação (plug-in não carregado no cliente exportador) e nomes de função dinâmicos (MBS($name; …)) sem destino resolvível. O censo confronta, por arquivo, as contagens do texto e do grafo com um veredicto."
+    },
+    "sv": {
+      "title": "Integritet för plugin-referenser",
+      "description": "Kontrollerar om lösningens plugin-anrop verkligen nådde objektgrafen. Tre exportfel gör dem osynliga utan att importen misslyckas: filer exporterade utan DDR-info (alternativet ”Inkludera information för analysverktyg” var av), funktioner som vid exporten ersattes av <Function Missing> (plugin inte laddat på den exporterande klienten) och dynamiska funktionsnamn (MBS($name; …)) utan upplösbart mål. Inventeringen ställer per fil text- och grafsiffror mot varandra med ett utlåtande."
+    },
+    "zh-Hans": {
+      "title": "插件引用完整性",
+      "description": "检查解决方案的插件调用是否真正进入了对象图。三种导出缺陷会在导入不报错的情况下让调用不可见：未包含 DDR 信息导出的文件（“包括分析工具的详细信息”选项被关闭）、导出时被替换为 <Function Missing> 的函数（导出客户端未加载插件），以及没有可解析目标的动态函数名（MBS($name; …)）。普查按文件对照文本侧与图侧的计数并给出判定。"
+    }
+  }
+}

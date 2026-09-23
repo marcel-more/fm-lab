@@ -5,9 +5,10 @@
   },
   "layout": {
     "files_table.props.columns[1].label": "文件",
-    "files_table.props.columns[2].label": "日期",
-    "files_table.props.columns[3].label": "大小",
-    "files_table.props.columns[4].label": "已导入",
+    "files_table.props.columns[2].label": "DDR",
+    "files_table.props.columns[3].label": "日期",
+    "files_table.props.columns[4].label": "大小",
+    "files_table.props.columns[5].label": "已导入",
     "files_table.props.empty.message": "XML 目录中没有文件。",
     "last_run.props.title": "上次转换",
     "import_integrity.props.title": "导入完整性",

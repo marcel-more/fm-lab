@@ -3,7 +3,7 @@
 Part of the [FM-Lab schema](../Schema.md) · Object catalog · `db/fm_catalog.duckdb` (solution catalog)
 **XML source:** derived in phase P4 from all branches of the [FileMaker XML](../../xml/XML.md)
 
-The central object registry of the solution catalog. Every object of every imported FileMaker file — base tables, fields, scripts, script steps, layouts, layout objects, custom functions, value lists, accounts, themes, triggers, variables, plugin functions and more (25+ object types) — is registered here with one row per object. It is the starting point for every existence and where-used question: find the object here first, then follow its `Object_UUID` into [ObjectLinks](ObjectLinks.md) or into the type-specific detail table named in `Source_Table`.
+The central object registry of the solution catalog. Every [object](Object%20Types.md) of every imported FileMaker file — base tables, fields, scripts, script steps, layouts, layout objects, custom functions, value lists, accounts, themes, triggers, variables, plugin functions and more (25+ object types) — is registered here with one row per object. It is the starting point for every existence and where-used question: find the object here first, then follow its `Object_UUID` into [ObjectLinks](ObjectLinks.md) or into the type-specific detail table named in `Source_Table`.
 
 ## Columns
 

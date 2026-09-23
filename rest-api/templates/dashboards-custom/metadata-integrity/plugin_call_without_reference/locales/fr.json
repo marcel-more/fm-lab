@@ -1,0 +1,28 @@
+{
+  "manifest": {
+    "title": "Appel de plug-in sans référence",
+    "description": "Vérification d'intégrité des métadonnées : appels de plug-ins dans des fichiers exportés avec informations DDR qui n'ont pourtant obtenu aucune référence : un nom de fonction dynamique (MBS($name; …)) que le convertisseur ne peut pas résoudre, ou un appariement de fragments non résolu. Les fichiers exportés sans informations DDR relèvent de « Export sans informations DDR » et sont exclus ici.",
+    "analysis.defaultResult.meaning": "Nombre de formules dans des fichiers avec informations DDR dont l'appel de plug-in ne porte aucune référence dans le catalogue : noms de fonction dynamiques (info) et appariements non résolus (avertissement)"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Constats",
+    "summary_kpi.props.items[1].label": "Nom dynamique (info)",
+    "summary_kpi.props.items[2].label": "Non résolus (avertissement)",
+    "summary_kpi.props.items[3].label": "Commentaire seulement",
+    "summary_kpi.props.items[4].label": "Fichiers sans infos DDR (exclus)",
+    "summary_kpi.props.items[5].label": "Fichiers concernés",
+    "findings_card.props.title": "Appels de plug-in sans référence",
+    "findings_table.props.chipFilter.allLabel": "Toutes les causes",
+    "findings_table.props.columns[0].label": "Cause",
+    "findings_table.props.columns[1].label": "Fichier",
+    "findings_table.props.columns[2].label": "Objet",
+    "findings_table.props.columns[3].label": "Type",
+    "findings_table.props.columns[4].label": "Calcul",
+    "findings_table.props.columns[5].label": "Action",
+    "findings_table.props.columns[6].label": "Formule",
+    "findings_table.props.searchPlaceholder": "Rechercher fichier, objet ou formule…",
+    "findings_table.props.empty.message": "Chaque appel de plug-in des fichiers avec informations DDR a été résolu en une référence.",
+    "notes_card.props.title": "À propos de cette vérification",
+    "notes_md.props.content": "Le texte de la formule contient un appel de plug-in, mais l'instance de calcul ne porte aucune arête `calls_pluginfunction` — l'appel est invisible pour où-est-utilisé, l'inventaire des plug-ins, les tests de plateforme et les compteurs de documentation. Seuls les fichiers exportés **avec** informations DDR sont examinés : dans un fichier exporté sans elles, chaque appel de plug-in est non résolu pour la même raison au niveau du fichier, que la règle sœur **Export sans informations DDR** signale une fois par fichier ; lister ces appels ici répéterait ce constat des centaines de fois. Le résumé compte les fichiers exclus.\n\nDeux causes, sous forme de puces :\n\n- **dynamic-name** — `MBS($name; …)` : le nom de fonction n'est pas un littéral, aucune cible ne peut être résolue et le convertisseur écarte l'appel des objets et des arêtes. La formule peut encore porter une arête via un appel littéral voisin — elle est listée parce qu'un de ses appels est perdu. *Info* : un style de code que l'analyse statique ne peut pas suivre, pas un défaut d'export.\n- **unresolved** — informations DDR présentes, aucune ligne d'usage, non dynamique : l'appariement des fragments a échoué. Angle mort du convertisseur — signalez la formule. *Avertissement.*\n\nVocabulaire : `MBS` plus chaque préfixe de plug-in connu du catalogue. Les appels dans des commentaires `/* … */` ou `//` ne comptent pas (*commentaire seulement* dans le résumé) ; un appel de plug-in dans un littéral de chaîne (p. ex. `Evaluate(\"MBS(…\")`) est le seul faux positif résiduel connu."
+  }
+}

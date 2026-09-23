@@ -1,0 +1,103 @@
+{
+  "id": "plugin_call_without_reference",
+  "version": "1.1.0",
+  "title": "Plug-in call without reference",
+  "description": "Metadata-integrity check — plug-in calls in files exported with DDR info that never became a reference: a dynamic function name (MBS($name; …)) the converter cannot resolve, or an unresolved chunk pairing. Files exported without DDR info are the finding of \"Export without DDR info\" and are excluded here.",
+  "author": "fm-lab rules",
+  "icon": "plug",
+  "category": "metadata_integrity",
+  "tags": [
+    "rule",
+    "metadata",
+    "export",
+    "plugin",
+    "where-used"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "warning",
+    "category": "metadata_integrity",
+    "rationale": "A plug-in call that never became a reference is invisible to where-used, the plug-in inventory, platform tests and the docs counters — the import succeeded and nothing points at the gap. Text against graph exposes it per formula and names the cause; the file-level cause (export without DDR info) stays with its own rule so this list holds only the calls that are unresolvable despite a complete export.",
+    "remediation": "dynamic-name: use a literal function name where the call site allows it — the dynamic form is opaque to every static analysis (where-used, platform tests, docs). unresolved: report the formula — this class is a converter defect. Files without DDR info: see \"Export without DDR info\".",
+    "meta": {
+      "name": "Plug-in call without reference",
+      "author": "fm-lab rules",
+      "source": "fm-lab",
+      "url": null,
+      "description": "Formulas in files exported with DDR info that call a plug-in in their text but carry no plug-in reference in the catalog — dynamic function names (info) and unresolved chunk pairings (warning).",
+      "created": "2026-09-23",
+      "references": [
+        {
+          "project": "Claris Help",
+          "rule": "Save a Copy as XML — Include details for analysis tools",
+          "url": "https://help.claris.com/en/pro-help/content/save-a-copy-as-xml.html"
+        }
+      ]
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Script",
+      "CustomFunction"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of formulas in files with DDR info whose plug-in call carries no reference in the catalog — dynamic function names (info) and unresolved pairings (warning)"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql"
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (formulas defined in this file)."
+    },
+    {
+      "name": "scope_uuids",
+      "type": "string",
+      "required": false,
+      "description": "CSV of Object_UUIDs supplied by the Analysis-Tests run boundary."
+    },
+    {
+      "name": "limit",
+      "type": "number",
+      "required": false,
+      "description": "Maximum number of finding rows returned (default 500)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "Export ohne DDR-Info",
+    "description": "Metadaten-Integritätsprüfung — Dateien, die ohne DDR-Info exportiert wurden (Option „Details für Analysewerkzeuge einschließen“ war aus). Der Import sieht vollständig aus, aber der Katalog enthält für diese Dateien keine Formel-Referenzen (Felder, Funktionen, Custom Functions, Plugin-Aufrufe).",
+    "analysis.defaultResult.meaning": "Anzahl der ohne DDR-Info exportierten Dateien (ihre Formel-Referenzen fehlen im Katalog)"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Dateien ohne DDR-Info",
+    "summary_kpi.props.items[1].label": "Betroffene Formeln",
+    "summary_kpi.props.items[2].label": "Betroffene Plugin-Formeln",
+    "summary_kpi.props.items[3].label": "Dateien der Lösung",
+    "findings_card.props.title": "Ohne DDR-Info exportierte Dateien",
+    "findings_table.props.columns[0].label": "Datei",
+    "findings_table.props.columns[1].label": "FileMaker",
+    "findings_table.props.columns[2].label": "SaXML",
+    "findings_table.props.columns[3].label": "Formeln",
+    "findings_table.props.columns[4].label": "Plugin-Formeln",
+    "findings_table.props.searchPlaceholder": "Datei suchen…",
+    "findings_table.props.empty.message": "Alle Dateien wurden mit DDR-Info exportiert.",
+    "notes_card.props.title": "Über diese Prüfung",
+    "notes_md.props.content": "Eine FileMaker-Datei, die **ohne** die Option *Details für Analysewerkzeuge einschließen* als XML gesichert wurde, trägt keinen `DDR_INFO`-Block. Der Import gelingt trotzdem und sieht vollständig aus — Scripts, Felder, Layouts und jeder Formeltext sind da — aber der DDR-Chunk-Strom ist die **einzige** Quelle für Formel-Referenzen: keine Feldzugriffe aus Berechnungen, keine Funktions- oder Custom-Function-Aufrufe, keine Plugin-Aufrufe für alles, was in dieser Datei definiert ist. Where-used, das Plugin-Inventar und der Objektgraph sind für sie still blind.\n\n**Kein Fix in FM-Lab.** Die Information fehlt im Export: die Datei mit aktivierter Option erneut sichern und erneut importieren. Die Formelzahlen zeigen, was verloren ist; *Plugin-Formeln* nutzt dasselbe Text-Vokabular wie die Regel **Plugin-Aufruf ohne Referenz** (MBS plus jedes Plugin-Präfix, das der Katalog kennt) und ist eine Untergrenze.\n\nDie XML-Import-Seite zeigt dasselbe Urteil schon vor dem Import (Header-Probe je Datei), das Import-Protokoll meldet es als Warnung."
+  }
+}

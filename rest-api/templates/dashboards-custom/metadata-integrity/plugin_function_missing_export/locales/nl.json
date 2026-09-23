@@ -1,0 +1,25 @@
+{
+  "manifest": {
+    "title": "Plug-in-functie ontbreekt bij export",
+    "description": "Metadata-integriteitscontrole — formules waarin FileMaker bij de export een plug-in-functie door <Function Missing> heeft vervangen, omdat de plug-in niet geladen was op de exporterende client. De aanroepen ontbreken in de objectgraaf en de tekst noemt de plug-in niet meer.",
+    "analysis.defaultResult.meaning": "Aantal formules waarvan de plug-in-functie bij de export door <Function Missing> is vervangen"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Formules",
+    "summary_kpi.props.items[1].label": "Plaatshouders",
+    "summary_kpi.props.items[2].label": "Getroffen objecten",
+    "summary_kpi.props.items[3].label": "Getroffen bestanden",
+    "findings_card.props.title": "Formules met <Function Missing>",
+    "findings_table.props.columns[0].label": "Bestand",
+    "findings_table.props.columns[1].label": "Object",
+    "findings_table.props.columns[2].label": "Type",
+    "findings_table.props.columns[3].label": "Berekening",
+    "findings_table.props.columns[4].label": "Stap",
+    "findings_table.props.columns[5].label": "Ontbrekend",
+    "findings_table.props.columns[6].label": "Formule",
+    "findings_table.props.searchPlaceholder": "Zoek bestand, object of formule…",
+    "findings_table.props.empty.message": "Geen enkele formule heeft bij de export een plug-in-functie verloren.",
+    "notes_card.props.title": "Over deze controle",
+    "notes_md.props.content": "Als een plug-in **niet geladen is op de client die de XML opslaat**, vervangt FileMaker de functienaam in de formuletekst zelf door de plaatshouder `<Function Missing>` (en markeert het DDR-chunk als onoplosbare verwijzing). De aanroep is uit de export verdwenen: geen plug-in-object, geen aanroeprand — en de tekst zegt niet meer welke plug-in het was. De regel leest de formule**tekst** en werkt daarom met en zonder DDR-info.\n\n**Geen oplossing binnen FM-Lab.** Sla het bestand opnieuw als XML op op een client waar de plug-in geïnstalleerd en ingeschakeld is. Het *formulefragment* behoudt de argumenten — vaak de enige aanwijzing welke plug-in bedoeld is.\n\nHet importlogboek meldt hetzelfde gebrek als waarschuwing (`Function Missing`-chunks)."
+  }
+}

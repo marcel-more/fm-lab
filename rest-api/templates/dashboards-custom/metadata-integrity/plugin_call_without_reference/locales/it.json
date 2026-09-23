@@ -1,0 +1,28 @@
+{
+  "manifest": {
+    "title": "Chiamata a plug-in senza riferimento",
+    "description": "Controllo di integrità dei metadati — chiamate a plug-in in file esportati con informazioni DDR che tuttavia non hanno ottenuto alcun riferimento: un nome di funzione dinamico (MBS($name; …)) che il convertitore non può risolvere, o un abbinamento di frammenti non risolto. I file esportati senza informazioni DDR sono il rilevamento di «Esportazione senza informazioni DDR» e qui sono esclusi.",
+    "analysis.defaultResult.meaning": "Numero di formule in file con informazioni DDR la cui chiamata a plug-in non ha riferimento nel catalogo: nomi di funzione dinamici (info) e abbinamenti non risolti (avviso)"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Rilevamenti",
+    "summary_kpi.props.items[1].label": "Nome dinamico (info)",
+    "summary_kpi.props.items[2].label": "Non risolte (avviso)",
+    "summary_kpi.props.items[3].label": "Solo nel commento",
+    "summary_kpi.props.items[4].label": "File senza informazioni DDR (esclusi)",
+    "summary_kpi.props.items[5].label": "File interessati",
+    "findings_card.props.title": "Chiamate a plug-in senza riferimento",
+    "findings_table.props.chipFilter.allLabel": "Tutte le cause",
+    "findings_table.props.columns[0].label": "Causa",
+    "findings_table.props.columns[1].label": "File",
+    "findings_table.props.columns[2].label": "Oggetto",
+    "findings_table.props.columns[3].label": "Tipo",
+    "findings_table.props.columns[4].label": "Calcolo",
+    "findings_table.props.columns[5].label": "Passo",
+    "findings_table.props.columns[6].label": "Formula",
+    "findings_table.props.searchPlaceholder": "Cerca file, oggetto o formula…",
+    "findings_table.props.empty.message": "Ogni chiamata a plug-in nei file con informazioni DDR è stata risolta in un riferimento.",
+    "notes_card.props.title": "Informazioni su questo controllo",
+    "notes_md.props.content": "Il testo della formula contiene una chiamata a plug-in, ma l'istanza di calcolo non porta alcun arco `calls_pluginfunction` — la chiamata è invisibile a dove-si-usa, all'inventario dei plug-in, ai test di piattaforma e ai contatori della documentazione. Vengono esaminati solo i file esportati **con** informazioni DDR: in un file esportato senza, ogni chiamata a plug-in è irrisolta per la stessa causa a livello di file, che la regola gemella **Esportazione senza informazioni DDR** segnala una volta per file; elencare qui quelle chiamate ripeterebbe quel rilevamento centinaia di volte. Il riepilogo conta i file esclusi.\n\nDue cause, come chip:\n\n- **dynamic-name** — `MBS($name; …)`: il nome della funzione non è un letterale, nessuna destinazione è risolvibile e il convertitore esclude la chiamata da oggetti e archi. La formula può comunque portare un arco tramite una chiamata letterale vicina — è elencata perché una delle sue chiamate è persa. *Info*: uno stile di codice che l'analisi statica non può seguire, non un difetto di esportazione.\n- **unresolved** — informazioni DDR presenti, nessuna riga di utilizzo, non dinamica: l'abbinamento dei frammenti è fallito. Punto cieco del convertitore — segnalare la formula. *Avviso.*\n\nVocabolario: `MBS` più ogni prefisso di plug-in noto al catalogo. Le chiamate dentro commenti `/* … */` o `//` non contano (*solo nel commento* nel riepilogo); una chiamata a plug-in dentro un letterale stringa (es. `Evaluate(\"MBS(…\")`) è l'unico falso positivo residuo noto."
+  }
+}

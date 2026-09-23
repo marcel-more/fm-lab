@@ -51,7 +51,7 @@ The document has one root element, `<FMSaveAsXML>`, whose attributes identify th
 
 - **`Structure/AddAction`** holds the object catalogs — one XML dictionary per object type. This is where nearly all schema information lives.
 - **`Metadata/AddAction`** holds the file options (→ [XML Metadata](catalogs/XML%20Metadata.md)).
-- **`DDR_INFO`** exists only when the export was created with *“Include details for analysis tools”* (FileMaker 21+) and carries the tokenized calculations that power FM-Lab's dependency analysis (→ [XML DDR_INFO](catalogs/XML%20DDR_INFO.md)).
+- **`DDR_INFO`** exists only when the export was created with *“Include details for analysis tools”* (FileMaker 21+) and carries the tokenized calculations that power FM-Lab's dependency analysis (→ [XML DDR_INFO](catalogs/XML%20DDR_INFO.md)). Without it the import still succeeds and looks complete, but the catalog holds no formula references at all for that file (fields, functions, custom functions, plug-in calls). FM-Lab flags such files three times: the XML-import page probes the root attribute of every file in the inbox and marks *DDR info missing* in the file-list header before the import, the import log reports the files as a warning, and the [Plug-in reference integrity](../Wiki/Analysis%20Tests.md) test lists them.
 
 The root attributes themselves (format version, source version, file name/UUID, export locale, DDR flag) are imported into [XMLMetadata](../schema/catalog-tables/XMLMetadata.md) and [FilesCatalog](../schema/object-catalog/FilesCatalog.md).
 

@@ -1,0 +1,28 @@
+{
+  "manifest": {
+    "title": "참조 없는 플러그인 호출",
+    "description": "메타데이터 무결성 검사 — DDR 정보와 함께 내보낸 파일에서 그럼에도 참조를 얻지 못한 플러그인 호출: 변환기가 해석할 수 없는 동적 함수 이름(MBS($name; …)) 또는 해결되지 않은 청크 짝짓기. DDR 정보 없이 내보낸 파일은 “DDR 정보 없는 내보내기”의 결과이며 여기서는 제외됩니다.",
+    "analysis.defaultResult.meaning": "DDR 정보가 있는 파일에서 플러그인 호출이 카탈로그에 참조를 갖지 않는 수식 수 — 동적 함수 이름(정보)과 해결되지 않은 짝짓기(경고)"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "결과",
+    "summary_kpi.props.items[1].label": "동적 이름(정보)",
+    "summary_kpi.props.items[2].label": "해결되지 않음(경고)",
+    "summary_kpi.props.items[3].label": "주석에만 있음",
+    "summary_kpi.props.items[4].label": "DDR 정보 없는 파일(제외)",
+    "summary_kpi.props.items[5].label": "영향받는 파일",
+    "findings_card.props.title": "참조 없는 플러그인 호출",
+    "findings_table.props.chipFilter.allLabel": "모든 원인",
+    "findings_table.props.columns[0].label": "원인",
+    "findings_table.props.columns[1].label": "파일",
+    "findings_table.props.columns[2].label": "객체",
+    "findings_table.props.columns[3].label": "유형",
+    "findings_table.props.columns[4].label": "계산",
+    "findings_table.props.columns[5].label": "단계",
+    "findings_table.props.columns[6].label": "수식",
+    "findings_table.props.searchPlaceholder": "파일, 객체 또는 수식 검색…",
+    "findings_table.props.empty.message": "DDR 정보가 있는 파일의 모든 플러그인 호출이 참조로 해석되었습니다.",
+    "notes_card.props.title": "이 검사에 대하여",
+    "notes_md.props.content": "수식 텍스트에는 플러그인 호출이 있지만 계산 인스턴스에 `calls_pluginfunction` 간선이 없습니다 — 그 호출은 사용 위치, 플러그인 목록, 플랫폼 테스트, 문서 카운터에 보이지 않습니다. DDR 정보와 **함께** 내보낸 파일만 검사합니다. DDR 정보 없이 내보낸 파일에서는 모든 플러그인 호출이 같은 파일 수준의 이유로 해결되지 않으며, 이는 자매 규칙 **DDR 정보 없는 내보내기**가 파일당 한 번 보고합니다. 그 호출들을 여기에 나열하면 같은 결과를 수백 번 반복하게 됩니다. 요약은 제외된 파일 수를 보여 줍니다.\n\n원인은 두 가지이며 칩으로 표시됩니다.\n\n- **dynamic-name** — `MBS($name; …)`: 함수 이름이 리터럴이 아니어서 대상을 해석할 수 없고, 변환기는 객체와 간선에서 호출을 제외합니다. 인접한 리터럴 호출 덕분에 수식이 간선을 가질 수는 있지만, 호출 중 하나가 손실되므로 나열됩니다. *정보*: 정적 분석이 따라갈 수 없는 코드 스타일이지 내보내기 결함이 아닙니다.\n- **unresolved** — DDR 정보가 있고 사용 행이 없으며 동적이지 않음: 청크 짝짓기가 실패했습니다. 변환기의 사각지대입니다 — 수식을 보고해 주세요. *경고.*\n\n어휘: `MBS`와 카탈로그가 아는 모든 플러그인 접두사. `/* … */` 또는 `//` 주석 안의 호출은 세지 않습니다(요약의 *주석에만 있음*). 문자열 리터럴 안의 플러그인 호출(예: `Evaluate(\"MBS(…\")`)이 유일하게 알려진 잔여 오탐입니다."
+  }
+}

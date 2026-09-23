@@ -1,8 +1,8 @@
 {
   "manifest_schema": "1.0",
-  "version": "0.9.12",
-  "generated_at": "2026-09-16T21:16:10.632Z",
-  "source_commit": "58f94af5",
+  "version": "0.9.13",
+  "generated_at": "2026-09-23T17:33:12.714Z",
+  "source_commit": "d52bba86",
   "components": {
     "rest_api": {
       "scheme": "A",
@@ -37,7 +37,7 @@
     "xml_import": {
       "scheme": "B",
       "version": "5.5.0",
-      "engine_version": "2.30.0",
+      "engine_version": "2.31.0",
       "source": "ingestion/convert_fm_xml.sh",
       "on_change": "reconvert_xml"
     },

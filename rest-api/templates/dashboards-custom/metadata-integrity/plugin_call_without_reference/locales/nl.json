@@ -1,0 +1,28 @@
+{
+  "manifest": {
+    "title": "Plug-in-aanroep zonder verwijzing",
+    "description": "Metadata-integriteitscontrole — plug-in-aanroepen in bestanden die met DDR-info zijn geëxporteerd en toch geen verwijzing kregen: een dynamische functienaam (MBS($name; …)) die de converter niet kan oplossen, of een onopgeloste chunk-koppeling. Bestanden die zonder DDR-info zijn geëxporteerd, zijn de bevinding van „Export zonder DDR-info” en worden hier uitgesloten.",
+    "analysis.defaultResult.meaning": "Aantal formules in bestanden met DDR-info waarvan de plug-in-aanroep geen verwijzing in de catalogus heeft: dynamische functienamen (info) en onopgeloste koppelingen (waarschuwing)"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Bevindingen",
+    "summary_kpi.props.items[1].label": "Dynamische naam (info)",
+    "summary_kpi.props.items[2].label": "Onopgelost (waarschuwing)",
+    "summary_kpi.props.items[3].label": "Alleen in commentaar",
+    "summary_kpi.props.items[4].label": "Bestanden zonder DDR-info (uitgesloten)",
+    "summary_kpi.props.items[5].label": "Getroffen bestanden",
+    "findings_card.props.title": "Plug-in-aanroepen zonder verwijzing",
+    "findings_table.props.chipFilter.allLabel": "Alle oorzaken",
+    "findings_table.props.columns[0].label": "Oorzaak",
+    "findings_table.props.columns[1].label": "Bestand",
+    "findings_table.props.columns[2].label": "Object",
+    "findings_table.props.columns[3].label": "Type",
+    "findings_table.props.columns[4].label": "Berekening",
+    "findings_table.props.columns[5].label": "Stap",
+    "findings_table.props.columns[6].label": "Formule",
+    "findings_table.props.searchPlaceholder": "Zoek bestand, object of formule…",
+    "findings_table.props.empty.message": "Elke plug-in-aanroep in bestanden met DDR-info is naar een verwijzing opgelost.",
+    "notes_card.props.title": "Over deze controle",
+    "notes_md.props.content": "De formuletekst bevat een plug-in-aanroep, maar de berekeningsinstantie draagt geen `calls_pluginfunction`-rand — de aanroep is onzichtbaar voor waar-gebruikt, de plug-in-inventaris, de platformtests en de documentatietellers. Alleen bestanden die **met** DDR-info zijn geëxporteerd, worden onderzocht: in een bestand zonder DDR-info is elke plug-in-aanroep om dezelfde reden op bestandsniveau onopgelost, wat de zusterregel **Export zonder DDR-info** één keer per bestand meldt; die aanroepen hier vermelden zou die bevinding honderden keren herhalen. De samenvatting telt de uitgesloten bestanden.\n\nTwee oorzaken, als chips:\n\n- **dynamic-name** — `MBS($name; …)`: de functienaam is geen literal, er valt geen doel op te lossen en de converter laat de aanroep weg uit objecten en randen. De formule kan via een naburige literal-aanroep toch een rand dragen — ze staat vermeld omdat een van haar aanroepen verloren is. *Info*: een codestijl die de statische analyse niet kan volgen, geen exportgebrek.\n- **unresolved** — DDR-info aanwezig, geen gebruiksrij, niet dynamisch: de chunk-koppeling is mislukt. Een blinde vlek van de converter — meld de formule. *Waarschuwing.*\n\nVocabulaire: `MBS` plus elk plug-in-voorvoegsel dat de catalogus kent. Aanroepen binnen `/* … */`- of `//`-commentaar tellen niet (*alleen in commentaar* in de samenvatting); een plug-in-aanroep in een string-literal (bv. `Evaluate(\"MBS(…\")`) is de enige bekende resterende fout-positief."
+  }
+}

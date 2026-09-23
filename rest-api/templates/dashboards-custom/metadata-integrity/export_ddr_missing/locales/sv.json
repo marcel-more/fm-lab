@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "Export utan DDR-info",
+    "description": "Metadataintegritetskontroll — filer exporterade utan DDR-info (alternativet ”Inkludera information för analysverktyg” var av). Importen ser komplett ut, men katalogen saknar formelreferenser (fält, funktioner, egna funktioner, plugin-anrop) för dessa filer.",
+    "analysis.defaultResult.meaning": "Antal filer exporterade utan DDR-info (deras formelreferenser saknas i katalogen)"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Filer utan DDR-info",
+    "summary_kpi.props.items[1].label": "Berörda formler",
+    "summary_kpi.props.items[2].label": "Berörda plugin-formler",
+    "summary_kpi.props.items[3].label": "Filer i lösningen",
+    "findings_card.props.title": "Filer exporterade utan DDR-info",
+    "findings_table.props.columns[0].label": "Fil",
+    "findings_table.props.columns[1].label": "FileMaker",
+    "findings_table.props.columns[2].label": "SaXML",
+    "findings_table.props.columns[3].label": "Formler",
+    "findings_table.props.columns[4].label": "Plugin-formler",
+    "findings_table.props.searchPlaceholder": "Sök fil…",
+    "findings_table.props.empty.message": "Alla filer exporterades med DDR-info.",
+    "notes_card.props.title": "Om den här kontrollen",
+    "notes_md.props.content": "En FileMaker-fil som sparats som XML **utan** alternativet *Inkludera information för analysverktyg* saknar `DDR_INFO`-blocket. Importen lyckas och ser komplett ut — skript, fält, layouter och varje formeltext finns där — men DDR-chunkströmmen är den **enda** källan till formelreferenser: inga fältläsningar/-skrivningar från beräkningar, inga anrop av funktioner eller egna funktioner, inga plugin-anrop för något som definieras i den filen. Var-används, plugin-inventeringen och objektgrafen är tyst blinda för den.\n\n**Ingen åtgärd inom FM-Lab.** Informationen saknas i exporten: spara filen igen med alternativet aktiverat och importera på nytt. Formelantalen visar vad som går förlorat; *plugin-formler* använder samma textvokabulär som regeln **Plugin-anrop utan referens** (MBS plus varje plugin-prefix som katalogen känner till) och är en undre gräns.\n\nXML-importsidan visar samma utlåtande före importen (huvudkontroll per fil); importloggen rapporterar det som en varning."
+  }
+}

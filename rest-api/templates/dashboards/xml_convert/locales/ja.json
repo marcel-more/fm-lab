@@ -5,9 +5,10 @@
   },
   "layout": {
     "files_table.props.columns[1].label": "ファイル",
-    "files_table.props.columns[2].label": "日付",
-    "files_table.props.columns[3].label": "サイズ",
-    "files_table.props.columns[4].label": "インポート済み",
+    "files_table.props.columns[2].label": "DDR",
+    "files_table.props.columns[3].label": "日付",
+    "files_table.props.columns[4].label": "サイズ",
+    "files_table.props.columns[5].label": "インポート済み",
     "files_table.props.empty.message": "XML ディレクトリにファイルがありません。",
     "last_run.props.title": "最後の変換",
     "import_integrity.props.title": "インポート整合性",

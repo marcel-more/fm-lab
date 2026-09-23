@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "type": "Grid",
+    "props": {
+      "columns": 12,
+      "gap": 16
+    },
+    "children": [
+      {
+        "type": "Card",
+        "id": "summary_card",
+        "props": {
+          "span": 12,
+          "variant": "hero"
+        },
+        "data": {
+          "dataset": "summary"
+        },
+        "children": [
+          {
+            "type": "KPIStrip",
+            "id": "summary_kpi",
+            "props": {
+              "items": [
+                {
+                  "label": "Files without DDR info",
+                  "field": "finding_count",
+                  "format": "number",
+                  "tone": "warning",
+                  "toneWhen": "nonzero"
+                },
+                {
+                  "label": "Formulas affected",
+                  "field": "affected_formulas",
+                  "format": "number",
+                  "tone": "warning",
+                  "toneWhen": "nonzero"
+                },
+                {
+                  "label": "Plug-in formulas affected",
+                  "field": "affected_plugin_formulas",
+                  "format": "number",
+                  "tone": "warning",
+                  "toneWhen": "nonzero"
+                },
+                {
+                  "label": "Files in solution",
+                  "field": "files_total",
+                  "format": "number"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "findings_card",
+        "props": {
+          "span": 12,
+          "title": "Files exported without DDR info"
+        },
+        "data": {
+          "dataset": "findings"
+        },
+        "children": [
+          {
+            "type": "Table",
+            "id": "findings_table",
+            "props": {
+              "rowKey": "row_key",
+              "density": "comfortable",
+              "sortable": true,
+              "searchable": "auto",
+              "searchAutoThreshold": 3,
+              "searchPlaceholder": "Search file…",
+              "columns": [
+                {
+                  "field": "name",
+                  "label": "File"
+                },
+                {
+                  "field": "filemaker_version",
+                  "label": "FileMaker"
+                },
+                {
+                  "field": "saxml_profile",
+                  "label": "SaXML",
+                  "format": "badge"
+                },
+                {
+                  "field": "formulas_total",
+                  "label": "Formulas",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "plugin_text_formulas",
+                  "label": "Plug-in formulas",
+                  "align": "right",
+                  "format": "number"
+                }
+              ],
+              "onRowClick": {
+                "action": "openObject",
+                "args": {
+                  "uuid": "{{nav_uuid}}",
+                  "type": "{{type}}",
+                  "file": "{{file}}"
+                }
+              },
+              "empty": {
+                "message": "Every file was exported with DDR info."
+              },
+              "alwaysShowCount": true
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "notes_card",
+        "props": {
+          "span": 12,
+          "title": "About this check"
+        },
+        "children": [
+          {
+            "type": "Markdown",
+            "id": "notes_md",
+            "props": {
+              "content": "A FileMaker file saved as XML **without** the option *Include details for analysis tools* carries no `DDR_INFO` block. The import still succeeds and looks complete — scripts, fields, layouts and every formula text are present — but the DDR chunk stream is the **only** source of formula references: no field reads/writes from calculations, no function or custom-function calls, no plug-in calls for anything defined in that file. Where-used, the plug-in inventory and the object graph are silently blind for it.\n\n**No fix inside FM-Lab.** The information is absent from the export: save the file again with the option enabled and import it again. The formula counts show what is lost; *plug-in formulas* uses the same text vocabulary as the rule **Plug-in call without reference** (MBS plus every plug-in prefix the catalog knows) and is a lower bound.\n\nThe XML-import page shows the same verdict before the import (header probe of each file), the import log reports it as a warning."
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

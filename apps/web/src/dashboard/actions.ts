@@ -142,6 +142,18 @@ export function dispatchAction(
         }
       }
       const merged = nested ?? flat;
+      // A FileMaker file has its own detail page (`/file/:name`, the `file`
+      // bundle). The generic object view knows no File renderer, so a File row
+      // would land on a bare header. Rule bundles reach this branch two ways:
+      // with a literal `type: "File"` (export_ddr_missing) and with a `{{type}}`
+      // taken from ObjectCatalog, which yields 'File' on cloned files
+      // (uuid_clone_collisions) — hence the redirect lives here and not in the
+      // single bundle. Without a file name we keep the generic route: the File
+      // object's UUID alone cannot address `/file/:name`.
+      if (String(merged.type ?? '') === 'File' && String(merged.file ?? '')) {
+        ctx.navigate(`/file/${encodeURIComponent(String(merged.file))}`);
+        return;
+      }
       const qs = Object.keys(merged).length > 0
         ? new URLSearchParams(
             Object.fromEntries(

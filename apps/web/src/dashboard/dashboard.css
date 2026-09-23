@@ -192,8 +192,10 @@
   justify-self: start;
   padding: 2px 8px;
   border-radius: 999px;
-  background: var(--color-info-bg);
-  color: var(--color-info-fg);
+  /* Geometry only. Colour comes from `.dash-badge` and its value/tone
+     modifiers further down — a two-class selector here would out-specify
+     every `.dash-badge--*` rule and force each definition-list badge to the
+     neutral info tone. */
 }
 
 /* --- List --- */
@@ -295,6 +297,12 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
+  /* Eigener Stacking-Context: der Zeilen-Fortschrittsbalken liegt als
+   * z-index:-1-Overlay hinter den Zellinhalten (siehe .dash-table__fill).
+   * Ohne diese Isolation würde er unter den Hintergrund der umgebenden
+   * Karte rutschen und unsichtbar werden. `isolation` statt `position`,
+   * damit sich an Layout und Containing-Block nichts ändert. */
+  isolation: isolate;
 }
 .dash-table th,
 .dash-table td {
@@ -405,10 +413,20 @@
 }
 /* Filling-Row — importierende Datei mit bekannter Chunk-Gesamtzahl: statt des
  * indeterminaten Puls-Hintergrunds ein linksbündiger, mit dem Chunk-Fortschritt
- * (done/total) wachsender Balken. Der Gradient liegt per Inline-Style auf der
- * <tr> (spannt die volle Zeilenbreite über alle Zellen); --fill-color liefert
- * die theme-fähige Farbe, die Zellen bleiben transparent, damit der Balken
- * durchscheint. Kein Puls — der wachsende Balken IST das Fortschrittssignal. */
+ * (done/total) wachsender Balken. Kein Puls — der wachsende Balken IST das
+ * Fortschrittssignal.
+ *
+ * Der Balken ist bewusst KEIN Hintergrund der <tr>: im CSS-Tabellen-Malmodell
+ * malt nicht die Zeile ihren Hintergrund, sondern jede Zelle malt den geerbten
+ * Layer-Stapel (table → colgroup → col → rowgroup → row → cell) selbst. Als
+ * Positionierungsbereich dieser geerbten Layer nimmt WebKit (Safari, alle
+ * iOS-Browser) die ZELLE statt der Zeilenbox — ein Verlauf auf der <tr> beginnt
+ * dort in jeder Zelle neu und zerfällt in so viele Fragmente, wie die Tabelle
+ * Spalten hat (WebKit-Bug 34392, unbehoben). Stattdessen hängt der Balken als
+ * absolut positioniertes Overlay in der ersten Zelle und ragt über die
+ * restlichen Spalten hinaus; seine Pixelbreite liefert die Komponente aus der
+ * gemessenen Tabellenbreite. --fill-color liefert die theme-fähige Farbe, die
+ * Zellen bleiben transparent, damit der Balken durchscheint. */
 .dash-table__row--filling {
   --fill-color: rgba(255, 145, 30, 0.38);
 }
@@ -416,6 +434,26 @@
   --fill-color: rgba(255, 160, 50, 0.42);
 }
 .dash-table__row--filling > td { background: transparent; }
+/* Die erste Zelle ist der Anker des Overlays. `overflow` bleibt sichtbar, damit
+ * der Balken über die Spaltengrenze hinauswachsen kann. */
+.dash-table__row--filling > td:first-child { position: relative; }
+/* Ein Zeilen-Hover darf den Balken nicht überdecken: der Hover-Hintergrund
+ * liegt auf der <tr> und damit (als geerbter Layer jeder Zelle) über dem
+ * z-index:-1-Overlay. Für laufende Zeilen daher abschalten. */
+.dash-table__row--filling:hover { background: transparent; }
+.dash-table__fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: -1;
+  background: var(--fill-color);
+  pointer-events: none;
+  transition: width 0.3s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dash-table__fill { transition: none; }
+}
 /* Done-Row — in diesem Lauf fertig konvertierte Datei. Ganz heller grüner
  * Hintergrund (kein Puls), bleibt bis zum Lauf-Ende und verschwindet dann. */
 .dash-table__row--done > td {
@@ -462,6 +500,17 @@
 }
 .dash-search-bar__count {
   font-weight: 500;
+}
+/* Hervorgehobenes Warn-Label in der Zähler-Zeile (Opt-in `summaryFlag*` der
+   Table-Primitive, z.B. „DDR-Info fehlt" auf der XML-Import-Seite). Nur das
+   Label trägt die Warn-Tokens, der Hinweistext dahinter bleibt Zählerzeilen-Typo. */
+.dash-search-bar__flag {
+  color: var(--color-warning-fg);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  border-radius: 3px;
+  padding: 0 5px;
+  font-weight: 600;
 }
 .dash-search-bar__input {
   flex: 0 1 240px;

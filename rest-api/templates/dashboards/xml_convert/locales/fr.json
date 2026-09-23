@@ -5,9 +5,10 @@
   },
   "layout": {
     "files_table.props.columns[1].label": "Fichier",
-    "files_table.props.columns[2].label": "Date",
-    "files_table.props.columns[3].label": "Taille",
-    "files_table.props.columns[4].label": "Importé",
+    "files_table.props.columns[2].label": "DDR",
+    "files_table.props.columns[3].label": "Date",
+    "files_table.props.columns[4].label": "Taille",
+    "files_table.props.columns[5].label": "Importé",
     "files_table.props.empty.message": "Aucun fichier dans le répertoire XML.",
     "last_run.props.title": "Dernière conversion",
     "import_integrity.props.title": "Intégrité de l'import",

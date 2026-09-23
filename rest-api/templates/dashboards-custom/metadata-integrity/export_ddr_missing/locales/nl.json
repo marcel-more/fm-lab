@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "Export zonder DDR-info",
+    "description": "Metadata-integriteitscontrole — bestanden geëxporteerd zonder DDR-info (optie “Details opnemen voor analysetools” stond uit). De import lijkt compleet, maar de catalogus bevat voor deze bestanden geen formuleverwijzingen (velden, functies, aangepaste functies, plug-in-aanroepen).",
+    "analysis.defaultResult.meaning": "Aantal bestanden geëxporteerd zonder DDR-info (hun formuleverwijzingen ontbreken in de catalogus)"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Bestanden zonder DDR-info",
+    "summary_kpi.props.items[1].label": "Getroffen formules",
+    "summary_kpi.props.items[2].label": "Getroffen plug-in-formules",
+    "summary_kpi.props.items[3].label": "Bestanden in de oplossing",
+    "findings_card.props.title": "Bestanden geëxporteerd zonder DDR-info",
+    "findings_table.props.columns[0].label": "Bestand",
+    "findings_table.props.columns[1].label": "FileMaker",
+    "findings_table.props.columns[2].label": "SaXML",
+    "findings_table.props.columns[3].label": "Formules",
+    "findings_table.props.columns[4].label": "Plug-in-formules",
+    "findings_table.props.searchPlaceholder": "Zoek bestand…",
+    "findings_table.props.empty.message": "Alle bestanden zijn met DDR-info geëxporteerd.",
+    "notes_card.props.title": "Over deze controle",
+    "notes_md.props.content": "Een FileMaker-bestand dat **zonder** de optie *Details opnemen voor analysetools* als XML is opgeslagen, bevat geen `DDR_INFO`-blok. De import slaagt en lijkt compleet — scripts, velden, lay-outs en elke formuletekst zijn aanwezig — maar de DDR-chunkstroom is de **enige** bron van formuleverwijzingen: geen veldlezingen/-schrijvingen vanuit berekeningen, geen functie- of aangepaste-functie-aanroepen, geen plug-in-aanroepen voor alles wat in dat bestand is gedefinieerd. Waar-gebruikt, de plug-in-inventaris en de objectgraaf zijn er stilzwijgend blind voor.\n\n**Geen oplossing binnen FM-Lab.** De informatie ontbreekt in de export: sla het bestand opnieuw op met de optie ingeschakeld en importeer het opnieuw. De formuletellingen tonen wat verloren gaat; *plug-in-formules* gebruikt hetzelfde tekstvocabulaire als de regel **Plug-in-aanroep zonder verwijzing** (MBS plus elk plug-in-voorvoegsel dat de catalogus kent) en is een ondergrens.\n\nDe XML-importpagina toont hetzelfde oordeel vóór de import (headerpeiling per bestand); het importlogboek meldt het als waarschuwing."
+  }
+}

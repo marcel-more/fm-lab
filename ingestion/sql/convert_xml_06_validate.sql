@@ -576,12 +576,26 @@ SELECT
 FROM slots
 GROUP BY side;
 
+-- Dateien ohne DDR-Info — der Export lief ohne „Details für Analysewerkzeuge
+-- einschließen" (Root-Attribut Has_DDR_INFO="False"). Der Import ist trotzdem
+-- vollständig (Objekte, Formeltexte), aber der DDR-Chunk-Strom ist die EINZIGE
+-- Quelle für Formel-Referenzen (Felder, Funktionen, Custom Functions,
+-- Plugin-Aufrufe) — für diese Dateien existieren keine. > 0 ⇒ Warn-Finding:
+-- Re-Export mit der Option. Gegenstück zur Header-Probe der Import-Seite
+-- (rest-api utils/xml-head.js) und zum Analysis-Test plugin-availability.
+CREATE OR REPLACE VIEW v_check_ddr_missing AS
+SELECT
+    COUNT(*) AS file_n,
+    string_agg(File_Name, ', ' ORDER BY File_Name) AS files
+FROM FilesCatalog
+WHERE NOT COALESCE(Has_DDR_INFO, FALSE);
+
 -- „Function Missing"-Platzhalter — FileMaker schreibt bei einer beim EXPORT nicht
 -- geladenen Plugin-Funktion <Chunk type="VariableReference">Function Missing</Chunk>.
 -- P3 verwirft diese Chunks aus der Variablen-Extraktion (kein Scheinvariablen-Objekt),
 -- die Roh-Chunks bleiben aber in DDR_Calculations. Diese View zählt sie, damit die
 -- eigentliche Information (ein Plugin fehlte im Export → Referenzen unauflösbar) als
--- Info-Finding sichtbar wird statt still unterzugehen. > 0 ⇒ Export unvollständig
+-- Warn-Finding sichtbar wird statt still unterzugehen. > 0 ⇒ Export unvollständig
 -- (Plugin auf dem exportierenden Client nicht installiert/aktiviert).
 CREATE OR REPLACE VIEW v_check_function_missing AS
 SELECT

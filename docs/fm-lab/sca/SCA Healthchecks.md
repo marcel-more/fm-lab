@@ -8,7 +8,7 @@ Open it at `/dashboard/health_hints`, or from the dashboards overview.
 
 ## What the page shows
 
-**The hero KPI strip** is one aggregate over the three rule subtrees — `static-code-analysis`, `metadata-integrity`, `developer-workflow` — currently **136 declared rule dashboards** (128 + 2 + 6). It counts rules, not findings:
+**The hero KPI strip** is one aggregate over the three rule subtrees — `static-code-analysis`, `metadata-integrity`, `developer-workflow` — currently **148 declared rule dashboards** (137 + 5 + 6). It counts rules, not findings:
 
 | KPI | Meaning |
 |---|---|

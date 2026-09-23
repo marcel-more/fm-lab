@@ -1,0 +1,28 @@
+{
+  "manifest": {
+    "title": "Chamada a plug-in sem referência",
+    "description": "Verificação de integridade de metadados — chamadas a plug-ins em arquivos exportados com informações DDR que mesmo assim não obtiveram referência: um nome de função dinâmico (MBS($name; …)) que o conversor não consegue resolver, ou um emparelhamento de fragmentos não resolvido. Arquivos exportados sem informações DDR são o achado de «Exportação sem informações DDR» e ficam excluídos aqui.",
+    "analysis.defaultResult.meaning": "Número de fórmulas em arquivos com informações DDR cuja chamada a plug-in não tem referência no catálogo: nomes de função dinâmicos (info) e emparelhamentos não resolvidos (aviso)"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Achados",
+    "summary_kpi.props.items[1].label": "Nome dinâmico (info)",
+    "summary_kpi.props.items[2].label": "Não resolvidas (aviso)",
+    "summary_kpi.props.items[3].label": "Somente em comentário",
+    "summary_kpi.props.items[4].label": "Arquivos sem informações DDR (excluídos)",
+    "summary_kpi.props.items[5].label": "Arquivos afetados",
+    "findings_card.props.title": "Chamadas a plug-in sem referência",
+    "findings_table.props.chipFilter.allLabel": "Todas as causas",
+    "findings_table.props.columns[0].label": "Causa",
+    "findings_table.props.columns[1].label": "Arquivo",
+    "findings_table.props.columns[2].label": "Objeto",
+    "findings_table.props.columns[3].label": "Tipo",
+    "findings_table.props.columns[4].label": "Cálculo",
+    "findings_table.props.columns[5].label": "Passo",
+    "findings_table.props.columns[6].label": "Fórmula",
+    "findings_table.props.searchPlaceholder": "Pesquisar arquivo, objeto ou fórmula…",
+    "findings_table.props.empty.message": "Cada chamada a plug-in em arquivos com informações DDR foi resolvida para uma referência.",
+    "notes_card.props.title": "Sobre esta verificação",
+    "notes_md.props.content": "O texto da fórmula contém uma chamada a plug-in, mas a instância de cálculo não carrega aresta `calls_pluginfunction` — a chamada é invisível para onde-é-usado, o inventário de plug-ins, os testes de plataforma e os contadores da documentação. Só são examinados arquivos exportados **com** informações DDR: em um arquivo exportado sem elas, cada chamada a plug-in fica não resolvida pelo mesmo motivo no nível do arquivo, que a regra irmã **Exportação sem informações DDR** reporta uma vez por arquivo; listar essas chamadas aqui repetiria esse achado centenas de vezes. O resumo conta os arquivos excluídos.\n\nDuas causas, como chips:\n\n- **dynamic-name** — `MBS($name; …)`: o nome da função não é um literal, nenhum destino pode ser resolvido e o conversor descarta a chamada de objetos e arestas. A fórmula ainda pode carregar uma aresta por uma chamada literal vizinha — é listada porque uma de suas chamadas se perde. *Info*: um estilo de código que a análise estática não consegue seguir, não um defeito de exportação.\n- **unresolved** — informações DDR presentes, sem linha de uso, não dinâmica: o emparelhamento de fragmentos falhou. Ponto cego do conversor — reporte a fórmula. *Aviso.*\n\nVocabulário: `MBS` mais cada prefixo de plug-in que o catálogo conhece. Chamadas dentro de comentários `/* … */` ou `//` não contam (*somente em comentário* no resumo); uma chamada a plug-in dentro de um literal de texto (p. ex. `Evaluate(\"MBS(…\")`) é o único falso positivo residual conhecido."
+  }
+}

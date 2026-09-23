@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { PrimitiveProps } from '../types';
 import { formatTableCell, formatKpiValue } from './_format';
 import { translateCellValue } from './_cellTranslate';
+import { badgeToneClass, type BadgeTone } from './_badgeTone';
 import { useRowSearch } from './_useRowSearch';
 import { dispatchAction } from '../actions';
 import { isActionActive } from '../actionState';
@@ -33,6 +34,9 @@ interface ColumnSpec {
   // button whose tooltip reveals the raw value (for long identifiers like
   // UUIDs that would waste column width as plain text).
   format?: string;
+  // Semantic colour per badge value, overriding the value-derived class
+  // (see _badgeTone.ts). Only meaningful with `format: 'badge'`.
+  badgeTone?: BadgeTone;
 }
 
 interface ChipFilterGroup {
@@ -99,11 +103,43 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
   const summaryNewField = props.summaryNewField as string | undefined;
   const summaryNewValue = props.summaryNewValue as string | undefined;
   const summarySizeField = props.summarySizeField as string | undefined;
+  // `summaryFlagField`/`summaryFlagValue` zählen Zeilen mit einem Feld-Wert und
+  // rendern bei ≥ 1 Treffer ein hervorgehobenes Warn-Label (`summaryFlagLabelKey`,
+  // i18n-Key, erhält { count, total }; Suffix `_partial` wenn nicht alle Zeilen
+  // betroffen sind) plus optionalen Hinweistext (`summaryFlagHintKey`). Erster
+  // Nutzer: „DDR-Info fehlt" auf der XML-Import-Seite (ddr_info === false).
+  // null/undefined-Werte zählen nie als Treffer.
+  const summaryFlagField = props.summaryFlagField as string | undefined;
+  const summaryFlagValue = props.summaryFlagValue as unknown;
+  const summaryFlagLabelKey = props.summaryFlagLabelKey as string | undefined;
+  const summaryFlagHintKey = props.summaryFlagHintKey as string | undefined;
   // Opt-in: Zähler-/Status-Zeile immer rendern, auch wenn das Suchfeld (noch)
   // ausgeblendet ist (z.B. wenige Dateien). Ohne diese Prop erscheint die Zeile
   // wie bisher nur zusammen mit dem Suchfeld.
   const alwaysShowCount = (props.alwaysShowCount as boolean) ?? false;
   const liveStates = useXmlConvertFileStates(!!liveHighlightField);
+  // Breite des Zeilen-Fortschrittsbalkens: der Balken spannt die ganze Zeile,
+  // hängt aber als absolut positioniertes Overlay in der ERSTEN Zelle — ein
+  // Hintergrund auf der <tr> ist keine Option, weil WebKit (Safari) den
+  // Zeilenhintergrund pro Zelle neu anlegt und ein Verlauf dort in ebenso viele
+  // Fragmente zerfällt, wie die Tabelle Spalten hat (siehe dashboard.css,
+  // .dash-table__row--filling). Die Zeilenbreite ist die Tabellenbreite, also
+  // messen wir die einmal und halten sie per ResizeObserver aktuell — nur
+  // während eines laufenden Imports.
+  const tableRef = useRef<HTMLTableElement>(null);
+  const [tableWidth, setTableWidth] = useState(0);
+  const measureTable = !!liveHighlightField && liveStates.active;
+  useEffect(() => {
+    if (!measureTable) return;
+    const el = tableRef.current;
+    if (!el) return;
+    const measure = () => setTableWidth(el.getBoundingClientRect().width);
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [measureTable]);
   const rows = dataset?.data ?? [];
   const [searchParams] = useSearchParams();
 
@@ -192,6 +228,15 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
     return sortedRows.reduce((acc, r) => acc + (Number(r[summarySizeField]) || 0), 0);
   }, [sortedRows, summarySizeField]);
 
+  const summaryFlagCount = useMemo(() => {
+    if (!summaryFlagField || !summaryFlagLabelKey) return null;
+    const want = String(summaryFlagValue ?? '');
+    return sortedRows.reduce((acc, r) => {
+      const v = r[summaryFlagField];
+      return acc + (v != null && String(v) === want ? 1 : 0);
+    }, 0);
+  }, [sortedRows, summaryFlagField, summaryFlagValue, summaryFlagLabelKey]);
+
   if (rows.length === 0) {
     return <div className="dash-table__empty">{empty?.message ?? t('common:noEntries')}</div>;
   }
@@ -265,6 +310,20 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
                 size: formatKpiValue(summaryTotalSize, 'filesize', lang),
               })}</>
             )}
+            {summaryFlagCount != null && summaryFlagCount > 0 && summaryFlagLabelKey && (
+              <>
+                {' · '}
+                <span className="dash-search-bar__flag">
+                  {t(
+                    summaryFlagCount === sortedRows.length
+                      ? summaryFlagLabelKey
+                      : `${summaryFlagLabelKey}_partial`,
+                    { count: summaryFlagCount, total: sortedRows.length },
+                  ) as string}
+                </span>
+                {summaryFlagHintKey && <> – {t(summaryFlagHintKey) as string}</>}
+              </>
+            )}
           </span>
           {search.visible && (
             <input
@@ -277,7 +336,7 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
           )}
         </div>
       )}
-      <table className="dash-table">
+      <table className="dash-table" ref={tableRef}>
         <thead>
           <tr>
             {columns.map(c => {
@@ -315,7 +374,7 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
               : undefined;
             const liveState = liveEntry?.state;
             // Importierende Datei mit bekannter Chunk-Gesamtzahl → determinierter
-            // Fortschrittsbalken (done/total) als linksbündige Hintergrund-Füllung der
+            // Fortschrittsbalken (done/total) als linksbündiger Balken hinter der
             // Zeile. Solange total fehlt (kurz nach import_start im Fallback) bzw.
             // während des Splittens (chunking) bleibt es beim indeterminaten Puls.
             const fillTotal = liveState === 'importing' ? liveEntry?.total : undefined;
@@ -335,27 +394,26 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
               liveState === 'imported' ? 'dash-table__row--done' : '',
               liveState === 'failed' ? 'dash-table__row--failed' : '',
             ].filter(Boolean).join(' ') || undefined;
-            // Inline-Gradient: linksbündige Orange-Füllung bis fillPct, danach
-            // transparent. Inline (statt CSS-Klasse) gewinnt zuverlässig gegen den
-            // :hover-Hintergrund derselben <tr>; die Farbe kommt aus der theme-fähigen
-            // --fill-color (gesetzt von .dash-table__row--filling).
-            const rowStyle = isFilling
-              ? {
-                  background:
-                    `linear-gradient(to right, var(--fill-color) 0, ` +
-                    `var(--fill-color) ${fillPct}%, transparent ${fillPct}%)`,
-                }
-              : undefined;
+            // Fortschritts-Overlay: linksbündiger Balken bis fillPct der
+            // ZEILEN-Breite, gerendert als absolut positioniertes <span> in der
+            // ersten Zelle (siehe `tableWidth` oben). Die Farbe kommt aus der
+            // theme-fähigen --fill-color (gesetzt von .dash-table__row--filling).
+            const fillOverlay = isFilling ? (
+              <span
+                className="dash-table__fill"
+                aria-hidden="true"
+                style={{ width: `${(fillPct / 100) * tableWidth}px` }}
+              />
+            ) : null;
             return (
               <tr
                 key={key}
                 className={rowClass}
-                style={rowStyle}
                 onClick={clickable ? () => handleRowClick(row) : undefined}
                 aria-current={isActive ? 'true' : undefined}
                 aria-selected={selectable ? isSelected(row) : undefined}
               >
-                {columns.map(c => {
+                {columns.map((c, ci) => {
                   let rawValue = row[c.field];
                   // Live-Status-Spalte (z.B. "emoji") während eines Laufs vom
                   // Live-Status überschreiben: beim Start alle Checkmarks leeren
@@ -380,6 +438,7 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
                         key={c.field}
                         className={c.align ? `dash-table__td--${c.align}` : undefined}
                       >
+                        {ci === 0 && fillOverlay}
                         {copyValue !== '' && (
                           <button
                             type="button"
@@ -433,12 +492,20 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
                       key={c.field}
                       className={c.align ? `dash-table__td--${c.align}` : undefined}
                     >
+                      {ci === 0 && fillOverlay}
                       {isBadge ? (
-                        <span
-                          className={`dash-badge dash-badge--${slugify(String(rawValue ?? ''))}`}
-                        >
-                          {formatted}
-                        </span>
+                        // A badge is a category, and an absent value is no
+                        // category — render nothing rather than a pill around
+                        // the "—" placeholder. This is what lets a column show
+                        // only the exceptions (XML import: `ddr_flag` is set on
+                        // the files MISSING DDR info and null on all others).
+                        rawValue == null || rawValue === '' ? null : (
+                          <span
+                            className={`dash-badge ${badgeToneClass(rawValue, c.badgeTone)}`}
+                          >
+                            {formatted}
+                          </span>
+                        )
                       ) : (
                         <>
                           {formatted}
@@ -464,9 +531,6 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
   );
 }
 
-function slugify(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-}
 
 function compareValues(a: unknown, b: unknown, lang: string): number {
   if (a === b) return 0;

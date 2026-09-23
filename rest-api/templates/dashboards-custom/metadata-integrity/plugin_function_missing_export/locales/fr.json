@@ -1,0 +1,25 @@
+{
+  "manifest": {
+    "title": "Fonction de plug-in manquante à l'export",
+    "description": "Vérification d'intégrité des métadonnées : formules dans lesquelles FileMaker a remplacé une fonction de plug-in par <Function Missing> à l'export, parce que le plug-in n'était pas chargé sur le client exportateur. Les appels manquent dans le graphe d'objets et le texte ne nomme plus le plug-in.",
+    "analysis.defaultResult.meaning": "Nombre de formules dont la fonction de plug-in a été remplacée par <Function Missing> à l'export"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Formules",
+    "summary_kpi.props.items[1].label": "Marqueurs",
+    "summary_kpi.props.items[2].label": "Objets concernés",
+    "summary_kpi.props.items[3].label": "Fichiers concernés",
+    "findings_card.props.title": "Formules avec <Function Missing>",
+    "findings_table.props.columns[0].label": "Fichier",
+    "findings_table.props.columns[1].label": "Objet",
+    "findings_table.props.columns[2].label": "Type",
+    "findings_table.props.columns[3].label": "Calcul",
+    "findings_table.props.columns[4].label": "Action",
+    "findings_table.props.columns[5].label": "Manquantes",
+    "findings_table.props.columns[6].label": "Formule",
+    "findings_table.props.searchPlaceholder": "Rechercher fichier, objet ou formule…",
+    "findings_table.props.empty.message": "Aucune formule n'a perdu de fonction de plug-in à l'export.",
+    "notes_card.props.title": "À propos de cette vérification",
+    "notes_md.props.content": "Lorsqu'un plug-in **n'est pas chargé sur le client qui enregistre le XML**, FileMaker remplace le nom de la fonction dans le texte même de la formule par le marqueur `<Function Missing>` (et marque le fragment DDR comme référence non résoluble). L'appel a disparu de l'export : aucun objet de plug-in, aucune arête d'appel — et le texte ne dit plus de quel plug-in il s'agissait. La règle lit le **texte** de la formule et fonctionne donc avec et sans informations DDR.\n\n**Aucune correction dans FM-Lab.** Réenregistrez le fichier en XML sur un client où le plug-in est installé et activé. L'*extrait de formule* conserve les arguments — souvent le seul indice du plug-in visé.\n\nLe journal d'import signale le même défaut comme avertissement (fragments `Function Missing`)."
+  }
+}

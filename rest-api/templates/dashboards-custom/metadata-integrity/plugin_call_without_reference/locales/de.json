@@ -1,0 +1,28 @@
+{
+  "manifest": {
+    "title": "Plugin-Aufruf ohne Referenz",
+    "description": "Metadaten-Integritätsprüfung — Plugin-Aufrufe in Dateien, die mit DDR-Info exportiert wurden und trotzdem keine Referenz bekommen haben: ein dynamischer Funktionsname (MBS($name; …)), den der Konverter nicht auflösen kann, oder eine nicht aufgelöste Chunk-Paarung. Dateien ohne DDR-Info sind der Befund von „Export ohne DDR-Info“ und hier ausgeschlossen.",
+    "analysis.defaultResult.meaning": "Anzahl der Formeln in Dateien mit DDR-Info, deren Plugin-Aufruf keine Referenz im Katalog trägt — dynamische Funktionsnamen (Info) und nicht aufgelöste Paarungen (Warnung)"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Treffer",
+    "summary_kpi.props.items[1].label": "Dynamischer Name (Info)",
+    "summary_kpi.props.items[2].label": "Nicht aufgelöst (Warnung)",
+    "summary_kpi.props.items[3].label": "Nur im Kommentar",
+    "summary_kpi.props.items[4].label": "Dateien ohne DDR-Info (ausgeschlossen)",
+    "summary_kpi.props.items[5].label": "Betroffene Dateien",
+    "findings_card.props.title": "Plugin-Aufrufe ohne Referenz",
+    "findings_table.props.chipFilter.allLabel": "Alle Ursachen",
+    "findings_table.props.columns[0].label": "Ursache",
+    "findings_table.props.columns[1].label": "Datei",
+    "findings_table.props.columns[2].label": "Objekt",
+    "findings_table.props.columns[3].label": "Typ",
+    "findings_table.props.columns[4].label": "Berechnung",
+    "findings_table.props.columns[5].label": "Schritt",
+    "findings_table.props.columns[6].label": "Formel",
+    "findings_table.props.searchPlaceholder": "Datei, Objekt oder Formel suchen…",
+    "findings_table.props.empty.message": "Jeder Plugin-Aufruf in Dateien mit DDR-Info ist zu einer Referenz aufgelöst.",
+    "notes_card.props.title": "Über diese Prüfung",
+    "notes_md.props.content": "Der Formeltext enthält einen Plugin-Aufruf, aber die Berechnungsinstanz trägt keine `calls_pluginfunction`-Kante — der Aufruf ist für Where-used, das Plugin-Inventar, die Plattform-Tests und die Doku-Zähler unsichtbar. Geprüft werden nur Dateien, die **mit** DDR-Info exportiert wurden: in einer Datei ohne DDR-Info ist jeder Plugin-Aufruf aus demselben dateibezogenen Grund unaufgelöst, den die Schwester-Regel **Export ohne DDR-Info** einmal je Datei meldet; diese Aufrufe hier zu listen würde den einen Befund hundertfach wiederholen. Die Summary zählt die ausgeschlossenen Dateien.\n\nZwei Ursachen, als Chips:\n\n- **dynamic-name** — `MBS($name; …)`: der Funktionsname ist kein Literal, es lässt sich kein Ziel auflösen, und der Konverter lässt den Aufruf aus Objekten und Kanten weg. Die Formel kann über einen benachbarten Literal-Aufruf trotzdem eine Kante tragen — sie ist gelistet, weil einer ihrer Aufrufe verloren ist. *Info*: ein Code-Stil, dem die statische Analyse nicht folgen kann, kein Exportfehler.\n- **unresolved** — DDR-Info vorhanden, keine Usage-Zeile, nicht dynamisch: die Chunk-Paarung hat versagt. Eine Konverter-Blindstelle — bitte die Formel melden. *Warnung.*\n\nVokabular: `MBS` plus jedes Plugin-Präfix, das der Katalog selbst kennt. Aufrufe in `/* … */`- oder `//`-Kommentaren zählen nicht (*nur im Kommentar* in der Summary); ein Plugin-Aufruf in einem String-Literal (z. B. `Evaluate(\"MBS(…\")`) ist der einzige bekannte Rest-Fehlalarm."
+  }
+}

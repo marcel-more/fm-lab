@@ -5,6 +5,7 @@ import { formatKpiValue } from './_format';
 import { dispatchAction } from '../actions';
 import { isActionActive } from '../actionState';
 import { translateCellValue } from './_cellTranslate';
+import { badgeToneClass } from './_badgeTone';
 import type { ActionSpec } from '../actions';
 import type { KpiItem } from './KPI';
 
@@ -32,7 +33,14 @@ export function KPIStrip({ node, row, dataset, navigate }: PrimitiveProps) {
         const click: ActionSpec | undefined = item.onClick;
         const clickable = !!click;
         const active = clickable ? isActionActive(click, row, searchParams) : false;
-        const badgeClass = isBadge ? ` dash-kpi__value--badge dash-badge--${slugify(String(rawValue ?? ''))}` : '';
+        const badgeClass = isBadge ? ` dash-kpi__value--badge ${badgeToneClass(rawValue, item.badgeTone)}` : '';
+        // Result-state colour for a plain value (see KpiItem.tone). With
+        // `toneWhen: 'nonzero'` a zero stays neutral, so the colour appears
+        // exactly when the KPI has something to report. Non-numeric values
+        // count as present.
+        const toneActive = item.tone
+          && (item.toneWhen !== 'nonzero' || (rawValue != null && Number(rawValue) !== 0));
+        const toneClass = toneActive ? ` dash-state-${item.tone}` : '';
         const cls = [
           'dash-kpi',
           clickable ? 'dash-kpi--clickable' : '',
@@ -48,14 +56,10 @@ export function KPIStrip({ node, row, dataset, navigate }: PrimitiveProps) {
             aria-pressed={active}
           >
             <span className="dash-kpi__label">{item.label}</span>
-            <span className={`dash-kpi__value${badgeClass}`}>{formatted}</span>
+            <span className={`dash-kpi__value${badgeClass}${toneClass}`}>{formatted}</span>
           </button>
         );
       })}
     </div>
   );
-}
-
-function slugify(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }

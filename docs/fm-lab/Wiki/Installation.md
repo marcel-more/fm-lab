@@ -47,8 +47,8 @@ The catalog (`db/`), conversions and settings live in the cloned repo **on the h
 
 ### b) VS Code Dev Container (easy start)
 
-Open the repository in VS Code with the **Dev Containers** extension installed, select **“Reopen in Container”** → pick **`fm-lab`** or **`fm-lab + Claude Code`**. Everything starts automatically — bootstrap and both servers; VS Code then shows a clickable notification for the web client on port 5173. In the Claude variant the egress firewall and a credentials preflight run on start, and you reach the agent through the **Claude Code for VS Code** extension — no terminal steps required.
-Recommended if you already work in VS Code.
+Open the repository in VS Code with the **[Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)** extension installed, select **“Reopen in Container”** → pick **`fm-lab`** or **`fm-lab + Claude Code`**. Everything starts automatically — bootstrap and both servers; VS Code then shows a clickable notification for the web client on port 5173. In the Claude variant the egress firewall and a credentials preflight run on start, and you reach the agent through the **Claude Code for VS Code** extension — no terminal steps required.
+Recommended if you already work in VS Code — Microsoft's [Developing inside a Container](https://code.visualstudio.com/docs/devcontainers/containers) guide explains the extension and the container workflow itself.
 
 ### c) Native (no Docker, macOS / Linux)
 
@@ -103,6 +103,7 @@ FMLAB_DUCKDB_THREADS=4  # thread cap (raise on hosts with more cores)
 ## Prerequisites
 
 - **Docker (ways a / b):** only **[Docker](https://docs.docker.com/get-docker/)** on the host — everything else is in the image.
-- **Native (way c):** [DuckDB CLI](https://duckdb.org/docs/installation/) ≥ 1.5.4 + the **webbed** community extension (the XML reader; `init.sh` installs it when missing); Node.js ≥ 20, npm ≥ 10.
+- **VS Code Dev Container (way b), on top of Docker:** [VS Code](https://code.visualstudio.com/) and the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) (`ms-vscode-remote.remote-containers`) — installation and the container workflow are documented in Microsoft's [Developing inside a Container](https://code.visualstudio.com/docs/devcontainers/containers) guide.
+- **Native (way c):** [DuckDB CLI](https://duckdb.org/docs/installation/) ≥ 1.5.4 + the **webbed** community extension (the XML reader; `init.sh` installs it when missing); [Node.js](https://nodejs.org/en) ≥ 20 with [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) ≥ 10 — npm comes bundled with Node.js, so it needs no separate install; `init.sh` checks the two versions independently and, if an older Node still carries npm 9, asks for `npm install -g npm`. If the check keeps reporting an old version after an update, an earlier `PATH` entry is shadowing the new one — see [Troubleshooting](Troubleshooting.md#old-nodejs-or-npm-keeps-winning-after-an-update).
 - **AI agent (optional):** [Claude Code](https://docs.claude.com/en/docs/claude-code) (bundled in the Docker agent variant) + the [duckdb-skills](https://github.com/duckdb/duckdb-skills) plugin (recommended).
 - **XML export:** FileMaker Pro for the SaXML export — SaXML v2.1.0.0+ (FileMaker 19–22) and v2.3.0.0 (FileMaker 26), each read under its own import profile (see [the SaXML version notes](../xml/XML.md#version-notes-saxml-v22-and-v23)). Later SaXML versions may require parser adjustments.

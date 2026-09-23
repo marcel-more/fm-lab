@@ -1,0 +1,28 @@
+{
+  "manifest": {
+    "title": "无引用的插件调用",
+    "description": "元数据完整性检查 — 在包含 DDR 信息导出的文件中却仍未获得引用的插件调用：转换器无法解析的动态函数名（MBS($name; …)），或未解析的块配对。未包含 DDR 信息导出的文件属于“未包含 DDR 信息的导出”的发现，在此排除。",
+    "analysis.defaultResult.meaning": "包含 DDR 信息的文件中，插件调用在目录中没有引用的公式数 —— 动态函数名（信息）和未解析的配对（警告）"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "发现",
+    "summary_kpi.props.items[1].label": "动态名称（信息）",
+    "summary_kpi.props.items[2].label": "未解析（警告）",
+    "summary_kpi.props.items[3].label": "仅在注释中",
+    "summary_kpi.props.items[4].label": "无 DDR 信息的文件（已排除）",
+    "summary_kpi.props.items[5].label": "受影响文件",
+    "findings_card.props.title": "无引用的插件调用",
+    "findings_table.props.chipFilter.allLabel": "所有原因",
+    "findings_table.props.columns[0].label": "原因",
+    "findings_table.props.columns[1].label": "文件",
+    "findings_table.props.columns[2].label": "对象",
+    "findings_table.props.columns[3].label": "类型",
+    "findings_table.props.columns[4].label": "计算",
+    "findings_table.props.columns[5].label": "步骤",
+    "findings_table.props.columns[6].label": "公式",
+    "findings_table.props.searchPlaceholder": "搜索文件、对象或公式…",
+    "findings_table.props.empty.message": "包含 DDR 信息的文件中的每个插件调用都已解析为引用。",
+    "notes_card.props.title": "关于此检查",
+    "notes_md.props.content": "公式文本包含插件调用，但计算实例没有 `calls_pluginfunction` 边 —— 该调用对使用位置、插件清单、平台测试和文档计数器都不可见。只检查**包含** DDR 信息导出的文件：在未包含 DDR 信息导出的文件中，每个插件调用都因同一个文件级原因而未解析，姊妹规则 **未包含 DDR 信息的导出** 会按文件报告一次；在此列出这些调用只会把同一发现重复数百次。摘要统计了被排除的文件数。\n\n两种原因，以标签显示：\n\n- **dynamic-name** —— `MBS($name; …)`：函数名不是字面量，无法解析目标，转换器将该调用从对象和边中剔除。公式可能因相邻的字面量调用仍带有一条边 —— 之所以列出，是因为其中一个调用丢失了。*信息*：静态分析无法跟随的代码风格，不是导出缺陷。\n- **unresolved** —— 有 DDR 信息、无使用行、非动态：块配对失败。转换器的盲点 —— 请报告该公式。*警告。*\n\n词表：`MBS` 加上目录已知的每个插件前缀。`/* … */` 或 `//` 注释内的调用不计入（摘要中的 *仅在注释中*）；字符串字面量内的插件调用（如 `Evaluate(\"MBS(…\")`）是唯一已知的残余误报。"
+  }
+}

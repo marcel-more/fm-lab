@@ -1,0 +1,100 @@
+{
+  "id": "export_ddr_missing",
+  "version": "1.0.0",
+  "title": "Export without DDR info",
+  "description": "Metadata-integrity check — files exported without DDR info (\"Include details for analysis tools\" was off). The import looks complete, but the catalog holds no formula references (fields, functions, custom functions, plug-in calls) for these files.",
+  "author": "fm-lab rules",
+  "icon": "file-x",
+  "category": "metadata_integrity",
+  "tags": [
+    "rule",
+    "metadata",
+    "export",
+    "ddr",
+    "plugin"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "warning",
+    "category": "metadata_integrity",
+    "rationale": "The DDR chunk stream is the only source of formula references. A file exported without it imports without error, yet every reference from its formulas is missing — where-used, plug-in inventories and the object graph are silently blind for that file.",
+    "remediation": "Save the file as XML again with \"Include details for analysis tools\" enabled and import it again. There is nothing to repair inside FM-Lab — the information is absent from the export.",
+    "meta": {
+      "name": "Export without DDR info",
+      "author": "fm-lab rules",
+      "source": "fm-lab",
+      "url": null,
+      "description": "Files whose XML export was saved without DDR info; their formula references are invisible in the catalog.",
+      "created": "2026-09-23",
+      "references": [
+        {
+          "project": "Claris Help",
+          "rule": "Save a Copy as XML — Include details for analysis tools",
+          "url": "https://help.claris.com/en/pro-help/content/save-a-copy-as-xml.html"
+        }
+      ]
+    }
+  },
+  "analysis": {
+    "objectTypes": [],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of files exported without DDR info (their formula references are missing from the catalog)"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql"
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (only this file)."
+    },
+    {
+      "name": "scope_uuids",
+      "type": "string",
+      "required": false,
+      "description": "CSV of Object_UUIDs supplied by the Analysis-Tests run boundary."
+    },
+    {
+      "name": "limit",
+      "type": "number",
+      "required": false,
+      "description": "Maximum number of finding rows returned (default 500)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

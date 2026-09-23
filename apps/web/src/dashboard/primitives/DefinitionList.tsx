@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import type { PrimitiveProps } from '../types';
 import { formatKpiValue } from './_format';
 import { translateCellValue } from './_cellTranslate';
+import { badgeToneClass } from './_badgeTone';
 import type { KpiItem } from './KPI';
 
 /**
@@ -28,7 +29,7 @@ export function DefinitionList({ node, row, dataset }: PrimitiveProps) {
         const value = isBadge ? translateCellValue(rawValue, t) : rawValue;
         const formatted = formatKpiValue(value, item.format, i18n.language);
         const badgeClass = isBadge
-          ? ` dash-badge dash-badge--${slugify(String(rawValue ?? ''))}`
+          ? ` dash-badge ${badgeToneClass(rawValue, item.badgeTone)}`
           : '';
         return (
           <div className="dash-deflist__row" key={`${item.label}-${i}`}>
@@ -39,8 +40,4 @@ export function DefinitionList({ node, row, dataset }: PrimitiveProps) {
       })}
     </dl>
   );
-}
-
-function slugify(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }

@@ -1,0 +1,25 @@
+{
+  "manifest": {
+    "title": "Função de plug-in ausente na exportação",
+    "description": "Verificação de integridade de metadados — fórmulas em que o FileMaker substituiu uma função de plug-in por <Function Missing> na exportação, porque o plug-in não estava carregado no cliente exportador. As chamadas faltam no grafo de objetos e o texto já não nomeia o plug-in.",
+    "analysis.defaultResult.meaning": "Número de fórmulas cuja função de plug-in foi substituída por <Function Missing> na exportação"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Fórmulas",
+    "summary_kpi.props.items[1].label": "Marcadores",
+    "summary_kpi.props.items[2].label": "Objetos afetados",
+    "summary_kpi.props.items[3].label": "Arquivos afetados",
+    "findings_card.props.title": "Fórmulas com <Function Missing>",
+    "findings_table.props.columns[0].label": "Arquivo",
+    "findings_table.props.columns[1].label": "Objeto",
+    "findings_table.props.columns[2].label": "Tipo",
+    "findings_table.props.columns[3].label": "Cálculo",
+    "findings_table.props.columns[4].label": "Passo",
+    "findings_table.props.columns[5].label": "Ausentes",
+    "findings_table.props.columns[6].label": "Fórmula",
+    "findings_table.props.searchPlaceholder": "Pesquisar arquivo, objeto ou fórmula…",
+    "findings_table.props.empty.message": "Nenhuma fórmula perdeu uma função de plug-in na exportação.",
+    "notes_card.props.title": "Sobre esta verificação",
+    "notes_md.props.content": "Quando um plug-in **não está carregado no cliente que salva o XML**, o FileMaker substitui o nome da função no próprio texto da fórmula pelo marcador `<Function Missing>` (e marca o fragmento DDR como referência não resolvível). A chamada desaparece da exportação: sem objeto de plug-in, sem aresta de chamada — e o texto já não diz qual plug-in era. A regra lê o **texto** da fórmula e, por isso, funciona com e sem informações DDR.\n\n**Não há correção dentro do FM-Lab.** Salve o arquivo como XML novamente em um cliente com o plug-in instalado e ativado. O *trecho da fórmula* mantém os argumentos — muitas vezes a única pista de qual plug-in se trata.\n\nO registro de importação reporta o mesmo defeito como aviso (fragmentos `Function Missing`)."
+  }
+}

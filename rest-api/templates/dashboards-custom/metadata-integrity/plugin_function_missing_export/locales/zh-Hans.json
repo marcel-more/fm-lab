@@ -1,0 +1,25 @@
+{
+  "manifest": {
+    "title": "导出时缺少插件函数",
+    "description": "元数据完整性检查 — 由于导出客户端未加载插件，FileMaker 在导出时将插件函数替换为 <Function Missing> 的公式。这些调用在对象图中缺失，文本也不再指明插件。",
+    "analysis.defaultResult.meaning": "导出时插件函数被替换为 <Function Missing> 的公式数"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "公式",
+    "summary_kpi.props.items[1].label": "占位符",
+    "summary_kpi.props.items[2].label": "受影响对象",
+    "summary_kpi.props.items[3].label": "受影响文件",
+    "findings_card.props.title": "含 <Function Missing> 的公式",
+    "findings_table.props.columns[0].label": "文件",
+    "findings_table.props.columns[1].label": "对象",
+    "findings_table.props.columns[2].label": "类型",
+    "findings_table.props.columns[3].label": "计算",
+    "findings_table.props.columns[4].label": "步骤",
+    "findings_table.props.columns[5].label": "缺失",
+    "findings_table.props.columns[6].label": "公式",
+    "findings_table.props.searchPlaceholder": "搜索文件、对象或公式…",
+    "findings_table.props.empty.message": "没有公式在导出时丢失插件函数。",
+    "notes_card.props.title": "关于此检查",
+    "notes_md.props.content": "当**保存 XML 的客户端未加载插件**时，FileMaker 会把公式文本本身中的函数名替换为占位符 `<Function Missing>`（并将 DDR 块标记为不可解析的引用）。该调用从导出中消失：没有插件对象、没有调用边 —— 文本也不再说明是哪个插件。此规则读取公式**文本**，因此无论有无 DDR 信息都有效。\n\n**FM-Lab 内无法修复。** 请在已安装并启用该插件的客户端上重新将文件另存为 XML。*公式摘录* 保留了参数 —— 通常是判断所指插件的唯一线索。\n\n导入日志将同一缺陷报告为警告（`Function Missing` 块）。"
+  }
+}

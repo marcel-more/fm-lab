@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "未包含 DDR 信息的导出",
+    "description": "元数据完整性检查 — 未包含 DDR 信息导出的文件（“包括分析工具的详细信息” 选项被关闭）。导入看起来完整，但目录中没有这些文件的任何公式引用（字段、函数、自定义函数、插件调用）。",
+    "analysis.defaultResult.meaning": "未包含 DDR 信息导出的文件数（其公式引用在目录中缺失）"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "无 DDR 信息的文件",
+    "summary_kpi.props.items[1].label": "受影响公式",
+    "summary_kpi.props.items[2].label": "受影响插件公式",
+    "summary_kpi.props.items[3].label": "解决方案中的文件",
+    "findings_card.props.title": "未包含 DDR 信息导出的文件",
+    "findings_table.props.columns[0].label": "文件",
+    "findings_table.props.columns[1].label": "FileMaker",
+    "findings_table.props.columns[2].label": "SaXML",
+    "findings_table.props.columns[3].label": "公式",
+    "findings_table.props.columns[4].label": "插件公式",
+    "findings_table.props.searchPlaceholder": "搜索文件…",
+    "findings_table.props.empty.message": "所有文件均已包含 DDR 信息导出。",
+    "notes_card.props.title": "关于此检查",
+    "notes_md.props.content": "在**未勾选** *包括分析工具的详细信息* 选项的情况下另存为 XML 的 FileMaker 文件不含 `DDR_INFO` 块。导入仍会成功且看似完整 —— 脚本、字段、布局以及每个公式文本都在 —— 但 DDR 块流是公式引用的**唯一**来源：该文件中定义的任何内容都没有来自计算的字段读写、没有函数或自定义函数调用、没有插件调用。使用位置、插件清单和对象图对它悄然失明。\n\n**FM-Lab 内无法修复。** 信息在导出中就不存在：请启用该选项重新保存文件并再次导入。公式计数显示了丢失的内容；*插件公式* 使用与规则 **无引用的插件调用** 相同的文本词表（MBS 加上目录已知的每个插件前缀），是一个下限。\n\nXML 导入页面在导入前就显示同样的判定（逐文件的文件头探测），导入日志将其报告为警告。"
+  }
+}

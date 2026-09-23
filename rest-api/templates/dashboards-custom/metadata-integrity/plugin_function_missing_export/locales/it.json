@@ -1,0 +1,25 @@
+{
+  "manifest": {
+    "title": "Funzione di plug-in mancante all'esportazione",
+    "description": "Controllo di integrità dei metadati — formule in cui FileMaker ha sostituito una funzione di plug-in con <Function Missing> all'esportazione, perché il plug-in non era caricato sul client che esporta. Le chiamate mancano nel grafo degli oggetti e il testo non nomina più il plug-in.",
+    "analysis.defaultResult.meaning": "Numero di formule la cui funzione di plug-in è stata sostituita da <Function Missing> all'esportazione"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Formule",
+    "summary_kpi.props.items[1].label": "Segnaposto",
+    "summary_kpi.props.items[2].label": "Oggetti interessati",
+    "summary_kpi.props.items[3].label": "File interessati",
+    "findings_card.props.title": "Formule con <Function Missing>",
+    "findings_table.props.columns[0].label": "File",
+    "findings_table.props.columns[1].label": "Oggetto",
+    "findings_table.props.columns[2].label": "Tipo",
+    "findings_table.props.columns[3].label": "Calcolo",
+    "findings_table.props.columns[4].label": "Passo",
+    "findings_table.props.columns[5].label": "Mancanti",
+    "findings_table.props.columns[6].label": "Formula",
+    "findings_table.props.searchPlaceholder": "Cerca file, oggetto o formula…",
+    "findings_table.props.empty.message": "Nessuna formula ha perso una funzione di plug-in all'esportazione.",
+    "notes_card.props.title": "Informazioni su questo controllo",
+    "notes_md.props.content": "Quando un plug-in **non è caricato sul client che salva l'XML**, FileMaker sostituisce il nome della funzione nel testo stesso della formula con il segnaposto `<Function Missing>` (e marca il frammento DDR come riferimento non risolvibile). La chiamata sparisce dall'esportazione: nessun oggetto plug-in, nessun arco di chiamata — e il testo non dice più quale plug-in fosse. La regola legge il **testo** della formula e funziona quindi con e senza informazioni DDR.\n\n**Nessuna correzione in FM-Lab.** Salvare di nuovo il file come XML su un client con il plug-in installato e attivo. L'*estratto della formula* conserva gli argomenti — spesso l'unico indizio su quale plug-in si tratti.\n\nIl registro di importazione segnala lo stesso difetto come avviso (frammenti `Function Missing`)."
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "manifest": {
+    "title": "書き出し時にプラグイン関数が欠落",
+    "description": "メタデータ整合性チェック — 書き出し側クライアントでプラグインが未ロードだったため、FileMaker が書き出し時にプラグイン関数を <Function Missing> に置き換えた計算式。呼び出しはオブジェクトグラフに存在せず、テキストにもプラグイン名が残りません。",
+    "analysis.defaultResult.meaning": "書き出し時にプラグイン関数が <Function Missing> に置き換えられた計算式の数"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "計算式",
+    "summary_kpi.props.items[1].label": "プレースホルダー",
+    "summary_kpi.props.items[2].label": "影響オブジェクト",
+    "summary_kpi.props.items[3].label": "影響ファイル",
+    "findings_card.props.title": "<Function Missing> を含む計算式",
+    "findings_table.props.columns[0].label": "ファイル",
+    "findings_table.props.columns[1].label": "オブジェクト",
+    "findings_table.props.columns[2].label": "種類",
+    "findings_table.props.columns[3].label": "計算式",
+    "findings_table.props.columns[4].label": "ステップ",
+    "findings_table.props.columns[5].label": "欠落",
+    "findings_table.props.columns[6].label": "計算式テキスト",
+    "findings_table.props.searchPlaceholder": "ファイル・オブジェクト・計算式を検索…",
+    "findings_table.props.empty.message": "書き出し時にプラグイン関数を失った計算式はありません。",
+    "notes_card.props.title": "このチェックについて",
+    "notes_md.props.content": "XML を保存するクライアントで**プラグインがロードされていない**と、FileMaker は計算式テキストそのものの関数名をプレースホルダー `<Function Missing>` に置き換えます（DDR チャンクは解決不能な参照としてマークされます）。呼び出しは書き出しから消えます。プラグインオブジェクトも呼び出しエッジもなく、テキストにはどのプラグインだったかも残りません。このルールは計算式の**テキスト**を読むため、DDR 情報の有無に関わらず機能します。\n\n**FM-Lab 内で修復はできません。** プラグインがインストールされ有効になっているクライアントで、ファイルを XML として再保存してください。*計算式の抜粋* は引数を保持しており、どのプラグインかを示す唯一の手がかりになることがよくあります。\n\nインポートログは同じ不備を警告として報告します（`Function Missing` チャンク）。"
+  }
+}

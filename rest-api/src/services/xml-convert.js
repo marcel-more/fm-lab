@@ -6,6 +6,7 @@ const settingsStore = require('../plugins/settings-store');
 const db = require('../config/database');
 const annoDb = require('../config/annotations-db');
 const environment = require('../config/environment');
+const { readDdrInfoHead } = require('../utils/xml-head');
 
 /**
  * XML-Convert Bridge
@@ -98,10 +99,28 @@ async function ensureStateDir(solutionId) {
   await fsp.mkdir(stateDirPath(solutionId), { recursive: true });
 }
 
+// DDR-Info-Probe je Datei (Header-Sniff, utils/xml-head.js): true/false aus
+// dem Root-Attribut `Has_DDR_INFO`, null = kein Urteil (v2.0-Format, fremde
+// Datei, Lesefehler). Gecacht über (size, mtime) — der 6-s-Soft-Refresh der
+// Import-Seite und jeder Dashboard-Reload listen das Verzeichnis neu; ohne
+// Cache würde jeder Aufruf N Dateien öffnen. Einträge verschwundener Dateien
+// räumt das Listing nach jedem Durchlauf aus.
+const ddrProbeCache = new Map(); // absoluter Pfad → { key, ddr_info }
+
+async function probeDdrInfoCached(filePath, stat) {
+  const key = `${stat.size}|${stat.mtimeMs}`;
+  const hit = ddrProbeCache.get(filePath);
+  if (hit && hit.key === key) return hit.ddr_info;
+  const ddrInfo = await readDdrInfoHead(filePath);
+  ddrProbeCache.set(filePath, { key, ddr_info: ddrInfo });
+  return ddrInfo;
+}
+
 /**
  * Listet den XML-Eingang einer Lösung (Default: aktive). Liefert
- * `{ filename, size, mtime }`-Tupel (mtime als ISO-String). Fehlende
- * Verzeichnisse → leere Liste.
+ * `{ filename, size, mtime, mtime_ms, ddr_info }`-Tupel (mtime als ISO-String,
+ * ddr_info true|false|null aus der Header-Probe). Fehlende Verzeichnisse →
+ * leere Liste.
  */
 async function listXmlDirectory(solutionId) {
   const dir = xmlDirPath(solutionId);
@@ -118,16 +137,24 @@ async function listXmlDirectory(solutionId) {
     if (!e.name.toLowerCase().endsWith('.xml')) continue;
     if (e.name.startsWith('.')) continue;
     try {
-      const stat = await fsp.stat(path.join(dir, e.name));
+      const filePath = path.join(dir, e.name);
+      const stat = await fsp.stat(filePath);
       files.push({
         filename: e.name,
         size: stat.size,
         mtime: stat.mtime.toISOString(),
         mtime_ms: stat.mtimeMs,
+        ddr_info: await probeDdrInfoCached(filePath, stat),
       });
     } catch {
       // Datei verschwand zwischen readdir und stat — ignorieren
     }
+  }
+  // Cache-Hygiene: nur Einträge DIESES Verzeichnisses (andere Lösungen haben
+  // eigene Eingänge) und nur die, deren Datei nicht mehr existiert.
+  const seen = new Set(files.map(f => path.join(dir, f.filename)));
+  for (const k of ddrProbeCache.keys()) {
+    if (k.startsWith(dir + path.sep) && !seen.has(k)) ddrProbeCache.delete(k);
   }
   files.sort((a, b) => a.filename.localeCompare(b.filename, 'de'));
   return files;
@@ -151,7 +178,8 @@ async function listXmlDirectory(solutionId) {
 const FILES_CATALOG_SQL =
   `SELECT File_Name,
           strftime(Import_Timestamp, '%Y-%m-%dT%H:%M:%S') || 'Z' AS imported_at,
-          epoch_ms(Import_Timestamp AT TIME ZONE 'UTC')        AS imported_ms
+          epoch_ms(Import_Timestamp AT TIME ZONE 'UTC')        AS imported_ms,
+          Has_DDR_INFO                                          AS has_ddr_info
    FROM FilesCatalog`;
 
 function rowsToCatalogMap(rows) {
@@ -164,6 +192,9 @@ function rowsToCatalogMap(rows) {
       file_name: row.File_Name,
       imported_at: importedAt,
       imported_ms: Number.isFinite(importedMs) ? importedMs : null,
+      // Katalog-Sicht der DDR-Info (Import-Zeitpunkt); Fallback für Dateien,
+      // deren Header-Probe kein Urteil liefert.
+      has_ddr_info: row.has_ddr_info == null ? null : Boolean(row.has_ddr_info),
     });
   }
   return map;
@@ -431,6 +462,7 @@ async function getStatus(ctx, solutionId) {
     } else {
       status = 'current';
     }
+    const ddrInfo = f.ddr_info != null ? f.ddr_info : (entry?.has_ddr_info ?? null);
     return {
       filename: f.filename,
       size: f.size,
@@ -438,6 +470,13 @@ async function getStatus(ctx, solutionId) {
       status,
       emoji: STATUS_EMOJI[status],
       imported_at: entry?.imported_at || null,
+      // Vorrang Header-Probe (beschreibt die Datei, die der nächste Lauf
+      // importieren würde) → Katalogwert der importierten Fassung → null.
+      ddr_info: ddrInfo,
+      // Nur der Mangel wird angezeigt: die Spalte bleibt für Dateien MIT
+      // DDR-Info (und für die ohne Urteil, ddr_info === null) leer, damit die
+      // wenigen Ausreißer in einer langen Liste sofort ins Auge fallen.
+      ddr_flag: ddrInfo === false ? 'missing' : null,
     };
   });
 

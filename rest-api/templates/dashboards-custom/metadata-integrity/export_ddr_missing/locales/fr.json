@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "Export sans informations DDR",
+    "description": "Vérification d'intégrité des métadonnées : fichiers exportés sans informations DDR (option « Inclure les détails pour les outils d'analyse » désactivée). L'import paraît complet, mais le catalogue ne contient aucune référence de formule (champs, fonctions, fonctions personnalisées, appels de plug-ins) pour ces fichiers.",
+    "analysis.defaultResult.meaning": "Nombre de fichiers exportés sans informations DDR (leurs références de formules manquent dans le catalogue)"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Fichiers sans infos DDR",
+    "summary_kpi.props.items[1].label": "Formules concernées",
+    "summary_kpi.props.items[2].label": "Formules de plug-in concernées",
+    "summary_kpi.props.items[3].label": "Fichiers de la solution",
+    "findings_card.props.title": "Fichiers exportés sans informations DDR",
+    "findings_table.props.columns[0].label": "Fichier",
+    "findings_table.props.columns[1].label": "FileMaker",
+    "findings_table.props.columns[2].label": "SaXML",
+    "findings_table.props.columns[3].label": "Formules",
+    "findings_table.props.columns[4].label": "Formules de plug-in",
+    "findings_table.props.searchPlaceholder": "Rechercher un fichier…",
+    "findings_table.props.empty.message": "Tous les fichiers ont été exportés avec les informations DDR.",
+    "notes_card.props.title": "À propos de cette vérification",
+    "notes_md.props.content": "Un fichier FileMaker enregistré en XML **sans** l'option *Inclure les détails pour les outils d'analyse* ne contient pas de bloc `DDR_INFO`. L'import réussit et paraît complet — scripts, rubriques, modèles et chaque texte de formule sont là — mais le flux de fragments DDR est la **seule** source de références de formules : aucune lecture/écriture de rubrique depuis les calculs, aucun appel de fonction ou de fonction personnalisée, aucun appel de plug-in pour tout ce qui est défini dans ce fichier. Où-est-utilisé, l'inventaire des plug-ins et le graphe d'objets restent aveugles en silence.\n\n**Aucune correction dans FM-Lab.** L'information est absente de l'export : réenregistrez le fichier avec l'option activée et réimportez-le. Les comptages de formules montrent ce qui est perdu ; *formules de plug-in* utilise le même vocabulaire textuel que la règle **Appel de plug-in sans référence** (MBS plus chaque préfixe de plug-in connu du catalogue) et constitue une borne inférieure.\n\nLa page d'import XML affiche le même verdict avant l'import (sondage d'en-tête par fichier) ; le journal d'import le signale comme avertissement."
+  }
+}

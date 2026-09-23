@@ -1,0 +1,28 @@
+{
+  "manifest": {
+    "title": "参照のないプラグイン呼び出し",
+    "description": "メタデータ整合性チェック — DDR 情報付きで書き出されたファイル内で、それでも参照を得られなかったプラグイン呼び出し。コンバーターが解決できない動的な関数名（MBS($name; …)）、または未解決のチャンク対応付けです。DDR 情報なしで書き出されたファイルは「DDR 情報なしの書き出し」の検出対象であり、ここでは除外されます。",
+    "analysis.defaultResult.meaning": "DDR 情報付きファイル内で、プラグイン呼び出しがカタログに参照を持たない計算式の数 — 動的な関数名（情報）と未解決の対応付け（警告）"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "検出",
+    "summary_kpi.props.items[1].label": "動的な名前（情報）",
+    "summary_kpi.props.items[2].label": "未解決（警告）",
+    "summary_kpi.props.items[3].label": "コメント内のみ",
+    "summary_kpi.props.items[4].label": "DDR 情報のないファイル（除外）",
+    "summary_kpi.props.items[5].label": "影響ファイル",
+    "findings_card.props.title": "参照のないプラグイン呼び出し",
+    "findings_table.props.chipFilter.allLabel": "すべての原因",
+    "findings_table.props.columns[0].label": "原因",
+    "findings_table.props.columns[1].label": "ファイル",
+    "findings_table.props.columns[2].label": "オブジェクト",
+    "findings_table.props.columns[3].label": "種類",
+    "findings_table.props.columns[4].label": "計算式",
+    "findings_table.props.columns[5].label": "ステップ",
+    "findings_table.props.columns[6].label": "計算式テキスト",
+    "findings_table.props.searchPlaceholder": "ファイル・オブジェクト・計算式を検索…",
+    "findings_table.props.empty.message": "DDR 情報付きファイル内のすべてのプラグイン呼び出しは参照に解決されています。",
+    "notes_card.props.title": "このチェックについて",
+    "notes_md.props.content": "計算式テキストにはプラグイン呼び出しがありますが、計算インスタンスに `calls_pluginfunction` エッジがありません — その呼び出しは使用箇所、プラグイン一覧、プラットフォームテスト、ドキュメントのカウンターから見えません。検査対象は DDR 情報**付き**で書き出されたファイルのみです。DDR 情報なしで書き出されたファイルでは、すべてのプラグイン呼び出しが同じファイル単位の理由で未解決になり、それは姉妹ルール **DDR 情報なしの書き出し** がファイルごとに 1 回報告します。ここでそれらを列挙すると同じ検出を何百回も繰り返すことになります。サマリーは除外ファイル数を示します。\n\n原因は 2 つで、チップとして表示されます。\n\n- **dynamic-name** — `MBS($name; …)`：関数名がリテラルではないため対象を解決できず、コンバーターはオブジェクトとエッジから呼び出しを除外します。隣接するリテラル呼び出しにより計算式がエッジを持つ場合もありますが、呼び出しの一つが失われているため一覧されます。*情報*：静的解析が追えないコードスタイルであり、書き出し不備ではありません。\n- **unresolved** — DDR 情報があり、使用行がなく、動的でもない：チャンクの対応付けが失敗しました。コンバーターの盲点です — 計算式を報告してください。*警告。*\n\n語彙：`MBS` とカタログが知る各プラグイン接頭辞。`/* … */` や `//` のコメント内の呼び出しは数えません（サマリーの *コメント内のみ*）。文字列リテラル内のプラグイン呼び出し（例：`Evaluate(\"MBS(…\")`）が唯一既知の残存誤検出です。"
+  }
+}

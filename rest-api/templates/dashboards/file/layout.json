@@ -37,7 +37,8 @@
                       "onClick": { "action": "applyFilter", "args": { "file": "{{File_Name}}" } } },
                     { "label": "References", "field": "total_links", "format": "number" },
                     { "label": "FM version", "field": "fm_version" },
-                    { "label": "DDR info", "field": "has_ddr", "format": "badge" },
+                    { "label": "DDR info", "field": "has_ddr", "format": "badge",
+                      "badgeTone": { "yes": "ok", "no": "warning" } },
                     { "label": "Last import", "field": "import_ts", "format": "date:relative" },
                     { "label": "Min. version", "field": "min_version" }
                   ]

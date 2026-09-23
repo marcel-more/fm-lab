@@ -8,6 +8,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 ## [Unreleased]
 
+*(Upcoming changes go here)*
+
+---
+
+## [0.9.13] — 2026-09-23
+
+<!-- components:auto --> *Components: schema 1.32.0 · xml-import 5.5.0 (converter 2.31.0) · fm-spec 2.9.0 · plugin-spec 1.2.0*
+
+A small maintenance release — plugin-reference integrity checks, import diagnostics, and setup hardening.
+
+- **Plugin reference integrity** — the XML import now checks plugin calls against the bundled plugin reference and surfaces the result: a new dashboard lists plugin calls whose function is not in the reference (dynamic calls, unknown plugins, or a plugin the bundled reference does not cover yet), and files imported without DDR information are flagged in their own dashboard so an incomplete analysis is visible rather than silent
+- **Setup hardening** — `init.sh` gains a preflight check for Node.js and npm and lists the matching `PATH` entries when a tool is installed more than once, so an ambiguous or broken toolchain is diagnosed up front instead of failing mid-run
+- **Local repo hygiene** — `.gitignore` excludes imported solution bundles (XML inbox, catalog DBs, state) from the FM-Lab repo, so the app rewriting them no longer conflicts with a git pull update
+- **Documentation** — updates and corrections
+
 ---
 
 ## [0.9.12] — 2026-09-16
@@ -901,7 +916,8 @@ Initial release: XML conversion pipeline, core database structure, and first AI 
 <!-- Link references. compare-ranges span adjacent tagged releases; documentation-only
      versions that were never tagged (e.g. 0.8.7, 0.8.1, 0.8.0, 0.7.5–0.7.7, …) are
      intentionally left unlinked and render as plain text. Add a line here per new tag. -->
-[Unreleased]: https://github.com/marcel-more/fm-lab/compare/v0.9.12...HEAD
+[Unreleased]: https://github.com/marcel-more/fm-lab/compare/v0.9.13...HEAD
+[0.9.13]: https://github.com/marcel-more/fm-lab/compare/v0.9.12...v0.9.13
 [0.9.12]: https://github.com/marcel-more/fm-lab/compare/v0.9.11...v0.9.12
 [0.9.11]: https://github.com/marcel-more/fm-lab/compare/v0.9.10...v0.9.11
 [0.9.10]: https://github.com/marcel-more/fm-lab/compare/v0.9.9...v0.9.10

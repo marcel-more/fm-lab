@@ -5,9 +5,10 @@
   },
   "layout": {
     "files_table.props.columns[1].label": "Fil",
-    "files_table.props.columns[2].label": "Datum",
-    "files_table.props.columns[3].label": "Storlek",
-    "files_table.props.columns[4].label": "Importerad",
+    "files_table.props.columns[2].label": "DDR",
+    "files_table.props.columns[3].label": "Datum",
+    "files_table.props.columns[4].label": "Storlek",
+    "files_table.props.columns[5].label": "Importerad",
     "files_table.props.empty.message": "Inga filer i XML-katalogen.",
     "last_run.props.title": "Senaste konvertering",
     "import_integrity.props.title": "Importintegritet",

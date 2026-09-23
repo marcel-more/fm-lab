@@ -90,6 +90,14 @@ version_cmp() {
   echo 0
 }
 
+# Leading major number of a --version string ("v22.17.0" → 22, "10.9.2" → 10).
+# Echoes empty when there is nothing numeric to read, so the caller can tell
+# "too old" apart from "unreadable" — a bare `[ "$x" -ge N ]` on an empty value
+# aborts with "integer expression expected" and hides the real prerequisite.
+major_of() {
+  printf '%s' "$1" | sed -E 's/^[^0-9]*([0-9]+).*/\1/' | tr -cd '0-9'
+}
+
 # Warn (recommendation only) when DuckDB is older than the tested baseline.
 check_duckdb_baseline() {
   local installed_raw="$1" base_duckdb="" base_webbed="" base_url="" installed
@@ -142,6 +150,81 @@ check_webbed_extension() {
     summary_add "webbed            MISSING — run: FORCE INSTALL webbed FROM community;"
     ok=false
   fi
+}
+
+# ─── PATH shadowing diagnosis (node / npm) ────────────────────
+# An older interpreter EARLIER in PATH silently wins over a freshly installed
+# newer one — "I just installed Node 22" and "Node 18 found" are then both true,
+# and reinstalling does not help until the PATH order is fixed. Called only when
+# a version gate has already failed (so the extra `--version` probes cost nothing
+# on a healthy host): name the binary that actually answers, then every other
+# candidate we can see — PATH entries in resolution order first, then common
+# install prefixes that a fresh install may have missed in PATH.
+# Diagnosis only: init never edits a shell profile and never uninstalls anything —
+# which binary is supposed to win is the host owner's decision, not ours.
+diagnose_tool_path() {
+  local name="$1" req_major="$2"
+  local active="" search="" origin dir cand ver major
+  local seen="" shadowed="" offpath=""
+
+  active=$(command -v "$name" 2>/dev/null || true)
+
+  search=$(printf '%s' "$PATH" | tr ':' '\n' | sed -e 's/^$/./' -e 's/^/P|/')
+  for dir in /opt/homebrew/bin /usr/local/bin /usr/bin /opt/local/bin \
+             "$HOME/.volta/bin" "$HOME/.local/bin" "$HOME"/.nvm/versions/node/*/bin; do
+    [ -d "$dir" ] || continue
+    search="$search
+X|$dir"
+  done
+
+  while IFS='|' read -r origin dir; do
+    [ -n "${dir:-}" ] || continue
+    cand="$dir/$name"
+    [ -x "$cand" ] && [ ! -d "$cand" ] || continue
+    case "$seen" in *"[$cand]"*) continue ;; esac
+    seen="$seen[$cand]"
+    [ "$cand" = "$active" ] && continue
+    ver=$("$cand" --version 2>/dev/null | head -1 || true)
+    ver="${ver#v}"
+    major="${ver%%.*}"; major="${major//[!0-9]/}"
+    [ -n "$major" ] || continue
+    [ "$major" -ge "$req_major" ] || continue
+    if [ "$origin" = "P" ]; then
+      shadowed="${shadowed}    Shadowed:      $cand → v$ver  (on PATH, but after the active one)
+"
+    else
+      offpath="${offpath}    Not on PATH:   $cand → v$ver
+"
+    fi
+  done <<EOF
+$search
+EOF
+
+  if [ -n "$active" ]; then
+    echo "    Active binary: $active  (the first $name in PATH)"
+  else
+    echo "    No $name in PATH at all."
+  fi
+  printf '%s' "$shadowed$offpath"
+
+  if [ -n "$shadowed$offpath" ]; then
+    warn "A suitable $name (≥ $req_major) is already installed — PATH decides which one answers."
+    if [ -n "$shadowed" ]; then
+      echo "    Installing it again will not help: an older build comes first in PATH."
+    else
+      echo "    Installing it again will not help: its directory is not on PATH."
+    fi
+    echo "    Put the directory of the newer $name first in PATH (shell profile, e.g. ~/.zshrc),"
+    echo "    open a NEW shell, then re-run this script."
+    echo "    Wiki → Troubleshooting → \"Old Node.js or npm keeps winning after an update\"."
+    # No summary_add here on purpose: this runs only from a failing gate, and that
+    # gate exits before the run summary is ever printed.
+  else
+    echo "    No newer $name found on this host. List every one PATH can see:  type -a $name"
+  fi
+  # Never let a diagnosis decide the exit status: a non-zero return here would
+  # trip the ERR trap and replace the prerequisite message with a generic abort.
+  return 0
 }
 
 # ─── Resource floors (advisory) ───────────────────────────────
@@ -246,30 +329,44 @@ fi
 # Node.js (≥20)
 if command -v node &>/dev/null; then
   NODE_VER=$(node --version)
-  NODE_MAJOR=$(echo "$NODE_VER" | sed 's/v\([0-9]*\).*/\1/')
-  if [ "$NODE_MAJOR" -ge 20 ]; then
+  NODE_MAJOR=$(major_of "$NODE_VER")
+  if [ -z "$NODE_MAJOR" ]; then
+    error "Node.js reported an unreadable version: '$NODE_VER' (expected e.g. v22.17.0)."
+    diagnose_tool_path node 20
+    ok=false
+  elif [ "$NODE_MAJOR" -ge 20 ]; then
     info "Node.js: $NODE_VER"
   else
     error "Node.js $NODE_VER found, but ≥20 is required."
+    diagnose_tool_path node 20
     ok=false
   fi
 else
   error "Node.js not found. Install it from https://nodejs.org/"
+  diagnose_tool_path node 20
   ok=false
 fi
 
 # npm (≥10)
 if command -v npm &>/dev/null; then
   NPM_VER=$(npm --version)
-  NPM_MAJOR=$(echo "$NPM_VER" | sed 's/\([0-9]*\).*/\1/')
-  if [ "$NPM_MAJOR" -ge 10 ]; then
+  NPM_MAJOR=$(major_of "$NPM_VER")
+  if [ -z "$NPM_MAJOR" ]; then
+    error "npm reported an unreadable version: '$NPM_VER' (expected e.g. 10.9.2)."
+    echo  "    npm runs on the node that PATH resolves first — a broken/old node breaks npm too."
+    diagnose_tool_path npm 10
+    ok=false
+  elif [ "$NPM_MAJOR" -ge 10 ]; then
     info "npm: $NPM_VER"
   else
     error "npm $NPM_VER found, but ≥10 is required. Run: npm install -g npm"
+    diagnose_tool_path npm 10
     ok=false
   fi
 else
-  error "npm not found."
+  error "npm not found — it ships with Node.js."
+  echo  "    → https://docs.npmjs.com/downloading-and-installing-node-js-and-npm"
+  diagnose_tool_path npm 10
   ok=false
 fi
 

@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "Esportazione senza informazioni DDR",
+    "description": "Controllo di integrità dei metadati — file esportati senza informazioni DDR (opzione «Includi dettagli per gli strumenti di analisi» disattivata). L'importazione sembra completa, ma il catalogo non contiene riferimenti di formule (campi, funzioni, funzioni personalizzate, chiamate ai plug-in) per questi file.",
+    "analysis.defaultResult.meaning": "Numero di file esportati senza informazioni DDR (i loro riferimenti di formule mancano nel catalogo)"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "File senza informazioni DDR",
+    "summary_kpi.props.items[1].label": "Formule interessate",
+    "summary_kpi.props.items[2].label": "Formule di plug-in interessate",
+    "summary_kpi.props.items[3].label": "File della soluzione",
+    "findings_card.props.title": "File esportati senza informazioni DDR",
+    "findings_table.props.columns[0].label": "File",
+    "findings_table.props.columns[1].label": "FileMaker",
+    "findings_table.props.columns[2].label": "SaXML",
+    "findings_table.props.columns[3].label": "Formule",
+    "findings_table.props.columns[4].label": "Formule di plug-in",
+    "findings_table.props.searchPlaceholder": "Cerca file…",
+    "findings_table.props.empty.message": "Tutti i file sono stati esportati con le informazioni DDR.",
+    "notes_card.props.title": "Informazioni su questo controllo",
+    "notes_md.props.content": "Un file FileMaker salvato come XML **senza** l'opzione *Includi dettagli per gli strumenti di analisi* non contiene il blocco `DDR_INFO`. L'importazione riesce e sembra completa — script, campi, formati e ogni testo di formula ci sono — ma il flusso di frammenti DDR è l'**unica** fonte dei riferimenti di formule: nessuna lettura/scrittura di campi dai calcoli, nessuna chiamata a funzioni o funzioni personalizzate, nessuna chiamata a plug-in per tutto ciò che è definito in quel file. Dove-si-usa, l'inventario dei plug-in e il grafo degli oggetti restano silenziosamente ciechi.\n\n**Nessuna correzione in FM-Lab.** L'informazione manca nell'esportazione: salvare di nuovo il file con l'opzione attiva e reimportarlo. I conteggi delle formule mostrano ciò che va perso; *formule di plug-in* usa lo stesso vocabolario testuale della regola **Chiamata a plug-in senza riferimento** (MBS più ogni prefisso di plug-in noto al catalogo) ed è un limite inferiore.\n\nLa pagina di importazione XML mostra lo stesso verdetto prima dell'importazione (sondaggio dell'intestazione per file); il registro di importazione lo segnala come avviso."
+  }
+}
