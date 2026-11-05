@@ -1,0 +1,79 @@
+{
+  "id": "platform_compat_plugins_ios",
+  "version": "1.0.0",
+  "title": "Plug-in compatibility: FileMaker Go (iOS)",
+  "description": "Plug-in function calls in scope that cannot run on FileMaker Go (iOS): FileMaker Go supports no plug-ins (generic rule, applies to every vendor - independent of the MBS 'iOS SDK' column, which covers Claris iOS SDK apps). Includes one-level custom-function wrappers (via_custom_function) and layout/field calculation usages (evidence_kind='layout').",
+  "author": "fm-lab rules",
+  "icon": "smartphone",
+  "category": "platform",
+  "tags": [
+    "rule",
+    "platform",
+    "plugin"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "warning",
+    "category": "platform",
+    "rationale": "FileMaker Go does not support plug-ins at all (Claris documentation) - every plug-in function call fails there, regardless of vendor. The MBS 'iOS SDK' column covers Claris iOS SDK apps and never feeds this signal.",
+    "remediation": "Guard or replace plug-in calls for FileMaker Go (e.g. branch on Get(Device) or move the work to a server script via Perform Script on Server)."
+  },
+  "analysis": {
+    "objectTypes": [
+      "Script",
+      "Field",
+      "LayoutObject"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
+    },
+    "requires": [
+      "plugin-spec"
+    ],
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Plug-in function calls in scope that do not run on FileMaker Go (iOS)"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

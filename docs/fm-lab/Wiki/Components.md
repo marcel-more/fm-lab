@@ -64,13 +64,14 @@ Refer to detailed [REST API Overview](../rest-api/REST%20API%20Overview.md).
 
 - `rest-api/` — Express server for HTTP access to the analysis database.
 - `rest-api/db/solutions/<id>/fm_catalog.duckdb` — DuckDB database copy for exclusive, read-only access by the REST API.
-- `rest-api/templates/dashboards/` — Dashboard bundles for standard views exposed through API endpoints.
-- `rest-api/templates/dashboards-custom/` — Additional dashboard bundles for custom use cases. These can be generated using a Claude Code skill.
-- `rest-api/templates/dashboards-custom/static-code-analysis/` — Dashboard bundles for static code analysis, inspired by the PMD standard ruleset. They are accessible through the web frontend and provide quick access to different code metrics. All dashboards support drill-down filters and interactive navigation to code references within the object browser.
-- `rest-api/templates/sql/` — [SQL templates](../templates/Built-in%20Query%20Templates.md) for standard queries exposed through API endpoints.
-- `rest-api/templates/sql-custom/` — [Additional SQL templates](../templates/Custom%20Query%20Templates.md) for custom use cases.
-- `rest-api/templates/tests/` — Declared [Analysis Tests](Analysis%20Tests.md) test sets bundled with the installation.
-- `rest-api/templates/tests-custom/` — User-defined test sets (user space, not overwritten by updates).
+- `rest-api/templates/dashboards/` — All shipped dashboards: the app pages under `system/` (home, file details, XML import), the overview and index pages of the modules under `modules/` (dashboards, tests, docs), and the content dashboards in their rubric folders (`static-code-analysis/`, `modularization/`, `developer-workflow/`, `metadata-integrity/`, `changelog/`, plus `health_hints/`) — bundles and, in `layouts/`, `scripts/`, `schema/`, `top/` and `metadata-integrity/`, [single-file dashboards](../templates/Single-file%20Dashboards.md).
+- `rest-api/templates/dashboards/static-code-analysis/` — Dashboard bundles for static code analysis, inspired by the PMD standard ruleset. They are accessible through the web frontend and provide quick access to different code metrics. All dashboards support drill-down filters and interactive navigation to code references within the object browser.
+- `rest-api/templates/dashboards-custom/` — Your own dashboards, bundles and single-file dashboards (user space, ignored by git and never touched by updates), listed in the overview under **Custom**. Create them with the [create-custom-dashboard](../skills/Skill%20create-custom-dashboard.md) skill.
+- `rest-api/templates/dashboards-community/` — Installation target for community packages, listed under **Community** once it holds dashboards.
+- `rest-api/templates/queries/` — Internal SQL templates the server and the web client call by name: `system/` ([system templates](../templates/Built-in%20Query%20Templates.md) of `/api/report`) and `modules/` ([module templates](../templates/Detail%20View%20Templates.md) of `/api/query`). Not listed, not overridable.
+- `rest-api/templates/tests/` — Declared [Analysis Tests](Analysis%20Tests.md) bundled with the installation.
+- `rest-api/templates/tests-custom/` — Your own tests (user space, ignored by git and never touched by updates), listed under **Tests / Custom**. Create them with the [create-custom-test](../skills/Skill%20create-custom-test.md) skill.
+- `rest-api/templates/tests-community/` — Installation target for community test packages.
 
 ---
 
@@ -81,6 +82,50 @@ Rich browser-based interface for application-level functions and for [Interactiv
 Besides the object browser, dashboards and Graph Explorer, the web client includes an interactive [fm-spec](fm-spec.md) schema browser (`/fm-spec`, with detail pages per script step and per function).
 
 `apps/web/` — React/Vite frontend
+
+### Dashboard overview
+
+The overview at `/dashboard` lists every content dashboard — bundles and [single-file dashboards](../templates/Single-file%20Dashboards.md) alike: the shipped rubrics (Static Code Analysis, Modularization, Metadata Integrity, Developer Workflow, Changelog, Layouts, Scripts, Schema, Top) with the Healthchecks entry point on top, then the area folders **Custom** — your own dashboards from `rest-api/templates/dashboards-custom/`, shown even while empty with a hint to [create-custom-dashboard](../skills/Skill%20create-custom-dashboard.md) — and **Community**, shown once it holds dashboards. A custom dashboard that replaces a shipped one with the same id carries the badge *overrides standard*; one still read from the former query folder `sql-custom/` carries *old location*. A single-file dashboard has no severity: its status columns stay empty, and *#* shows its declared result with the meaning as tooltip — for an inventory that is a row count, not a number of defects. The former query pages redirect for one release: `/query` → `/dashboard`, `/query?category=Layouts` → `/dashboard?folder=layouts`, `/query/<name>` → `/dashboard/<name>`. System and module pages (home, file details, the overview pages themselves, docsets) are reached through the main navigation and do not appear here (see [Areas and overrides](../templates/Dashboard%20Datasets.md#areas-and-overrides)).
+
+A view selector above the list switches between three views; the overview opens in the list. The choice is part of the URL (`?view=folders|list|favorites`) and is remembered for links without it: each browser tab keeps its own view, and a new tab opens with the view you chose last.
+
+| View | What it shows |
+|---|---|
+| **Folders** | One tile per folder with its entry counts — *direct entries (dashboards in total)*, direct entries being sub-folders plus dashboards — and the status aggregate of its subtree; a click opens the folder (`?folder=<path>`), the breadcrumb leads back. Tiles keep the standard order. The Healthchecks entry point spans the full width above the folders. |
+| **List** | A hierarchical list with the columns name · ● error · ▲ warning · ✓ OK · ◦ neutral · # findings (per dashboard its result, per folder the sum). A click on a folder row expands it, a double click or `Enter` opens it as the new root, a click on a dashboard row opens the dashboard; arrow keys move through the rows. Below 640 px the four status columns fold into one. The **Healthchecks** row on top is a sum row: pulse icon, accent background, the number of rules and, in the status and findings columns, the totals over every rubric it covers. |
+| **Favorites** | Your favorite dashboards as a flat list with the same columns and the rubric path under each title (see below). |
+
+While rules of the Healthchecks have not been computed yet, a glowing dot runs along the pulse icon — in the folders view and in the list (no animation when the system asks for reduced motion).
+
+All three views share the status filter, the object-type filter, the search and **Run all**. Results are computed on demand: opening a folder — or expanding one folder in the list — with up to 32 pending results computes them automatically; larger sets wait for **Run all**.
+
+**Sorting.** In the list and the favorites view a click on a column header sorts by that column: **Name** (the standard order: folders by their configured order, dashboards by title), **●**, **▲**, **✓**, **◦** (per folder the number of dashboards in that state, per dashboard whether it has it) and **#** (findings). The first click sorts names ascending and counts descending, the second click reverses the direction, the third returns to *Name ↑*; the active header shows ↑ or ↓. Entries without a result stay at the end in both directions. The tree stays intact: only entries of the same level move, folders stay above dashboards and Healthchecks stays on top. Below 640 px the combined status column sorts by the worst state. In the favorites view the first header is split into **Name | Module** — *Module* groups the favorites by rubric (entries without a rubric first). The sort order is part of the URL (`?sort=findings-desc`, `?sort=error-desc`, …); changing it adds no "back" step. The folders view always keeps the standard order.
+
+**Expand all / collapse all.** In the list, two buttons next to the entry count open or close every folder of the shown tree. Expanding all computes nothing — use **Run all** for that. Collapsing keeps the root row of a folder you opened with a double click. In a filtered tree (search, status or object type) both act only on the current view.
+
+**Remembered folders.** The list remembers which folders are open — within a tab across reload and returning from a dashboard, and as the starting state of every new tab, also after a browser restart. Open tabs never change each other: a new tab starts with the list you operated last. Folders added since then start closed. Folding a folder during a search or filter, or the root row of a folder opened with a double click, is not remembered. The state is stored in the browser, separately for `/dashboard` and `/tests`.
+
+**Object-type filter.** The menu in front of the search field narrows the overview to the dashboards that check one object type — *Script (89)*, *Layout (42)*, … with the number of dashboards per type, plus *Without object type* for dashboards without object rows (change dashboards, statistics). Like the search it works across all folders: the folders view shows the matches with their rubric path, the list a filtered tree, the favorites view the matching favorites; it combines with the search and the status filter. The choice is part of the URL (`?type=Script`). The types come from each bundle's declaration `analysis.objectTypes` (see [Object types](../templates/Dashboard%20Datasets.md#object-types)), so the filter works before anything has been computed.
+
+**Cleaning up after an update.** Earlier versions kept the app pages directly in `rest-api/templates/dashboards/`, the shipped rubrics in `rest-api/templates/dashboards-custom/` and the queries in `rest-api/templates/sql-custom/`. `git pull` removes the old shipped copies there; if it stops at a file you edited, [one command](Troubleshooting.md#update-stops-local-changes-would-be-overwritten) saves your version and completes the update. At its first start after the update the REST API tidies up by itself: your own dashboards and queries from old places move to `dashboards-custom/` (they then appear under **Custom**), the old copies to `rest-api/templates/dashboards-removed/<timestamp>/`. An old copy you edited lives on as an own version — `<id>-local` under **Custom**, title suffix *(own version)* — and so does a shipped dashboard or test that [the update command](Installation.md#updating-fm-lab) had to put back. Nothing is deleted; you can delete the folder's content once you no longer need it. The overview reports the result once above the list; **Close** hides it. `STARTUP_CLEANUP_ENABLED=false` in `rest-api/.env` turns the automatic run off.
+
+Leftovers that appear later — for example after an update by copying files — show the hint *N dashboard folders from an earlier version are still in old places* (for queries *… and N queries at old locations*). *Show details* lists every move; **Clean up** runs the same cleanup by hand. An edited old copy can be left in place by unticking it — it may then block the next update, so prefer its own version under **Custom**. A clean installation never shows the hint (see [Maintenance API](../rest-api/endpoints/Maintenance%20API.md)).
+
+**Favorites.** A star marks a content dashboard as a favorite: outline = not a favorite, filled = favorite; a click toggles it. It sits at the right end of a dashboard's title row, in the top-right corner of every dashboard tile in the folders view (folder tiles have none) and in the last column of the list view (dashboard rows only). In the overview, filled stars always show, outline stars appear while you point at a tile or row (on touch devices always). The favorites view removes an entry through the star at the end of its row or the `Delete` key — the confirmation message offers *Undo*. **Run all** there runs exactly the shown favorites, and up to 32 pending favorites are computed automatically. A favorite whose dashboard was deleted or renamed appears as a hint (*1 favorite is no longer available — remove*) instead of a row. Favorites are stored workspace-wide in `.fmlab/favorites.json` (excluded from git): every browser sees the same list, it stays the same when you switch solutions, and another open tab picks up a change as soon as it becomes visible again (see [Favorites API](../rest-api/endpoints/Favorites%20API.md)).
+
+### Test overview
+
+The overview at `/tests` lists every [Analysis Test](Analysis%20Tests.md) with the same controls as the dashboard overview: a view selector **Folders | List | Favorites** (`?view=`, opens in the list; view and open folders are remembered the same way), the entry count, *Expand all / Collapse all* (list only), the object-type menu and the search. The folders are the shipped rubrics (Layout, Platform, Script, Solution), then **Custom** — your own tests from `rest-api/templates/tests-custom/`, shown even while empty with the hint *No custom tests yet. Create your own with /create-custom-test.* — and **Community** once it holds tests.
+
+| Column | Content |
+|---|---|
+| **Name** | folder (count) or test title; badge *overrides standard* for a custom test with a shipped id |
+| **Test type** | Exploration · Code quality · Error check · Security · Inventory · Performance · Platform (hidden below 640 px) |
+| **Members** | number of member dashboards; per folder the total |
+| **Status** | state of the last solution-scope run (● error, ▲ warning, ✓ OK, ◦ neutral); empty = never run; per folder the worst state and how many tests have run (`2/6`) |
+| ☆ | favorite star |
+
+Every column sorts (`?sort=`), the list shows no descriptions (they are the tile tooltip and are searched). Tests do not run from the overview — open one at `/tests/<id>`, use the object tab **Tests** or `/fm-test <id>`; the status column fills from those runs. The star also sits at the top right of a test's detail page; the favorites view (*Name | Folder*) works as for dashboards and keeps its own list (see [Favorites API](../rest-api/endpoints/Favorites%20API.md)). After an update the REST API moves leftovers out of the shipped `tests/` folder at its first start — your own tests to `tests-custom/`, old copies to `tests-removed/<timestamp>/`, a shipped test you edited to `tests-custom/<id>-local` — and the overview reports it once; leftovers that appear later show a hint box with **Clean up** (see [Test cleanup](../rest-api/endpoints/Maintenance%20API.md#test-cleanup)).
 
 ---
 
@@ -156,8 +201,9 @@ Each bundled skill has its own reference page with invocation, options and prere
 - `.claude/skills/fm-deep-research` — Writes a solution-level research report (executive summary, business context, architecture, technical description, findings, recommendations, segment appendix) from the clustered graph and the member objects of its largest segments, rendered from a Markdown template.
 - `.claude/skills/fm-changes` — Writes release notes from the change stamps: what changed since a date, in a work session or by a person, grouped by file and module with a short description per object, rendered from a Markdown template.
 - `.claude/skills/fm-test` — Runs curated [Analysis Tests](Analysis%20Tests.md) (static-code-analysis rules and custom checks with a compact result model) in solution, file, object or cluster scope; `--find` discovers matching tests without running them.
+- `.claude/skills/create-custom-test` — Builds an own [Analysis Test](Analysis%20Tests.md) from existing dashboards: proposes the members, validates the `test.json` and runs it once.
 
-- `.claude/skills/create-custom-dashboard` — Helps you build a new custom dashboard for [Static code analysis](4%20Code%20Analysis%20Approaches.md#2-static-code-analysis) by describing its goals in plain language.
+- `.claude/skills/create-custom-dashboard` — Helps you build a new custom dashboard for [Static code analysis](4%20Code%20Analysis%20Approaches.md#2-static-code-analysis) by describing its goals in plain language — as a single-file dashboard or as a bundle.
 
 **Agentic code generation**
 

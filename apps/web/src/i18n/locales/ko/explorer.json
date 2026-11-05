@@ -90,9 +90,17 @@
       "recency": "노드를 가장 최근 개별 변경의 경과 기간으로 색칠합니다(그래프 아틀라스와 같은 분류)"
     },
     "communityUnnamed": "커뮤니티 {{id}}",
-    "resizePanel": "필터 패널 너비 조절",
+    "detailsShort": "세부 정보",
+    "openDetails": "포커스 오브젝트의 세부 정보 보기 열기",
+    "openTypeList": "{{type}} 오브젝트 목록 열기",
+    "hideType": "{{type}} 숨기기",
+    "showType": "{{type}} 표시",
+    "depthOf": "(최대 {{max}})",
+    "extendDepth": "더 깊게",
+    "extendDepthHint": "슬라이더를 4 이상으로 확장합니다 (도달 가능한 최대 깊이까지).",
     "depthLoad": "도달 가능 {{count}}개",
     "depthClipped": "도달 가능 {{count}}개, 로드는 {{limit}}개로 제한",
+    "resizePanel": "필터 패널 너비 조절",
     "partLoaded": "로드 {{count}}개",
     "partConnected": "연결 {{count}}개",
     "partIsland_one": "섬 {{count}}개",
@@ -104,11 +112,6 @@
     "loadAllHint": "모든 유형을 불러옵니다. 칩 선택 해제는 숨기기만 합니다",
     "loadSelectedHint": "선택한 유형만 불러옵니다 (다시 로드)"
   },
-  "unconnectedHidden_one": "포커스와 연결되지 않은 노드 {{count}}개",
-  "unconnectedHidden_other": "포커스와 연결되지 않은 노드 {{count}}개",
-  "unconnectedToggleShow": "표시",
-  "unconnectedToggleHide": "숨기기",
-  "unconnectedToggleHint": "포커스로 가는 경로가 없는 노드는 유형/깊이 필터로 인해 생깁니다 — 표시하거나 숨깁니다",
   "typeList": {
     "ariaLabel": "오브젝트 목록: {{type}}",
     "sortBy": "정렬",
@@ -124,6 +127,11 @@
     "empty": "그래프에 이 유형의 오브젝트가 없습니다.",
     "focus": "포커스 오브젝트"
   },
+  "unconnectedHidden_one": "포커스와 연결되지 않은 노드 {{count}}개",
+  "unconnectedHidden_other": "포커스와 연결되지 않은 노드 {{count}}개",
+  "unconnectedToggleShow": "표시",
+  "unconnectedToggleHide": "숨기기",
+  "unconnectedToggleHint": "포커스로 가는 경로가 없는 노드는 유형/깊이 필터로 인해 생깁니다 — 표시하거나 숨깁니다",
   "edge": {
     "represents": "나타냄",
     "buttonAction": "버튼 동작",

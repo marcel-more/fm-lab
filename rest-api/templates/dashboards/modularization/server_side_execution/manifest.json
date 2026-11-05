@@ -1,0 +1,71 @@
+{
+  "id": "server_side_execution",
+  "version": "1.0.0",
+  "title": "Server-side execution",
+  "description": "What runs (potentially) on the server: Perform Script on Server, Execute FileMaker Data API and Install OnTimer Script (Step_ID-gated), plus the server-relevant Extended Privilege grants (fmrest, fmurlscript, fmodata, fmxml, fmphp, fmextscriptaccess). An access-audit view of the server surface.",
+  "author": "fm-lab",
+  "icon": "server",
+  "tags": [
+    "template",
+    "modularization",
+    "server",
+    "api"
+  ],
+  "entry": "layout.json",
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "by_kind",
+      "source": "bundle:data/by_kind.sql",
+      "params": {
+        "limit": 20
+      }
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 400
+    },
+    {
+      "id": "grants",
+      "source": "bundle:data/grants.sql",
+      "pageSize": 200,
+      "pageParam": "grants_page",
+      "searchParam": "grants_q",
+      "sortParam": "grants_sort"
+    }
+  ],
+  "analysis": {
+    "objectTypes": [
+      "PrivilegeSet",
+      "Script"
+    ]
+  },
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "mechanism",
+      "type": "string",
+      "required": false,
+      "description": "Restricts the detail list to a mechanism (Perform Script on Server / Execute FileMaker Data API / Install OnTimer Script). 'All' (or empty) lifts the filter."
+    },
+    {
+      "name": "limit",
+      "type": "number",
+      "required": false,
+      "description": "Maximum number of rows returned by the detail lists."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

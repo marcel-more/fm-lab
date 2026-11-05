@@ -90,9 +90,17 @@
       "recency": "Colora i nodi in base all’età della loro modifica singola più recente (le classi dell’Atlante del grafo)"
     },
     "communityUnnamed": "Comunità {{id}}",
-    "resizePanel": "Ridimensiona il pannello dei filtri",
+    "detailsShort": "Dettagli",
+    "openDetails": "Apri la vista di dettaglio dell’oggetto focus",
+    "openTypeList": "Apri l’elenco degli oggetti {{type}}",
+    "hideType": "Nascondi {{type}}",
+    "showType": "Mostra {{type}}",
+    "depthOf": "(di {{max}})",
+    "extendDepth": "più in profondità",
+    "extendDepthHint": "Estendi il cursore oltre 4 (fino alla profondità massima raggiungibile).",
     "depthLoad": "{{count}} raggiungibili",
     "depthClipped": "{{count}} raggiungibili, caricamento limitato a {{limit}}",
+    "resizePanel": "Ridimensiona il pannello dei filtri",
     "partLoaded": "{{count}} caricati",
     "partConnected": "{{count}} connessi",
     "partIsland_one": "{{count}} isola",
@@ -104,11 +112,6 @@
     "loadAllHint": "Carica tutti i tipi; deselezionare un chip lo nasconde soltanto",
     "loadSelectedHint": "Carica solo i tipi selezionati (ricarica)"
   },
-  "unconnectedHidden_one": "{{count}} nodo non collegato al fuoco",
-  "unconnectedHidden_other": "{{count}} nodi non collegati al fuoco",
-  "unconnectedToggleShow": "mostra",
-  "unconnectedToggleHide": "nascondi",
-  "unconnectedToggleHint": "I nodi senza percorso verso il fuoco derivano dal filtro tipo/profondità — mostrali o nascondili",
   "typeList": {
     "ariaLabel": "Elenco oggetti: {{type}}",
     "sortBy": "Ordina",
@@ -124,6 +127,11 @@
     "empty": "Nessun oggetto di questo tipo nel grafo.",
     "focus": "Oggetto focus"
   },
+  "unconnectedHidden_one": "{{count}} nodo non collegato al fuoco",
+  "unconnectedHidden_other": "{{count}} nodi non collegati al fuoco",
+  "unconnectedToggleShow": "mostra",
+  "unconnectedToggleHide": "nascondi",
+  "unconnectedToggleHint": "I nodi senza percorso verso il fuoco derivano dal filtro tipo/profondità — mostrali o nascondili",
   "edge": {
     "represents": "rappresenta",
     "buttonAction": "Azione pulsante",

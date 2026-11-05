@@ -12,10 +12,15 @@
     "ddrMissing": "DDR-info saknas",
     "ddrMissing_partial": "DDR-info saknas i {{count}} av {{total}} filer",
     "ddrMissingHint": "exportera med alternativet ”Inkludera information för analysverktyg”",
+    "formatLegacy": "Alla {{total}} filer i FileMaker 18-format — importeras inte",
+    "formatLegacy_partial": "{{count}} av {{total}} filer i FileMaker 18-format — importeras inte",
+    "formatLegacyHint": "exportera dem igen med FileMaker 19 eller senare via ”Spara en kopia som XML”",
     "page": "Sida {{current}} / {{total}}",
     "noMatches": "Inga träffar för ”{{query}}”.",
     "prev": "← Föregående",
     "next": "Nästa →",
+    "pageSize": "Rader",
+    "pageSizeAll": "Alla",
     "rowAction": "Öppna målet"
   },
   "layoutPreview": {
@@ -173,6 +178,11 @@
     "notNavigable": "Målet finns inte i den importerade datamängden",
     "showInLayout": "Visa i layouten (Alt+klick)",
     "showInFile": "Visa i filen (Alt+klick)",
+    "dirFilterAria": "Filtrera efter riktning",
+    "dirFilterLabel": "Riktning",
+    "dirIn": "Inkommande",
+    "dirOut": "Utgående",
+    "dirBoth": "Båda",
     "subroles": {
       "hide": {
         "short": "Hide",
@@ -311,7 +321,18 @@
     "storageIndexLanguage": "Standardspråk",
     "summaryRestartGroup": "Börja om för varje grupp",
     "summaryRepMode": "Beräkna upprepningar",
-    "calcEvaluatesWhenEmpty": "Beräknar även vid tomma fält"
+    "calcEvaluatesWhenEmpty": "Beräknar även vid tomma fält",
+    "validationMessageCalc": "Meddelandeberäkning",
+    "disabled": "inaktiverad",
+    "sectionExtended": "Utökade alternativ (FileMaker 26)",
+    "annotation": "Annotering (DDL)",
+    "displayNames": "Visningsnamn",
+    "displayNamesEnabled": "Anpassade visningsnamn aktiva",
+    "displayNamesDisabled": "Inte anpassade",
+    "displayNameElements": "Element",
+    "displayNameKey": "Element",
+    "displayNameValue": "Etikett / formel",
+    "displayNamesFormula": "Formel för visningsnamn"
   },
   "typeDetail": {
     "loading": "Laddar…",
@@ -390,6 +411,18 @@
     "settingsHeading": "Inställningar",
     "saveLabel": "Spara inställningar",
     "savingLabel": "Sparar…",
+    "versions": {
+      "fmlab": "FM-Lab",
+      "api": "API",
+      "frontend": "Frontend",
+      "xmlConverter": "XML-konverterare",
+      "xmlEngine": "Motor",
+      "dbSchema": "DB-schema",
+      "fmSpec": "fm-spec",
+      "duckdb": "DuckDB",
+      "duckdbCli": "DuckDB CLI",
+      "duckdbCliMissing": "hittades inte"
+    },
     "api": {
       "heading": "REST-API-anslutning",
       "label": "REST-API-URL",
@@ -413,11 +446,22 @@
       "empty": "Ingen skanning ännu. Klicka på \"Skanna om\".",
       "colVersion": "Version"
     },
-    "versions": {
-      "fmSpec": "fm-spec",
-      "duckdb": "DuckDB",
-      "duckdbCli": "DuckDB CLI",
-      "duckdbCliMissing": "hittades inte"
+    "graphify": {
+      "enableFirst": "Aktivera pluginet ovan för att starta exporten.",
+      "exportButton": "Exportera graf",
+      "doneMessage": "Exporten är klar. Filen finns i katalogen output/.",
+      "failed": "Exporten misslyckades.",
+      "lastExport": "Senaste export",
+      "colFile": "Fil",
+      "colNodes": "Noder",
+      "colEdges": "Kanter",
+      "colSize": "Storlek",
+      "recentFiles": "Tidigare exporter ({{count}})",
+      "phase": {
+        "count": "Räknar objekt…",
+        "export": "Exporterar graf…",
+        "assemble": "Skriver JSON-fil…"
+      }
     },
     "solutions": {
       "heading": "Lösningar",
@@ -484,6 +528,10 @@
     "source": "Källa:",
     "relationshipGraphLink": "↗ Relationsdiagram",
     "copyUuidAria": "Kopiera UUID till urklipp",
+    "copyOriginalUuidAria": "Kopiera ursprungligt UUID till urklipp (tvetydigt i källfilen)",
+    "copySyntheticUuidAria": "Kopiera syntetiskt FM-Lab-UUID till urklipp",
+    "syntheticBadge": "FM-Lab",
+    "syntheticTooltip": "FM-Lab-intern ersättningsidentitet: det ursprungliga UUID:t för detta objekt var en dubblett i källfilen och har reparerats vid importen. Klicka för att kopiera det syntetiska UUID:t (katalogidentitet).",
     "change": {
       "modified": "Senast ändrad",
       "containerModified": "Behållaren senast ändrad",

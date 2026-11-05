@@ -320,10 +320,12 @@
   position: sticky;
   top: 0;
 }
-.dash-table__th--right,
-.dash-table__td--right { text-align: right; }
-.dash-table__th--center,
-.dash-table__td--center { text-align: center; }
+/* Alignment modifiers carry the `.dash-table` prefix so they outrank the
+   `text-align: left` default of `.dash-table th/td` above. */
+.dash-table .dash-table__th--right,
+.dash-table .dash-table__td--right { text-align: right; }
+.dash-table .dash-table__th--center,
+.dash-table .dash-table__td--center { text-align: center; }
 .dash-table__th--nowrap,
 .dash-table__td--nowrap { white-space: nowrap; }
 .dash-table--compact td,
@@ -513,6 +515,11 @@
   border-radius: 3px;
   padding: 0 5px;
   font-weight: 600;
+}
+.dash-search-bar__flag--error {
+  color: var(--color-error-fg);
+  background: var(--color-error-bg);
+  border-color: var(--color-error-border);
 }
 .dash-search-bar__input {
   flex: 0 1 240px;
@@ -793,6 +800,59 @@
 .dash-autotable__th--sortable:hover {
   color: var(--color-text-primary);
 }
+/* Table header sort button: looks like the plain header text, makes the
+   column reachable by keyboard; the click bubbles into the <th> handler. */
+.dash-table__sort {
+  display: inline;
+  padding: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-align: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.dash-table__sort:focus {
+  outline: none;
+}
+.dash-table__sort:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+/* Keyboard-navigable rows (`keyboardNav`): ring on the focused row only when
+   the focus came from the keyboard. Drawn as inset shadows on the cells — an
+   outline on a <tr> is not painted reliably by WebKit. */
+.dash-table__row--focusable:focus {
+  outline: none;
+}
+.dash-table__row--focusable:focus-visible > td {
+  box-shadow: inset 0 2px 0 var(--color-focus-ring), inset 0 -2px 0 var(--color-focus-ring);
+}
+.dash-table__row--focusable:focus-visible > td:first-child {
+  box-shadow: inset 0 2px 0 var(--color-focus-ring), inset 0 -2px 0 var(--color-focus-ring),
+    inset 2px 0 0 var(--color-focus-ring);
+}
+.dash-table__row--focusable:focus-visible > td:last-child {
+  box-shadow: inset 0 2px 0 var(--color-focus-ring), inset 0 -2px 0 var(--color-focus-ring),
+    inset -2px 0 0 var(--color-focus-ring);
+}
+/* Page-size select of a client-paged Table, in the count bar before the pager. */
+.dash-search-bar__pagesize {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.dash-search-bar__pagesize .dash-select__control {
+  padding: 2px 6px;
+  font-size: 0.78rem;
+}
+.dash-search-bar__pagesize + .dash-autotable__pager--top {
+  margin-left: 0;
+}
 .dash-autotable__noresult {
   padding: 12px 8px !important;
   color: var(--color-text-muted);
@@ -802,8 +862,8 @@
 /* Zweites Klickziel pro Zeile (`@row_action`): schmale Spalte am Zeilenende
  * mit kleinem Pfeil-Button. Der Button bleibt dezent und färbt sich erst beim
  * Hover der Zeile bzw. des Buttons selbst. */
-.dash-autotable__th--rowaction,
-.dash-autotable__rowaction-cell {
+.dash-table .dash-autotable__th--rowaction,
+.dash-table .dash-autotable__rowaction-cell {
   width: 2rem;
   text-align: right;
   white-space: nowrap;
@@ -941,7 +1001,7 @@
   transition: background 0.15s, border-color 0.15s;
 }
 .dash-tile--clickable:hover {
-  background: var(--color-hover-bg);
+  background: var(--color-accent-soft-bg);
   border-color: var(--color-accent);
 }
 .dash-tile__title {
@@ -1049,11 +1109,30 @@
 }
 .dash-tile--featured {
   width: 100%;
-  align-items: stretch;
-  gap: 4px;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
   padding: 14px 16px;
   background: var(--color-accent-soft-bg);
   border-color: var(--color-accent-ring);
+}
+/* The band already sits on the accent surface — its hover goes one step further. */
+.dash-tile--featured.dash-tile--clickable:hover,
+.dash-tile-cell:hover > .dash-tile--featured.dash-tile--clickable {
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-accent-soft-bg));
+}
+.dash-featured__icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--color-accent);
+}
+.dash-featured__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
 }
 .dash-featured__head {
   display: flex;
@@ -1086,8 +1165,47 @@
   background: var(--color-bg-subtle, var(--color-bg-surface));
 }
 .dash-tile__foldericon {
+  display: inline-flex;
+  vertical-align: -3px;
   margin-right: 6px;
   color: var(--color-accent);
+}
+.dash-foldericon {
+  display: block;
+  flex: 0 0 auto;
+}
+
+/* "überschreibt Standard" — a custom bundle replacing a shipped one. */
+.dash-badge-override {
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+  font-weight: 500;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--color-warning-border);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-fg);
+  white-space: nowrap;
+  line-height: 1.6;
+}
+.dash-tile > .dash-badge-override {
+  align-self: flex-start;
+}
+/* Same shape as the override badge; info tone — a hint, not a conflict. */
+.dash-badge-legacy {
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+  font-weight: 500;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--color-info-border);
+  background: var(--color-info-bg);
+  color: var(--color-info-fg);
+  white-space: nowrap;
+  line-height: 1.6;
+}
+.dash-tile > .dash-badge-legacy {
+  align-self: flex-start;
 }
 .dash-tile__run {
   position: absolute;
@@ -1167,14 +1285,6 @@
   opacity: 1;
   border-color: currentColor;
   background: var(--color-accent-soft-bg);
-}
-.dash-viewbar__sort {
-  font-size: 0.78rem;
-  padding: 3px 6px;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background: var(--color-bg-surface);
-  color: var(--color-text-primary);
 }
 
 /* Collapsible subfolder sections of the filtered hierarchy view. */
@@ -1256,11 +1366,14 @@
 /* --- View toolbar (tiles⇄list toggle + entry-count meta) --- */
 .dash-viewbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.6rem;
   margin-bottom: 12px;
 }
+/* The view selector keeps its width — the other toolbar parts wrap instead. */
 .dash-viewbar__toggle {
+  flex: 0 0 auto;
   display: inline-flex;
   border: 1px solid var(--color-border);
   border-radius: 6px;
@@ -1298,6 +1411,343 @@
   color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
 }
+/* Narrow screens: the status chips take a row of their own below the
+   selector, "Run all" and the count. */
+@media (max-width: 640px) {
+  .dash-viewbar__filters {
+    order: 1;
+    flex-basis: 100%;
+  }
+}
+/* Scope note in the search line ("searching all dashboards"). */
+.dash-search-bar__scope {
+  font-style: italic;
+}
+
+/* --- Hierarchical list (FolderTreeList, role="treegrid") ---
+   One CSS grid per row so header, folder and dashboard rows share columns:
+   name · ● · ▲ · ✓ · ◦ · #. Below 640 px the four state columns collapse
+   into one status column. Colors only via --result-state-* (both themes). */
+.dash-tree {
+  --dash-tree-cols: minmax(0, 1fr) repeat(4, 64px) 92px;
+  --dash-tree-indent: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 0.88rem;
+}
+/* The Card clips with overflow:hidden, which would make it the (non-scrolling)
+   sticky container of the column header. `clip` keeps the clipping without
+   creating a scroll container, so the header sticks to the page scroller. */
+.dash-card:has(.dash-tree) {
+  overflow: clip;
+}
+.dash-tree__row {
+  display: grid;
+  grid-template-columns: var(--dash-tree-cols);
+  align-items: center;
+  min-height: 34px;
+  border-top: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-app);
+  user-select: none;
+}
+.dash-tree__row--head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  min-height: 28px;
+  border-top: none;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 6px 6px 0 0;
+  background: var(--color-bg-surface);
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.dash-tree__row--head + .dash-tree__row {
+  border-top: none;
+}
+.dash-tree__row--folder {
+  background: var(--color-bg-surface);
+  cursor: pointer;
+}
+.dash-tree__row--folder .dash-tree__label {
+  font-weight: 600;
+}
+.dash-tree__row--top .dash-tree__label {
+  font-size: 0.95rem;
+}
+.dash-tree__row--dashboard {
+  cursor: pointer;
+}
+.dash-tree__row--folder:hover,
+.dash-tree__row--dashboard:hover {
+  /* Opaque accent surface: the translucent --color-hover-bg is barely
+     distinguishable from the grey folder rows, especially in Safari. */
+  background: var(--color-accent-soft-bg);
+}
+.dash-tree__row:last-child {
+  border-radius: 0 0 6px 6px;
+}
+.dash-tree__row:focus {
+  outline: none;
+}
+.dash-tree__row:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+.dash-tree__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 4px 8px 4px calc(8px + var(--dash-tree-level, 0) * var(--dash-tree-indent));
+  color: var(--color-text-primary);
+}
+.dash-tree__row--head .dash-tree__name {
+  color: inherit;
+}
+.dash-tree__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dash-tree__icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--color-accent);
+}
+.dash-tree__count {
+  flex: 0 0 auto;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.dash-tree__c {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 2px 4px;
+  font-variant-numeric: tabular-nums;
+}
+.dash-tree__c--findings {
+  justify-content: flex-end;
+  padding-right: 12px;
+}
+.dash-tree__c--status {
+  display: none;
+}
+.dash-tree__value {
+  min-width: 48px;
+  justify-content: center;
+}
+/* Folder findings = sum of the subtree, deliberately muted. */
+.dash-tree__sum {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+.dash-tree__pending {
+  color: var(--result-state-pending);
+}
+.dash-tree__skeleton {
+  width: 40px;
+}
+.dash-tree__row--hint {
+  cursor: default;
+}
+.dash-tree__row--hint:hover {
+  background: var(--color-bg-app);
+}
+.dash-tree__hint {
+  grid-column: 1 / -1;
+  color: var(--color-text-muted);
+  font-style: italic;
+  white-space: normal;
+}
+@media (max-width: 640px) {
+  .dash-tree {
+    --dash-tree-cols: minmax(0, 1fr) auto 72px;
+    --dash-tree-indent: 12px;
+  }
+  .dash-tree__c--state {
+    display: none;
+  }
+  .dash-tree__c--status {
+    display: flex;
+    justify-content: flex-end;
+  }
+}
+
+/* --- Favorites: star toggle (dashboard title, tiles, list rows) ---
+   Outline star = not a favorite, filled = favorite; colour via
+   --favorite-color (both themes). In the overview a filled star always
+   shows, an outline star only while its row or tile is hovered or focused
+   (always on devices without hover) — the calm picture of the list. */
+.dash-favstar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, opacity 0.15s;
+}
+.dash-favstar:hover {
+  color: var(--favorite-color);
+  background: var(--color-hover-bg);
+}
+.dash-favstar--on {
+  color: var(--favorite-color);
+}
+.dash-favstar:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+.dash-favstar:disabled {
+  cursor: default;
+  opacity: 0.5;
+  background: transparent;
+}
+.dash-favstar svg {
+  display: block;
+}
+.dash-favstar--head {
+  width: 32px;
+  height: 32px;
+}
+.dash-favstar--row {
+  /* Fills its column cell, so a click anywhere in the column hits the star
+     instead of falling through to the row (which would open the dashboard). */
+  align-self: stretch;
+  width: 100%;
+  height: auto;
+  min-height: 24px;
+  border-radius: 0;
+}
+/* In the list the not-yet-favorite star stays a grey hint, also under the
+   pointer; only a favorite takes the favorite colour. */
+.dash-favstar--row:hover {
+  background: transparent;
+}
+.dash-favstar--row:not(.dash-favstar--on):hover {
+  color: var(--color-text-secondary);
+}
+.dash-favstar--tile {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+}
+.dash-favstar--row:not(.dash-favstar--on),
+.dash-favstar--tile:not(.dash-favstar--on) {
+  opacity: 0;
+}
+.dash-tree__row:hover .dash-favstar--row,
+.dash-tree__row:focus-visible .dash-favstar--row,
+.dash-tile-cell:hover .dash-favstar--tile,
+.dash-tile-cell:focus-within .dash-favstar--tile {
+  opacity: 1;
+}
+@media (hover: none) {
+  .dash-favstar--row:not(.dash-favstar--on),
+  .dash-favstar--tile:not(.dash-favstar--on) {
+    opacity: 1;
+  }
+}
+/* A dashboard tile with its star: the star is a sibling of the tile button
+   (no nested buttons) in the top-right corner; the cell carries the hover. */
+.dash-tile-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.dash-tile-cell > .dash-tile {
+  flex: 1 1 auto;
+  padding-right: 36px;
+}
+.dash-tile-cell:hover > .dash-tile--clickable {
+  background: var(--color-accent-soft-bg);
+  border-color: var(--color-accent);
+}
+/* List with a star column (list view, favorites view). */
+.dash-tree--starred {
+  --dash-tree-cols: minmax(0, 1fr) repeat(4, 64px) 92px 36px;
+}
+.dash-tree__c--star {
+  align-self: stretch;
+  justify-content: center;
+  padding: 0;
+  color: var(--color-text-muted);
+}
+.dash-tree__titlestack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+/* Rubric path under the title — the folder context the flat list lacks. */
+.dash-tree__rubric {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+}
+/* Hint above the favorites list: favorites that are no longer available. */
+.dash-favmissing {
+  margin-bottom: 10px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  color: var(--color-warning-fg);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  border-radius: 6px;
+}
+@media (max-width: 640px) {
+  .dash-tree--starred {
+    --dash-tree-cols: minmax(0, 1fr) auto 72px 32px;
+  }
+}
+/* Test preset (Tests overview): test type · members · status of the last run.
+   The status column stays visible on every width; narrow screens drop the type. */
+.dash-tree--test {
+  --dash-tree-cols: minmax(0, 1fr) 150px 84px 64px;
+}
+.dash-tree--test.dash-tree--starred {
+  --dash-tree-cols: minmax(0, 1fr) 150px 84px 64px 36px;
+}
+.dash-tree__c--testtype {
+  justify-content: flex-start;
+  min-width: 0;
+}
+.dash-tree__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+.dash-tree__c--members {
+  justify-content: flex-end;
+  padding-right: 12px;
+}
+@media (max-width: 640px) {
+  .dash-tree--test {
+    --dash-tree-cols: minmax(0, 1fr) 64px 52px;
+  }
+  .dash-tree--test.dash-tree--starred {
+    --dash-tree-cols: minmax(0, 1fr) 64px 52px 32px;
+  }
+  .dash-tree__c--testtype {
+    display: none;
+  }
+}
 
 /* --- Folder grouping (TileGrid groupBy) --- */
 .dash-tilegroups {
@@ -1315,6 +1765,9 @@
   color: var(--color-text);
   border-bottom: 1px solid var(--color-border);
   padding-bottom: 6px;
+}
+.dash-tile__title .dash-tilegroup__count {
+  margin-left: 0.35em;
 }
 .dash-tilegroup__count {
   font-size: 0.8rem;
@@ -1738,7 +2191,7 @@
   gap: 10px;
   margin-bottom: 12px;
 }
-/* Clean self-abort banner (out of memory / incomplete build). Full-width row at the
+/* Clean self-abort banner (out of memory / incomplete build / no importable file). Full-width row at the
  * top of the control (flex-wrap container → flex-basis 100%), themed like other errors. */
 .xml-convert-abort {
   flex-basis: 100%;
@@ -1751,6 +2204,12 @@
   color: var(--color-error-fg);
   border: 1px solid var(--color-error-border);
   text-align: left;
+}
+/* Notice variant (files skipped, run otherwise successful): warning tokens, not error. */
+.xml-convert-abort--warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-fg);
+  border-color: var(--color-warning-border);
 }
 .xml-convert-abort__title {
   font-size: 0.9rem;
@@ -2017,6 +2476,39 @@
   border-top: 1px solid var(--color-border);
 }
 .xml-empty-card__count {
+  font-weight: 600;
+}
+/* Conversion running in the terminal: the whole card pulses in the signal orange of
+ * the import progress (processing row / active segment), so the state is noticed. */
+.xml-empty-card--running,
+.xml-convert-abort--running {
+  border-color: rgba(255, 145, 30, 0.55);
+  border-left: 4px solid rgba(255, 145, 30, 0.95);
+  animation: xml-running-pulse 1.4s ease-in-out infinite;
+}
+.xml-convert-abort--running {
+  color: inherit;
+}
+@keyframes xml-running-pulse {
+  0%, 100% { background: rgba(255, 145, 30, 0.18); }
+  50%      { background: rgba(255, 145, 30, 0.42); }
+}
+[data-theme="dark"] .xml-empty-card--running,
+[data-theme="dark"] .xml-convert-abort--running {
+  animation-name: xml-running-pulse-dark;
+}
+@keyframes xml-running-pulse-dark {
+  0%, 100% { background: rgba(255, 160, 50, 0.22); }
+  50%      { background: rgba(255, 160, 50, 0.48); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .xml-empty-card--running,
+  .xml-convert-abort--running {
+    animation: none;
+    background: rgba(255, 145, 30, 0.22);
+  }
+}
+.xml-empty-card__running {
   font-weight: 600;
 }
 .xml-empty-card__ready {
@@ -2583,4 +3075,266 @@
 .dash-chart-tip__note {
   margin-top: 6px;
   color: var(--color-text-muted);
+}
+
+/* --- Overview list: sortable column headers ---
+   Header cells hold buttons; the active one carries ↑/↓. The arrow slot keeps
+   its width so the header does not shift between columns. */
+.dash-tree__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin: -2px -4px;
+  padding: 2px 4px;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.dash-tree__sort:hover {
+  color: var(--color-text-primary);
+  background: var(--color-hover-bg);
+}
+.dash-tree__sort:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+.dash-tree__sort--active {
+  color: var(--color-text-primary);
+}
+.dash-tree__sortarrow {
+  display: inline-block;
+  min-width: 0.7em;
+  font-size: 0.75rem;
+  color: var(--color-accent);
+}
+.dash-tree__sortsep {
+  margin: 0 4px;
+  color: var(--color-border);
+}
+
+/* --- Overview list: featured health row (sum row) ---
+   Same language as the featured band of the folder view — accent surface and
+   accent edge — and the totals over its rubrics in the state columns. */
+.dash-tree__row--featured {
+  min-height: 44px;
+  background: var(--color-accent-soft-bg);
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+.dash-tree__row--featured:hover {
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-accent-soft-bg));
+}
+.dash-tree__row--featured .dash-tree__label {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.dash-tree__icon--featured {
+  justify-content: center;
+  width: 14px;
+}
+.dash-tree__rulechip {
+  flex: 0 0 auto;
+  font-size: 0.74rem;
+  padding: 1px 7px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* --- Search bar: expand/collapse all + object-type filter --- */
+.dash-search-bar__bulk {
+  display: inline-flex;
+  margin-right: auto;
+}
+.dash-search-bar__count + .dash-search-bar__type {
+  margin-left: auto;
+}
+.dash-search-bar__type {
+  max-width: 220px;
+  padding: 3px 6px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  color: var(--color-text-primary);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+}
+.dash-search-bar__type:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-soft-bg);
+}
+@media (max-width: 640px) {
+  .dash-search-bar {
+    flex-wrap: wrap;
+  }
+  .dash-search-bar__bulk .bulk-toggle__label {
+    display: none;
+  }
+  .dash-search-bar__type {
+    flex: 1 1 140px;
+    max-width: none;
+  }
+  .dash-search-bar__type + .dash-search-bar__input {
+    flex: 1 1 100%;
+  }
+}
+
+/* --- Cleanup hint above the overview (leftovers of an older layout) --- */
+.dash-cleanup {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.88rem;
+  color: var(--color-text-primary);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  border-radius: 8px;
+}
+.dash-cleanup--done {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  background: var(--color-bg-surface);
+  border-color: var(--color-border);
+}
+.dash-cleanup__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.dash-cleanup__text {
+  flex: 1 1 280px;
+  margin: 0;
+}
+.dash-cleanup__run {
+  padding: 4px 12px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-accent);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.dash-cleanup__run:hover:not(:disabled) {
+  background: var(--color-accent-soft-bg);
+}
+.dash-cleanup__run:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.dash-cleanup__list,
+.dash-cleanup__errors {
+  max-height: 280px;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+.dash-cleanup__errors {
+  flex-basis: 100%;
+  color: var(--color-error-fg);
+}
+.dash-cleanup__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 3px 0;
+  border-top: 1px solid var(--color-warning-border);
+}
+.dash-cleanup__item--kept .dash-cleanup__path {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+.dash-cleanup__nocheck {
+  display: inline-block;
+  width: 13px;
+}
+.dash-cleanup__path {
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+.dash-cleanup__hint {
+  display: block;
+  color: var(--color-text-muted);
+}
+.dash-cleanup__arrow {
+  color: var(--color-text-muted);
+}
+.dash-cleanup__tag {
+  font-size: 0.74rem;
+  padding: 0 6px;
+  border: 1px solid var(--color-warning-border);
+  border-radius: 10px;
+  color: var(--color-warning-fg);
+}
+.dash-cleanup__case {
+  font-size: 0.74rem;
+  color: var(--color-text-muted);
+}
+
+/* --- Pulse glyph of the Healthchecks entry (band + list row) ---
+   The wave is a 24-unit SVG scaled to --dash-pulse-size. While rules still
+   wait for a result a glowing dot runs along the wave and pauses before the
+   next pass. Only transform and opacity animate — compositor work, no
+   main-thread timer. */
+.dash-pulse {
+  position: relative;
+  display: inline-block;
+  flex: 0 0 auto;
+  width: var(--dash-pulse-size);
+  height: var(--dash-pulse-size);
+}
+.dash-pulse__box {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  transform: scale(var(--dash-pulse-scale));
+  transform-origin: 0 0;
+}
+.dash-pulse__box svg {
+  display: block;
+  overflow: visible;
+}
+/* Lighter core than the wave, glow in the wave's colour. */
+.dash-pulse__dot {
+  position: absolute;
+  top: -2.6px;
+  left: -2.6px;
+  width: 5.2px;
+  height: 5.2px;
+  border-radius: 50%;
+  background: color-mix(in srgb, currentColor 35%, #fff);
+  box-shadow: 0 0 1.5px currentColor, 0 0 4px currentColor;
+  opacity: 0;
+  animation: dash-pulse-run 2.6s linear infinite;
+  will-change: transform, opacity;
+}
+/* Corner points of the wave; the times follow the segment lengths, one pass
+   in the first 55 % of the cycle, then the dot fades out and waits. */
+@keyframes dash-pulse-run {
+  0% { transform: translate(2px, 12px); opacity: 0; }
+  4.79% { transform: translate(6px, 12px); }
+  6% { opacity: 1; }
+  16.14% { transform: translate(9px, 3px); }
+  38.86% { transform: translate(15px, 21px); }
+  50% { opacity: 1; }
+  50.21% { transform: translate(18px, 12px); }
+  55%, 100% { transform: translate(22px, 12px); }
+  58%, 100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dash-pulse__dot {
+    display: none;
+  }
 }

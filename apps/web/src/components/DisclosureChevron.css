@@ -1,0 +1,19 @@
+/* Shared disclosure chevron (DisclosureChevron.tsx) — the one expand/collapse
+ * indicator of the client. Fixed 14px slot so toggling never shifts the label. */
+.disclosure-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 14px;
+  color: var(--color-text-muted);
+  transition: transform 0.12s;
+}
+.disclosure-chevron--open {
+  transform: rotate(90deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .disclosure-chevron {
+    transition: none;
+  }
+}

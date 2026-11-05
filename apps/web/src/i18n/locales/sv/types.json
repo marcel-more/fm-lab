@@ -34,5 +34,14 @@
     "ScriptStepType": "Kategori",
     "BuiltinFunction": "Kategori",
     "PluginFunction": "Komponent"
+  },
+  "testTypes": {
+    "exploration": "Utforskning",
+    "code-quality": "Kodkvalitet",
+    "error-check": "Felkontroll",
+    "security": "Säkerhet",
+    "inventory": "Inventering",
+    "performance": "Prestanda",
+    "platform": "Plattform"
   }
 }

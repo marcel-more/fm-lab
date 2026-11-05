@@ -1,0 +1,117 @@
+{
+  "id": "name_copied_suffix",
+  "version": "1.0.0",
+  "title": "Name still carries a duplicate suffix",
+  "description": "Code-style rule — an object name still carries the suffix FileMaker appends when something is duplicated. The copy suffixes (Copy / copy / Kopie) are the default finding set; the numeric class — a name ending in a space and up to four digits — is a separate chip, because it is also how countless deliberate names are built.\n\nBased on the fmCheckMate check \"Copied Function Name\" — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+  "author": "fm-lab rules",
+  "icon": "copy",
+  "category": "code_style",
+  "tags": [
+    "rule",
+    "fmcheckmate",
+    "code_style"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "info",
+    "category": "code_style",
+    "rationale": "A name left as \"… Copy\" says the duplicate was never finished. It is the cheapest available signal for code that was cloned and then only half adapted, and it makes every name-based reference ambiguous to read.",
+    "remediation": "Rename the copy to what it actually does, or delete it if the duplicate was only made to try something out.",
+    "meta": {
+      "name": "Name still carries a duplicate suffix",
+      "author": "fm-lab rules",
+      "source": "fmCheckMate-XSLT",
+      "url": "https://github.com/mrwatson-de/fmCheckMate-XSLT",
+      "description": "Code-style rule — an object name still carries the suffix FileMaker appends when something is duplicated. The copy suffixes (Copy / copy / Kopie) are the default finding set; the numeric class — a name ending in a space and up to four digits — is a separate chip, because it is also how countless deliberate names are built.",
+      "created": "2026-08-16",
+      "references": [
+        {
+          "project": "fmCheckMate-XSLT",
+          "rule": "XMFN_fmCM_AnalyseFunctions.xsl (XMFN_fmCM_ReportCopiedFunctionNames)",
+          "url": "https://github.com/mrwatson-de/fmCheckMate-XSLT"
+        }
+      ],
+      "calibration": "The numeric class is deliberately not part of the default finding set: measured on a large solution it outnumbers the copy suffixes roughly two to one and is almost entirely legitimate naming. The localised suffix list currently covers the English and German wording and is meant to be extended per solution."
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Script",
+      "Field",
+      "Layout",
+      "CustomFunction",
+      "TableOccurrence",
+      "BaseTable",
+      "ValueList",
+      "CustomMenu"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Name still carries a duplicate suffix"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    },
+    {
+      "id": "object_types",
+      "source": "bundle:data/object_types.sql"
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "suffix_kind",
+      "type": "string",
+      "required": false,
+      "description": "Suffix-class filter chip (copy, numeric, all); default copy."
+    },
+    {
+      "name": "object_type",
+      "type": "string",
+      "required": false,
+      "description": "Object-type filter select; unset = all."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  },
+  "messages": {
+    "copy": "Name still carries the suffix FileMaker adds when duplicating",
+    "numeric": "Name ends in a number — possibly a duplicate that was never renamed"
+  }
+}

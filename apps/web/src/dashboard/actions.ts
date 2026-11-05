@@ -247,7 +247,7 @@ export function dispatchAction(
     case 'navigate': {
       // Generic SPA-Navigation to an app-internal path. Replaces the
       // id-Spezialfälle in openDashboard for the Leitseiten (`/dashboard`,
-      // `/query`, `/docs`, `/xml-import`).
+      // `/docs`, `/xml-import`).
       const path = String(args.path || '');
       if (!path.startsWith('/')) {
         console.warn('[dashboard] navigate requires an app-internal path (leading "/")', args);
@@ -289,8 +289,8 @@ export function dispatchAction(
         console.warn('[dashboard] runQuery called without query', args);
         return;
       }
-      // Phase 2: _generic-Dashboard. Vorerst: navigiere auf /query/:name (Stub).
-      ctx.navigate(`/query/${encodeURIComponent(q)}`);
+      // A query is a single-file dashboard — same route as every dashboard.
+      ctx.navigate(`/dashboard/${encodeURIComponent(q)}`);
       return;
     }
     case 'openUrl': {

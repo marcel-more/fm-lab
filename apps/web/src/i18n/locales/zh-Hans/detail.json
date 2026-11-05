@@ -12,10 +12,15 @@
     "ddrMissing": "缺少 DDR 信息",
     "ddrMissing_partial": "{{total}} 个文件中有 {{count}} 个缺少 DDR 信息",
     "ddrMissingHint": "请使用“包括分析工具的详细信息”选项导出",
+    "formatLegacy": "全部 {{total}} 个文件均为 FileMaker 18 格式 — 不会被导入",
+    "formatLegacy_partial": "{{total}} 个文件中有 {{count}} 个为 FileMaker 18 格式 — 不会被导入",
+    "formatLegacyHint": "请使用 FileMaker 19 或更高版本通过“另存为 XML”重新导出",
     "page": "第 {{current}} / {{total}} 页",
     "noMatches": "没有与“{{query}}”匹配的结果。",
     "prev": "← 上一页",
     "next": "下一页 →",
+    "pageSize": "每页条数",
+    "pageSizeAll": "全部",
     "rowAction": "打开目标"
   },
   "layoutPreview": {
@@ -173,6 +178,11 @@
     "notNavigable": "目标不在已导入的数据集中",
     "showInLayout": "在布局中显示 (Alt+点击)",
     "showInFile": "在文件中显示 (Alt+点击)",
+    "dirFilterAria": "按方向筛选",
+    "dirFilterLabel": "方向",
+    "dirIn": "传入",
+    "dirOut": "传出",
+    "dirBoth": "双向",
     "subroles": {
       "hide": {
         "short": "Hide",
@@ -311,7 +321,18 @@
     "storageIndexLanguage": "默认语言",
     "summaryRestartGroup": "每组重新开始",
     "summaryRepMode": "汇总重复次数",
-    "calcEvaluatesWhenEmpty": "引用字段为空时也计算"
+    "calcEvaluatesWhenEmpty": "引用字段为空时也计算",
+    "validationMessageCalc": "消息计算式",
+    "disabled": "已禁用",
+    "sectionExtended": "扩展选项 (FileMaker 26)",
+    "annotation": "注解 (DDL)",
+    "displayNames": "显示名称",
+    "displayNamesEnabled": "已启用自定义显示名称",
+    "displayNamesDisabled": "未自定义",
+    "displayNameElements": "元素",
+    "displayNameKey": "元素",
+    "displayNameValue": "标签 / 公式",
+    "displayNamesFormula": "显示名称公式"
   },
   "typeDetail": {
     "loading": "加载中…",
@@ -390,6 +411,18 @@
     "settingsHeading": "设置",
     "saveLabel": "保存设置",
     "savingLabel": "保存中…",
+    "versions": {
+      "fmlab": "FM-Lab",
+      "api": "API",
+      "frontend": "前端",
+      "xmlConverter": "XML 转换器",
+      "xmlEngine": "引擎",
+      "dbSchema": "数据库架构",
+      "fmSpec": "fm-spec",
+      "duckdb": "DuckDB",
+      "duckdbCli": "DuckDB CLI",
+      "duckdbCliMissing": "未找到"
+    },
     "api": {
       "heading": "REST API 连接",
       "label": "REST API URL",
@@ -413,11 +446,22 @@
       "empty": "尚未扫描。请点击“重新扫描”。",
       "colVersion": "版本"
     },
-    "versions": {
-      "fmSpec": "fm-spec",
-      "duckdb": "DuckDB",
-      "duckdbCli": "DuckDB CLI",
-      "duckdbCliMissing": "未找到"
+    "graphify": {
+      "enableFirst": "请先启用上方的插件以开始导出。",
+      "exportButton": "导出图",
+      "doneMessage": "导出完成。文件位于 output/ 目录中。",
+      "failed": "导出失败。",
+      "lastExport": "上次导出",
+      "colFile": "文件",
+      "colNodes": "节点",
+      "colEdges": "边",
+      "colSize": "大小",
+      "recentFiles": "以前的导出 ({{count}})",
+      "phase": {
+        "count": "正在统计对象…",
+        "export": "正在导出图…",
+        "assemble": "正在写入 JSON 文件…"
+      }
     },
     "solutions": {
       "heading": "解决方案",
@@ -484,6 +528,10 @@
     "source": "来源:",
     "relationshipGraphLink": "↗ 关系图",
     "copyUuidAria": "将 UUID 复制到剪贴板",
+    "copyOriginalUuidAria": "将原始 UUID 复制到剪贴板 (在源文件中不唯一)",
+    "copySyntheticUuidAria": "将 FM-Lab 合成 UUID 复制到剪贴板",
+    "syntheticBadge": "FM-Lab",
+    "syntheticTooltip": "FM-Lab 内部替代标识：此对象的原始 UUID 在源文件中重复，已在导入时修复。点击可复制合成 UUID (目录标识)。",
     "change": {
       "modified": "最后修改",
       "containerModified": "容器最后修改",

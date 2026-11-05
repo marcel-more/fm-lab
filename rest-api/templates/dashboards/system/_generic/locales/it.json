@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Risultato di query personalizzata",
+    "description": "Renderer generico per qualsiasi query."
+  },
+  "layout": {}
+}

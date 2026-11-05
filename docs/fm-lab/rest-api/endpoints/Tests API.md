@@ -1,12 +1,12 @@
 # Tests API
 
-Endpoints under `/api/tests/*` expose **[Analysis Tests](../../Wiki/Analysis%20Tests.md)** — declared collections of rule dashboards and custom queries with a compact result model. Listing and detail are metadata reads; the run routes execute the members against the active solution.
+Endpoints under `/api/tests/*` expose **[Analysis Tests](../../Wiki/Analysis%20Tests.md)** — declared collections of dashboards (rule bundles and single-file dashboards) with a compact result model. Listing and detail are metadata reads; the run routes execute the members against the active solution.
 
 All routes are `GET`. Errors follow [Error responses](../REST%20API%20Conventions.md#error-responses). Unknown or invalid test ids return `404 TEMPLATE_NOT_FOUND`; scope, profile and parameter problems return `400 VALIDATION_ERROR`. Solution scoping via `X-Solution` applies as everywhere ([Solution scoping](../REST%20API%20Conventions.md#solution-scoping-x-solution)).
 
 ## GET /api/tests
 
-Lists all test definitions (built-in and custom; a custom test with the same id overrides the built-in one — `tier` and `overridesSystem` report this).
+Lists all test definitions (built-in, custom and community; a custom test with the same id overrides the built-in one — `tier` and `overridesSystem` report this; a community test never overrides).
 
 | Parameter | Type | Description |
 |---|---|---|
@@ -25,7 +25,7 @@ The cache-key context of the effective solution: `{ solution, catalogFingerprint
 
 ## GET /api/tests/:id
 
-One test with resolved member summaries: everything from the list row plus `members[]` (`kind`, `ref`, `title`, `icon`, `severity`, `resolved`, analysis declaration).
+One test with resolved member summaries: everything from the list row plus `members[]` (`kind`, `ref`, `title`, `icon`, `severity`, `resolved`, analysis declaration). `kind` is `dashboard` for both forms; a `test.json` that still says `query` is read as `dashboard`. A new test is visible after `POST /api/admin/reload`.
 
 ## GET /api/tests/:id/run
 

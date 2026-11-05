@@ -46,8 +46,6 @@ export type BreadcrumbCtx =
   | { kind: 'file'; fileLabel: string }
   | { kind: 'dashboards'; folderCrumbs?: BreadcrumbItem[] }
   | { kind: 'dashboard'; title: string; folderCrumbs?: BreadcrumbItem[] }
-  | { kind: 'customQueries'; category?: string | null }
-  | { kind: 'query'; name: string; category?: string | null }
   | { kind: 'tests'; folderCrumbs?: BreadcrumbItem[] }
   | { kind: 'testDetail'; testLabel: string; folderCrumbs?: BreadcrumbItem[] }
   | { kind: 'docs' }
@@ -60,17 +58,6 @@ export type BreadcrumbCtx =
   | { kind: 'fmSpecFunction'; name: string }
   | { kind: 'fmSpecTrigger'; name: string }
   | { kind: 'settings' };
-
-/**
- * Kategorie-Krume der Custom Queries. Anders als Dashboards/Tests haben Queries
- * keinen Ordnerbaum — ihre Gruppierung ist der `@category:`-Header des
- * SQL-Templates, also genau EINE Ebene. Der Wert ist unlokalisiert (er steht
- * einsprachig im Template-Header); das Label ist deshalb der Rohwert.
- */
-function queryCategoryCrumb(category?: string | null): BreadcrumbItem[] {
-  if (!category) return [];
-  return [{ label: category, path: `/query?category=${encodeURIComponent(category)}` }];
-}
 
 /** Letzten Crumb auf aktiv (kein Link) setzen — Regel 4. */
 function finalize(items: BreadcrumbItem[]): BreadcrumbItem[] {
@@ -86,7 +73,6 @@ export function buildBreadcrumb(ctx: BreadcrumbCtx, t: TranslateFn): BreadcrumbI
   const graph: BreadcrumbItem = { label: t('nav:crumbs.graph'), path: '/atlas' };
   const docs: BreadcrumbItem = { label: t('nav:crumbs.docs'), path: '/docs' };
   const dashboards: BreadcrumbItem = { label: t('nav:crumbs.dashboards'), path: '/dashboard' };
-  const customQueries: BreadcrumbItem = { label: t('nav:crumbs.customQueries'), path: '/query' };
 
   switch (ctx.kind) {
     case 'search':
@@ -129,13 +115,6 @@ export function buildBreadcrumb(ctx: BreadcrumbCtx, t: TranslateFn): BreadcrumbI
       // `/dashboard?folder=<teilpfad>`. `folderCrumbs` arrives with the
       // envelope, so before it loads the chain is just Home / Dashboards / <title>.
       return finalize([home, dashboards, ...(ctx.folderCrumbs ?? []), { label: ctx.title, path: null }]);
-    case 'customQueries':
-      return finalize([home, customQueries, ...queryCategoryCrumb(ctx.category)]);
-    case 'query':
-      // Queries have no folder tree — their grouping is the `@category:` header
-      // of the SQL template. It behaves like one rubric level: the crumb links
-      // to `/query?category=<kategorie>`, which filters the overview.
-      return finalize([home, customQueries, ...queryCategoryCrumb(ctx.category), { label: ctx.name, path: null }]);
     case 'tests':
       // Folder navigation of the tests overview rides on the same unified
       // breadcrumb as the dashboard one: Home / Tests / <Rubrik> / …

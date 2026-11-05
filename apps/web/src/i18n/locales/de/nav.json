@@ -17,7 +17,6 @@
     "graph": "Graph",
     "relationships": "Beziehungen",
     "dashboards": "Dashboards",
-    "customQueries": "Eigene Abfragen",
     "docs": "Doku",
     "xmlImport": "XML-Import",
     "cluster": "Cluster",
@@ -30,15 +29,13 @@
   },
   "leitDescription": {
     "dashboards": "Übersicht aller verfügbaren Dashboards.",
-    "customQueries": "Wiederverwendbare SQL-Vorlagen — eine Kachel öffnet die Analyse.",
     "docs": "Installierte Dokumentationsquellen.",
     "xmlImport": "Importiert alle Dateien aus dem xml/-Verzeichnis in die DuckDB.",
     "xmlImportContextNote": "Import einer nicht-aktiven Lösung — die angezeigten Analysedaten ändern sich erst nach dem Aktivieren.",
     "tests": "Kuratierte Analysis Tests — gebündelte Prüfungen auf Lösung, Datei oder einzelnes Objekt ausführen."
   },
   "errors": {
-    "noDashboardId": "Keine Dashboard-ID angegeben.",
-    "noQueryName": "Kein Query-Name angegeben."
+    "noDashboardId": "Keine Dashboard-ID angegeben."
   },
   "home": {
     "title": "Startseite (Filter zurücksetzen)",
@@ -133,7 +130,7 @@
     "edit": "Bearbeiten ↗",
     "source": "Quelle",
     "noContent": "Kein Inhalt verfügbar.",
-    "category": "Category",
+    "category": "Kategorie",
     "docset": "Docset",
     "references": "Code-Referenzen"
   },
@@ -149,8 +146,9 @@
     "run": "Ausführen",
     "running": "Läuft…",
     "showFindings": "Findings anzeigen",
+    "showChecks": "Prüfungen anzeigen",
     "memberError": "Fehler",
-    "openMember": "Dashboard/Query öffnen",
+    "openMember": "Dashboard öffnen",
     "openFinding": "In der Detailansicht öffnen",
     "openMemberFindings": "Alle Findings in der Detailansicht öffnen",
     "truncated": "Weitere Findings gekürzt — Member für die vollständige Liste öffnen.",

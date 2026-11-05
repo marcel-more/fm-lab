@@ -16,7 +16,7 @@ The current public setup supports the following features:
 
 - **Web Client** — React/Vite frontend for interactive exploration of the solution structure and dependencies with rich visualizations 🔎
 
-- **Dashboard System** — library of predefined analysis patterns, with support for [custom queries](../templates/Custom%20Query%20Templates.md) and [custom dashboards](../templates/Dashboard%20Datasets.md) 📁
+- **Dashboard System** — library of predefined analysis patterns in two forms, [single-file dashboards](../templates/Single-file%20Dashboards.md) (one `.sql` file) and [dashboard bundles](../templates/Dashboard%20Datasets.md), shipped and your own, browsable as folders, as a hierarchical list with status columns or as your favorites (see [details](Components.md#dashboard-overview)) 📁
 
 - **Analysis Tests** — curated, declared checks with a compact result model: static-code-analysis rules, error checks and two-axis platform tests (compatibility and platform binding, including the OS sub-axis macOS / Windows / Linux / iOS and plug-in platform evidence), runnable per solution, file, object or cluster (see [details](Analysis%20Tests.md)) ✅
 

@@ -282,11 +282,11 @@ export const LayoutCanvas = forwardRef<LayoutCanvasHandle, Props>(({ data, exter
     if (!layoutUuid) return undefined;
     const scope = `?file=${encodeURIComponent(data.fileName)}&scope_uuids=${encodeURIComponent(layoutUuid)}`;
     return {
-      cf: `/query/conditional_formatting_inventory${scope}`,
-      hide: `/query/hide_condition_inventory${scope}`,
-      trigger: `/query/script_trigger_inventory${scope}`,
-      tooltip: `/query/tooltip_inventory${scope}`,
-      display: `/query/layout_calculation_inventory${scope}`,
+      cf: `/dashboard/conditional_formatting_inventory${scope}`,
+      hide: `/dashboard/hide_condition_inventory${scope}`,
+      trigger: `/dashboard/script_trigger_inventory${scope}`,
+      tooltip: `/dashboard/tooltip_inventory${scope}`,
+      display: `/dashboard/layout_calculation_inventory${scope}`,
     };
   }, [layoutUuid, data.fileName]);
 

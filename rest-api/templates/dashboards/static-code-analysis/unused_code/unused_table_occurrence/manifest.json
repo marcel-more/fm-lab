@@ -1,0 +1,77 @@
+{
+  "id": "unused_table_occurrence",
+  "version": "1.0.0",
+  "title": "Unused Table Occurrence",
+  "description": "Unused-code rule — table occurrences not used as a layout context, portal source, GTRR target or relationship side.",
+  "author": "fm-lab rules",
+  "icon": "table",
+  "category": "unused_code",
+  "tags": [
+    "rule",
+    "pmd",
+    "unused_code"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "info",
+    "category": "unused_code",
+    "rationale": "Orphaned occurrences enlarge the relationship graph without adding function.",
+    "remediation": "Remove the occurrence from the relationship graph.",
+    "meta": {
+      "name": "Unused Table Occurrence",
+      "author": "fm-lab rules",
+      "source": "fm-lab",
+      "url": null,
+      "description": "Unused-code rule — table occurrences not used as a layout context, portal source, GTRR target or relationship side.",
+      "created": "2026-07-01",
+      "references": []
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "TableOccurrence"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {}
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Unused Table Occurrence"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

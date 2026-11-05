@@ -137,6 +137,52 @@
         "pasteDropped": "붙여넣기 시 삭제됨",
         "pasteDroppedHint": "FileMaker는 붙여넣기 시 값에 관계없이 이 옵션을 삭제합니다 — 생성기는 이를 생략하고, 참조는 읽기를 위해 자리 표시자를 유지합니다."
       },
+      "repeatGroups": "반복 그룹 (목록)",
+      "rg": {
+        "group": "그룹",
+        "container": "컨테이너",
+        "form": "항목 형식",
+        "fixedSlots": "고정 슬롯 {{n}}개",
+        "nestedIn": "{{parent}}에 중첩됨",
+        "countAttr": "개수 속성 {{attr}}"
+      },
+      "knownBugHint": "알려진 FileMaker 버그 — 유효성 규칙이 아닌 경고 클래스입니다. 단계 자체는 유효하며, 위험은 FileMaker 자체의 직렬화에 있습니다.",
+      "saxmlGapHint": "SaXML 내보내기 공백 — 내보내기에는 이 슬롯이 전혀 포함되지 않으므로 이를 기반으로 만든 카탈로그에서는 표시할 수 없으며, 클립보드 복사본에서만 볼 수 있습니다. 스니펫의 결함이 아닙니다.",
+      "constraintCoverageHint": "FileMaker {{coverage}} 직렬화에만 적용",
+      "variableTargetMarker": "변수 대상 마커",
+      "variableTargetMarkerHint": "대상 슬롯이 필드 참조 대신 변수를 담고 있을 때에만 단계 수준의 빈 <Text/> 마커를 가집니다.",
+      "consumerNote": "사용 측 참고",
+      "skeletons": "스켈레톤 헐",
+      "sk": {
+        "in": "{{parent}} 내",
+        "hull": "헐 — 구성되지 않아도 기본 내용과 함께 유지됨",
+        "hull_strip_children": "헐 — 속성은 유지되고, 채워지지 않은 하위 요소는 제거됨",
+        "condition": "{{cond}}인 경우에만",
+        "help": "내부에 아무것도 구성되지 않아도 FileMaker가 스니펫에 유지하는 요소입니다. 템플릿 순서대로, 이들이 이루는 트리로 표시됩니다. 생성기는 채워지지 않은 내용을 정리한 후 이를 복원하며, 판독기는 기본 내용을 버릴 수 있습니다."
+      },
+      "bindings": "옵션 종속 요소",
+      "bd": {
+        "requires": "{{cond}}인 경우에만 존재",
+        "excludes": "{{cond}}인 경우 삭제됨",
+        "requiresOption": "{{option}}이(가) 설정된 동안에만 존재",
+        "excludesOption": "{{option}}이(가) 설정된 동안 삭제됨",
+        "suppressEmpty": "빈 요소는 결정적으로 출력되지 않음 (대화 상자 잔여물)",
+        "help": "존재 여부가 다른 옵션에 따라 달라지는 요소입니다. 한 옵션의 여러 값이 요소가 존재하는(또는 삭제되는) 집합을 이룹니다. 그 값 중 하나이면 요소가 기록되고, 다른 모든 값에서는 제거됩니다."
+      },
+      "mirrors": "미러링된 값",
+      "mr": {
+        "source_present": "{{option}}의 복사본 — 소스가 설정되면 항상 FileMaker가 기록",
+        "help": "FileMaker가 단계의 다른 위치에 한 번 더 기록하고 붙여넣기 시 동기화를 유지하는 값입니다. 소스 옵션이 기준입니다. 생성기는 이를 복사하고, 판독기는 복사본을 중복으로 취급합니다."
+      },
+      "implications": "표기법 함의",
+      "imp": {
+        "option_present": "옵션 있음",
+        "value_form": "참조 형식",
+        "keyword": "키워드",
+        "mode_switch": "모드 전환",
+        "default": "기본 모드 (전환 레이블 없음)",
+        "help": "정규 텍스트 표기법이 암시적으로 남겨 두는 옵션입니다. 키워드, 참조 형식 또는 레이블이 지정된 모드는 단계를 파싱할 때 다른 옵션의 값을 함축합니다."
+      },
       "coverage": "셰이프 커버리지",
       "coverageHint": "이 셰이프가 짝지어진 내보내기 및 클립보드 증거에 대해 검증된 FileMaker 버전입니다. 버전이 표시된 행은 해당 커버리지의 오버라이드이며 같은 키의 표준 행을 대체합니다.",
       "coverageBase": "기본",

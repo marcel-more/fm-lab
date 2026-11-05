@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "自定义查询结果",
+    "description": "适用于任意查询的通用渲染器。"
+  },
+  "layout": {}
+}

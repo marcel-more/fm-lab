@@ -42,7 +42,7 @@
       "ref": "layout_button_label_symbol"
     },
     {
-      "kind": "query",
+      "kind": "dashboard",
       "ref": "layout_symbol_inventory"
     }
   ],

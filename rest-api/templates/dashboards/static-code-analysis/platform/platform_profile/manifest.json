@@ -1,0 +1,48 @@
+{
+  "id": "platform_profile",
+  "version": "1.4.0",
+  "title": "Platform profile: OS bindings",
+  "description": "Which scripts are bound to specific operating systems (macOS, Windows, Linux, iOS) — one consolidated profile over three evidence sources: Claris script steps (e.g. Perform AppleScript works only on macOS), Claris calculation functions (e.g. the Core ML functions work only on macOS and iOS, including functions reached through custom functions) and plug-in functions (vendor platform documentation). All statements come from the curated FileMaker reference schema — hand-verified documentation evidence, never guessed from names. Neutral inventory, not a rule: an OS binding is a property, no findings, no severity. The per-OS counter tiles double as filters for the script list; they count OS-SPECIFIC bindings only (bindings confined to at most two operating systems) — broad restrictions like 'everything except Linux' stay visible in the list but never mark a script as bound to a particular OS. The runtime views live in the sibling per-platform dashboards ('Platform-specific usage: FileMaker Go (iOS)' and 'Platform-specific usage: FileMaker Server'); Linux deployment questions have their own 'Linux server readiness' view. Deliberately carries NO result declaration (analysis.defaultResult): this is a descriptive profile, not a rule - it stays chipless in overview/results aggregation by design.",
+  "author": "fm-lab rules",
+  "icon": "server",
+  "category": "platform",
+  "tags": [
+    "platform",
+    "inventory"
+  ],
+  "entry": "layout.json",
+  "datasets": [
+    {
+      "id": "os_summary",
+      "source": "bundle:data/os_summary.sql"
+    },
+    {
+      "id": "os_findings",
+      "source": "bundle:data/os_findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "analysis": {
+    "objectTypes": [
+      "Script"
+    ]
+  },
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "os",
+      "type": "string",
+      "required": false,
+      "description": "KPI-tile filter for the OS-bound scripts list: macos | windows | linux | ios (empty = all). A desktop-only script matches both macos and windows."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

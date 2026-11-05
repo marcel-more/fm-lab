@@ -26,7 +26,7 @@
 # The Node version is derived: ingestion/version_check.json → tested_baseline.
 # node_recommended_version, written by tools/build-container-env.mjs (tools/init.sh
 # recommends the same version). Edit it there, never here.
-FROM node:22.23.4-bookworm AS base
+FROM node:26.13.0-bookworm AS base
 
 ARG TZ=Etc/UTC
 ENV TZ="$TZ"

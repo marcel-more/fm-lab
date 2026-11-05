@@ -1,18 +1,18 @@
 {
   "manifest_schema": "1.0",
-  "version": "0.9.16",
-  "generated_at": "2026-10-30T19:35:04.119Z",
-  "source_commit": "3fb6d304",
+  "version": "0.9.17",
+  "generated_at": "2026-11-05T18:41:00.036Z",
+  "source_commit": "b9e39333",
   "components": {
     "rest_api": {
       "scheme": "A",
-      "version": "0.9.0",
+      "version": "0.9.17",
       "source": "rest-api/package.json",
       "on_change": "restart_api"
     },
     "web": {
       "scheme": "A",
-      "version": "0.9.0",
+      "version": "0.9.17",
       "source": "apps/web/package.json",
       "on_change": "rebuild_web"
     },
@@ -24,7 +24,7 @@
     },
     "claude_md": {
       "scheme": "A",
-      "version": "0.9.0",
+      "version": "0.9.17",
       "source": "CLAUDE.md",
       "on_change": "copy_file"
     },
@@ -70,7 +70,7 @@
   "skills": [
     {
       "name": "convert-xml",
-      "version": "0.9.0"
+      "version": "0.9.17"
     },
     {
       "name": "install-claris-docs",
@@ -90,7 +90,7 @@
     },
     {
       "name": "filemaker-function-reference",
-      "version": "0.8.9"
+      "version": "0.9.17"
     },
     {
       "name": "mbs-function-reference",
@@ -134,11 +134,15 @@
     },
     {
       "name": "fm-test",
-      "version": "0.1.0"
+      "version": "0.9.17"
     },
     {
       "name": "create-custom-dashboard",
-      "version": "0.9.0"
+      "version": "0.9.17"
+    },
+    {
+      "name": "create-custom-test",
+      "version": "0.9.17"
     },
     {
       "name": "select-solution",

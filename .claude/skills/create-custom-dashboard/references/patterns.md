@@ -4,6 +4,32 @@ Named, composable blueprints built from the primitives (see
 `references/primitives.md`). Pick by **user intent**, not by data shape alone.
 Real analyses usually combine two (P2 + P3 is the normal case).
 
+## Build form (step 3, stage 0)
+
+Every dashboard is built in one of two forms. Recommend the form together with
+the pattern — the user decides in gate G2.
+
+| Form | What it is | Delivers |
+|---|---|---|
+| **Single-file dashboard** | one `<id>.sql` with a `-- @` header (`references/single-file.md`) | title card + one table: sort, search, row click, optional second row action, optional chip bar and server paging, findings value; English only |
+| **Bundle** | directory with `manifest.json`, `layout.json`, `data/*.sql`, `locales/` | any pattern P1–P6: several datasets, KPI tiles, filter chips/menus, drilldown, several panels, notes, 10 languages |
+
+Signals (internal decision rule — first match wins):
+
+| Signal in the request or the confirmed data | Form |
+|---|---|
+| several result lists, mixed object types in separate panels, counts per trait shown as tiles, grouping first and members second, explanatory text, translated labels | Bundle |
+| a partition the user wants to click (I2) that is more than one column's values | Bundle (P2 tiles) |
+| "list of all …", "which … have …", one query, one object type, a click opens the object | Single-file |
+| the same plus value chips over **one** column | Single-file (`@chip_filter`) |
+| a ranking or inventory meant as a test member | Single-file (`@default_result`) |
+
+In doubt, recommend the single-file form: it is the smaller artefact and grows
+into a bundle without rewriting the SQL (`references/single-file.md` §Moving
+between the two forms). The interactivity duties hold in both forms — in the
+single-file form I1 is the row click, I2 is the chip bar (one column only), I3
+is built in (the table is always searchable and sortable).
+
 ## The three interactivity duties (apply to every pattern)
 
 - **I1 — Object rows are always navigable.** Rows representing catalog objects
@@ -145,7 +171,7 @@ KPI semantics, filter behaviour, classification rules there), `KPIStrip` /
 
 ---
 
-## Intent → pattern matrix (step 3, stage 1)
+## Intent → pattern matrix (step 3, stage 1 — bundle form)
 
 | The user wants … | Pattern |
 |---|---|
@@ -165,7 +191,7 @@ KPI semantics, filter behaviour, classification rules there), `KPIStrip` /
 | rows with `uuid`+`name`, navigation focus | `List` |
 | rows with 3–8 mixed columns, analysis focus | `Table` (sortable) |
 | exploratory / unknown columns | `AutoTable` |
-| navigation targets (dashboards, queries) | `TileGrid` or `NavButton`s |
+| navigation targets (dashboards) | `TileGrid` or `NavButton`s |
 | free text | `Markdown` |
 
 If List and Table both fit, offer both: List = compact navigation, Table = all
@@ -173,7 +199,12 @@ columns for analysis.
 
 ## Folder placement
 
-Related dashboards can be grouped in a category folder:
-`dashboards-custom/<folder>/<id>/` plus a `<folder>/folder.json`
-(`title`, `icon`, `description`, `order`, inline `locales`) — see
-`modularization/` and `static-code-analysis/`. Single dashboards stay top-level.
+Related dashboards can be grouped in a folder of the user area:
+`dashboards-custom/<folder>/[<sub>/]<id>/` (bundle) or
+`dashboards-custom/<folder>/[<sub>/]<id>.sql` (single file), up to four levels, plus an optional
+`<folder>/folder.json` (`title`, `icon`, `description`, `order`, inline
+`locales`) — see the shipped `dashboards/modularization/` and
+`dashboards/static-code-analysis/`. Without a `folder.json` the label is the
+humanized directory name. Single dashboards stay directly in `dashboards-custom/`.
+Every folder becomes one breadcrumb level below **Custom**:
+`Dashboards / Custom / <folder label> / <title>`.

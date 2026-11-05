@@ -130,12 +130,12 @@ The image ships every prerequisite pinned to a tested version (DuckDB CLI + webb
 - **Web client** → http://localhost:5173
 - **REST API** → http://localhost:3003
 
-The catalog (`db/`), conversions and settings live in the cloned repo **on the host**, so they survive restarts; updating is a plain `git pull` (the repo is mounted, not baked into the image). This is also the **Windows** path — the whole POSIX layer runs inside Linux, so the host OS no longer matters.
+The catalog (`db/`), conversions and settings live in the cloned repo **on the host**, so they survive restarts; to update, run `bash tools/fmlab.sh update` in the fm-lab folder — it saves local changes that are in the way first (the repo is mounted, not baked into the image). If a plain `git pull` stops with *local changes would be overwritten*, see [Troubleshooting](docs/fm-lab/Wiki/Troubleshooting.md#update-stops--local-changes-would-be-overwritten).
 
 ### b) VS Code Dev Container (easy start)
 
 Open the repository in VS Code with the **Dev Containers** extension installed, select **“Reopen in Container”** → pick **`fm-lab`** or **`fm-lab + Claude Code`**. Everything starts automatically — bootstrap, both servers, and the browser opens the web client. In the Claude variant the egress firewall and a credentials preflight run on start, and you reach the agent through the **Claude Code for VS Code** extension — no terminal steps required.
-Recommended if you already work in VS Code. After a `git pull`, run **Dev Containers: Rebuild Container** instead of a plain reopen; if the container does not come up, see [Troubleshooting](docs/fm-lab/Wiki/Troubleshooting.md#dev-container-fails-to-reopen--dockerfile-with-features-not-found).
+Recommended if you already work in VS Code. After an update, run **Dev Containers: Rebuild Container** instead of a plain reopen; if the container does not come up, see [Troubleshooting](docs/fm-lab/Wiki/Troubleshooting.md#dev-container-fails-to-reopen--dockerfile-with-features-not-found).
 
 ### c) Native (no Docker, macOS / Linux)
 
@@ -230,6 +230,7 @@ The project has grown along a clear arc — from a solid foundation toward an in
 - **v0.9.9 – v0.9.11** · _Closing gaps + flow analysis_ — calculations, script triggers, conditional-formatting rules, merge fields, and layout variables join the object catalog. A new Trace view and a research skill for enhanced analysis.
 - **v0.9.12** · _FileMaker 26 support_ — across the whole stack: XML import, object catalog, web client, FileMaker reference, and code generation.
 - **v0.9.15 – v0.9.16** · _Version updates + change history_ — DuckDB 2.0 and Node.js 22. The catalog imports the last change of every object, shown in the web client dashboards.
+- **v0.9.17** · _Dashboard & test overview + update path_ — list view, favorites and filters; custom queries become dashboards. Own files stay apart from shipped ones, so updates leave them untouched. Docker image on Node.js 26.
 
 - More details in [`CHANGELOG.md`](CHANGELOG.md) — release history
 

@@ -88,7 +88,7 @@
       "ref": "error_code_web_only"
     },
     {
-      "kind": "query",
+      "kind": "dashboard",
       "ref": "error_code_inventory"
     }
   ],

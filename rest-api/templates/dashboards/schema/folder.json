@@ -1,0 +1,18 @@
+{
+  "title": "Schema",
+  "icon": "table",
+  "description": "Analyses of tables and fields — comments, annotations, display names and table width.",
+  "order": 8,
+  "locales": {
+    "de": "Schema",
+    "es": "Esquema",
+    "fr": "Schéma",
+    "it": "Schema",
+    "ja": "スキーマ",
+    "ko": "스키마",
+    "nl": "Schema",
+    "pt": "Esquema",
+    "sv": "Schema",
+    "zh-Hans": "架构"
+  }
+}

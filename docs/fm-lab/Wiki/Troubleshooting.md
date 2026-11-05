@@ -1,5 +1,6 @@
 If you have trouble with the technical setup, please refer to the following known issues.
 
+- [Update stops — local changes would be overwritten](#update-stops-local-changes-would-be-overwritten)
 - [Old Node.js or npm keeps winning](#old-nodejs-or-npm-keeps-winning-after-an-update)
 - [Permission prompts for duckdb](#too-many-permission-prompts-for-duckdb)
 - [Dev Container fails to reopen](#dev-container-fails-to-reopen-dockerfile-with-features-not-found)
@@ -11,6 +12,37 @@ If you have trouble with the technical setup, please refer to the following know
 - [FileMaker 22 and 26 exports of the same file](#filemaker-22-and-26-exports-of-the-same-file)
 - [No plug-in references after an import](#no-plug-in-references-after-an-import)
 
+
+---
+### Update stops — local changes would be overwritten
+
+`git pull` stops without updating anything and lists files:
+
+```
+error: Your local changes to the following files would be overwritten by merge:
+	CLAUDE.md
+Please commit your changes or stash them before you merge.
+Aborting
+```
+
+or, in the second form, *The following untracked working tree files would be overwritten by merge*. Git prints this in the language of your system, so the wording can differ — the picture is the same: the update ends and names files.
+
+The update changes or adds files that you changed or created yourself, and git refuses to replace them. Nothing is broken; fm-lab simply stays on the old version. Typical causes are a shipped dashboard or skill corrected in place, or the `language:` line that older versions asked you to edit in `CLAUDE.md`.
+
+**Fix:** run this one command in the fm-lab folder:
+
+```bash
+bash -c "$(git show origin/main:tools/update.sh)"
+```
+
+The failed pull has already downloaded the new release; the command runs that release's update script. It saves the listed files to `.fmlab/update-backup/<timestamp>/` (`update.json` there lists every file and why it was saved), puts edited shipped files back to their shipped version and completes the update. At the end it names the next step — restart fm-lab with `bash tools/fmlab.sh up`, **Dev Containers: Rebuild Container** or `bash tools/init.sh`. At that start, edited dashboards and tests come back as own versions under **Custom** (`<id>-local`, title suffix *(own version)*); a language pinned in `CLAUDE.md` moves to `.fmlab/user.local.json`. Nothing is deleted. To only see what would be saved, append `update.sh --dry-run` to the command.
+
+Two other answers you may get:
+
+- `fatal: path 'tools/update.sh' does not exist in 'origin/main'` — the new release has not been downloaded yet, for example because the pull had no network. Run `git fetch`, then the command again.
+- *This fm-lab folder contains … own commit(s)* — you work with git yourself; combine your commits with the release as usual (`git pull`), the script does not touch them.
+
+From version 0.9.17 on, `bash tools/fmlab.sh update` does the same before git can stop — see [Updating fm-lab](Installation.md#updating-fm-lab).
 
 ---
 ### Old Node.js or npm keeps winning after an update
@@ -103,6 +135,11 @@ After a webbed/DuckDB update the converter may switch its parser policy (DOM ↔
 ### IMPORT ABORTED — build incomplete
 
 A failure in the resolve phase (Phase 2) aborts the import before anything is published: no catalogs from that run are written and the previously served database stays unchanged. The log names the cause — fix it and re-run; if the workspace state looks inconsistent, `--batch --force-rebuild` rebuilds the catalog from scratch.
+
+---
+### No importable file — FileMaker 18 exports
+
+The import stops before it begins with *No importable file* (CLI: `IMPORT ABORTED — no importable files`, exit code `4`), and the inbox marks the files with ⛔ and **FM 18**. The XML files were exported from FileMaker 18 or older; FM-Lab reads exports from FileMaker 19 and later. Nothing was written — open the files in FileMaker Pro 19 or newer, export them again via *Save a Copy as XML* and import again. Details: [Exports from FileMaker 18](../xml/XML.md#exports-from-filemaker-18).
 
 ---
 ### FileMaker 22 and 26 exports of the same file

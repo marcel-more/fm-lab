@@ -1,6 +1,6 @@
 # SCA Code Style
 
-**Rubric:** [Static Code Analysis](../Wiki/Static%20Code%20Analysis.md) · 17 rules · `rest-api/templates/dashboards-custom/static-code-analysis/code_style/`
+**Rubric:** [Static Code Analysis](../Wiki/Static%20Code%20Analysis.md) · 17 rules · `rest-api/templates/dashboards/static-code-analysis/code_style/`
 
 Code-style rules measure size, shape and naming: scripts and formulas that have outgrown readability, tables and layouts that carry too much, names that betray a paste accident or a forgotten duplicate. Nothing here is broken — these are the maintainability signals that predict where the *next* defect will be written.
 

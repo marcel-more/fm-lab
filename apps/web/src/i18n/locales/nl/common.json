@@ -10,6 +10,7 @@
   "empty": "Niets te tonen.",
   "noData": "Geen gegevens beschikbaar.",
   "noEntries": "Geen vermeldingen.",
+  "general": "Algemeen",
   "unknown": "(onbekend)",
   "all": "Alles",
   "filter": "Filter",
@@ -30,6 +31,7 @@
   "actions": {
     "openInFileMaker": "Openen in FileMaker",
     "copyUuid": "UUID kopiëren",
+    "copyOriginalUuid": "Originele UUID kopiëren — let op: deze UUID is meer dan eens toegekend in het bronbestand",
     "expandAll": "Alles uitvouwen",
     "collapseAll": "Alles invouwen",
     "collapseMultilineCalcs": "Berekeningen op meerdere regels invouwen",

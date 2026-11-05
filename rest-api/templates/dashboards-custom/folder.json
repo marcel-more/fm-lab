@@ -1,0 +1,6 @@
+{
+  "title": "Custom",
+  "icon": "user",
+  "description": "Your own dashboards. Bundles in this area are never tracked by git and never touched by updates — create one with /create-custom-dashboard.",
+  "order": 900
+}

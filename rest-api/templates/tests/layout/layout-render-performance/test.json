@@ -32,11 +32,11 @@
       "ref": "layout_unstored_calc_fields"
     },
     {
-      "kind": "query",
+      "kind": "dashboard",
       "ref": "layout_complexity_score"
     },
     {
-      "kind": "query",
+      "kind": "dashboard",
       "ref": "container_field_placements"
     }
   ],

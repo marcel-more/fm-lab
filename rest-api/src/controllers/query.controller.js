@@ -8,8 +8,8 @@ const { sendFormatted } = require('../utils/response-builder');
  */
 
 /**
- * GET/POST /api/query - Execute custom SQL template
- * Custom templates from templates/sql-custom/
+ * GET/POST /api/query - Execute a query template
+ * Every query area except system (query-discovery), then bundle queries
  */
 async function executeQuery(req, res, next) {
   try {
@@ -55,7 +55,7 @@ async function executeQuery(req, res, next) {
       req.solutionContext,
       template,
       finalParams,
-      'query' // Custom templates
+      'query' // query areas
     );
 
     // For content templates, always use content formatter (except for json)
@@ -105,7 +105,7 @@ async function executeQuery(req, res, next) {
 
 /**
  * GET/POST /api/report - Execute report template
- * Standard report templates from templates/sql/
+ * Internal templates of the system area (templates/queries/system/)
  */
 async function executeReport(req, res, next) {
   try {
@@ -151,7 +151,7 @@ async function executeReport(req, res, next) {
       req.solutionContext,
       template,
       finalParams,
-      'report' // Standard report templates
+      'report' // system area
     );
 
     // For content templates, always use content formatter (except for json)
@@ -200,7 +200,7 @@ async function executeReport(req, res, next) {
 }
 
 /**
- * GET /api/query/list - List available custom templates
+ * GET /api/query/list - List the queries of the content areas (builtin, custom, community)
  */
 async function listQueryTemplates(req, res, next) {
   try {
@@ -220,7 +220,7 @@ async function listQueryTemplates(req, res, next) {
 }
 
 /**
- * GET /api/report/list - List available report templates
+ * GET /api/report/list - List the internal templates of the system area
  */
 async function listReportTemplates(req, res, next) {
   try {

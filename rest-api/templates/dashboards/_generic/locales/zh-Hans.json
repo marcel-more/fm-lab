@@ -1,7 +1,0 @@
-{
-  "manifest": {
-    "title": "自定义查询结果",
-    "description": "适用于任意 sql-custom 模板的通用渲染器。"
-  },
-  "layout": {}
-}

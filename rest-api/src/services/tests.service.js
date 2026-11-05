@@ -6,7 +6,6 @@ const { createError } = require('../middleware/error-handler');
 const db = require('../config/database');
 const dashboardService = require('./dashboard.service');
 const dashboardI18nService = require('./dashboard-i18n.service');
-const templateService = require('./template.service');
 const resultsService = require('./results.service');
 const {
   schemas: testsSchemas, TEST_TYPES, OUTPUT_TYPES, SCOPES, ID_PATTERN,
@@ -17,22 +16,40 @@ const { SUPPORTED_LANGUAGE_CODES } = require('../config/languages');
  * Analysis Tests Service
  *
  * A Test is a declared, executable collection of dashboards / custom queries
- * (templates/tests/<id>/test.json — system tier; templates/tests-custom/… —
- * user tier, custom-first override) with a compact result model: one named
- * default result per member, optionally enriched with the member's findings
- * rows (`include=findings`).
+ * (`<area dir>/[<folder>/…]<id>/test.json`) with a compact result model: one
+ * named default result per member, optionally enriched with the member's
+ * findings rows (`include=findings`).
  *
- * Discovery / cache follow dashboard.service 1:1; consistency rules M1–M6
- * (+M5a/M5b) are checked at load time and reported as a `validation` block.
- * Scope normalisation (object / object-list / cluster → `file` + `scope_uuids`)
- * happens HERE at the run boundary — member SQLs only ever see the two params.
+ * Discovery / cache follow dashboard.service 1:1, including the area model:
+ *
+ *   area       source               folder (rubric)        tier (legacy field)
+ *   builtin    tests/**             relative to tests/     system
+ *   custom     tests-custom/**      custom[/<rel>]         custom
+ *   community  tests-community/**   community[/<rel>]      community
+ *
+ * A custom test may override a builtin test of the same id (`overrides`,
+ * `overridesSystem`); community tests never override (discarded + warning).
+ * The names system, modules, custom and community are reserved at the top
+ * level of tests/.
+ *
+ * Consistency rules M1–M6 (+M5a/M5b) are checked at load time and reported
+ * as a `validation` block. Scope normalisation (object / object-list / cluster
+ * → `file` + `scope_uuids`) happens HERE at the run boundary — member SQLs
+ * only ever see the two params.
  */
 
-// Custom first → overrides system tier on id collision.
-const TESTS_DIRS = [
-  { base: environment.templates.testsCustomDir, tier: 'custom' },
-  { base: environment.templates.testsDir, tier: 'system' },
+// Sources in precedence order of the override rule (see buildDiscovery).
+// `prefix` = virtual first folder segment of the area.
+const TESTS_SOURCES = [
+  { key: 'custom', base: environment.templates.testsCustomDir, area: 'custom', prefix: 'custom', tier: 'custom' },
+  { key: 'shipped', base: environment.templates.testsDir, area: 'builtin', prefix: null, tier: 'system' },
+  { key: 'community', base: environment.templates.testsCommunityDir, area: 'community', prefix: 'community', tier: 'community' },
 ];
+const SHIPPED_SOURCE = TESTS_SOURCES.find(s => s.key === 'shipped');
+
+// Reserved top-level names of tests/: no storage groups today, but kept free
+// like in dashboards/ and queries/, plus the virtual area prefixes.
+const RESERVED_TOP_LEVEL = new Set(['system', 'modules', 'custom', 'community']);
 
 const MAX_FOLDER_DEPTH = 4;
 
@@ -61,7 +78,7 @@ const testCache = new LRUCache({
   updateAgeOnGet: true,
 });
 
-// id → { id, dir, tier, folder, overridesSystem }
+// id → { id, dir, folder, area, tier, overrides, overridesSystem }
 let discoveryPromise = null;
 
 // folderPath → { mtime, title, icon, description, order, locales }
@@ -93,9 +110,10 @@ async function tryStatMtime(filePath) {
 /**
  * Recursive walk: collects test bundle dirs (= dirs containing test.json).
  * Folders without test.json are category folders (optional folder.json).
+ * The reserved names at the top level of tests/ are skipped.
  */
-async function walkTestsDir(base, relDir, depth, out) {
-  const absDir = path.join(base, relDir);
+async function walkTestsDir(source, relDir, depth, out) {
+  const absDir = path.join(source.base, relDir);
   let entries;
   try {
     entries = await fs.readdir(absDir, { withFileTypes: true });
@@ -105,8 +123,12 @@ async function walkTestsDir(base, relDir, depth, out) {
   }
   for (const e of entries) {
     if (!e.isDirectory() || e.name.startsWith('.')) continue;
-    const childRel = relDir ? path.join(relDir, e.name) : e.name;
-    const childAbs = path.join(base, childRel);
+    const childRel = relDir ? `${relDir}/${e.name}` : e.name;
+    const childAbs = path.join(source.base, childRel);
+    if (source === SHIPPED_SOURCE && !relDir && RESERVED_TOP_LEVEL.has(e.name)) {
+      console.warn(`[tests] "${childAbs}" uses the reserved folder name "${e.name}" — skipped`);
+      continue;
+    }
     let isTest = false;
     try {
       isTest = (await fs.stat(path.join(childAbs, 'test.json'))).isFile();
@@ -114,39 +136,52 @@ async function walkTestsDir(base, relDir, depth, out) {
       // category folder or unrelated dir
     }
     if (isTest) {
-      out.push({ id: e.name, dir: childAbs, folder: relDir || null });
+      const folder = source.prefix
+        ? (relDir ? `${source.prefix}/${relDir}` : source.prefix)
+        : (relDir || null);
+      out.push({ id: e.name, dir: childAbs, folder, area: source.area, tier: source.tier });
     } else if (depth < MAX_FOLDER_DEPTH) {
-      await walkTestsDir(base, childRel, depth + 1, out);
+      await walkTestsDir(source, childRel, depth + 1, out);
     }
   }
 }
 
+/**
+ * Builds the discovery map id → { id, dir, folder, area, tier, overrides,
+ * overridesSystem }. Override rule on equal ids:
+ *   - custom wins against builtin (`overrides: true`, keeps its custom/… path);
+ *   - community never overrides (discarded);
+ *   - a duplicate id within one source keeps the first one found.
+ * Every discarded collision is logged as a warning.
+ */
 async function buildDiscovery() {
-  const map = new Map();
-  const systemIds = new Set();
-  // Scan system tier first only to know which ids exist there (override flag);
-  // precedence is still custom-first below.
-  {
-    const sys = [];
-    await walkTestsDir(environment.templates.testsDir, '', 0, sys);
-    for (const e of sys) systemIds.add(e.id);
+  const scanned = {};
+  for (const source of TESTS_SOURCES) {
+    scanned[source.key] = [];
+    await walkTestsDir(source, '', 0, scanned[source.key]);
   }
-  for (const { base, tier } of TESTS_DIRS) {
-    const found = [];
-    await walkTestsDir(base, '', 0, found);
-    for (const entry of found) {
-      if (map.has(entry.id)) {
-        if (tier === 'custom') {
-          console.warn(`[tests:${entry.id}] duplicate test id at "${entry.dir}" — keeping first`);
-        }
-        continue; // custom tier scanned first → wins
-      }
-      map.set(entry.id, {
-        ...entry,
-        tier,
-        overridesSystem: tier === 'custom' && systemIds.has(entry.id),
-      });
-    }
+  const map = new Map();
+  const discard = (entry, existing, reason) => console.warn(
+    `[tests:${entry.id}] test at "${entry.dir}" collides with "${existing.dir}" — ${reason}, discarding`,
+  );
+  const add = (entry, overrides) => map.set(entry.id, { ...entry, overrides, overridesSystem: overrides });
+
+  for (const entry of scanned.shipped) {
+    const existing = map.get(entry.id);
+    if (existing) { discard(entry, existing, 'duplicate test id'); continue; }
+    add(entry, false);
+  }
+  const customSeen = new Map();
+  for (const entry of scanned.custom) {
+    const sibling = customSeen.get(entry.id);
+    if (sibling) { discard(entry, sibling, 'duplicate test id'); continue; }
+    customSeen.set(entry.id, entry);
+    add(entry, map.has(entry.id));
+  }
+  for (const entry of scanned.community) {
+    const existing = map.get(entry.id);
+    if (existing) { discard(entry, existing, 'community tests never override'); continue; }
+    add(entry, false);
   }
   return map;
 }
@@ -170,20 +205,30 @@ function pushIssue(validation, severity, rule, message) {
 }
 
 /**
- * Resolves a member to its metadata surface:
- *  - dashboard → { analysis, datasets, sqlByDataset (raw text) }
- *  - query     → { meta (incl. default_result/object_types/…), content }
- * Returns null when the ref does not resolve (M1).
+ * Resolves a member to its metadata surface. Both member kinds address a
+ * dashboard (`query` is the read alias of `dashboard`): a bundle or a
+ * single-file dashboard, via the dashboard discovery.
+ *   → { kind: 'dashboard', bundle, analysis, sqlByDataset (raw text),
+ *       findingsDataset }
+ * A single-file dashboard has one dataset `results` (its SQL file), which is
+ * at the same time its findings dataset. Returns null when the ref does not
+ * resolve (M1).
  */
 async function resolveMember(member) {
-  if (member.kind === 'dashboard') {
-    let bundle;
+  let bundle;
+  try {
+    bundle = await dashboardService.getBundle(member.ref);
+  } catch {
+    return null;
+  }
+  const sqlByDataset = {};
+  if (bundle.unit === 'file') {
     try {
-      bundle = await dashboardService.getBundle(member.ref);
+      sqlByDataset.results = await fs.readFile(bundle.file, 'utf-8');
     } catch {
-      return null;
+      sqlByDataset.results = null;
     }
-    const sqlByDataset = {};
+  } else {
     for (const spec of bundle.manifest.datasets || []) {
       const m = /^bundle:(.+)$/.exec(String(spec.source));
       if (!m) continue;
@@ -193,11 +238,14 @@ async function resolveMember(member) {
         sqlByDataset[spec.id] = null;
       }
     }
-    return { kind: 'dashboard', bundle, analysis: bundle.manifest.analysis || null, sqlByDataset };
   }
-  const source = await templateService.getTemplateSource(member.ref, 'query');
-  if (!source) return null;
-  return { kind: 'query', meta: source.metadata, content: source.content };
+  return {
+    kind: 'dashboard',
+    bundle,
+    analysis: bundle.manifest.analysis || null,
+    sqlByDataset,
+    findingsDataset: bundle.unit === 'file' ? 'results' : 'findings',
+  };
 }
 
 /**
@@ -251,77 +299,59 @@ async function validateTest(test) {
       pushIssue(validation, 'error', 'M1', `${label}: reference does not resolve`);
       continue;
     }
-    if (resolved.kind === 'dashboard') {
-      const analysis = resolved.analysis;
-      if (!analysis) {
-        pushIssue(validation, 'error', 'M2', `${label}: manifest has no "analysis" block`);
-        continue;
-      }
-      if (Array.isArray(analysis.objectTypes) && analysis.objectTypes.length) {
-        memberObjectTypeSets.push(new Set(analysis.objectTypes));
-      } else {
-        universalMembers += 1;
-      }
-      for (const t of analysis.outputTypes || []) memberOutputTypes.add(t);
-      // M6 — defaultResult.dataset must exist in the manifest's datasets
-      const dr = analysis.defaultResult;
-      if (dr && dr.dataset) {
-        const ds = (resolved.bundle.manifest.datasets || []).find(d => d.id === dr.dataset);
-        if (!ds) {
-          pushIssue(validation, 'error', 'M6', `${label}: defaultResult.dataset "${dr.dataset}" not declared`);
-        } else {
-          // defaultResult datasets accept only native scope mode
-          const mode = (analysis.scope && analysis.scope.mode && analysis.scope.mode[dr.dataset]) || 'native';
-          if (mode !== 'native') {
-            pushIssue(validation, 'warning', 'M5', `${label}: defaultResult dataset "${dr.dataset}" must be scope-mode "native"`);
-          }
-        }
-      }
-      // M5c — the findings dataset must carry a `message`/`_message` column:
-      // the tests panel renders that text per row; without it every finding
-      // is an empty (and, with a row action, invisible but clickable) line.
-      const findingsSql = resolved.sqlByDataset.findings;
-      if (typeof findingsSql === 'string' && !findingsHasMessageColumn(findingsSql)) {
-        pushIssue(validation, 'warning', 'M5c',
-          `${label}/findings: no "AS message" (or "AS _message") column — finding rows render without text`);
-      }
-      // M5 family — only when the member declares object-like scope support
-      const supported = (analysis.scope && analysis.scope.supported) || [];
-      if (supported.some(s => s === 'object' || s === 'object-list' || s === 'cluster')) {
-        const anchor = (analysis.scope && analysis.scope.anchor) || 'nav_uuid';
-        const modeMap = (analysis.scope && analysis.scope.mode) || {};
-        for (const [dsId, sqlText] of Object.entries(resolved.sqlByDataset)) {
-          const mode = modeMap[dsId] || 'native';
-          if (mode === 'native') {
-            checkScopeSql(sqlText, anchor, `${label}/${dsId}`, validation);
-          } else if (mode === 'post-filter') {
-            if (typeof sqlText === 'string' && !/\bAS\s+nav_uuid\b/i.test(sqlText)) {
-              pushIssue(validation, 'warning', 'M5', `${label}/${dsId}: post-filter mode but no "AS nav_uuid" column in SELECT`);
-            }
-          }
-          // 'static': declared scope-independent (no catalog evidence rows,
-          // e.g. a select-options list from a reference DB) — no scope checks.
-        }
-      }
+    const analysis = resolved.analysis;
+    if (resolved.bundle.unit === 'file' && !(analysis && analysis.defaultResult)) {
+      pushIssue(validation, 'error', 'M2', `${label}: SQL header has no @default_result`);
+      continue;
+    }
+    if (!analysis) {
+      pushIssue(validation, 'error', 'M2', `${label}: manifest has no "analysis" block`);
+      continue;
+    }
+    if (Array.isArray(analysis.objectTypes) && analysis.objectTypes.length) {
+      memberObjectTypeSets.push(new Set(analysis.objectTypes));
     } else {
-      const meta = resolved.meta;
-      if (!meta.default_result) {
-        pushIssue(validation, 'error', 'M2', `${label}: SQL frontmatter has no @default_result`);
-        continue;
-      }
-      if (Array.isArray(meta.object_types) && meta.object_types.length) {
-        memberObjectTypeSets.push(new Set(meta.object_types));
+      universalMembers += 1;
+    }
+    for (const t of analysis.outputTypes || []) memberOutputTypes.add(t);
+    // M6 — defaultResult.dataset must exist in the manifest's datasets
+    const dr = analysis.defaultResult;
+    if (dr && dr.dataset) {
+      const ds = (resolved.bundle.manifest.datasets || []).find(d => d.id === dr.dataset);
+      if (!ds) {
+        pushIssue(validation, 'error', 'M6', `${label}: defaultResult.dataset "${dr.dataset}" not declared`);
       } else {
-        universalMembers += 1;
+        // defaultResult datasets accept only native scope mode
+        const mode = (analysis.scope && analysis.scope.mode && analysis.scope.mode[dr.dataset]) || 'native';
+        if (mode !== 'native') {
+          pushIssue(validation, 'warning', 'M5', `${label}: defaultResult dataset "${dr.dataset}" must be scope-mode "native"`);
+        }
       }
-      if (typeof resolved.content === 'string' && !findingsHasMessageColumn(resolved.content)) {
-        pushIssue(validation, 'warning', 'M5c',
-          `${label}: no "AS _message" (or "AS message") column — finding rows render without text`);
-      }
-      for (const t of meta.output_types || []) memberOutputTypes.add(t);
-      const scopes = meta.scope || [];
-      if (scopes.some(s => s === 'object' || s === 'object-list' || s === 'cluster')) {
-        checkScopeSql(resolved.content, 'nav_uuid', label, validation);
+    }
+    // M5c — the findings dataset must carry a `message`/`_message` column:
+    // the tests panel renders that text per row; without it every finding
+    // is an empty (and, with a row action, invisible but clickable) line.
+    const findingsSql = resolved.sqlByDataset[resolved.findingsDataset];
+    if (typeof findingsSql === 'string' && !findingsHasMessageColumn(findingsSql)) {
+      pushIssue(validation, 'warning', 'M5c',
+        `${label}/${resolved.findingsDataset}: no "AS message" (or "AS _message") column — finding rows render without text`);
+    }
+    // M5 family — only when the member declares object-like scope support
+    const supported = (analysis.scope && analysis.scope.supported) || [];
+    if (supported.some(s => s === 'object' || s === 'object-list' || s === 'cluster')) {
+      const anchor = (analysis.scope && analysis.scope.anchor) || 'nav_uuid';
+      const modeMap = (analysis.scope && analysis.scope.mode) || {};
+      for (const [dsId, sqlText] of Object.entries(resolved.sqlByDataset)) {
+        const mode = modeMap[dsId] || 'native';
+        if (mode === 'native') {
+          checkScopeSql(sqlText, anchor, `${label}/${dsId}`, validation);
+        } else if (mode === 'post-filter') {
+          if (typeof sqlText === 'string' && !/\bAS\s+nav_uuid\b/i.test(sqlText)) {
+            pushIssue(validation, 'warning', 'M5', `${label}/${dsId}: post-filter mode but no "AS nav_uuid" column in SELECT`);
+          }
+        }
+        // 'static': declared scope-independent (no catalog evidence rows,
+        // e.g. a select-options list from a reference DB) — no scope checks.
       }
     }
   }
@@ -424,7 +454,9 @@ async function loadTest(id) {
       id,
       dir: entry.dir,
       folder: entry.folder,
+      area: entry.area,
       tier: entry.tier,
+      overrides: entry.overrides,
       overridesSystem: entry.overridesSystem,
       definition,
       validation,
@@ -493,43 +525,26 @@ function localizeAnalysis(analysis, localizedTitle, lang) {
  * them. CAUTION at the call sites: never pass this as a bare `.map()` callback,
  * Array.map would hand the element INDEX in as the language.
  *
- * Query members carry no locale layer (SQL frontmatter has none) — they stay
- * English by construction; the shipped test sets currently declare none.
+ * Single-file dashboards carry no locale layer (their SQL header is English)
+ * — they stay English by construction. `query` members resolve like
+ * `dashboard` members (read alias).
  */
 async function resolveMemberSummary(member, lang) {
-  if (member.kind === 'dashboard') {
-    try {
-      const bundle = await dashboardService.getBundle(member.ref);
-      const { manifest } = await dashboardI18nService.resolveBundleForLanguage(bundle, lang);
-      return {
-        ...member,
-        title: manifest.title,
-        icon: manifest.icon || null,
-        severity: (manifest.rule && manifest.rule.severity) || null,
-        analysis: localizeAnalysis(manifest.analysis, manifest.title, lang),
-        folder: bundle.folder || null,
-        resolved: true,
-      };
-    } catch {
-      return { ...member, resolved: false };
-    }
+  try {
+    const bundle = await dashboardService.getBundle(member.ref);
+    const { manifest } = await dashboardI18nService.resolveBundleForLanguage(bundle, lang);
+    return {
+      ...member,
+      title: manifest.title,
+      icon: manifest.icon || null,
+      severity: (manifest.rule && manifest.rule.severity) || null,
+      analysis: localizeAnalysis(manifest.analysis, manifest.title, lang),
+      folder: bundle.folder || null,
+      resolved: true,
+    };
+  } catch {
+    return { ...member, resolved: false };
   }
-  const meta = await templateService.getTemplateMeta(member.ref, 'query');
-  if (!meta) return { ...member, resolved: false };
-  return {
-    ...member,
-    title: meta.title || member.ref,
-    icon: meta.icon || null,
-    severity: null,
-    analysis: {
-      objectTypes: meta.object_types || [],
-      outputTypes: meta.output_types || [],
-      scope: { supported: meta.scope || [] },
-      defaultResult: meta.default_result || null,
-    },
-    category: meta.category || null,
-    resolved: true,
-  };
 }
 
 /**
@@ -567,22 +582,36 @@ function filterTests(tests, filters = {}) {
   return out;
 }
 
+// Source of a folder path: an area prefix (custom/…, community/…) points into
+// that area's directory, every other path into tests/.
+function folderSource(folderPath) {
+  const head = String(folderPath).split('/')[0];
+  return TESTS_SOURCES.find(s => s.prefix && s.prefix === head) || SHIPPED_SOURCE;
+}
+
+// Area of a folder path of the overview (custom, community or builtin).
+function folderArea(folderPath) {
+  return folderSource(folderPath).area;
+}
+
 // Optional folder.json display metadata (same layered fallback as dashboards).
+// The prefix resolves into its area directory (`custom` →
+// tests-custom/folder.json, `custom/x` → tests-custom/x/folder.json); the
+// areas share no folder namespace.
 async function loadFolderMeta(folderPath) {
-  for (const { base } of TESTS_DIRS) {
-    const fp = path.join(base, folderPath, 'folder.json');
-    const mtime = await tryStatMtime(fp);
-    if (!mtime) continue;
-    const cached = folderMetaCache.get(folderPath);
-    if (cached && cached.mtime === mtime) return cached;
-    let raw = null;
-    try { raw = await readJsonFile(fp); } catch { raw = null; }
-    const { value } = testsSchemas.testFolder.validate(raw || {}, { convert: true });
-    const meta = { mtime, ...(value || {}) };
-    folderMetaCache.set(folderPath, meta);
-    return meta;
-  }
-  return null;
+  const source = folderSource(folderPath);
+  const rel = source.prefix ? String(folderPath).split('/').slice(1).join('/') : String(folderPath);
+  const fp = path.join(source.base, rel, 'folder.json');
+  const mtime = await tryStatMtime(fp);
+  if (!mtime) return null;
+  const cached = folderMetaCache.get(folderPath);
+  if (cached && cached.mtime === mtime) return cached;
+  let raw = null;
+  try { raw = await readJsonFile(fp); } catch { raw = null; }
+  const { value } = testsSchemas.testFolder.validate(raw || {}, { convert: true });
+  const meta = { mtime, ...(value || {}) };
+  folderMetaCache.set(folderPath, meta);
+  return meta;
 }
 
 function humanizeFolderSegment(seg) {
@@ -810,7 +839,7 @@ function buildOpenTarget(member, params) {
     search.set(k, String(v));
   }
   const qs = search.toString();
-  const base = member.kind === 'dashboard' ? `/dashboard/${member.ref}` : `/query/${member.ref}`;
+  const base = `/dashboard/${member.ref}`;
   return qs ? `${base}?${qs}` : base;
 }
 
@@ -901,38 +930,30 @@ function memberObjectTypeSkip(declaredTypes, objectType) {
 }
 
 /**
- * Declared scope of a member: dashboards from `analysis.scope` (supported
- * list, anchor, per-dataset mode), query templates from `@scope`. Missing
- * declarations fall back to the schema default (solution + file).
+ * Declared scope of a member from `analysis.scope` of its dashboard (supported
+ * list, anchor, per-dataset mode; single-file dashboards derive it from
+ * `@scope`). Missing declarations fall back to the schema default (solution +
+ * file).
  */
 async function resolveMemberScope(member, bundle) {
   const out = { supported: null, anchor: 'nav_uuid', findingsMode: null };
   try {
-    if (member.kind === 'dashboard') {
-      const b = bundle || await dashboardService.getBundle(member.ref);
-      const sc = (b.manifest.analysis && b.manifest.analysis.scope) || {};
-      out.supported = Array.isArray(sc.supported) ? sc.supported : null;
-      out.anchor = sc.anchor || 'nav_uuid';
-      out.findingsMode = (sc.mode && sc.mode.findings) || null;
-      return out;
-    }
-    const meta = await templateService.getTemplateMeta(member.ref, 'query');
-    out.supported = meta && Array.isArray(meta.scope) ? meta.scope : null;
+    const b = bundle || await dashboardService.getBundle(member.ref);
+    const sc = (b.manifest.analysis && b.manifest.analysis.scope) || {};
+    out.supported = Array.isArray(sc.supported) ? sc.supported : null;
+    out.anchor = sc.anchor || 'nav_uuid';
+    out.findingsMode = (sc.mode && sc.mode.findings) || null;
     return out;
   } catch {
     return out;
   }
 }
 
-/** Declared object types of a member (manifest / SQL frontmatter); [] = universal. */
+/** Declared object types of a member (`analysis.objectTypes`); [] = universal. */
 async function resolveMemberObjectTypes(member, bundle) {
   try {
-    if (member.kind === 'dashboard') {
-      const b = bundle || await dashboardService.getBundle(member.ref);
-      return (b.manifest.analysis && b.manifest.analysis.objectTypes) || [];
-    }
-    const meta = await templateService.getTemplateMeta(member.ref, 'query');
-    return (meta && meta.object_types) || [];
+    const b = bundle || await dashboardService.getBundle(member.ref);
+    return (b.manifest.analysis && b.manifest.analysis.objectTypes) || [];
   } catch {
     return [];
   }
@@ -962,12 +983,8 @@ async function lookupObjectType(ctx, uuid, file) {
 /** Best-effort member title for run/skipped rows (bundle caches make this cheap). */
 async function resolveMemberTitle(member) {
   try {
-    if (member.kind === 'dashboard') {
-      const bundle = await dashboardService.getBundle(member.ref);
-      return bundle.manifest.title || member.ref;
-    }
-    const meta = await templateService.getTemplateMeta(member.ref, 'query');
-    return (meta && meta.title) || member.ref;
+    const bundle = await dashboardService.getBundle(member.ref);
+    return bundle.manifest.title || member.ref;
   } catch {
     return member.ref;
   }
@@ -991,63 +1008,61 @@ async function runMember(ctx, member, scopeParams, options) {
   // A missing plugin-spec DB is an install-state, not an error: skip with an
   // explanatory reason instead of failing the member (pattern: DDR-Info).
   let bundle = null;
-  if (member.kind === 'dashboard') {
-    try {
-      bundle = await dashboardService.getBundle(member.ref);
-      const requires = (bundle.manifest.analysis && bundle.manifest.analysis.requires) || [];
-      if (requires.includes('plugin-spec') && !db.isPluginSpecAttached()) {
-        return {
-          ...base,
-          title: bundle.manifest.title || member.ref,
-          status: 'skipped',
-          runStatus: 'skipped',
-          skipReason: 'missing-plugin-spec',
-          skipMessage: 'Plugin platform map not available — reference/plugin_spec.duckdb is missing. It ships with every fm-lab release; restore the file from the release checkout.',
-          resultState: 'skipped',
-        };
-      }
-      // OS-affinity members need fm_spec >= 1.13.0 (step_os_affinity /
-      // function_os_affinity / runtime_os_matrix). An older reference DB is a
-      // version state, not an error: skip with reason (pattern: plugin-spec).
-      if (requires.includes('fm-spec-os') && !db.hasOsAffinityTables()) {
-        return {
-          ...base,
-          title: bundle.manifest.title || member.ref,
-          status: 'skipped',
-          runStatus: 'skipped',
-          skipReason: 'missing-fm-spec-os',
-          skipMessage: 'Reference database predates schema 1.13.0 — re-run tools/fm-reference/pull-reference.sh to deploy the OS affinity tables.',
-          resultState: 'skipped',
-        };
-      }
-      // Trigger-compatibility and error-code members need fm_spec >= 2.8.0
-      // (trigger_compat, error_codes). Same version-state semantics.
-      if (requires.includes('fm-spec-diagnostics') && !db.hasDiagnosticsTables()) {
-        return {
-          ...base,
-          title: bundle.manifest.title || member.ref,
-          status: 'skipped',
-          runStatus: 'skipped',
-          skipReason: 'missing-fm-spec-diagnostics',
-          skipMessage: 'Reference database predates schema 2.8.0 — re-run tools/fm-reference/pull-reference.sh to deploy the trigger-compatibility and error-code tables.',
-          resultState: 'skipped',
-        };
-      }
-      // Version-floor members need fm_spec >= 2.9.0 (the numeric version keys
-      // step_compat.originated_in_version_num / functions.origin_version_num).
-      if (requires.includes('fm-spec-version-keys') && !db.hasVersionKeys()) {
-        return {
-          ...base,
-          title: bundle.manifest.title || member.ref,
-          status: 'skipped',
-          runStatus: 'skipped',
-          skipReason: 'missing-fm-spec-version-keys',
-          skipMessage: 'Reference database predates schema 2.9.0 — re-run tools/fm-reference/pull-reference.sh to deploy the numeric version keys.',
-          resultState: 'skipped',
-        };
-      }
-    } catch { /* bundle resolution problems surface in runOne below */ }
-  }
+  try {
+    bundle = await dashboardService.getBundle(member.ref);
+    const requires = (bundle.manifest.analysis && bundle.manifest.analysis.requires) || [];
+    if (requires.includes('plugin-spec') && !db.isPluginSpecAttached()) {
+      return {
+        ...base,
+        title: bundle.manifest.title || member.ref,
+        status: 'skipped',
+        runStatus: 'skipped',
+        skipReason: 'missing-plugin-spec',
+        skipMessage: 'Plugin platform map not available — reference/plugin_spec.duckdb is missing. It ships with every fm-lab release; restore the file from the release checkout.',
+        resultState: 'skipped',
+      };
+    }
+    // OS-affinity members need fm_spec >= 1.13.0 (step_os_affinity /
+    // function_os_affinity / runtime_os_matrix). An older reference DB is a
+    // version state, not an error: skip with reason (pattern: plugin-spec).
+    if (requires.includes('fm-spec-os') && !db.hasOsAffinityTables()) {
+      return {
+        ...base,
+        title: bundle.manifest.title || member.ref,
+        status: 'skipped',
+        runStatus: 'skipped',
+        skipReason: 'missing-fm-spec-os',
+        skipMessage: 'Reference database predates schema 1.13.0 — re-run tools/fm-reference/pull-reference.sh to deploy the OS affinity tables.',
+        resultState: 'skipped',
+      };
+    }
+    // Trigger-compatibility and error-code members need fm_spec >= 2.8.0
+    // (trigger_compat, error_codes). Same version-state semantics.
+    if (requires.includes('fm-spec-diagnostics') && !db.hasDiagnosticsTables()) {
+      return {
+        ...base,
+        title: bundle.manifest.title || member.ref,
+        status: 'skipped',
+        runStatus: 'skipped',
+        skipReason: 'missing-fm-spec-diagnostics',
+        skipMessage: 'Reference database predates schema 2.8.0 — re-run tools/fm-reference/pull-reference.sh to deploy the trigger-compatibility and error-code tables.',
+        resultState: 'skipped',
+      };
+    }
+    // Version-floor members need fm_spec >= 2.9.0 (the numeric version keys
+    // step_compat.originated_in_version_num / functions.origin_version_num).
+    if (requires.includes('fm-spec-version-keys') && !db.hasVersionKeys()) {
+      return {
+        ...base,
+        title: bundle.manifest.title || member.ref,
+        status: 'skipped',
+        runStatus: 'skipped',
+        skipReason: 'missing-fm-spec-version-keys',
+        skipMessage: 'Reference database predates schema 2.9.0 — re-run tools/fm-reference/pull-reference.sh to deploy the numeric version keys.',
+        resultState: 'skipped',
+      };
+    }
+  } catch { /* bundle resolution problems surface in runOne below */ }
   // Object scope: a member declaring other object types than the target's is
   // not applicable — skip it (reason 'object-type') instead of reporting a
   // meaningless 0. The M3 union rule admits such members on purpose (a test
@@ -1287,7 +1302,8 @@ async function resolveFolderOrder(folderPath) {
 }
 
 module.exports = {
-  TESTS_DIRS,
+  TESTS_SOURCES,
+  RESERVED_TOP_LEVEL,
   TEST_TYPES,
   OUTPUT_TYPES,
   SCOPES,
@@ -1301,6 +1317,7 @@ module.exports = {
   resolveFolderCrumbs,
   resolveFolderOrder,
   loadFolderMeta,
+  folderArea,
   localizeTest,
   localizeRunResult,
   catalogMeta,

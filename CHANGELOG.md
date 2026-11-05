@@ -8,7 +8,45 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 ## [Unreleased]
 
-*(Upcoming changes go here)*
+---
+
+## [0.9.17] — 2026-11-05
+
+<!-- components:auto --> *Components: schema 1.37.0 · xml-import 5.5.0 (converter 2.42.0) · fm-spec 2.9.0 · plugin-spec 1.2.0*
+
+Dashboards and tests get one overview with list view, favorites and filters, custom queries become single-file dashboards, FileMaker 18 exports are reported clearly instead of breaking the import, and the Docker image moves to Node.js 26.
+
+- **If `git pull` stops and lists files** (*Your local changes … would be overwritten* or *untracked working tree files would be overwritten*) — run `bash -c "$(git show origin/main:tools/update.sh)"` in the fm-lab folder. This release moves the shipped dashboards and queries, so a shipped file you edited is in the way of `git pull`; the command saves your versions to `.fmlab/update-backup/` and completes the update, and the next start brings them back under *Custom* as `<id>-local`
+- **Dashboard overview** — `/dashboard` offers three views: *Folders*, *List* (default) and *Favorites*; view, sort order and object-type filter are part of the URL
+  - **List view** — a hierarchical tree with status columns (error · warning · OK · neutral · findings) per dashboard and per folder, keyboard navigation, sorting by column, expand/collapse all; open folders are remembered in the browser
+  - **Favorites** — a star on title row, tile and list row; the *Favorites* view runs them with *Run all*. Stored workspace-wide in `.fmlab/favorites.json`, shared across browsers and solutions
+  - **Object-type filter** — narrows all views to the dashboards of one object type (*Script*, *Layout*, *Field*, …); Analysis Tests use the same declaration to skip members that do not apply
+  - **Own dashboards under *Custom*** — shipped bundles live in `rest-api/templates/dashboards/`, your own only in `dashboards-custom/` (ignored by git, untouched by updates), optionally grouped in sub-folders; `dashboards-community/` is reserved for community packages
+- **Custom queries become single-file dashboards** — a `.sql` file with a `-- @` header is listed in the dashboard overview, opens at `/dashboard/<name>` with sorting, search and server paging, and can be a favorite; the separate *Custom Queries* page is gone
+  - **Rubrics** — the shipped queries appear under **Layouts**, **Scripts**, **Schema** and **Top**; `@category` has no effect any more
+  - **Unchanged** — `/api/query?template=<name>`, the dataset source `custom:<name>`, the output formats and the names of all shipped queries
+  - **Tests** — members are written `{ "kind": "dashboard", "ref": "<id>" }`; `"kind": "query"` keeps working
+- **Test overview** — `/tests` gets the same views, filters and favorites as the dashboard overview, with a test-type column and the status of the latest run; your own tests appear under **Tests / Custom**
+- **Skills** — `create-custom-dashboard` recommends a single file or a bundle and builds either; new `create-custom-test` bundles existing dashboards into an own Analysis Test
+- **Upgrading** — shipped dashboards, queries and tests now live in `dashboards/`, `queries/` and `tests/`; `git pull` removes their old copies from `dashboards-custom/`, `sql/`, `sql-custom/` and `sql-custom-details/`. Your own files there were never tracked and stay: at its first start the API moves own ones from old locations into the `-custom/` folders, and `/dashboard` and `/tests` report the result once. Nothing is deleted
+  - **Edited copies stay yours** — a shipped dashboard, query or test you changed lives on under *Custom* as `<id>-local` with the title suffix *(own version)*, taken from the update backup (see *If `git pull` stops* above) or from the old folder
+  - **Updated by copying files** — old copies of shipped files that you did not edit move to `…-removed/<timestamp>/`
+  - **Updating from now on** — `bash tools/fmlab.sh update` saves local changes that are in the way first and never stops halfway; `--dry-run` only shows them
+  - **Language of the AI agent** — the setting moved from `CLAUDE.md` to `.fmlab/user.local.json` (`bash tools/fmlab.sh language de`, `auto` = language of your prompts); the update command takes over an existing `language:` line
+  - **Old locations keep working for one release** — files in `sql-custom/` appear with the badge *old location*, `/query…` links redirect to `/dashboard…`, `TEMPLATE_*_DIR` entries in `rest-api/.env` draw a deprecation warning
+  - **Changed links** — own folders open at `/dashboard?folder=custom/<folder>` and `/tests?folder=custom/<folder>`; links to single dashboards and tests stay valid
+- **FileMaker 18 exports reported clearly** — SaXML 2.0 exports are recognized before the import: the import page marks them **FM 18** and names the remedy (re-export with FileMaker 19+ via *Tools ▸ Save a Copy as XML*)
+  - **No importable file** — the run stops before it begins with exit code `4` and leaves the solution unchanged, instead of ending with *Build incomplete* and follow-up errors
+  - **Mixed inbox** — FileMaker 18 files next to supported ones are skipped with a notice, the run succeeds; import log, run record and `/api/xml/status` report the skip reason
+  - **Export hint** — the start hint of an empty solution names the correct menu and option names in every language
+- **Import started in the terminal** — while `init.sh` or the CLI converts, the import page says so instead of showing an empty solution, and refreshes by itself when the run ends
+- **File list on the home page** — sortable columns, a rows-per-page choice and keyboard navigation
+- **Docker image on Node.js 26** — Node.js 26.13.0 with npm 11; existing volumes keep working without a rebuild of `node_modules`. Native installs still run on Node.js 22.13+, `init.sh` recommends 26
+  - **VS Code Dev Container** — run *Rebuild Container* once after the update; a reopen keeps running the previous Node.js 22 container
+- **Fixes**
+  - **Empty solution** — search, search count and the folder trees answer an empty solution with an empty result instead of HTTP 500
+  - **Servers from an old checkout** — `init.sh` and `fmlab.sh up --native` restart the REST API and the web client after their bootstrap instead of reusing a running server. A server started before the bootstrap kept serving the old build. After you deleted and cloned the folder again, the web client stopped with *Failed to resolve import "@packages/shared/constants"*
+  - **`start-servers.sh`** — restarts a running server whose folder was deleted or that belongs to another checkout. The status shows *(restarted)* or *(already running, not restarted)*, and the `init.sh` summary no longer reports *servers started* for a server it did not start
 
 ---
 
@@ -992,7 +1030,8 @@ Initial release: XML conversion pipeline, core database structure, and first AI 
 <!-- Link references. compare-ranges span adjacent tagged releases; documentation-only
      versions that were never tagged (e.g. 0.8.7, 0.8.1, 0.8.0, 0.7.5–0.7.7, …) are
      intentionally left unlinked and render as plain text. Add a line here per new tag. -->
-[Unreleased]: https://github.com/marcel-more/fm-lab/compare/v0.9.16...HEAD
+[Unreleased]: https://github.com/marcel-more/fm-lab/compare/v0.9.17...HEAD
+[0.9.17]: https://github.com/marcel-more/fm-lab/compare/v0.9.16...v0.9.17
 [0.9.16]: https://github.com/marcel-more/fm-lab/compare/v0.9.15...v0.9.16
 [0.9.15]: https://github.com/marcel-more/fm-lab/compare/v0.9.14...v0.9.15
 [0.9.14]: https://github.com/marcel-more/fm-lab/compare/v0.9.13...v0.9.14

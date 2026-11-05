@@ -1,0 +1,80 @@
+{
+  "id": "platform_specific_os",
+  "version": "1.1.0",
+  "title": "OS binding: plug-in functions",
+  "description": "Scripts in scope bound to specific operating systems through plug-in function calls: functions that do not exist on at least one OS (macOS / Windows / Linux / iOS). The verbatim vendor flags (binary, from the plug-in documentation) fold into the shared OS vocabulary through a curated map: the 'server' flag is a runtime statement and stays out of the OS profile (the Server x OS condition lives in the server compat member), 'iOS SDK' maps to the OS 'ios' with qualifier sdk-only - Claris iOS SDK apps, NOT FileMaker Go (Go supports no plug-ins). The os_profile uses the set-wide vocabulary (macos-only, windows-only, linux-only, ios-only, desktop-only, apple-only, mixed). Includes one-level custom-function wrappers (via_custom_function) and layout/field calculation usages (evidence_kind='layout'); the core metric counts scripts only. Inventory, not defects - findings are neutral properties, never errors.",
+  "author": "fm-lab rules",
+  "icon": "layers",
+  "category": "platform",
+  "tags": [
+    "rule",
+    "platform",
+    "plugin",
+    "os-binding"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "info",
+    "category": "platform",
+    "rationale": "A plug-in function that exists only on certain operating systems binds every calling script to those systems - a hard 'does not exist elsewhere' (signal 'exclusive' on the OS sub-axis). This is the only structured OS signal in the platform model; Claris runtime environments stay OS-free.",
+    "remediation": "Nothing to fix. Use the inventory to know which scripts assume which OS; guard calls with Get(SystemPlatform) checks where a script must run cross-platform."
+  },
+  "analysis": {
+    "objectTypes": [
+      "Script",
+      "LayoutObject"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
+    },
+    "requires": [
+      "plugin-spec"
+    ],
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "script_count",
+      "type": "number",
+      "name": "platform_os_bound_scripts",
+      "unit": "scripts",
+      "meaning": "Scripts in scope bound to specific operating systems via plug-in function calls"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

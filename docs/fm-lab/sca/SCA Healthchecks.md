@@ -1,8 +1,8 @@
 # Healthchecks
 
-**Dashboard:** [Static Code Analysis](../Wiki/Static%20Code%20Analysis.md) · consumer, carries no rules of its own · `rest-api/templates/dashboards-custom/health_hints/`
+**Dashboard:** [Static Code Analysis](../Wiki/Static%20Code%20Analysis.md) · summary page, carries no rules of its own · `rest-api/templates/dashboards/health_hints/`
 
-The **Healthchecks** dashboard is the one page that answers *"how is this solution doing?"* in a single view: a KPI strip over every rule result, and one card per rubric listing the rules with their current state and finding count. It is a **pure consumer of the results layer** — it never executes rule SQL on page load, it reads the server-side result cache. That is what makes it instant on a 30 k-object catalog, and it is also the one thing to understand before trusting a green light: an empty cache is not an all-clear, it is *unknown*.
+The **Healthchecks** dashboard is the one page that answers *"how is this solution doing?"* in a single view: a KPI strip over every rule result, and one card per rubric listing the rules with their current state and finding count. It **sums up results that have already been computed** — opening the page runs no rule; it shows what the rules returned when they last ran. That is what makes it instant on a 30 k-object catalog, and it is also the one thing to understand before trusting a green light: a rule without a result is not an all-clear, it is *unknown*.
 
 Open it at `/dashboard/health_hints`, or from the dashboards overview.
 
@@ -57,7 +57,7 @@ The **Run all rules** button next to the KPI strip triggers the run explicitly, 
 
 Only **result-capable** units enter the aggregate: a rule dashboard qualifies when its manifest declares `analysis.defaultResult`, or when it follows the summary convention (a `summary` dataset whose SQL emits `finding_count`). Bundles without such a declaration are **chipless by design** — the platform profile and the layout geometry explorer describe rather than judge, and would only add noise to a health count. The [Modularization](SCA%20Modularization.md) inventories sit outside the aggregate for the same reason.
 
-The dashboard is restricted to `kinds: dashboard` — [custom queries](../templates/Custom%20Query%20Templates.md) and tests do carry result envelopes, but Healthchecks is about the rule library. And Healthchecks itself declares **no** result: a consumer that scored itself would appear in its own count.
+The aggregate covers the dashboards of its rubric folders (`static-code-analysis`, `metadata-integrity`, `developer-workflow`); tests carry result envelopes too but stay out — Healthchecks is about the rule library. A [single-file dashboard](../templates/Single-file%20Dashboards.md) in one of these folders counts like a rule without severity: the plug-in reference census in *Metadata Integrity* enters as a neutral entry and, having no findings unit, never adds to the findings sum. And Healthchecks itself declares **no** result: a summary page with a result of its own would appear in its own count.
 
 Both halves of the page — the aggregate roots and the per-rubric cards — are hand-declared in the manifest, which means a newly added rubric folder would raise the KPI total while staying invisible in the cards. A guard test in the API test suite enforces that every rubric contributing rules has a card bound to it, and that no card points at a rubric that no longer exists.
 

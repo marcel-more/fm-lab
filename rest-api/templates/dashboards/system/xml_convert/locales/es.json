@@ -1,0 +1,19 @@
+{
+  "manifest": {
+    "title": "Importación XML",
+    "description": "Importa exportaciones XML del directorio xml/ a la base de datos DuckDB."
+  },
+  "layout": {
+    "files_table.props.columns[1].label": "Archivo",
+    "files_table.props.columns[2].label": "Formato",
+    "files_table.props.columns[3].label": "DDR",
+    "files_table.props.columns[4].label": "Fecha",
+    "files_table.props.columns[5].label": "Tamaño",
+    "files_table.props.columns[6].label": "Importado",
+    "files_table.props.empty.message": "No hay archivos en el directorio XML.",
+    "last_run.props.title": "Última conversión",
+    "import_integrity.props.title": "Integridad de la importación",
+    "graph_communities.props.title": "Comunidades del grafo",
+    "graph_communities_desc.props.content": "Cobertura de estructura y nomenclatura de los módulos detectados. Reconstruye la partición con el botón; (re)nombra los módulos nuevos con la skill `/fm-graph-cluster`."
+  }
+}

@@ -1,9 +1,9 @@
 {
+  "modeTabsAriaLabel": "Modalità di visualizzazione",
   "fileActions": {
     "search": "Ricerca",
     "drilldown": "Drill-down"
   },
-  "modeTabsAriaLabel": "Modalità di visualizzazione",
   "breadcrumbs": {
     "search": "Ricerca",
     "analyses": "Analisi",
@@ -17,7 +17,6 @@
     "graph": "Grafo",
     "relationships": "Relazioni",
     "dashboards": "Dashboard",
-    "customQueries": "Query personalizzate",
     "docs": "Documentazione",
     "xmlImport": "Importa XML",
     "cluster": "Cluster",
@@ -25,17 +24,18 @@
     "fmSpec": "fm-spec",
     "tests": "Test"
   },
+  "entryType": {
+    "dashboard": "Dashboard"
+  },
   "leitDescription": {
     "dashboards": "Panoramica di tutte le dashboard disponibili.",
-    "customQueries": "Modelli SQL riutilizzabili — fai clic su una tessera per aprire un’analisi.",
     "docs": "Fonti di documentazione installate.",
     "xmlImport": "Importa tutti i file dalla directory xml/ in DuckDB.",
     "xmlImportContextNote": "Import di una soluzione non attiva — i dati di analisi visualizzati cambiano solo dopo l’attivazione.",
     "tests": "Test di analisi curati: esegui controlli raggruppati sulla soluzione, su un file o su un oggetto."
   },
   "errors": {
-    "noDashboardId": "Nessun id di dashboard fornito.",
-    "noQueryName": "Nessun nome di query fornito."
+    "noDashboardId": "Nessun id di dashboard fornito."
   },
   "home": {
     "title": "Home (azzera i filtri)",
@@ -122,6 +122,18 @@
     "folderDetailsTitle": "Mostra i dettagli della cartella",
     "noName": "(senza nome)"
   },
+  "docs": {
+    "langFallback": "Questa documentazione non è disponibile nella lingua selezionata — visualizzazione: {{lang}}.",
+    "openOnline": "Apri online ↗",
+    "openInFmSpec": "fm-spec →",
+    "openInBrowser": "Apri nel browser",
+    "edit": "Modifica ↗",
+    "source": "Fonte",
+    "noContent": "Nessun contenuto disponibile.",
+    "category": "Categoria",
+    "docset": "Docset",
+    "references": "Riferimenti nel codice"
+  },
   "noData": {
     "title": "Ancora nessun dato",
     "message": "Nessuna soluzione FileMaker è stata ancora importata. Importa prima un’esportazione XML per usare questa vista.",
@@ -134,8 +146,9 @@
     "run": "Esegui",
     "running": "In esecuzione…",
     "showFindings": "Mostra risultati",
+    "showChecks": "Mostra controlli",
     "memberError": "Errore",
-    "openMember": "Apri dashboard/query",
+    "openMember": "Apri dashboard",
     "openFinding": "Apri nella vista di dettaglio",
     "openMemberFindings": "Apri tutti i risultati nella vista di dettaglio",
     "truncated": "Altri risultati troncati: apri il membro per l’elenco completo.",

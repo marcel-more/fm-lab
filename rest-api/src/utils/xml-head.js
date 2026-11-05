@@ -15,6 +15,11 @@
  * import looks complete. Result: true / false, or null when the head carries no
  * verdict — v2.0 exports (`<FMDynamicTemplate>`), truncated or foreign files,
  * read errors. null means "unknown", never "missing".
+ *
+ * Format: `readXmlHead` additionally names the root element — `FMSaveAsXML`
+ * (SaXML 2.1.0.0+, FileMaker 19+, importable) or `FMDynamicTemplate` (SaXML
+ * 2.0.0.0, FileMaker 18 and older, skipped by the converter) — plus the SaXML
+ * version (`version`) and the exporting FileMaker version (`Source`).
  */
 'use strict';
 
@@ -24,6 +29,11 @@ const fsp = require('fs').promises;
 // leaves room for longer file names/paths without a second read.
 const HEAD_BYTES = 4096;
 const RE_DDR_INFO = /<FMSaveAsXML\b[^>]*\bHas_DDR_INFO="(True|False)"/i;
+// Root tag of either format; the XML declaration's own version="1.0" sits
+// before it and is never matched.
+const RE_ROOT = /<(FMSaveAsXML|FMDynamicTemplate)\b([^>]*)/;
+const RE_ATTR_VERSION = /\sversion="([0-9.]+)"/;
+const RE_ATTR_SOURCE = /\sSource="([0-9.]+)"/;
 
 /**
  * Decodes the head bytes according to their BOM (UTF-16LE / UTF-16BE) or as
@@ -55,6 +65,29 @@ function parseDdrInfoHead(text) {
   return m[1].toLowerCase() === 'true';
 }
 
+/**
+ * @param {string} text - decoded head
+ * @returns {{root: string|null, saxml_version: string|null, source_version: string|null, ddr_info: boolean|null}}
+ */
+function parseXmlHead(text) {
+  const m = RE_ROOT.exec(text);
+  if (!m) return { root: null, saxml_version: null, source_version: null, ddr_info: null };
+  const attrs = m[2] || '';
+  const version = RE_ATTR_VERSION.exec(attrs);
+  const source = RE_ATTR_SOURCE.exec(attrs);
+  return {
+    root: m[1],
+    saxml_version: version ? version[1] : null,
+    source_version: source ? source[1] : null,
+    ddr_info: m[1] === 'FMSaveAsXML' ? parseDdrInfoHead(text) : null,
+  };
+}
+
+/** Buffer → head record (decode + parse). */
+function probeXmlHead(buf) {
+  return parseXmlHead(decodeXmlHead(buf));
+}
+
 /** Buffer → verdict (decode + parse). */
 function probeDdrInfoHead(buf) {
   return parseDdrInfoHead(decodeXmlHead(buf));
@@ -69,14 +102,26 @@ function probeDdrInfoHead(buf) {
  * @returns {Promise<boolean|null>}
  */
 async function readDdrInfoHead(filePath, bytes = HEAD_BYTES) {
+  return (await readXmlHead(filePath, bytes)).ddr_info;
+}
+
+/**
+ * Reads the first `bytes` of the file and returns the full head record
+ * `{ root, saxml_version, source_version, ddr_info }`. Never throws — a
+ * missing or unreadable file yields all-null fields ("unknown").
+ * @param {string} filePath
+ * @param {number} [bytes]
+ * @returns {Promise<{root: string|null, saxml_version: string|null, source_version: string|null, ddr_info: boolean|null}>}
+ */
+async function readXmlHead(filePath, bytes = HEAD_BYTES) {
   let fh = null;
   try {
     fh = await fsp.open(filePath, 'r');
     const buf = Buffer.alloc(bytes);
     const { bytesRead } = await fh.read(buf, 0, bytes, 0);
-    return probeDdrInfoHead(buf.subarray(0, bytesRead));
+    return probeXmlHead(buf.subarray(0, bytesRead));
   } catch {
-    return null;
+    return parseXmlHead('');
   } finally {
     if (fh) await fh.close().catch(() => { /* already closed */ });
   }
@@ -88,4 +133,7 @@ module.exports = {
   parseDdrInfoHead,
   probeDdrInfoHead,
   readDdrInfoHead,
+  parseXmlHead,
+  probeXmlHead,
+  readXmlHead,
 };

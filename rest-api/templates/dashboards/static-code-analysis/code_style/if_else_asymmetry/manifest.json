@@ -1,0 +1,97 @@
+{
+  "locked": true,
+  "id": "if_else_asymmetry",
+  "version": "1.0.0",
+  "title": "If/Else block asymmetry",
+  "description": "Code-style rule — scripts containing If/Else blocks where the If branch is significantly longer than the Else branch. Candidates for refactoring into early returns or guard clauses. Thresholds adjustable via the header sliders (default If ≥ 10, Else ≤ 2 steps).",
+  "author": "fm-lab rules",
+  "icon": "git-fork",
+  "category": "code_style",
+  "tags": [
+    "rule",
+    "pmd",
+    "code_style",
+    "scripts",
+    "refactoring"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "info",
+    "category": "code_style",
+    "rationale": "A long If branch paired with a short (or empty) Else usually inverts the natural reading order — the exceptional case is handled first and the main path is buried, which hurts readability and testability.",
+    "remediation": "Invert the condition and handle the short case first as a guard clause / early return, so the main path stays at the top nesting level.",
+    "meta": {
+      "name": "If/Else block asymmetry",
+      "author": "fm-lab rules",
+      "source": "fm-lab",
+      "url": null,
+      "description": "Code-style rule — scripts with If/Else blocks whose If branch is much longer than the Else branch. Candidates for guard-clause / early-return refactoring. Thresholds adjustable via the header sliders.",
+      "created": "2026-07-03",
+      "references": [
+        {
+          "project": "PMD",
+          "rule": "CyclomaticComplexity",
+          "url": "https://docs.pmd-code.org/latest/pmd_rules_java_design.html#cyclomaticcomplexity"
+        }
+      ]
+    }
+  },
+  "analysis": {
+    "objectTypes": ["Script"],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {}
+    },
+    "defaultResult": {
+      "dataset": "if_else_kpi",
+      "column": "asymmetric_blocks",
+      "type": "number",
+      "name": "asymmetric_blocks",
+      "unit": "findings",
+      "meaning": "If/Else blocks with a long If branch and a near-empty Else branch"
+    }
+  },
+  "datasets": [
+    {
+      "id": "if_else_kpi",
+      "source": "bundle:data/if_else_kpi.sql"
+    },
+    {
+      "id": "if_else_blocks",
+      "source": "bundle:data/if_else_blocks.sql",
+      "pageSize": 50
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter — derived from the app-level filter."
+    },
+    {
+      "name": "min_if_len",
+      "type": "number",
+      "required": false,
+      "description": "Minimum number of steps inside the If branch (default 10)."
+    },
+    {
+      "name": "max_else_len",
+      "type": "number",
+      "required": false,
+      "description": "Maximum number of steps inside the Else branch (default 2)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

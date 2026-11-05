@@ -1,0 +1,62 @@
+{
+  "id": "plugin_dependency",
+  "version": "1.0.0",
+  "title": "Plugin dependency",
+  "description": "Plugin-dependency inventory: call sites per plugin component (MBS and others) × file, resolved via calls_pluginfunction, plus Install Plug-In File steps. A risk view — which modules would be dead without the plugin?",
+  "author": "fm-lab",
+  "icon": "puzzle",
+  "tags": [
+    "template",
+    "modularization",
+    "plugin",
+    "mbs"
+  ],
+  "entry": "layout.json",
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "components",
+      "source": "bundle:data/components.sql",
+      "pageSize": 100
+    },
+    {
+      "id": "top_functions",
+      "source": "bundle:data/top_functions.sql",
+      "params": {
+        "limit": 60
+      }
+    }
+  ],
+  "analysis": {
+    "objectTypes": [
+      "PluginFunction"
+    ]
+  },
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "component",
+      "type": "string",
+      "required": false,
+      "description": "Restricts the function list to a plugin component (e.g. Files, CURL, JSON). 'All' (or empty) lifts the filter."
+    },
+    {
+      "name": "limit",
+      "type": "number",
+      "required": false,
+      "description": "Maximum number of rows returned by the lists."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

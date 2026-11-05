@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { PrimitiveProps } from '../types';
@@ -8,6 +8,12 @@ import { badgeToneClass, type BadgeTone } from './_badgeTone';
 import { useRowSearch } from './_useRowSearch';
 import { Pager } from './_Pager';
 import { parseFacets } from './_chipFacets';
+import { browserStores } from './_expansionStore';
+import {
+  clampPage, isNavKey, nextFocus, normalizePageSizeOptions, pageCountOf, pageOfIndex,
+  pageWindow, resolvePageSize, smallestPageSize, type PageSize,
+} from './_tablePaging';
+import { loadTableState, saveTableState, type TableViewState } from './_tableStateStore';
 import { dispatchAction } from '../actions';
 import { isActionActive } from '../actionState';
 import { useSelection } from '../selectionContext';
@@ -15,8 +21,8 @@ import type { ActionSpec } from '../actions';
 import { useXmlConvertFileStates, type XmlConvertFileState } from './useXmlConvertFileStates';
 
 // Live-Status → Icon für die `liveStatusField`-Spalte (Datei-Status-Tabelle der
-// XML-Konvertierung). Voller Lebenszyklus 🟡 → 🔥 → 🟢 → ✴️ → ✅, plus ⏭️ (Skip)
-// und ⚠️ (Fehler).
+// XML-Konvertierung). Voller Lebenszyklus 🟡 → 🔥 → 🟢 → ✴️ → ✅, plus ⏭️ (Skip),
+// ⛔ (Format nicht unterstützt) und ⚠️ (Fehler).
 const LIVE_STATE_ICON: Record<XmlConvertFileState, string> = {
   planned:   '🟡',
   skipped:   '⏭️',
@@ -24,6 +30,7 @@ const LIVE_STATE_ICON: Record<XmlConvertFileState, string> = {
   chunked:   '🟢',
   importing: '✴️',
   imported:  '✅',
+  unsupported: '⛔',
   failed:    '⚠️',
 };
 
@@ -49,6 +56,15 @@ interface ColumnSpec {
   // `sortable: false` keeps a column header unclickable.
   sortKey?: string;
   sortable?: boolean;
+}
+
+// One entry of the opt-in `summaryFlags` prop (count-bar highlight, see below).
+interface SummaryFlag {
+  field: string;
+  value: unknown;
+  labelKey: string;
+  hintKey?: string;
+  tone?: 'warning' | 'error';
 }
 
 interface ChipFilterGroup {
@@ -129,6 +145,44 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
   // their KPIs and charts by the same term), which a local search would not reach.
   const clientModeOptIn = (props.clientMode as boolean) ?? false;
   const chipFilter = props.chipFilter as ChipFilterSpec | undefined;
+  // Client paging (opt-in via `pageSizeOptions`, e.g. ["all", 10, 25, 50, 100]):
+  // a page-size select in the count bar and a slice of the rows after chip,
+  // search and sort. `defaultPageSize` is the start ('all' | n | 'auto' = every
+  // row up to `autoPageSizeThreshold` rows, default 100, above it the threshold
+  // option); a choice of the user overrides it. Ignored on a server-paged table
+  // (`pageParam`), whose SQL pages instead.
+  const pageSizeOptionsRaw = props.pageSizeOptions;
+  const pageSizeOptions = useMemo(() => normalizePageSizeOptions(pageSizeOptionsRaw), [pageSizeOptionsRaw]);
+  const clientPaging = pageSizeOptions.length > 0 && !pageParam;
+  const defaultPageSize = props.defaultPageSize as PageSize | 'auto' | undefined;
+  const autoPageSizeThreshold = props.autoPageSizeThreshold as number | undefined;
+  // `defaultSort` ({ field, dir }) — start sort of a client-sorted table, shown
+  // with its indicator.
+  const defaultSort = props.defaultSort as { field?: string; dir?: 'asc' | 'desc' } | undefined;
+  // `keyboardNav` (opt-in): the rows are one tab stop (roving tabindex); the
+  // arrows move the focus across pages, Home/End within the page, PageUp/
+  // PageDown turn it, Enter runs the row click.
+  const keyboardNav = (props.keyboardNav as boolean) ?? false;
+  // `stateKey` (opt-in): sort, chosen page size, page and focus row survive
+  // reload and "back" (tab + browser level, see _tableStateStore.ts).
+  const stateKey = props.stateKey as string | undefined;
+  const [initialState] = useState<TableViewState>(() => {
+    if (!stateKey) return {};
+    const { tab, browser } = browserStores();
+    return loadTableState(tab, browser, stateKey);
+  });
+  // Only an explicit choice is held (and stored); `null` follows the default.
+  const [explicitPageSize, setExplicitPageSize] = useState<PageSize | null>(initialState.pageSize ?? null);
+  // Unclamped on purpose: while the rows are still loading the clamp would read
+  // page 1 and overwrite the stored page.
+  const [clientPageState, setClientPage] = useState(initialState.page ?? 1);
+  // Keyboard focus: the row index in the sorted, filtered set plus its identity,
+  // so the focus follows the row when sorting or searching moves it.
+  const [focus, setFocus] = useState<{ index: number; key: string | null }>(
+    () => ({ index: -1, key: initialState.focus ?? null }),
+  );
+  const refocusRef = useRef(false);
+  const restorePending = useRef(!!initialState.restoreFocus);
   // Opt-in: Live-Markierung der XML-Konvertierung. `liveHighlightField` (z.B.
   // "filename") wird gegen die `file_start`/`file`-Dateinamen abgeglichen und
   // markiert pro Zeile den Status: orange = gerade in Arbeit (im Parallel-Modus
@@ -145,16 +199,30 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
   const summaryNewField = props.summaryNewField as string | undefined;
   const summaryNewValue = props.summaryNewValue as string | undefined;
   const summarySizeField = props.summarySizeField as string | undefined;
-  // `summaryFlagField`/`summaryFlagValue` zählen Zeilen mit einem Feld-Wert und
-  // rendern bei ≥ 1 Treffer ein hervorgehobenes Warn-Label (`summaryFlagLabelKey`,
-  // i18n-Key, erhält { count, total }; Suffix `_partial` wenn nicht alle Zeilen
-  // betroffen sind) plus optionalen Hinweistext (`summaryFlagHintKey`). Erster
-  // Nutzer: „DDR-Info fehlt" auf der XML-Import-Seite (ddr_info === false).
-  // null/undefined-Werte zählen nie als Treffer.
-  const summaryFlagField = props.summaryFlagField as string | undefined;
-  const summaryFlagValue = props.summaryFlagValue as unknown;
-  const summaryFlagLabelKey = props.summaryFlagLabelKey as string | undefined;
-  const summaryFlagHintKey = props.summaryFlagHintKey as string | undefined;
+  // `summaryFlags` — Liste von `{ field, value, labelKey, hintKey?, tone? }`: jeder
+  // Eintrag zählt die Zeilen mit diesem Feld-Wert und rendert bei ≥ 1 Treffer ein
+  // hervorgehobenes Label (`labelKey`, i18n-Key, erhält { count, total }; Suffix
+  // `_partial` wenn nicht alle Zeilen betroffen sind) plus optionalen Hinweistext
+  // (`hintKey`). `tone`: 'warning' (Default) | 'error'. Nutzer: die XML-Import-
+  // Seite („FileMaker-18-Format", „DDR-Info fehlt"). null/undefined-Werte zählen
+  // nie als Treffer. Die Einzel-Props `summaryFlagField`/`summaryFlagValue`/
+  // `summaryFlagLabelKey`/`summaryFlagHintKey` bleiben als Alias für einen
+  // Eintrag gültig (bestehende Custom-Dashboards).
+  const summaryFlags = useMemo<SummaryFlag[]>(() => {
+    const list: SummaryFlag[] = Array.isArray(props.summaryFlags)
+      ? (props.summaryFlags as SummaryFlag[]).filter(f => f && f.field && f.labelKey)
+      : [];
+    if (list.length === 0 && props.summaryFlagField && props.summaryFlagLabelKey) {
+      list.push({
+        field: props.summaryFlagField as string,
+        value: props.summaryFlagValue,
+        labelKey: props.summaryFlagLabelKey as string,
+        hintKey: props.summaryFlagHintKey as string | undefined,
+      });
+    }
+    return list;
+  }, [props.summaryFlags, props.summaryFlagField, props.summaryFlagValue,
+      props.summaryFlagLabelKey, props.summaryFlagHintKey]);
   // Opt-in: Zähler-/Status-Zeile immer rendern, auch wenn das Suchfeld (noch)
   // ausgeblendet ist (z.B. wenige Dateien). Ohne diese Prop erscheint die Zeile
   // wie bisher nur zusammen mit dem Suchfeld.
@@ -283,6 +351,7 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
   const selectChip = (id: string | null) => {
     if (!chipParam) {
       setLocalChipValue(id);
+      setClientPage(1);
       return;
     }
     setSearchParams(prev => {
@@ -325,8 +394,15 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
   const serverQuery = !!searchParam && search.query.trim() !== '';
   const searchVisible = search.visible || serverQuery;
 
-  const [sortField, setSortField] = useState<string | null>(null);
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  // Start sort: the stored one (if its column still exists), else `defaultSort`.
+  const [initialSort] = useState<{ field: string; dir: 'asc' | 'desc' } | null>(() => {
+    const stored = initialState.sort;
+    if (stored && columns.some(c => c.field === stored.field)) return stored;
+    if (defaultSort?.field) return { field: defaultSort.field, dir: defaultSort.dir === 'desc' ? 'desc' : 'asc' };
+    return null;
+  });
+  const [sortField, setSortField] = useState<string | null>(initialSort?.field ?? null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>(initialSort?.dir ?? 'asc');
 
   // Leaving local mode (e.g. a chip widened the result to several pages): the
   // local sort and search move into the URL once, so the view keeps them.
@@ -368,6 +444,83 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
     );
   }, [search.filtered, sortField, sortDir, lang, serverSide]);
 
+  // Client paging: the size follows the loaded rows (a search must not flip the
+  // auto default), the page and the slice the filtered, sorted set.
+  const clientSize = resolvePageSize({
+    total: rows.length,
+    options: pageSizeOptions,
+    defaultSize: defaultPageSize,
+    threshold: autoPageSizeThreshold,
+    explicit: explicitPageSize,
+  });
+  const clientTotal = sortedRows.length;
+  const navSize: PageSize = clientPaging ? clientSize : 'all';
+  const clientPage = clampPage(clientPageState, clientTotal, navSize);
+  const clientPageCount = pageCountOf(clientTotal, navSize);
+  const pageSlice = pageWindow(clientPage, clientTotal, navSize);
+  const visibleRows = clientPaging ? sortedRows.slice(pageSlice.start, pageSlice.end) : sortedRows;
+  const minPageSize = smallestPageSize(pageSizeOptions);
+  // Up to the smallest option a page-size choice changes nothing.
+  const pageSizeSelectVisible = clientPaging && minPageSize != null && rows.length > minPageSize;
+
+  const rowIdentity = (row: Record<string, unknown>, index: number): string =>
+    rowKey ? String(row[rowKey] ?? '') : `#${index}`;
+  const focusIndex = (() => {
+    if (!keyboardNav) return -1;
+    const { index, key } = focus;
+    if (index >= 0 && index < clientTotal && (key == null || rowIdentity(sortedRows[index], index) === key)) {
+      return index;
+    }
+    return key == null ? -1 : sortedRows.findIndex((r, i) => rowIdentity(r, i) === key);
+  })();
+  // The row holding the tab stop: the focused one when it is on this page.
+  const tabStop = focusIndex >= pageSlice.start && focusIndex < pageSlice.end ? focusIndex : pageSlice.start;
+
+  const persistState = (extra?: Partial<TableViewState>) => {
+    if (!stateKey) return;
+    const state: TableViewState = {};
+    if (sortField) state.sort = { field: sortField, dir: sortDir };
+    if (explicitPageSize != null) state.pageSize = explicitPageSize;
+    if (clientPaging && clientPageState > 1) state.page = clientPageState;
+    if (focus.key != null) state.focus = focus.key;
+    if (restorePending.current) state.restoreFocus = true;
+    const { tab, browser } = browserStores();
+    saveTableState(tab, browser, stateKey, { ...state, ...extra });
+  };
+  useEffect(() => {
+    persistState();
+    // Every change of the persisted values writes a snapshot.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stateKey, sortField, sortDir, explicitPageSize, clientPageState, focus.key, clientPaging]);
+
+  // Back from a row opened by Enter: once the rows are there, the focus returns
+  // to that row (on its page). Without the row the flag just expires.
+  useEffect(() => {
+    if (!restorePending.current || rows.length === 0) return;
+    restorePending.current = false;
+    if (keyboardNav && focusIndex >= 0) {
+      if (clientPaging) setClientPage(pageOfIndex(focusIndex, clientTotal, clientSize));
+      refocusRef.current = true;
+    }
+    persistState();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows.length, focusIndex]);
+
+  // Moves the DOM focus once the target row is rendered (a page switch may
+  // need one more render).
+  useEffect(() => {
+    if (!refocusRef.current) return;
+    const target = focusIndex >= 0 ? focusIndex : tabStop;
+    const el = tableRef.current?.querySelector<HTMLTableRowElement>(`tbody tr[data-row-index="${target}"]`);
+    if (!el) {
+      if (focusIndex < 0) refocusRef.current = false;
+      return;
+    }
+    refocusRef.current = false;
+    el.focus({ preventScroll: true });
+    el.scrollIntoView?.({ block: 'nearest' });
+  });
+
   // Summary-Kennzahlen über den aktuell sichtbaren (gefilterten) Zeilen, damit
   // sie konsistent zum angezeigten "N Einträge" bleiben.
   const summaryNewCount = useMemo(() => {
@@ -384,14 +537,13 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
     return sortedRows.reduce((acc, r) => acc + (Number(r[summarySizeField]) || 0), 0);
   }, [sortedRows, summarySizeField]);
 
-  const summaryFlagCount = useMemo(() => {
-    if (!summaryFlagField || !summaryFlagLabelKey) return null;
-    const want = String(summaryFlagValue ?? '');
+  const summaryFlagCounts = useMemo(() => summaryFlags.map(f => {
+    const want = String(f.value ?? '');
     return sortedRows.reduce((acc, r) => {
-      const v = r[summaryFlagField];
+      const v = r[f.field];
       return acc + (v != null && String(v) === want ? 1 : 0);
     }, 0);
-  }, [sortedRows, summaryFlagField, summaryFlagValue, summaryFlagLabelKey]);
+  }), [sortedRows, summaryFlags]);
 
   // A server chip can leave zero rows as well; the chip bar must stay to clear it.
   if (rows.length === 0 && !serverQuery && !(chipParam && chipValue != null)) {
@@ -405,13 +557,19 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
         shown: `${fmtNumber(pageFrom)}–${fmtNumber(pageFrom + rows.length - 1)}`,
         total: fmtNumber(rowTotal as number),
       })} · ${t('detail:autoTable.page', { current: page, total: pageCount })}`
+    : clientPaging && clientPageCount > 1
+      ? `${t('detail:autoTable.rowCountTruncated', {
+          shown: `${fmtNumber(pageSlice.start + 1)}–${fmtNumber(pageSlice.end)}`,
+          total: fmtNumber(clientTotal),
+        })} · ${t('detail:autoTable.page', { current: clientPage, total: clientPageCount })}`
     : truncated
       ? t('detail:autoTable.rowCountTruncated', {
           shown: fmtNumber(rows.length),
           total: fmtNumber(rowTotal as number),
         })
       : t('detail:autoTable.rowCount', { count: sortedRows.length });
-  const showCountBar = alwaysShowCount || searchVisible || truncated || (paged && pageCount > 1);
+  const showCountBar = alwaysShowCount || searchVisible || truncated || (paged && pageCount > 1)
+    || pageSizeSelectVisible;
 
   const selectable = !!(selectionKey && selectField);
   const clickable = !!onRowClick || selectable;
@@ -453,6 +611,34 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
       setSortField(field);
       setSortDir('asc');
     }
+    setClientPage(1);
+  };
+
+  const selectPageSize = (value: string) => {
+    const next: PageSize = value === 'all' ? 'all' : Number(value);
+    setExplicitPageSize(next);
+    // The first row of the current page stays in view.
+    setClientPage(pageOfIndex(pageSlice.start, clientTotal, next));
+  };
+
+  const handleRowKeyDown = (e: KeyboardEvent<HTMLTableRowElement>, row: Record<string, unknown>, index: number) => {
+    // Keys on a control inside the row (copy button) stay with that control.
+    if (e.target !== e.currentTarget) return;
+    if (e.key === 'Enter') {
+      if (!clickable) return;
+      e.preventDefault();
+      // "Back" from the opened target focuses this row again.
+      if (onRowClick) persistState({ focus: rowIdentity(row, index), restoreFocus: true });
+      handleRowClick(row);
+      return;
+    }
+    if (!isNavKey(e.key)) return;
+    e.preventDefault();
+    const next = nextFocus(index, e.key, clientTotal, navSize);
+    if (next == null || next === index) return;
+    setFocus({ index: next, key: rowIdentity(sortedRows[next], next) });
+    if (clientPaging) setClientPage(pageOfIndex(next, clientTotal, navSize));
+    refocusRef.current = true;
   };
 
   return (
@@ -495,36 +681,66 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
                 size: formatKpiValue(summaryTotalSize, 'filesize', lang),
               })}</>
             )}
-            {summaryFlagCount != null && summaryFlagCount > 0 && summaryFlagLabelKey && (
-              <>
-                {' · '}
-                <span className="dash-search-bar__flag">
-                  {t(
-                    summaryFlagCount === sortedRows.length
-                      ? summaryFlagLabelKey
-                      : `${summaryFlagLabelKey}_partial`,
-                    { count: summaryFlagCount, total: sortedRows.length },
-                  ) as string}
+            {summaryFlags.map((f, fi) => {
+              const n = summaryFlagCounts[fi] ?? 0;
+              if (n === 0) return null;
+              return (
+                <span key={`${f.field}:${fi}`}>
+                  {' · '}
+                  <span
+                    className={`dash-search-bar__flag${f.tone === 'error' ? ' dash-search-bar__flag--error' : ''}`}
+                  >
+                    {t(
+                      n === sortedRows.length ? f.labelKey : `${f.labelKey}_partial`,
+                      { count: n, total: sortedRows.length },
+                    ) as string}
+                  </span>
+                  {f.hintKey && <> – {t(f.hintKey) as string}</>}
                 </span>
-                {summaryFlagHintKey && <> – {t(summaryFlagHintKey) as string}</>}
-              </>
-            )}
+              );
+            })}
           </span>
+          {pageSizeSelectVisible && (
+            <label className="dash-search-bar__pagesize">
+              {t('detail:autoTable.pageSize')}
+              <select
+                className="dash-select__control"
+                value={String(clientSize)}
+                onChange={e => selectPageSize(e.target.value)}
+              >
+                {pageSizeOptions.map(o => (
+                  <option key={String(o)} value={String(o)}>
+                    {o === 'all' ? t('detail:autoTable.pageSizeAll') : fmtNumber(o)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           {paged && <Pager page={page} pageCount={pageCount} onGo={goToPage} position="top" />}
+          {clientPaging && <Pager page={clientPage} pageCount={clientPageCount} onGo={setClientPage} position="top" />}
           {searchVisible && (
             <input
               type="search"
               className="dash-search-bar__input"
               placeholder={search.placeholder}
               value={search.query}
-              onChange={e => search.setQuery(e.target.value)}
+              onChange={e => {
+                search.setQuery(e.target.value);
+                setClientPage(1);
+              }}
             />
           )}
         </div>
       )}
-      <table className="dash-table" ref={tableRef}>
+      <table
+        className="dash-table"
+        ref={tableRef}
+        // Only one page is in the DOM: the row count (header row included)
+        // lets assistive technology announce "row 23 of 59".
+        aria-rowcount={clientPaging ? clientTotal + 1 : undefined}
+      >
         <thead>
-          <tr>
+          <tr aria-rowindex={clientPaging ? 1 : undefined}>
             {columns.map(c => {
               const alignClass = c.align ? `dash-table__th--${c.align}` : '';
               const canSort = sortable && c.sortable !== false;
@@ -534,20 +750,28 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
               const isSorted = serverSort ? urlSort === (c.sortKey ?? c.field) : sortField === c.field;
               const activeDir = serverSort ? (urlDir === 'desc' ? 'desc' : 'asc') : sortDir;
               const indicator = isSorted ? (activeDir === 'asc' ? ' ▲' : ' ▼') : '';
+              // The header cell keeps the click (whole cell as target); the
+              // button inside makes it reachable by Tab, Enter and Space — its
+              // click bubbles into the cell's handler.
               return (
                 <th
                   key={c.field}
                   className={className}
                   onClick={canSort ? () => handleHeaderClick(c) : undefined}
+                  aria-sort={canSort ? (isSorted ? (activeDir === 'asc' ? 'ascending' : 'descending') : 'none') : undefined}
                 >
-                  {c.label}{indicator}
+                  {canSort
+                    ? <button type="button" className="dash-table__sort">{c.label}{indicator}</button>
+                    : <>{c.label}{indicator}</>}
                 </th>
               );
             })}
           </tr>
         </thead>
         <tbody>
-          {sortedRows.map((row, i) => {
+          {visibleRows.map((row, pageIndex) => {
+            // Index in the whole sorted set (a page holds a slice of it).
+            const i = pageSlice.start + pageIndex;
             // Index immer mit anhängen — Datasets dürfen mehrfache Werte in
             // rowKey-Spalten haben (z.B. mehrere Variablen mit gleichem
             // Variable_Name in unterschiedlichen Files).
@@ -575,6 +799,7 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
             // importing mit total = wachsender Chunk-Balken, imported = grün, failed = rot.
             // planned/skipped/chunked bleiben neutral (nur das Status-Icon signalisiert sie).
             const rowClass = [
+              keyboardNav ? 'dash-table__row--focusable' : '',
               clickable ? 'dash-table__row--clickable' : '',
               isActive ? 'dash-table__row--active' : '',
               isSelected(row) ? 'dash-table__row--selected' : '',
@@ -601,6 +826,15 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
                 onClick={clickable ? () => handleRowClick(row) : undefined}
                 aria-current={isActive ? 'true' : undefined}
                 aria-selected={selectable ? isSelected(row) : undefined}
+                aria-rowindex={clientPaging ? i + 2 : undefined}
+                data-row-index={keyboardNav ? i : undefined}
+                tabIndex={keyboardNav ? (i === tabStop ? 0 : -1) : undefined}
+                onKeyDown={keyboardNav ? e => handleRowKeyDown(e, row, i) : undefined}
+                onFocus={keyboardNav ? e => {
+                  if (e.target === e.currentTarget && focusIndex !== i) {
+                    setFocus({ index: i, key: rowIdentity(row, i) });
+                  }
+                } : undefined}
               >
                 {columns.map((c, ci) => {
                   let rawValue = row[c.field];
@@ -717,6 +951,7 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
         </div>
       )}
       {paged && <Pager page={page} pageCount={pageCount} onGo={goToPage} position="bottom" />}
+      {clientPaging && <Pager page={clientPage} pageCount={clientPageCount} onGo={setClientPage} position="bottom" />}
     </div>
   );
 }

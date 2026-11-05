@@ -1,0 +1,90 @@
+{
+  "locked": true,
+  "id": "custom_function_without_comment",
+  "version": "1.0.0",
+  "title": "Custom Function without comment",
+  "description": "Documentation rule — custom functions whose formula contains no comment. Shared functions especially need documented contracts.\n\nBased on the PMD rule CommentRequired — https://docs.pmd-code.org/latest/pmd_rules_java_documentation.html#commentrequired A filter switch above the table toggles between items without and with a comment (the commented ones serve as documentation inspiration).",
+  "author": "fm-lab rules",
+  "icon": "file-text",
+  "category": "documentation",
+  "tags": [
+    "rule",
+    "pmd",
+    "documentation"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "info",
+    "category": "documentation",
+    "rationale": "A reusable function with no comment forces every caller to reverse-engineer it.",
+    "remediation": "Add a comment block describing parameters, return value and edge cases.",
+    "meta": {
+      "name": "Custom Function without comment",
+      "author": "fm-lab rules",
+      "source": "PMD",
+      "url": "https://docs.pmd-code.org/latest/pmd_rules_java_documentation.html#commentrequired",
+      "description": "Documentation rule — custom functions whose formula contains no comment. Shared functions especially need documented contracts. A filter switch above the table toggles between items without and with a comment (the commented ones serve as documentation inspiration).",
+      "created": "2026-07-01",
+      "references": [
+        {
+          "project": "PMD",
+          "rule": "CommentRequired",
+          "url": "https://docs.pmd-code.org/latest/pmd_rules_java_documentation.html#commentrequired"
+        }
+      ]
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "CustomFunction"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {}
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Custom Function without comment"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "comment",
+      "type": "string",
+      "required": false,
+      "description": "Filter switch: 'without' (default) or 'with' — show items lacking or carrying a comment."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

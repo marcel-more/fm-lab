@@ -102,7 +102,7 @@ Edges produced by calculations *inside* steps carry the step index as `Link_Subr
 
 - **XML schema:** [XML ScriptCatalog](../../xml/catalogs/XML%20ScriptCatalog.md) — `Structure/AddAction` branch; steps separately in [XML StepsForScripts](../../xml/catalogs/XML%20StepsForScripts.md)
 - **DB schema:** [ScriptCatalog](../catalog-tables/ScriptCatalog.md) · steps in [StepsForScripts](../catalog-tables/StepsForScripts.md) · human-readable step text in [DDR_ScriptSteps](../catalog-tables/DDR_ScriptSteps.md)
-- **Detail view template:** `rest-api/templates/sql/object_details_script.sql` (+ `object_details_script_tokens.sql` for the calculation token view and `object_references_script.sql` for the per-line references view), served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md)
+- **Detail view template:** `rest-api/templates/queries/system/object-details/object_details_script.sql` (+ `object_details_script_tokens.sql` for the calculation token view and `queries/system/references/object_references_script.sql` for the per-line references view), served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md)
 - **Frontend:** object list at `http://localhost:5173/?type=Script`
 
 **See also:** [Object Types](../object-catalog/Object%20Types.md) · [ScriptStep](ScriptStep.md) · [ScriptTrigger](ScriptTrigger.md) · [Folder](Folder.md) · [Link Roles and Subroles](../object-catalog/Link%20Roles%20and%20Subroles.md)

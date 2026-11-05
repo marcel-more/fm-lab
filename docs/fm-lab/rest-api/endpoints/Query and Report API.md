@@ -1,8 +1,13 @@
 # Query and Report API
 
-Execute prepared SQL templates against the catalog: `/query` for tabular analysis SQL, `/report` for report templates that default to rendered HTML. Both exist as GET (parameters in the query string) and POST (JSON body) variants; `/query/list` and `/report/list` enumerate the installed templates.
+Execute named SQL templates against the catalog: `/query` for analysis SQL, `/report` for the internal report templates that default to rendered HTML. Both exist as GET (parameters in the query string) and POST (JSON body) variants; `/query/list` and `/report/list` enumerate what each one reaches. Arbitrary SQL is **not** accepted — only named templates with parameters.
 
-Templates are `.sql` files shipped with the installation (`rest-api/templates/queries/` and `templates/reports/`). Arbitrary SQL is **not** accepted — only named templates with parameters.
+| Endpoint | Resolves a name to | In this order |
+|---|---|---|
+| `/api/query` | analysis SQL | 1. a single-file dashboard, see [Single-file Dashboards](../../templates/Single-file%20Dashboards.md) (`dashboards-custom/` → `dashboards/` → `dashboards-community/` → old location `sql-custom/`) · 2. a module template, see [Detail View Templates](../../templates/Detail%20View%20Templates.md) (`queries/modules/`) · 3. a `queries/` folder inside a dashboard bundle |
+| `/api/report` | internal templates | system templates ([Built-in Query Templates](../../templates/Built-in%20Query%20Templates.md)) only (`queries/system/`) |
+
+The same chains back the dashboard dataset sources `custom:<name>` and `report:<name>` ([Dashboard Datasets](../../templates/Dashboard%20Datasets.md)).
 
 ---
 
@@ -30,15 +35,21 @@ curl -X POST http://localhost:3003/api/query \
   -d '{"template": "unused_scripts", "params": {"file": "Contacts"}, "format": "markdown"}'
 ```
 
-**Response (json):** the standard envelope with `data` as an array of result rows. Errors: `404 TEMPLATE_NOT_FOUND`, `500 TEMPLATE_ERROR` (template failed during execution), `409 SCHEMA_DRIFT` (catalog older than the template expects — re-import the XML).
+**Response (json):** the standard envelope with `data` as an array of result rows. Errors: `404 TEMPLATE_NOT_FOUND` (also for a system template — those answer only `/report`), `500 TEMPLATE_ERROR` (template failed during execution), `409 SCHEMA_DRIFT` (catalog older than the template expects — re-import the XML).
+
+A single-file dashboard answers here and at `/api/dashboards/<name>/data` with the same rows; paged ones take `page`, `q`, `sort`/`dir` and `page_size` (see [Server paging](../../templates/Single-file%20Dashboards.md#server-paging-sorting-and-search)).
 
 ## GET/POST /api/report
 
 Identical interface to `/query`, but `format` defaults to **`html`** — report templates are designed to render as styled documents. Use `format=json` to get the underlying rows.
 
+```bash
+curl "http://localhost:3003/api/report?template=object_count_by_type&format=json"
+```
+
 ## GET /api/query/list · GET /api/report/list
 
-Enumerate the installed templates with their metadata (name, description, expected parameters). Useful for discovering what an installation provides before calling `/query` or `/report`.
+Enumerate the installed templates with their metadata (name, description, expected parameters). `/query/list` lists the single-file dashboards of the content areas (shipped, custom, community, old location) with their `folder`, `area`, `overrides`, `legacy` and `unit: "file"`; module templates are internal and not listed. `/report/list` lists the system templates.
 
 ---
 

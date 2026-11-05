@@ -51,8 +51,8 @@ older schema or converter.
 The pipeline is gated: a P2 failure aborts the run before P3 (exit 1, no
 publish — the previously served catalog stays untouched), and P6 is the final
 validation gate. Once P6 passes, the catalog is ready for every query tier —
-[Built-in Query Templates](Built-in%20Query%20Templates.md), [Custom Query Templates](Custom%20Query%20Templates.md) and the
-[Dashboard Datasets](Dashboard%20Datasets.md). The direction distinguishes them: those **read** the
+[Built-in Query Templates](Built-in%20Query%20Templates.md), [Detail View Templates](Detail%20View%20Templates.md),
+[Single-file Dashboards](Single-file%20Dashboards.md) and the [Dashboard Datasets](Dashboard%20Datasets.md). The direction distinguishes them: those **read** the
 catalog, these **produce** it.
 
 ## See also

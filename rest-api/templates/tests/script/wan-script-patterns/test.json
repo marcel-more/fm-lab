@@ -44,7 +44,7 @@
       "ref": "multi_navigation_without_freeze"
     },
     {
-      "kind": "query",
+      "kind": "dashboard",
       "ref": "script_network_roundtrip_ranking"
     }
   ],

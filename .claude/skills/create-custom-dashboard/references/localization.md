@@ -13,7 +13,7 @@ only the values change.
 
 ## File structure
 
-Path: `rest-api/templates/dashboards-custom/<id>/locales/<lang>.json`
+Path: `rest-api/templates/dashboards-custom/[<folder>/]<id>/locales/<lang>.json`
 
 ```json
 {
@@ -58,14 +58,16 @@ API — after generating locales, the validation gate's log check will surface t
 **Never translate:** dataset IDs, `field` names, `param` names / option `value`s,
 `format` values, icon names, action names/args, node `id`s.
 
-Reference bundles: `developer-workflow/script_todos/locales/de.json` (compact),
+Reference bundles (shipped, under `rest-api/templates/dashboards/`):
+`developer-workflow/script_todos/locales/de.json` (compact),
 `modularization/external_apis/locales/fr.json` (ID-form with full layout overrides).
 
 ## Folder bundles
 
-When a bundle lives in a category folder
-(`dashboards-custom/<folder>/<id>/`), the folder's `folder.json` carries its own
-inline translations — no locales/ directory:
+When a bundle lives in a folder
+(`dashboards-custom/<folder>/<id>/`), the folder's optional `folder.json` carries
+its own inline translations — no locales/ directory. The area level "Custom"
+itself is a fixed name and is never translated:
 
 ```json
 { "title": "Modularization", "icon": "boxes", "description": "…", "order": 2,

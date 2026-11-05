@@ -2,6 +2,7 @@ const db = require('../config/database');
 const referenceService = require('./reference.service');
 const helpService = require('./help.service');
 const templateService = require('./template.service');
+const queryDiscovery = require('./query-discovery');
 const graphService = require('./graph.service');
 const annotationsService = require('./annotations.service');
 const dashboardService = require('./dashboard.service');
@@ -39,6 +40,7 @@ async function performReload(solutionId) {
   require('./reference-candidates.service').clearReferenceCandidateCaches();
   helpService.clearCache();
   templateService.clearCache();
+  queryDiscovery.clearCache();
   graphService.clearCache();
   // Vor dem User-Remap: Skill-Semantic-Names durabel halten — erst
   // den Sidecar-Cache auf die neue Partition restaurieren (greift nach Force-

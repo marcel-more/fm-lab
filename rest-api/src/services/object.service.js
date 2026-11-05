@@ -2194,7 +2194,7 @@ async function getDetails(ctx, uuid, file, lang) {
     const templateName = DETAIL_TEMPLATE_MAP[objectType] || 'object_details_generic';
     const hasDedicatedTemplate = objectType in DETAIL_TEMPLATE_MAP;
 
-    // 3. Execute the detail template (templates/sql/ = 'report' source)
+    // 3. Execute the detail template (templates/queries/system/ = 'report' source)
     // `lang` = aktive UI-Sprache. Detail-Templates, die eine lokalisierte
     // Schreibweise NEBEN dem Katalognamen zeigen (BuiltinFunction seit
     // Katalog-Schema 1.32.0, wo der Katalogname sprachunabhängig kanonisch ist),

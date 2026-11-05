@@ -13,6 +13,7 @@ import {
   type CachedRun, type TestsSettings,
 } from '../lib/testsStore';
 import { dispatchAction, resolveAction } from '../dashboard/actions';
+import { DisclosureChevron } from './DisclosureChevron';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ErrorMessage } from './ErrorMessage';
 import './TestsPanel.css';
@@ -43,6 +44,8 @@ const STATE_TOKEN: Record<StateKey, string> = {
   error: '●', warning: '▲', neutral: '◦', ok: '✓', skipped: '—', failed: '⚡',
 };
 const PLATFORM_SECTION_KEY = '__platform';
+/** Shipped folder of the platform tests (`templates/tests/platform/`) — source of the section label. */
+const PLATFORM_FOLDER = 'platform';
 
 function severityClass(sev?: string | null): string {
   switch ((sev || '').toLowerCase()) {
@@ -138,7 +141,7 @@ const SummaryTokens: React.FC<{ summary?: TestRunSummary; showValueFor?: number 
 /**
  * One member (rule) row. Two operating modes:
  * - hierarchy (default): the line click jumps to the member's findings target
- *   (`memberJump`), expanding is the ▸ button's job.
+ *   (`memberJump`), expanding is the chevron button's job.
  * - flat (`flatContext` set): the row stands alone in the flat result list, so
  *   the line click toggles the findings instead and the title carries the
  *   origin path (section › bundle) — navigation happens on the finding rows.
@@ -230,14 +233,16 @@ const MemberRow: React.FC<{ member: TestRunMemberResult; query: string; flatCont
           className="tests-member-expand"
           onClick={() => setExpanded(e => !e)}
           disabled={!hasFindings}
-          aria-expanded={expanded}
+          aria-expanded={hasFindings ? expanded : undefined}
+          aria-label={hasFindings ? (t('nav:testsPanel.showFindings') as string) : undefined}
           title={hasFindings ? (t('nav:testsPanel.showFindings') as string) : undefined}
         >
-          {hasFindings ? (expanded ? '▾' : '▸') : '·'}
+          <DisclosureChevron open={hasFindings ? expanded : null} />
         </button>
-        {state && (
-          <span className={`tests-token tests-state-${state}`} aria-hidden="true">{STATE_TOKEN[state]}</span>
-        )}
+        {/* Fixed-width slot: the state glyphs differ in width, the names must align. */}
+        <span className={`tests-token tests-member-token${state ? ` tests-state-${state}` : ''}`} aria-hidden="true">
+          {state ? STATE_TOKEN[state] : ''}
+        </span>
         <span className="tests-member-ref" title={member.ref}>{member.title || member.ref}</span>
         {member.runStatus === 'failed' ? (
           <span className="tests-member-error" title={member.error}>
@@ -348,8 +353,9 @@ const TestRow: React.FC<TestRowProps> = ({
           className="tests-member-expand"
           onClick={() => setExpanded(e => !e)}
           aria-expanded={expanded}
+          aria-label={t('nav:testsPanel.showChecks') as string}
         >
-          {expanded ? '▾' : '▸'}
+          <DisclosureChevron open={expanded} />
         </button>
         <span className="tests-row-title" title={test.description || undefined}>{test.title}</span>
         <span className={`tests-type-badge tests-type-${test.testType}`}>{test.testType}</span>
@@ -724,7 +730,7 @@ export const TestsPanel: React.FC<TestsPanelProps> = ({ objectUuid, objectType, 
         section = {
           key,
           label: isPlatform
-            ? (test.folder_label || (t('nav:testsPanel.platformSection') as string))
+            ? (t('nav:testsPanel.platformSection') as string)
             : (test.folder_label || test.folder || (t('nav:testsPanel.otherSection') as string)),
           order: isPlatform ? Number.MAX_SAFE_INTEGER : (test.folder_order ?? Number.MAX_SAFE_INTEGER - 1),
           isPlatform,
@@ -732,6 +738,10 @@ export const TestsPanel: React.FC<TestsPanelProps> = ({ objectUuid, objectType, 
         };
         byKey.set(key, section);
       }
+      // The consolidated platform section also gathers platform-type tests of
+      // other folders (e.g. solution/version-floor) — it is named after the
+      // platform folder only, never after whichever test happens to come first.
+      if (isPlatform && test.folder === PLATFORM_FOLDER && test.folder_label) section.label = test.folder_label;
       section.tests.push(test);
     }
     return [...byKey.values()].sort((a, b) => (a.order - b.order) || a.label.localeCompare(b.label, lang));
@@ -945,7 +955,8 @@ export const TestsPanel: React.FC<TestsPanelProps> = ({ objectUuid, objectType, 
             onClick={() => toggleSection(section.key, defaultCollapsed)}
             aria-expanded={!isCollapsed}
           >
-            {isCollapsed ? '▸' : '▾'} {section.label}
+            <DisclosureChevron open={!isCollapsed} />
+            {section.label}
           </button>
           {section.isPlatform && (
             <span className="tests-platform-chips">

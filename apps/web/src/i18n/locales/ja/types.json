@@ -34,5 +34,14 @@
     "ScriptStepType": "カテゴリ",
     "BuiltinFunction": "カテゴリ",
     "PluginFunction": "コンポーネント"
+  },
+  "testTypes": {
+    "exploration": "探索",
+    "code-quality": "コード品質",
+    "error-check": "エラーチェック",
+    "security": "セキュリティ",
+    "inventory": "インベントリ",
+    "performance": "パフォーマンス",
+    "platform": "プラットフォーム"
   }
 }

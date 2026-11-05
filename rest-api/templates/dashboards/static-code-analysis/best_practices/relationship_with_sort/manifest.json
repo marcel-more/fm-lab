@@ -1,0 +1,90 @@
+{
+  "locked": true,
+  "id": "relationship_with_sort",
+  "version": "1.2.0",
+  "title": "Relationship with sorted records",
+  "description": "Best-practice rule — flags relationships that sort their related records. The sort runs whenever the relation is evaluated and can slow portals and lookups.",
+  "author": "fm-lab rules",
+  "icon": "arrow-down-up",
+  "category": "best_practices",
+  "tags": [
+    "rule",
+    "pmd",
+    "best_practices"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "info",
+    "category": "best_practices",
+    "rationale": "A sorted relationship re-sorts on every evaluation; on large sets this is costly.",
+    "remediation": "Sort in the portal / list layout instead where the cost is paid once per display.",
+    "meta": {
+      "name": "Relationship with sorted records",
+      "author": "fm-lab rules",
+      "source": "fm-lab",
+      "url": null,
+      "description": "Best-practice rule — flags relationships that sort their related records. The sort runs whenever the relation is evaluated and can slow portals and lookups.",
+      "created": "2026-07-01",
+      "references": []
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Relationship"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {}
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Relationship with sorted records"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "consumer_filter",
+      "type": "string",
+      "required": false,
+      "description": "Optional consumer filter: portals (at least one consumer portal), sorted-portals (at least one self-sorting consumer portal)."
+    },
+    {
+      "name": "sorted_side",
+      "type": "string",
+      "required": false,
+      "description": "Optional chip filter on the sorted side: left, right, both sides."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": false
+  }
+}

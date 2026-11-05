@@ -1,0 +1,40 @@
+{
+  "manifest": {
+    "title": "Healthchecks",
+    "description": "ソリューション全体の健全性をひと目で：すべてのチェックダッシュボードの計算済み結果を状態別に集計し、ルーブリックごとにまとめて表示します。各行はそのダッシュボードへ移動します。"
+  },
+  "layout": {
+    "results_kpi_strip.props.items[0].label": "チェック",
+    "results_kpi_strip.props.items[1].label": "エラー",
+    "results_kpi_strip.props.items[2].label": "警告",
+    "results_kpi_strip.props.items[3].label": "OK",
+    "results_kpi_strip.props.items[4].label": "中立",
+    "results_kpi_strip.props.items[5].label": "保留",
+    "results_kpi_strip.props.items[6].label": "失敗",
+    "results_kpi_strip.props.items[7].label": "件数",
+    "results_kpi_strip.props.items[8].label": "実行済み",
+    "results_run.props.label": "すべてのチェックを実行",
+    "rp_performance_card.props.title": "パフォーマンス",
+    "rp_performance_list.props.empty.message": "報告する項目はありません。",
+    "rp_error_prone_card.props.title": "エラーが起きやすい",
+    "rp_error_prone_list.props.empty.message": "報告する項目はありません。",
+    "rp_security_card.props.title": "セキュリティ",
+    "rp_security_list.props.empty.message": "報告する項目はありません。",
+    "rp_unused_code_card.props.title": "未使用コード",
+    "rp_unused_code_list.props.empty.message": "報告する項目はありません。",
+    "rp_code_style_card.props.title": "コードスタイル",
+    "rp_code_style_list.props.empty.message": "報告する項目はありません。",
+    "rp_layout_quality_card.props.title": "Layout 品質",
+    "rp_layout_quality_list.props.empty.message": "報告する項目はありません。",
+    "rp_documentation_card.props.title": "ドキュメント",
+    "rp_documentation_list.props.empty.message": "報告する項目はありません。",
+    "rp_best_practices_card.props.title": "ベストプラクティス",
+    "rp_best_practices_list.props.empty.message": "報告する項目はありません。",
+    "rp_platform_card.props.title": "プラットフォーム互換性",
+    "rp_platform_list.props.empty.message": "報告する項目はありません。",
+    "rp_metadata_integrity_card.props.title": "メタデータ整合性",
+    "rp_metadata_integrity_list.props.empty.message": "報告する項目はありません。",
+    "rp_developer_workflow_card.props.title": "開発者ワークフロー",
+    "rp_developer_workflow_list.props.empty.message": "報告する項目はありません。"
+  }
+}

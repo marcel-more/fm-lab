@@ -137,6 +137,52 @@
         "pasteDropped": "粘贴时丢弃",
         "pasteDroppedHint": "无论取值如何，FileMaker 在粘贴时都会丢弃此选项 — 生成器将其省略，参考库保留占位符以供读取。"
       },
+      "repeatGroups": "重复组 (列表)",
+      "rg": {
+        "group": "组",
+        "container": "容器",
+        "form": "项形式",
+        "fixedSlots": "{{n}} 个固定槽",
+        "nestedIn": "嵌套于 {{parent}}",
+        "countAttr": "计数属性 {{attr}}"
+      },
+      "knownBugHint": "已知 FileMaker 缺陷 — 这是警告类别，而非有效性规则：该步骤本身有效，风险在于 FileMaker 自身的序列化。",
+      "saxmlGapHint": "SaXML 导出缺口 — 导出从不包含此槽，因此基于导出构建的目录无法显示它；只有剪贴板副本可以。这不是代码片段的缺陷。",
+      "constraintCoverageHint": "仅适用于 FileMaker {{coverage}} 的序列化",
+      "variableTargetMarker": "变量目标标记",
+      "variableTargetMarkerHint": "当且仅当目标槽保存的是变量而非字段引用时，带有一个空的步骤级 <Text/> 标记。",
+      "consumerNote": "使用方说明",
+      "skeletons": "骨架外壳",
+      "sk": {
+        "in": "在 {{parent}} 中",
+        "hull": "外壳 — 即使未配置也会带默认内容保留",
+        "hull_strip_children": "外壳 — 保留其属性，未填充的子元素被移除",
+        "condition": "仅在 {{cond}} 时",
+        "help": "即使内部未配置任何内容，FileMaker 也会在代码片段中保留的元素；按模板顺序显示为它们构成的树。生成器在修剪未填充内容后会恢复它们，读取方可以丢弃其默认内容。"
+      },
+      "bindings": "选项绑定元素",
+      "bd": {
+        "requires": "仅在 {{cond}} 时存在",
+        "excludes": "在 {{cond}} 时丢弃",
+        "requiresOption": "仅在设置了 {{option}} 时存在",
+        "excludesOption": "设置了 {{option}} 时丢弃",
+        "suppressEmpty": "空元素按确定性规则从不输出 (对话框残留)",
+        "help": "其存在取决于另一选项的元素。一个选项的多个值构成该元素存在 (或被丢弃) 的集合：取其中任一值时写入该元素，取其他任何值时将其修剪。"
+      },
+      "mirrors": "镜像值",
+      "mr": {
+        "source_present": "{{option}} 的副本 — 只要设置了源，FileMaker 就会写入",
+        "help": "FileMaker 在步骤的另一位置再次写入并在粘贴时保持同步的值。以源选项为准：生成器复制它，读取方将副本视为冗余。"
+      },
+      "implications": "记法隐含",
+      "imp": {
+        "option_present": "选项存在",
+        "value_form": "引用形式",
+        "keyword": "关键字",
+        "mode_switch": "模式切换",
+        "default": "默认模式 (无切换标签)",
+        "help": "规范文本记法中隐含的选项：关键字、引用形式或带标签的模式在解析步骤时隐含另一选项的值。"
+      },
       "coverage": "形状覆盖版本",
       "coverageHint": "此形状据以验证的 FileMaker 版本（配对的导出与剪贴板证据）。带版本标记的行是该覆盖版本的覆盖行，会替换同一键的标准行。",
       "coverageBase": "基准",

@@ -1,0 +1,1084 @@
+{
+  "version": 1,
+  "bundles": [
+    {
+      "id": "change_quality",
+      "path": "changelog/change_quality",
+      "unit": "bundle"
+    },
+    {
+      "id": "changes",
+      "path": "changelog/changes",
+      "unit": "bundle"
+    },
+    {
+      "id": "cochange",
+      "path": "changelog/cochange",
+      "unit": "bundle"
+    },
+    {
+      "id": "hotspots",
+      "path": "changelog/hotspots",
+      "unit": "bundle"
+    },
+    {
+      "id": "module_activity",
+      "path": "changelog/module_activity",
+      "unit": "bundle"
+    },
+    {
+      "id": "security_changes",
+      "path": "changelog/security_changes",
+      "unit": "bundle"
+    },
+    {
+      "id": "calc_comment_fixme",
+      "path": "developer-workflow/calc_comment_fixme",
+      "unit": "bundle"
+    },
+    {
+      "id": "calc_comment_todo",
+      "path": "developer-workflow/calc_comment_todo",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_text_fixme",
+      "path": "developer-workflow/layout_text_fixme",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_text_todo",
+      "path": "developer-workflow/layout_text_todo",
+      "unit": "bundle"
+    },
+    {
+      "id": "script_comment_fixme",
+      "path": "developer-workflow/script_comment_fixme",
+      "unit": "bundle"
+    },
+    {
+      "id": "script_comment_todo",
+      "path": "developer-workflow/script_comment_todo",
+      "unit": "bundle"
+    },
+    {
+      "id": "script_todos",
+      "path": "developer-workflow/script_todos",
+      "unit": "bundle"
+    },
+    {
+      "id": "health_hints",
+      "path": "health_hints",
+      "unit": "bundle"
+    },
+    {
+      "id": "conditional_formatting_by_object",
+      "path": "layouts/conditional_formatting_by_object.sql",
+      "unit": "file"
+    },
+    {
+      "id": "conditional_formatting_inventory",
+      "path": "layouts/conditional_formatting_inventory.sql",
+      "unit": "file"
+    },
+    {
+      "id": "container_field_placements",
+      "path": "layouts/container_field_placements.sql",
+      "unit": "file"
+    },
+    {
+      "id": "hide_condition_inventory",
+      "path": "layouts/hide_condition_inventory.sql",
+      "unit": "file"
+    },
+    {
+      "id": "layout_calculation_inventory",
+      "path": "layouts/layout_calculation_inventory.sql",
+      "unit": "file"
+    },
+    {
+      "id": "layout_complexity_score",
+      "path": "layouts/layout_complexity_score.sql",
+      "unit": "file"
+    },
+    {
+      "id": "layout_overlap_explorer",
+      "path": "layouts/layout_overlap_explorer.sql",
+      "unit": "file"
+    },
+    {
+      "id": "layout_symbol_inventory",
+      "path": "layouts/layout_symbol_inventory.sql",
+      "unit": "file"
+    },
+    {
+      "id": "merge_field_inventory",
+      "path": "layouts/merge_field_inventory.sql",
+      "unit": "file"
+    },
+    {
+      "id": "merge_variable_inventory",
+      "path": "layouts/merge_variable_inventory.sql",
+      "unit": "file"
+    },
+    {
+      "id": "script_trigger_inventory",
+      "path": "layouts/script_trigger_inventory.sql",
+      "unit": "file"
+    },
+    {
+      "id": "theme_style_usage",
+      "path": "layouts/theme_style_usage.sql",
+      "unit": "file"
+    },
+    {
+      "id": "tooltip_inventory",
+      "path": "layouts/tooltip_inventory.sql",
+      "unit": "file"
+    },
+    {
+      "id": "export_ddr_missing",
+      "path": "metadata-integrity/export_ddr_missing",
+      "unit": "bundle"
+    },
+    {
+      "id": "plugin_call_without_reference",
+      "path": "metadata-integrity/plugin_call_without_reference",
+      "unit": "bundle"
+    },
+    {
+      "id": "plugin_function_missing_export",
+      "path": "metadata-integrity/plugin_function_missing_export",
+      "unit": "bundle"
+    },
+    {
+      "id": "plugin_reference_census",
+      "path": "metadata-integrity/plugin_reference_census.sql",
+      "unit": "file"
+    },
+    {
+      "id": "uuid_clone_collisions",
+      "path": "metadata-integrity/uuid_clone_collisions",
+      "unit": "bundle"
+    },
+    {
+      "id": "uuid_intrafile_duplicates",
+      "path": "metadata-integrity/uuid_intrafile_duplicates",
+      "unit": "bundle"
+    },
+    {
+      "id": "email_integration",
+      "path": "modularization/email_integration",
+      "unit": "bundle"
+    },
+    {
+      "id": "external_apis",
+      "path": "modularization/external_apis",
+      "unit": "bundle"
+    },
+    {
+      "id": "filesystem_access",
+      "path": "modularization/filesystem_access",
+      "unit": "bundle"
+    },
+    {
+      "id": "fm_file_coupling",
+      "path": "modularization/fm_file_coupling",
+      "unit": "bundle"
+    },
+    {
+      "id": "odbc_ess_sql",
+      "path": "modularization/odbc_ess_sql",
+      "unit": "bundle"
+    },
+    {
+      "id": "plugin_dependency",
+      "path": "modularization/plugin_dependency",
+      "unit": "bundle"
+    },
+    {
+      "id": "plugin_version",
+      "path": "modularization/plugin_version",
+      "unit": "bundle"
+    },
+    {
+      "id": "process_execution",
+      "path": "modularization/process_execution",
+      "unit": "bundle"
+    },
+    {
+      "id": "server_side_execution",
+      "path": "modularization/server_side_execution",
+      "unit": "bundle"
+    },
+    {
+      "id": "dashboards",
+      "path": "modules/dashboards",
+      "unit": "bundle"
+    },
+    {
+      "id": "docs",
+      "path": "modules/docs/docs",
+      "unit": "bundle"
+    },
+    {
+      "id": "docs_overview",
+      "path": "modules/docs/docs_overview",
+      "unit": "bundle"
+    },
+    {
+      "id": "docset_category",
+      "path": "modules/docs/docset_category",
+      "unit": "bundle"
+    },
+    {
+      "id": "docset_detail",
+      "path": "modules/docs/docset_detail",
+      "unit": "bundle"
+    },
+    {
+      "id": "docset_home",
+      "path": "modules/docs/docset_home",
+      "unit": "bundle"
+    },
+    {
+      "id": "docset_start",
+      "path": "modules/docs/docset_start",
+      "unit": "bundle"
+    },
+    {
+      "id": "test_detail",
+      "path": "modules/tests/test_detail",
+      "unit": "bundle"
+    },
+    {
+      "id": "tests_overview",
+      "path": "modules/tests/tests_overview",
+      "unit": "bundle"
+    },
+    {
+      "id": "field_annotation_inventory",
+      "path": "schema/field_annotation_inventory.sql",
+      "unit": "file"
+    },
+    {
+      "id": "field_comment_inventory",
+      "path": "schema/field_comment_inventory.sql",
+      "unit": "file"
+    },
+    {
+      "id": "field_display_names_inventory",
+      "path": "schema/field_display_names_inventory.sql",
+      "unit": "file"
+    },
+    {
+      "id": "table_comment_inventory",
+      "path": "schema/table_comment_inventory.sql",
+      "unit": "file"
+    },
+    {
+      "id": "table_width_ranking",
+      "path": "schema/table_width_ranking.sql",
+      "unit": "file"
+    },
+    {
+      "id": "error_code_inventory",
+      "path": "scripts/error_code_inventory.sql",
+      "unit": "file"
+    },
+    {
+      "id": "script_complexity_stats",
+      "path": "scripts/script_complexity_stats.sql",
+      "unit": "file"
+    },
+    {
+      "id": "script_layout_context_cost",
+      "path": "scripts/script_layout_context_cost.sql",
+      "unit": "file"
+    },
+    {
+      "id": "script_mcc_ranking",
+      "path": "scripts/script_mcc_ranking.sql",
+      "unit": "file"
+    },
+    {
+      "id": "script_network_roundtrip_ranking",
+      "path": "scripts/script_network_roundtrip_ranking.sql",
+      "unit": "file"
+    },
+    {
+      "id": "allow_user_abort_off",
+      "path": "static-code-analysis/best_practices/allow_user_abort_off",
+      "unit": "bundle"
+    },
+    {
+      "id": "field_auto_index",
+      "path": "static-code-analysis/best_practices/field_auto_index",
+      "unit": "bundle"
+    },
+    {
+      "id": "find_without_error_capture",
+      "path": "static-code-analysis/best_practices/find_without_error_capture",
+      "unit": "bundle"
+    },
+    {
+      "id": "global_stored_field",
+      "path": "static-code-analysis/best_practices/global_stored_field",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_without_body",
+      "path": "static-code-analysis/best_practices/layout_without_body",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_without_context",
+      "path": "static-code-analysis/best_practices/layout_without_context",
+      "unit": "bundle"
+    },
+    {
+      "id": "lookup_field",
+      "path": "static-code-analysis/best_practices/lookup_field",
+      "unit": "bundle"
+    },
+    {
+      "id": "plugin_deprecated_call",
+      "path": "static-code-analysis/best_practices/plugin_deprecated_call",
+      "unit": "bundle"
+    },
+    {
+      "id": "relationship_with_sort",
+      "path": "static-code-analysis/best_practices/relationship_with_sort",
+      "unit": "bundle"
+    },
+    {
+      "id": "repeating_field",
+      "path": "static-code-analysis/best_practices/repeating_field",
+      "unit": "bundle"
+    },
+    {
+      "id": "base_table_many_occurrences",
+      "path": "static-code-analysis/code_style/base_table_many_occurrences",
+      "unit": "bundle"
+    },
+    {
+      "id": "custom_function_many_params",
+      "path": "static-code-analysis/code_style/custom_function_many_params",
+      "unit": "bundle"
+    },
+    {
+      "id": "global_variable_single_script",
+      "path": "static-code-analysis/code_style/global_variable_single_script",
+      "unit": "bundle"
+    },
+    {
+      "id": "if_else_asymmetry",
+      "path": "static-code-analysis/code_style/if_else_asymmetry",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_many_objects",
+      "path": "static-code-analysis/code_style/layout_many_objects",
+      "unit": "bundle"
+    },
+    {
+      "id": "long_calculation",
+      "path": "static-code-analysis/code_style/long_calculation",
+      "unit": "bundle"
+    },
+    {
+      "id": "long_script",
+      "path": "static-code-analysis/code_style/long_script",
+      "unit": "bundle"
+    },
+    {
+      "id": "name_copied_suffix",
+      "path": "static-code-analysis/code_style/name_copied_suffix",
+      "unit": "bundle"
+    },
+    {
+      "id": "name_quoted",
+      "path": "static-code-analysis/code_style/name_quoted",
+      "unit": "bundle"
+    },
+    {
+      "id": "name_too_long",
+      "path": "static-code-analysis/code_style/name_too_long",
+      "unit": "bundle"
+    },
+    {
+      "id": "name_trailing_whitespace",
+      "path": "static-code-analysis/code_style/name_trailing_whitespace",
+      "unit": "bundle"
+    },
+    {
+      "id": "portal_heavy_layout",
+      "path": "static-code-analysis/code_style/portal_heavy_layout",
+      "unit": "bundle"
+    },
+    {
+      "id": "relationship_multi_field",
+      "path": "static-code-analysis/code_style/relationship_multi_field",
+      "unit": "bundle"
+    },
+    {
+      "id": "set_field_by_name",
+      "path": "static-code-analysis/code_style/set_field_by_name",
+      "unit": "bundle"
+    },
+    {
+      "id": "tab_control_many_tabs",
+      "path": "static-code-analysis/code_style/tab_control_many_tabs",
+      "unit": "bundle"
+    },
+    {
+      "id": "table_many_fields",
+      "path": "static-code-analysis/code_style/table_many_fields",
+      "unit": "bundle"
+    },
+    {
+      "id": "value_list_hardcoded_values",
+      "path": "static-code-analysis/code_style/value_list_hardcoded_values",
+      "unit": "bundle"
+    },
+    {
+      "id": "calculated_field_without_comment",
+      "path": "static-code-analysis/documentation/calculated_field_without_comment",
+      "unit": "bundle"
+    },
+    {
+      "id": "custom_function_without_comment",
+      "path": "static-code-analysis/documentation/custom_function_without_comment",
+      "unit": "bundle"
+    },
+    {
+      "id": "script_comment_density",
+      "path": "static-code-analysis/documentation/script_comment_density",
+      "unit": "bundle"
+    },
+    {
+      "id": "undocumented_script",
+      "path": "static-code-analysis/documentation/undocumented_script",
+      "unit": "bundle"
+    },
+    {
+      "id": "autoenter_overwrites_existing",
+      "path": "static-code-analysis/error_prone/autoenter_overwrites_existing",
+      "unit": "bundle"
+    },
+    {
+      "id": "calc_broken_comment_structure",
+      "path": "static-code-analysis/error_prone/calc_broken_comment_structure",
+      "unit": "bundle"
+    },
+    {
+      "id": "calc_commented_out",
+      "path": "static-code-analysis/error_prone/calc_commented_out",
+      "unit": "bundle"
+    },
+    {
+      "id": "cascade_delete_relationship",
+      "path": "static-code-analysis/error_prone/cascade_delete_relationship",
+      "unit": "bundle"
+    },
+    {
+      "id": "close_window_name_never_created",
+      "path": "static-code-analysis/error_prone/close_window_name_never_created",
+      "unit": "bundle"
+    },
+    {
+      "id": "cross_product_relationship",
+      "path": "static-code-analysis/error_prone/cross_product_relationship",
+      "unit": "bundle"
+    },
+    {
+      "id": "dead_code_after_exit",
+      "path": "static-code-analysis/error_prone/dead_code_after_exit",
+      "unit": "bundle"
+    },
+    {
+      "id": "deep_if_nesting",
+      "path": "static-code-analysis/error_prone/deep_if_nesting",
+      "unit": "bundle"
+    },
+    {
+      "id": "duplicate_script_name",
+      "path": "static-code-analysis/error_prone/duplicate_script_name",
+      "unit": "bundle"
+    },
+    {
+      "id": "empty_else_branch",
+      "path": "static-code-analysis/error_prone/empty_else_branch",
+      "unit": "bundle"
+    },
+    {
+      "id": "empty_if_branch",
+      "path": "static-code-analysis/error_prone/empty_if_branch",
+      "unit": "bundle"
+    },
+    {
+      "id": "error_code_unknown_literal",
+      "path": "static-code-analysis/error_prone/error_code_unknown_literal",
+      "unit": "bundle"
+    },
+    {
+      "id": "error_code_web_only",
+      "path": "static-code-analysis/error_prone/error_code_web_only",
+      "unit": "bundle"
+    },
+    {
+      "id": "exit_script_in_loop",
+      "path": "static-code-analysis/error_prone/exit_script_in_loop",
+      "unit": "bundle"
+    },
+    {
+      "id": "field_broken_lookup",
+      "path": "static-code-analysis/error_prone/field_broken_lookup",
+      "unit": "bundle"
+    },
+    {
+      "id": "loop_without_exit_loop_if",
+      "path": "static-code-analysis/error_prone/loop_without_exit_loop_if",
+      "unit": "bundle"
+    },
+    {
+      "id": "plugin_removed_call",
+      "path": "static-code-analysis/error_prone/plugin_removed_call",
+      "unit": "bundle"
+    },
+    {
+      "id": "replace_field_contents",
+      "path": "static-code-analysis/error_prone/replace_field_contents",
+      "unit": "bundle"
+    },
+    {
+      "id": "self_recursive_script",
+      "path": "static-code-analysis/error_prone/self_recursive_script",
+      "unit": "bundle"
+    },
+    {
+      "id": "show_dialog_in_loop",
+      "path": "static-code-analysis/error_prone/show_dialog_in_loop",
+      "unit": "bundle"
+    },
+    {
+      "id": "unbalanced_if_block",
+      "path": "static-code-analysis/error_prone/unbalanced_if_block",
+      "unit": "bundle"
+    },
+    {
+      "id": "variable_name_with_spaces",
+      "path": "static-code-analysis/error_prone/variable_name_with_spaces",
+      "unit": "bundle"
+    },
+    {
+      "id": "variable_read_never_set",
+      "path": "static-code-analysis/error_prone/variable_read_never_set",
+      "unit": "bundle"
+    },
+    {
+      "id": "window_opened_without_close",
+      "path": "static-code-analysis/error_prone/window_opened_without_close",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_broken_field_reference",
+      "path": "static-code-analysis/layout_quality/layout_broken_field_reference",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_broken_valuelist",
+      "path": "static-code-analysis/layout_quality/layout_broken_valuelist",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_button_label_symbol",
+      "path": "static-code-analysis/layout_quality/layout_button_label_symbol",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_button_without_action",
+      "path": "static-code-analysis/layout_quality/layout_button_without_action",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_calc_commented_out",
+      "path": "static-code-analysis/layout_quality/layout_calc_commented_out",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_classic_theme",
+      "path": "static-code-analysis/layout_quality/layout_classic_theme",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_copied_object_name",
+      "path": "static-code-analysis/layout_quality/layout_copied_object_name",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_degenerate_object",
+      "path": "static-code-analysis/layout_quality/layout_degenerate_object",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_geometry_explorer",
+      "path": "static-code-analysis/layout_quality/layout_geometry_explorer",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_group_of_one",
+      "path": "static-code-analysis/layout_quality/layout_group_of_one",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_invalid_symbol",
+      "path": "static-code-analysis/layout_quality/layout_invalid_symbol",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_local_css",
+      "path": "static-code-analysis/layout_quality/layout_local_css",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_lost_object",
+      "path": "static-code-analysis/layout_quality/layout_lost_object",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_object_occluded",
+      "path": "static-code-analysis/layout_quality/layout_object_occluded",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_object_offscreen",
+      "path": "static-code-analysis/layout_quality/layout_object_offscreen",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_popover_in_popover",
+      "path": "static-code-analysis/layout_quality/layout_popover_in_popover",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_quoted_hide_calc",
+      "path": "static-code-analysis/layout_quality/layout_quoted_hide_calc",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_quoted_object_name",
+      "path": "static-code-analysis/layout_quality/layout_quoted_object_name",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_repetition_out_of_range",
+      "path": "static-code-analysis/layout_quality/layout_repetition_out_of_range",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_stacked_duplicate_object",
+      "path": "static-code-analysis/layout_quality/layout_stacked_duplicate_object",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_unresolved_merge_anchor",
+      "path": "static-code-analysis/layout_quality/layout_unresolved_merge_anchor",
+      "unit": "bundle"
+    },
+    {
+      "id": "autoenter_calc_related_fields",
+      "path": "static-code-analysis/performance/autoenter_calc_related_fields",
+      "unit": "bundle"
+    },
+    {
+      "id": "commit_records_in_loop",
+      "path": "static-code-analysis/performance/commit_records_in_loop",
+      "unit": "bundle"
+    },
+    {
+      "id": "deeply_nested_loop",
+      "path": "static-code-analysis/performance/deeply_nested_loop",
+      "unit": "bundle"
+    },
+    {
+      "id": "execute_sql_range_without_between",
+      "path": "static-code-analysis/performance/execute_sql_range_without_between",
+      "unit": "bundle"
+    },
+    {
+      "id": "export_records_in_loop",
+      "path": "static-code-analysis/performance/export_records_in_loop",
+      "unit": "bundle"
+    },
+    {
+      "id": "field_index_minimal_locked",
+      "path": "static-code-analysis/performance/field_index_minimal_locked",
+      "unit": "bundle"
+    },
+    {
+      "id": "find_mode_after_layout_switch",
+      "path": "static-code-analysis/performance/find_mode_after_layout_switch",
+      "unit": "bundle"
+    },
+    {
+      "id": "freeze_window_then_pause",
+      "path": "static-code-analysis/performance/freeze_window_then_pause",
+      "unit": "bundle"
+    },
+    {
+      "id": "go_to_layout_in_loop",
+      "path": "static-code-analysis/performance/go_to_layout_in_loop",
+      "unit": "bundle"
+    },
+    {
+      "id": "go_to_related_record_in_loop",
+      "path": "static-code-analysis/performance/go_to_related_record_in_loop",
+      "unit": "bundle"
+    },
+    {
+      "id": "insert_from_url_in_loop",
+      "path": "static-code-analysis/performance/insert_from_url_in_loop",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_unstored_calc_fields",
+      "path": "static-code-analysis/performance/layout_unstored_calc_fields",
+      "unit": "bundle"
+    },
+    {
+      "id": "multi_navigation_without_freeze",
+      "path": "static-code-analysis/performance/multi_navigation_without_freeze",
+      "unit": "bundle"
+    },
+    {
+      "id": "onrecordload_trigger",
+      "path": "static-code-analysis/performance/onrecordload_trigger",
+      "unit": "bundle"
+    },
+    {
+      "id": "open_url_in_loop",
+      "path": "static-code-analysis/performance/open_url_in_loop",
+      "unit": "bundle"
+    },
+    {
+      "id": "perform_find_in_loop",
+      "path": "static-code-analysis/performance/perform_find_in_loop",
+      "unit": "bundle"
+    },
+    {
+      "id": "refresh_window_flush_cache",
+      "path": "static-code-analysis/performance/refresh_window_flush_cache",
+      "unit": "bundle"
+    },
+    {
+      "id": "sort_records_in_loop",
+      "path": "static-code-analysis/performance/sort_records_in_loop",
+      "unit": "bundle"
+    },
+    {
+      "id": "unstored_calc_field",
+      "path": "static-code-analysis/performance/unstored_calc_field",
+      "unit": "bundle"
+    },
+    {
+      "id": "unstored_calc_network_function",
+      "path": "static-code-analysis/performance/unstored_calc_network_function",
+      "unit": "bundle"
+    },
+    {
+      "id": "platform_compat_cloud",
+      "path": "static-code-analysis/platform/platform_compat_cloud",
+      "unit": "bundle"
+    },
+    {
+      "id": "platform_compat_cwp",
+      "path": "static-code-analysis/platform/platform_compat_cwp",
+      "unit": "bundle"
+    },
+    {
+      "id": "platform_compat_dataapi",
+      "path": "static-code-analysis/platform/platform_compat_dataapi",
+      "unit": "bundle"
+    },
+    {
+      "id": "platform_compat_ios",
+      "path": "static-code-analysis/platform/platform_compat_ios",
+      "unit": "bundle"
+    },
+    {
+      "id": "platform_compat_odata",
+      "path": "static-code-analysis/platform/platform_compat_odata",
+      "unit": "bundle"
+    },
+    {
+      "id": "platform_compat_plugins_cwp",
+      "path": "static-code-analysis/platform/platform_compat_plugins_cwp",
+      "unit": "bundle"
+    },
+    {
+      "id": "platform_compat_plugins_dataapi",
+      "path": "static-code-analysis/platform/platform_compat_plugins_dataapi",
+      "unit": "bundle"
+    },
+    {
+      "id": "platform_compat_plugins_ios",
+      "path": "static-code-analysis/platform/platform_compat_plugins_ios",
+      "unit": "bundle"
+    },
+    {
+      "id": "platform_compat_plugins_server",
+      "path": "static-code-analysis/platform/platform_compat_plugins_server",
+      "unit": "bundle"
+    },
+    {
+      "id": "platform_compat_plugins_webdirect",
+      "path": "static-code-analysis/platform/platform_compat_plugins_webdirect",
+      "unit": "bundle"
+    },
+    {
+      "id": "platform_compat_server",
+      "path": "static-code-analysis/platform/platform_compat_server",
+      "unit": "bundle"
+    },
+    {
+      "id": "platform_compat_triggers_ios",
+      "path": "static-code-analysis/platform/platform_compat_triggers_ios",
+      "unit": "bundle"
+    },
+    {
+      "id": "platform_compat_triggers_webdirect",
+      "path": "static-code-analysis/platform/platform_compat_triggers_webdirect",
+      "unit": "bundle"
+    },
+    {
+      "id": "platform_compat_webdirect",
+      "path": "static-code-analysis/platform/platform_compat_webdirect",
+      "unit": "bundle"
+    },
+    {
+      "id": "platform_linux_readiness",
+      "path": "static-code-analysis/platform/platform_linux_readiness",
+      "unit": "bundle"
+    },
+    {
+      "id": "platform_os_functions",
+      "path": "static-code-analysis/platform/platform_os_functions",
+      "unit": "bundle"
+    },
+    {
+      "id": "platform_os_steps",
+      "path": "static-code-analysis/platform/platform_os_steps",
+      "unit": "bundle"
+    },
+    {
+      "id": "platform_profile",
+      "path": "static-code-analysis/platform/platform_profile",
+      "unit": "bundle"
+    },
+    {
+      "id": "platform_specific_ios",
+      "path": "static-code-analysis/platform/platform_specific_ios",
+      "unit": "bundle"
+    },
+    {
+      "id": "platform_specific_os",
+      "path": "static-code-analysis/platform/platform_specific_os",
+      "unit": "bundle"
+    },
+    {
+      "id": "platform_specific_server",
+      "path": "static-code-analysis/platform/platform_specific_server",
+      "unit": "bundle"
+    },
+    {
+      "id": "platform_specific_triggers_ios",
+      "path": "static-code-analysis/platform/platform_specific_triggers_ios",
+      "unit": "bundle"
+    },
+    {
+      "id": "version_floor",
+      "path": "static-code-analysis/platform/version_floor",
+      "unit": "bundle"
+    },
+    {
+      "id": "account_with_full_access",
+      "path": "static-code-analysis/security/account_with_full_access",
+      "unit": "bundle"
+    },
+    {
+      "id": "credentials_in_scripts",
+      "path": "static-code-analysis/security/credentials_in_scripts",
+      "unit": "bundle"
+    },
+    {
+      "id": "hardcoded_ip_in_calc",
+      "path": "static-code-analysis/security/hardcoded_ip_in_calc",
+      "unit": "bundle"
+    },
+    {
+      "id": "hardcoded_url_in_calc",
+      "path": "static-code-analysis/security/hardcoded_url_in_calc",
+      "unit": "bundle"
+    },
+    {
+      "id": "password_field_plaintext",
+      "path": "static-code-analysis/security/password_field_plaintext",
+      "unit": "bundle"
+    },
+    {
+      "id": "password_field_plaintext_display",
+      "path": "static-code-analysis/security/password_field_plaintext_display",
+      "unit": "bundle"
+    },
+    {
+      "id": "secret_in_global_variable",
+      "path": "static-code-analysis/security/secret_in_global_variable",
+      "unit": "bundle"
+    },
+    {
+      "id": "account_disabled",
+      "path": "static-code-analysis/unused_code/account_disabled",
+      "unit": "bundle"
+    },
+    {
+      "id": "disabled_script_steps",
+      "path": "static-code-analysis/unused_code/disabled_script_steps",
+      "unit": "bundle"
+    },
+    {
+      "id": "empty_layout",
+      "path": "static-code-analysis/unused_code/empty_layout",
+      "unit": "bundle"
+    },
+    {
+      "id": "empty_script",
+      "path": "static-code-analysis/unused_code/empty_script",
+      "unit": "bundle"
+    },
+    {
+      "id": "unused_base_table",
+      "path": "static-code-analysis/unused_code/unused_base_table",
+      "unit": "bundle"
+    },
+    {
+      "id": "unused_custom_function",
+      "path": "static-code-analysis/unused_code/unused_custom_function",
+      "unit": "bundle"
+    },
+    {
+      "id": "unused_external_data_source",
+      "path": "static-code-analysis/unused_code/unused_external_data_source",
+      "unit": "bundle"
+    },
+    {
+      "id": "unused_field",
+      "path": "static-code-analysis/unused_code/unused_field",
+      "unit": "bundle"
+    },
+    {
+      "id": "unused_layout",
+      "path": "static-code-analysis/unused_code/unused_layout",
+      "unit": "bundle"
+    },
+    {
+      "id": "unused_privilege_set",
+      "path": "static-code-analysis/unused_code/unused_privilege_set",
+      "unit": "bundle"
+    },
+    {
+      "id": "unused_script",
+      "path": "static-code-analysis/unused_code/unused_script",
+      "unit": "bundle"
+    },
+    {
+      "id": "unused_table_occurrence",
+      "path": "static-code-analysis/unused_code/unused_table_occurrence",
+      "unit": "bundle"
+    },
+    {
+      "id": "unused_value_list",
+      "path": "static-code-analysis/unused_code/unused_value_list",
+      "unit": "bundle"
+    },
+    {
+      "id": "variable_set_never_read",
+      "path": "static-code-analysis/unused_code/variable_set_never_read",
+      "unit": "bundle"
+    },
+    {
+      "id": "_generic",
+      "path": "system/_generic",
+      "unit": "bundle"
+    },
+    {
+      "id": "file",
+      "path": "system/file",
+      "unit": "bundle"
+    },
+    {
+      "id": "home",
+      "path": "system/home",
+      "unit": "bundle"
+    },
+    {
+      "id": "xml_convert",
+      "path": "system/xml_convert",
+      "unit": "bundle"
+    },
+    {
+      "id": "top_custom_functions",
+      "path": "top/top_custom_functions.sql",
+      "unit": "file"
+    },
+    {
+      "id": "top_layouts",
+      "path": "top/top_layouts.sql",
+      "unit": "file"
+    },
+    {
+      "id": "top_mbs_functions",
+      "path": "top/top_mbs_functions.sql",
+      "unit": "file"
+    },
+    {
+      "id": "top_scripts",
+      "path": "top/top_scripts.sql",
+      "unit": "file"
+    },
+    {
+      "id": "top_tables",
+      "path": "top/top_tables.sql",
+      "unit": "file"
+    },
+    {
+      "id": "top_variables",
+      "path": "top/top_variables.sql",
+      "unit": "file"
+    }
+  ],
+  "folders": [
+    "changelog",
+    "developer-workflow",
+    "layouts",
+    "metadata-integrity",
+    "modularization",
+    "modules",
+    "modules/docs",
+    "modules/tests",
+    "schema",
+    "scripts",
+    "static-code-analysis",
+    "static-code-analysis/best_practices",
+    "static-code-analysis/code_style",
+    "static-code-analysis/documentation",
+    "static-code-analysis/error_prone",
+    "static-code-analysis/layout_quality",
+    "static-code-analysis/performance",
+    "static-code-analysis/platform",
+    "static-code-analysis/security",
+    "static-code-analysis/unused_code",
+    "system",
+    "top"
+  ]
+}

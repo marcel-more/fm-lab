@@ -44,7 +44,7 @@
       "ref": "plugin_call_without_reference"
     },
     {
-      "kind": "query",
+      "kind": "dashboard",
       "ref": "plugin_reference_census"
     }
   ],
@@ -75,7 +75,7 @@
     },
     "nl": {
       "title": "Integriteit van plug-in-verwijzingen",
-      "description": "Controleert of de plug-in-aanroepen van de oplossing daadwerkelijk in de objectgraaf zijn aangekomen. Drie exportgebreken maken ze onzichtbaar zonder dat de import mislukt: bestanden geëxporteerd zonder DDR-info (optie „Details opnemen voor analysetools” stond uit), functies die bij de export door <Function Missing> zijn vervangen (plug-in niet geladen op de exporterende client) en dynamische functienamen (MBS($name; …)) zonder oplosbaar doel. De telling zet per bestand de tekst- en graafaantallen met een oordeel naast elkaar."
+      "description": "Controleert of de plug-in-aanroepen van de oplossing daadwerkelijk in de objectgraaf zijn aangekomen. Drie exportgebreken maken ze onzichtbaar zonder dat de import mislukt: bestanden geëxporteerd zonder DDR-info (optie „Inclusief gegevens voor analysetools” stond uit), functies die bij de export door <Function Missing> zijn vervangen (plug-in niet geladen op de exporterende client) en dynamische functienamen (MBS($name; …)) zonder oplosbaar doel. De telling zet per bestand de tekst- en graafaantallen met een oordeel naast elkaar."
     },
     "pt": {
       "title": "Integridade das referências a plug-ins",

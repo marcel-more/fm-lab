@@ -1,0 +1,91 @@
+{
+  "locked": true,
+  "id": "hardcoded_ip_in_calc",
+  "version": "1.0.0",
+  "title": "Hard-coded IP address in Calculation",
+  "description": "Security / maintainability rule — calculation chunks with a literal IPv4 address (e.g. an FTP / SMTP host). Hard-coded hosts break on network changes.\n\nBased on the PMD rule AvoidUsingHardCodedIP — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#avoidusinghardcodedip",
+  "author": "fm-lab rules",
+  "icon": "server",
+  "category": "security",
+  "tags": [
+    "rule",
+    "pmd",
+    "security"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "warning",
+    "category": "security",
+    "rationale": "A literal IP address pins the solution to one network and exposes infrastructure in the DDR.",
+    "remediation": "Move the host into a settings field / global; prefer a DNS name over a raw IP.",
+    "meta": {
+      "name": "Hard-coded IP address in Calculation",
+      "author": "fm-lab rules",
+      "source": "PMD",
+      "url": "https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#avoidusinghardcodedip",
+      "description": "Security / maintainability rule — calculation chunks with a literal IPv4 address (e.g. an FTP / SMTP host). Hard-coded hosts break on network changes.",
+      "created": "2026-07-01",
+      "references": [
+        {
+          "project": "PMD",
+          "rule": "AvoidUsingHardCodedIP",
+          "url": "https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#avoidusinghardcodedip"
+        }
+      ]
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "LayoutObject",
+      "Script"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {}
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Hard-coded IP address in Calculation"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "object_type",
+      "type": "string",
+      "required": false,
+      "description": "Optional chip filter on nav_type."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

@@ -34,5 +34,14 @@
     "ScriptStepType": "类别",
     "BuiltinFunction": "类别",
     "PluginFunction": "组件"
+  },
+  "testTypes": {
+    "exploration": "探索",
+    "code-quality": "代码质量",
+    "error-check": "错误检查",
+    "security": "安全",
+    "inventory": "清单",
+    "performance": "性能",
+    "platform": "平台"
   }
 }

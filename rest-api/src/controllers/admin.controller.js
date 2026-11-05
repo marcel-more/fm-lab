@@ -279,6 +279,7 @@ async function deleteSolution(req, res, next) {
 }
 
 module.exports = {
+  isAuthorized,
   reload,
   poolStatus,
   activateSolution,

@@ -43,13 +43,13 @@ The image ships every prerequisite pinned to a tested version (DuckDB CLI + webb
 - **Web client** → http://localhost:5173
 - **REST API** → http://localhost:3003
 
-The catalog (`db/`), conversions and settings live in the cloned repo **on the host**, so they survive restarts; updating is a plain `git pull` (the repo is mounted, not baked into the image). This is also the **Windows** path — the whole POSIX layer runs inside Linux, so the host OS no longer matters.
+The catalog (`db/`), conversions and settings live in the cloned repo **on the host**, so they survive restarts; an update replaces only the repo contents (the repo is mounted, not baked into the image — see [Updating fm-lab](#updating-fm-lab)).
 
 ### b) VS Code Dev Container (easy start)
 
 Open the repository in VS Code with the **[Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)** extension installed, select **“Reopen in Container”** → pick **`fm-lab`** or **`fm-lab + Claude Code`**. Everything starts automatically — bootstrap and both servers; VS Code then shows a clickable notification for the web client on port 5173. In the Claude variant the egress firewall and a credentials preflight run on start, and you reach the agent through the **Claude Code for VS Code** extension — no terminal steps required.
 Recommended if you already work in VS Code — Microsoft's [Developing inside a Container](https://code.visualstudio.com/docs/devcontainers/containers) guide explains the extension and the container workflow itself.
-After updating fm-lab with `git pull`, run **Dev Containers: Rebuild Container** instead of a plain reopen, so the container is built from the updated definition. If the container does not come up, see the two Dev Container entries under [Troubleshooting](Troubleshooting.md#dev-container-fails-to-reopen-dockerfile-with-features-not-found).
+After [updating fm-lab](#updating-fm-lab), run **Dev Containers: Rebuild Container** instead of a plain reopen, so the container is built from the updated definition. If the container does not come up, see the two Dev Container entries under [Troubleshooting](Troubleshooting.md#dev-container-fails-to-reopen-dockerfile-with-features-not-found).
 
 ### c) Native (no Docker, macOS / Linux)
 
@@ -67,6 +67,18 @@ Native Windows is not supported — use way a) or b) via [Docker Desktop](https:
 
 Use **Docker Desktop with the WSL2 backend** and keep the cloned repo **inside** the WSL2 distribution (e.g. `~/projects/…`), **not** on the Windows drive (`/mnt/c/…`) — a repo on `/mnt/c` suffers slow bind mounts and file-watcher (inotify) problems.
 
+### Updating fm-lab
+
+One command in the fm-lab folder brings the newest release (available from version 0.9.17 on; older versions update with `git pull` once):
+
+```bash
+bash tools/fmlab.sh update            # --dry-run: only show what would be saved
+```
+
+It downloads the release and first checks whether files you changed or created yourself are in the way. Those files are saved to `.fmlab/update-backup/<timestamp>/` — `update.json` there lists every file and why — and edited shipped files are put back to their shipped version; then the update is applied. It never stops halfway, and nothing is deleted. At the end it names the next step: restart fm-lab the way you run it — `bash tools/fmlab.sh up` (Docker), **Dev Containers: Rebuild Container**, or `bash tools/init.sh` (native). At that start fm-lab tidies up on its own: copies of an earlier version leave the template folders, and a shipped dashboard or test you edited stays under **Custom** as `<id>-local` (see [Dashboard overview](Components.md#dashboard-overview)).
+
+A plain `git pull` keeps working. If it stops and lists files (*local changes would be overwritten*), one command repairs it — see [Troubleshooting](Troubleshooting.md#update-stops-local-changes-would-be-overwritten).
+
 
 ---
 
@@ -82,6 +94,8 @@ docker compose exec -it api claude  # sign in once; login then persists
 On first launch choose **“Claude account with subscription”** and complete the browser sign-in once — persisted in a named volume, so it survives restarts. Started via `bash tools/fmlab.sh up --claude` (or `agent`), the sign-in page opens in your browser on its own: confirm there, copy the code the page shows and paste it at the `Paste code here` prompt. If a session later reports _Login expired_, run `/login` in it.
 
 > **Started any other way (raw `docker compose exec`), the sign-in URL wraps across terminal lines — don’t select it by hand.** A truncated URL fails with _“Invalid response_type”_. Claude Code puts it on the clipboard where the terminal allows it (OSC 52, e.g. iTerm2 — not macOS Terminal); otherwise paste it into an editor and remove every line break first. After visiting the Claude authentication page: paste the returned code at the `Paste code here` prompt. See also [Troubleshooting](Troubleshooting.md#claude-code-sign-in-in-the-terminal).
+
+**Language of the agent.** The agent answers in the language of your prompts. To pin one, run `bash tools/fmlab.sh language de` — `auto` returns to the prompt language, no argument shows the setting. It is stored in `.fmlab/user.local.json`, outside the shipped files, so updates keep it; never change the language in `CLAUDE.md`.
 
 **No browser at hand?** Put credentials in a `.env` next to the compose files instead — `ANTHROPIC_API_KEY=…` (API-key billing) or `CLAUDE_CODE_OAUTH_TOKEN=…` (from `claude setup-token`). No secret is ever stored in the image.
 

@@ -109,9 +109,13 @@ function mergeEnvelopes(fingerprint: string | null, envelopes: ResultEnvelope[])
     // rebuilds it; merging into a foreign generation would mix truths.
     return;
   }
+  // Copy-on-write: a merge yields a NEW map, so consumers memoizing on the
+  // map identity (useMemo deps) recompute after a run.
+  const results = { ...existing.results };
   for (const envelope of envelopes) {
-    existing.results[`${envelope.ref.kind}:${envelope.ref.id}`] = envelope;
+    results[`${envelope.ref.kind}:${envelope.ref.id}`] = envelope;
   }
+  existing.results = results;
   existing.at = Date.now();
   persistCache();
   notify();
@@ -190,4 +194,32 @@ export function runSingle(target: ResultsRunTarget): Promise<void> {
     });
   inflight.set(key, p);
   return p;
+}
+
+/**
+ * Runs a list of dashboards in one call (the favorites view). Only units with
+ * a registry entry are sent — a single target without one would come back as
+ * a failed envelope. Mode "missing" sends just the pending ones (exactly what
+ * the server would run), so already computed rows keep their values instead
+ * of flashing a skeleton; "refresh" re-runs every listed unit.
+ */
+export function runDashboards(ids: readonly string[], mode: 'missing' | 'refresh' = 'missing'): Promise<void> {
+  const results = getCachedSummary()?.results;
+  if (!results) return Promise.resolve();
+  const runnable = [...new Set(ids)].filter(id => {
+    const envelope = results[`dashboard:${id}`];
+    if (!envelope || runningRefs.has(`dashboard:${id}`)) return false;
+    return mode === 'refresh' || envelope.runStatus === 'pending';
+  });
+  if (runnable.length === 0) return Promise.resolve();
+  const refKeys = runnable.map(id => `dashboard:${id}`);
+  for (const refKey of refKeys) runningRefs.add(refKey);
+  notify();
+  return runResults(runnable.map(id => ({ kind: 'dashboard' as const, id })), mode)
+    .then(res => mergeEnvelopes(res.meta.catalogFingerprint, res.results))
+    .catch(() => { /* silent — see runFolder */ })
+    .finally(() => {
+      for (const refKey of refKeys) runningRefs.delete(refKey);
+      notify();
+    });
 }

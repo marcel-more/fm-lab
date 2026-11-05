@@ -1,0 +1,102 @@
+{
+  "id": "variable_read_never_set",
+  "version": "1.0.1",
+  "title": "Variable read but never set",
+  "description": "Error-prone rule — a variable is read although nothing in the catalog ever writes it. Either the writing side was renamed or removed, or the value is expected to arrive from outside the exported files. Let() definitions are excluded: they are defined and read inside the same formula and would otherwise dominate the result.\n\nBased on the fmCheckMate check \"ListVarsUndefined\" — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+  "author": "fm-lab rules",
+  "icon": "variable",
+  "category": "error_prone",
+  "tags": [
+    "rule",
+    "fmcheckmate",
+    "error_prone"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "info",
+    "category": "error_prone",
+    "rationale": "A read without a write evaluates to empty. Where the calculation expected a value, the result is an empty comparison, an empty parameter or an empty find request — and none of that raises an error at runtime.",
+    "remediation": "Check where the value was supposed to come from: a renamed write, a script parameter that is never unpacked, or a variable set in a file outside this export. Restore the write or drop the read.",
+    "meta": {
+      "name": "Variable read but never set",
+      "author": "fm-lab rules",
+      "source": "fmCheckMate-XSLT",
+      "url": "https://github.com/mrwatson-de/fmCheckMate-XSLT",
+      "description": "Error-prone rule — a variable is read although nothing in the catalog ever writes it.",
+      "created": "2026-08-16",
+      "references": [
+        {
+          "project": "fmCheckMate-XSLT",
+          "rule": "XMSS_Text.Lines_ListVarsUndefined.xsl",
+          "url": "https://github.com/mrwatson-de/fmCheckMate-XSLT"
+        }
+      ],
+      "calibration": "Let() variables are excluded outright — measured on a large solution they outnumber the real findings roughly five to one. Severity is deliberately informational: script parameters and cross-file writes are legitimate sources the export cannot see."
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Script",
+      "CustomFunction",
+      "Layout",
+      "Variable"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Variable read but never set"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "variable_scope",
+      "type": "string",
+      "required": false,
+      "description": "Variable-scope filter chip (local, global); unset = all."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  },
+  "messages": {
+    "read-never-set": "Variable is read but never written"
+  }
+}

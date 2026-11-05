@@ -83,7 +83,7 @@
       "ref": "layout_local_css"
     },
     {
-      "kind": "query",
+      "kind": "dashboard",
       "ref": "layout_overlap_explorer"
     }
   ],

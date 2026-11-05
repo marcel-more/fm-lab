@@ -90,9 +90,17 @@
       "recency": "按最新单项更改的时长为节点着色（与图谱图集相同的分级）"
     },
     "communityUnnamed": "社区 {{id}}",
-    "resizePanel": "调整筛选面板宽度",
+    "detailsShort": "详情",
+    "openDetails": "打开焦点对象的详情视图",
+    "openTypeList": "打开 {{type}} 对象列表",
+    "hideType": "隐藏 {{type}}",
+    "showType": "显示 {{type}}",
+    "depthOf": "(最大 {{max}})",
+    "extendDepth": "更深",
+    "extendDepthHint": "将滑块扩展到 4 以上 (直至可达的最大深度)。",
     "depthLoad": "可达 {{count}} 个",
     "depthClipped": "可达 {{count}} 个，加载上限 {{limit}} 个",
+    "resizePanel": "调整筛选面板宽度",
     "partLoaded": "已加载 {{count}} 个",
     "partConnected": "已连接 {{count}} 个",
     "partIsland_one": "{{count}} 个孤岛",
@@ -104,11 +112,6 @@
     "loadAllHint": "加载所有类型；取消选择某个标签只会将其隐藏",
     "loadSelectedHint": "仅加载所选类型（重新加载）"
   },
-  "unconnectedHidden_one": "{{count}} 个与焦点无连接的节点",
-  "unconnectedHidden_other": "{{count}} 个与焦点无连接的节点",
-  "unconnectedToggleShow": "显示",
-  "unconnectedToggleHide": "隐藏",
-  "unconnectedToggleHint": "没有通往焦点路径的节点由类型/深度筛选产生 — 显示或隐藏它们",
   "typeList": {
     "ariaLabel": "对象列表：{{type}}",
     "sortBy": "排序",
@@ -124,6 +127,11 @@
     "empty": "图中没有此类型的对象。",
     "focus": "焦点对象"
   },
+  "unconnectedHidden_one": "{{count}} 个与焦点无连接的节点",
+  "unconnectedHidden_other": "{{count}} 个与焦点无连接的节点",
+  "unconnectedToggleShow": "显示",
+  "unconnectedToggleHide": "隐藏",
+  "unconnectedToggleHint": "没有通往焦点路径的节点由类型/深度筛选产生 — 显示或隐藏它们",
   "edge": {
     "represents": "代表",
     "buttonAction": "按钮动作",

@@ -90,9 +90,17 @@
       "recency": "Colorear los nodos según la antigüedad de su cambio individual más reciente (las clases del Atlas del grafo)"
     },
     "communityUnnamed": "Comunidad {{id}}",
-    "resizePanel": "Ajustar el ancho del panel de filtros",
+    "detailsShort": "Detalles",
+    "openDetails": "Abrir la vista de detalle del objeto de foco",
+    "openTypeList": "Abrir la lista de objetos {{type}}",
+    "hideType": "Ocultar {{type}}",
+    "showType": "Mostrar {{type}}",
+    "depthOf": "(de {{max}})",
+    "extendDepth": "más profundo",
+    "extendDepthHint": "Ampliar el control deslizante más allá de 4 (hasta la profundidad máxima alcanzable).",
     "depthLoad": "{{count}} alcanzables",
     "depthClipped": "{{count}} alcanzables, carga limitada a {{limit}}",
+    "resizePanel": "Ajustar el ancho del panel de filtros",
     "partLoaded": "{{count}} cargados",
     "partConnected": "{{count}} conectados",
     "partIsland_one": "{{count}} isla",
@@ -104,11 +112,6 @@
     "loadAllHint": "Cargar todos los tipos; desmarcar un chip solo lo oculta",
     "loadSelectedHint": "Cargar solo los tipos seleccionados (recarga)"
   },
-  "unconnectedHidden_one": "{{count}} nodo sin conexión con el foco",
-  "unconnectedHidden_other": "{{count}} nodos sin conexión con el foco",
-  "unconnectedToggleShow": "mostrar",
-  "unconnectedToggleHide": "ocultar",
-  "unconnectedToggleHint": "Los nodos sin ruta al foco resultan del filtro de tipo/profundidad — mostrarlos u ocultarlos",
   "typeList": {
     "ariaLabel": "Lista de objetos: {{type}}",
     "sortBy": "Ordenar",
@@ -124,6 +127,11 @@
     "empty": "No hay objetos de este tipo en el grafo.",
     "focus": "Objeto de foco"
   },
+  "unconnectedHidden_one": "{{count}} nodo sin conexión con el foco",
+  "unconnectedHidden_other": "{{count}} nodos sin conexión con el foco",
+  "unconnectedToggleShow": "mostrar",
+  "unconnectedToggleHide": "ocultar",
+  "unconnectedToggleHint": "Los nodos sin ruta al foco resultan del filtro de tipo/profundidad — mostrarlos u ocultarlos",
   "edge": {
     "represents": "representa",
     "buttonAction": "Acción de botón",

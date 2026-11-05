@@ -1,0 +1,91 @@
+{
+  "locked": true,
+  "id": "script_comment_density",
+  "version": "1.0.0",
+  "title": "Script comment density",
+  "description": "Documentation rule — compares scripts by total step count, real comment steps and whitespace-only comments, with a comment-density factor for each. Complements the binary \"Undocumented Script\" rule by grading how well-commented substantial scripts are. Minimum step count adjustable via the header slider (default 10).",
+  "author": "fm-lab rules",
+  "icon": "code",
+  "category": "documentation",
+  "tags": [
+    "rule",
+    "pmd",
+    "documentation",
+    "scripts",
+    "comments"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "info",
+    "category": "documentation",
+    "rationale": "A low comment density in a substantial script makes intent hard to reconstruct; whitespace-only comment steps inflate the apparent documentation without adding meaning.",
+    "remediation": "Add meaningful comment steps for the non-obvious sections (purpose, parameters, branches); remove empty comment steps that only pad the script.",
+    "meta": {
+      "name": "Script comment density",
+      "author": "fm-lab rules",
+      "source": "fm-lab",
+      "url": null,
+      "description": "Documentation metric — grades substantial scripts by their real vs. whitespace-only comment coverage (comment-density factor). Complements the binary \"Undocumented Script\" rule. Minimum step count adjustable via the header slider.",
+      "created": "2026-07-03",
+      "references": [
+        {
+          "project": "PMD",
+          "rule": "CommentRequired",
+          "url": "https://docs.pmd-code.org/latest/pmd_rules_java_documentation.html#commentrequired"
+        }
+      ]
+    }
+  },
+  "analysis": {
+    "objectTypes": ["Script"],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {}
+    },
+    "defaultResult": {
+      "dataset": "script_comment_density_kpi",
+      "column": "scripts_without_comment",
+      "type": "number",
+      "name": "scripts_without_comment",
+      "unit": "findings",
+      "meaning": "Substantial scripts without a single comment step"
+    }
+  },
+  "datasets": [
+    {
+      "id": "script_comment_density_kpi",
+      "source": "bundle:data/script_comment_density_kpi.sql"
+    },
+    {
+      "id": "script_comment_density",
+      "source": "bundle:data/script_comment_density.sql",
+      "pageSize": 200
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional FileMaker file filter (exact File_Name match)."
+    },
+    {
+      "name": "min_steps",
+      "type": "number",
+      "required": false,
+      "description": "Minimum total step count for a script to be included (default 10)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

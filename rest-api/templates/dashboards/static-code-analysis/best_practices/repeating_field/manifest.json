@@ -1,0 +1,77 @@
+{
+  "id": "repeating_field",
+  "version": "1.0.0",
+  "title": "Repeating field",
+  "description": "Best-practice rule — flags fields with more than one repetition. Repeating fields are hard to query and report on; a related table is usually better.",
+  "author": "fm-lab rules",
+  "icon": "rows",
+  "category": "best_practices",
+  "tags": [
+    "rule",
+    "pmd",
+    "best_practices"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "info",
+    "category": "best_practices",
+    "rationale": "Repeating fields resist normalisation, reporting and relationships.",
+    "remediation": "Model the repetitions as related records in a child table.",
+    "meta": {
+      "name": "Repeating field",
+      "author": "fm-lab rules",
+      "source": "fm-lab",
+      "url": null,
+      "description": "Best-practice rule — flags fields with more than one repetition. Repeating fields are hard to query and report on; a related table is usually better.",
+      "created": "2026-07-01",
+      "references": []
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Field"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {}
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Repeating field"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

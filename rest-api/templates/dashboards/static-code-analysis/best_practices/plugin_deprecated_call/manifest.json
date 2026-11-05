@@ -1,0 +1,88 @@
+{
+  "id": "plugin_deprecated_call",
+  "version": "1.0.0",
+  "title": "Deprecated plug-in function call",
+  "description": "Maintenance rule — plug-in function calls whose documentation marks the function as deprecated (verbatim status from the MBS docs mirror via reference/plugin_spec.duckdb). Deprecated functions still run today, but they are modernization debt: the vendor documents a successor for most of them, carried per row in the 'replacement' column. Includes one-level custom-function wrappers (via_custom_function) and layout/field calculation usages (evidence_kind='layout'). Functions of a known plugin without a doc entry appear as explicit 'unresolved' info rows (only in this rule, not in the removed sibling — one surface per set). This is the maintenance axis, not the platform axis: a deprecated finding says nothing about runtime environments.",
+  "author": "fm-lab rules",
+  "icon": "archive",
+  "category": "best_practices",
+  "tags": [
+    "rule",
+    "best_practices",
+    "plugin",
+    "maintenance"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "warning",
+    "category": "best_practices",
+    "rationale": "Deprecated plug-in functions keep working for now, but they stop receiving fixes and can be removed in a future plugin release. The status is a verbatim vendor statement from the documentation mirror.",
+    "remediation": "Replace the call with the documented successor; each finding row carries it in the 'replacement' column (empty when the vendor documents no replacement). Unresolved functions: update the MBS docs mirror (install-mbs-docs) and re-derive the plugin map.",
+    "meta": {
+      "name": "Deprecated plug-in function call",
+      "author": "fm-lab rules",
+      "source": "fm-lab",
+      "url": null,
+      "description": "Plug-in function calls whose vendor documentation marks the function as deprecated; the documented successor is carried per finding row.",
+      "created": "2026-08-12",
+      "references": []
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Script",
+      "LayoutObject"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
+    },
+    "requires": [
+      "plugin-spec"
+    ],
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Plug-in function calls in scope whose function is marked deprecated by the vendor documentation"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

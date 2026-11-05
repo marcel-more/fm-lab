@@ -10,6 +10,7 @@
   "empty": "表示できる項目はありません。",
   "noData": "データがありません。",
   "noEntries": "エントリがありません。",
+  "general": "一般",
   "unknown": "(不明)",
   "all": "すべて",
   "filter": "フィルター",
@@ -30,6 +31,7 @@
   "actions": {
     "openInFileMaker": "FileMaker で開く",
     "copyUuid": "UUID をコピー",
+    "copyOriginalUuid": "元の UUID をコピー — 注意: この UUID はソースファイル内で複数回割り当てられています",
     "expandAll": "すべて展開",
     "collapseAll": "すべて折りたたむ",
     "collapseMultilineCalcs": "複数行の計算式を折りたたむ",

@@ -227,15 +227,6 @@
 .fmspec-table--compact th,
 .fmspec-table--compact td { padding: 5px 10px; font-size: 0.82rem; }
 
-.fmspec-caret {
-  display: inline-block;
-  width: 1em;
-  margin-right: 4px;
-  color: var(--color-text-muted);
-  transition: transform 0.12s;
-}
-.fmspec-caret.open { transform: rotate(90deg); }
-
 /* ── Badges ── */
 .fmspec-badge {
   font-size: 0.68rem;

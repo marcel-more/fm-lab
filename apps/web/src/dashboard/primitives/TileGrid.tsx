@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { PrimitiveProps } from '../types';
@@ -7,107 +7,94 @@ import { useRowSearch } from './_useRowSearch';
 import { dispatchAction } from '../actions';
 import { translateCellValue } from './_cellTranslate';
 import type { ActionSpec } from '../actions';
+import { DisclosureChevron } from '../../components/DisclosureChevron';
 import { useDashboardSummary } from '../../hooks/useDashboardSummary';
+import { useFavorites } from '../../hooks/useFavorites';
 import { displayState, type ResultDisplayState, type ResultEnvelope } from '../../api/resultsApi';
+import {
+  AUTO_RUN_MAX_PENDING, AggregateTokens, FILTERABLE_STATES, STATE_TOKEN,
+  aggregateBadgeRoots, aggregateEnvelopes, aggregateFolder, formatEntryCount, type FolderAggregate,
+} from './_folderAggregate';
+import {
+  DEFAULT_SORT, formatSort, isCustomAreaRoot, parseSort,
+  type FolderRow, type TreeSortMode,
+} from './_folderTree';
+import { isFavoritableArea, listPreset, presetSortKeys, type ListColumnKey } from './_listColumns';
+import { FolderIcon } from './FolderIcon';
+import { FavoriteButton } from './FavoriteButton';
+import { FolderTreeList, LegacyBadge, OverrideBadge } from './FolderTreeList';
+import { PulseIcon } from './PulseIcon';
+import { StarIcon } from './StarIcon';
 
 interface TileSpec {
   title: string;
   subtitle?: string;
   icon?: string;
   badge?: string;
+  /** i18n prefix that labels the substituted badge value (`types:testTypes` → `types:testTypes.<value>`). */
+  badgeLabels?: string;
   onClick?: ActionSpec;
 }
 
 type ViewMode = 'tiles' | 'list';
 
-/** Row shape of builtin:list_dashboard_folders. */
-interface FolderRow {
-  path: string;
-  parent: string | null;
-  label: string;
-  path_label: string | null;
-  icon: string | null;
-  description: string | null;
-  order: number | null;
-  direct_count: number;
-  total_count: number;
-}
+/** Segments of the view selector, declared per layout via `viewModes`. */
+type OverviewView = 'folders' | 'list' | 'favorites';
+const OVERVIEW_VIEWS: OverviewView[] = ['folders', 'list', 'favorites'];
 
-/** Display-state ranking for the "Ampel" sort and worst-state aggregation. */
-const STATE_RANK: Record<ResultDisplayState, number> = {
-  error: 0, warning: 1, failed: 2, neutral: 3, ok: 4, pending: 5,
-};
-const STATE_TOKEN: Record<ResultDisplayState, string> = {
-  error: '●', warning: '▲', neutral: '◦', ok: '✓', failed: '⚡', pending: '…',
-};
-const FILTERABLE_STATES: ResultDisplayState[] = ['error', 'warning', 'ok', 'neutral', 'pending', 'failed'];
+/** `?type=` value of the dashboards that declare no object type. */
+const TYPE_NONE = '_none';
 
-/** Auto-run cap (O7): rubric levels auto-trigger, larger sets stay explicit. */
-const AUTO_RUN_MAX_PENDING = 32;
+/** Default key of the last chosen view — the fallback when the URL has no `?view=`. */
+const VIEW_STORAGE_KEY = 'fmlab.dashboards.view';
 
 /**
- * Entry-count meta — two states:
- *   - flat hierarchy (no subfolders):     "(total)"
- *   - nested hierarchy (with subfolders): "direct (total)"
+ * The view is kept on two levels under the same key: the tab
+ * (`sessionStorage`) keeps its own view across reload and return from a
+ * dashboard, the browser (`localStorage`) seeds new tabs. Open tabs are never
+ * synchronised.
  */
-export function formatEntryCount(direct: number, total: number, nested: boolean): string {
-  return nested ? `${direct} (${total})` : `(${total})`;
-}
+type ViewLevel = 'tab' | 'browser';
 
-interface FolderAggregate {
-  counts: Record<ResultDisplayState, number>;
-  worst: ResultDisplayState | null;
-  findings: number;
-  covered: number;
-  total: number;
-}
+const viewStore = (level: ViewLevel): Storage =>
+  level === 'tab' ? window.sessionStorage : window.localStorage;
 
-function emptyAggregate(): FolderAggregate {
-  return {
-    counts: { error: 0, warning: 0, failed: 0, neutral: 0, ok: 0, pending: 0 },
-    worst: null,
-    findings: 0,
-    covered: 0,
-    total: 0,
-  };
-}
-
-/**
- * Client-side fold of the flat envelope map over one folder subtree
- * (dashboard kind only — queries/tests anchor in their own hierarchies).
- */
-function aggregateFolder(
-  results: Record<string, ResultEnvelope> | null,
-  path: string,
-): FolderAggregate | null {
-  if (!results) return null;
-  const agg = emptyAggregate();
-  const prefix = `${path}/`;
-  for (const envelope of Object.values(results)) {
-    if (envelope.ref.kind !== 'dashboard') continue;
-    const rubric = envelope.rubric || '';
-    if (rubric !== path && !rubric.startsWith(prefix)) continue;
-    const state = displayState(envelope);
-    agg.counts[state] += 1;
-    agg.total += 1;
-    if (envelope.runStatus !== 'pending') agg.covered += 1;
-    if (envelope.runStatus === 'ran' && envelope.unit === 'findings' && typeof envelope.value === 'number') {
-      agg.findings += envelope.value;
-    }
-    if (agg.worst === null || STATE_RANK[state] < STATE_RANK[agg.worst]) agg.worst = state;
+function readStoredView(level: ViewLevel, key: string): string | null {
+  try {
+    return viewStore(level).getItem(key);
+  } catch {
+    return null;
   }
-  return agg.total > 0 ? agg : null;
 }
 
-/** Compact state counters for a folder tile: `3● 7▲ 41✓` (zero states omitted). */
-const AggregateTokens = ({ agg }: { agg: FolderAggregate }) => (
-  <span className="dash-tile__chips" aria-hidden="true">
-    {FILTERABLE_STATES.filter(s => agg.counts[s] > 0).map(s => (
-      <span key={s} className={`dash-chip dash-state-${s}`}>
-        {agg.counts[s]}{STATE_TOKEN[s]}
-      </span>
-    ))}
-  </span>
+function storeView(key: string, view: OverviewView, levels: readonly ViewLevel[] = ['tab', 'browser']): void {
+  for (const level of levels) {
+    try {
+      viewStore(level).setItem(key, view);
+    } catch {
+      /* storage unavailable — the URL still carries the view */
+    }
+  }
+}
+
+const TilesIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <rect x="3" y="3" width="7" height="7" rx="1.5" />
+    <rect x="14" y="3" width="7" height="7" rx="1.5" />
+    <rect x="3" y="14" width="7" height="7" rx="1.5" />
+    <rect x="14" y="14" width="7" height="7" rx="1.5" />
+  </svg>
+);
+
+const ListIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+    <line x1="8" y1="6" x2="20" y2="6" />
+    <line x1="8" y1="12" x2="20" y2="12" />
+    <line x1="8" y1="18" x2="20" y2="18" />
+    <circle cx="4" cy="6" r="1.1" fill="currentColor" stroke="none" />
+    <circle cx="4" cy="12" r="1.1" fill="currentColor" stroke="none" />
+    <circle cx="4" cy="18" r="1.1" fill="currentColor" stroke="none" />
+  </svg>
 );
 
 /** KPI + state chip row of one dashboard tile. */
@@ -139,7 +126,7 @@ const ResultChips = ({ envelope, running, unitLabel }: {
 };
 
 export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) {
-  const { t } = useTranslation(['common', 'detail', 'dashboard']);
+  const { t, i18n } = useTranslation(['common', 'detail', 'dashboard', 'types']);
   // Pipe substituted tile strings through the dashboard cell-value translator
   // so canonical English titles / descriptions / categories emitted from SQL
   // templates render in the active UI language. Unknown values pass through.
@@ -149,22 +136,121 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
   const empty = node.props?.empty as { message?: string } | undefined;
   // Opt-in toolbar with a tiles⇄list toggle + entry-count meta.
   const viewToggle = node.props?.viewToggle as boolean | undefined;
+  // Opt-in view selector (supersedes viewToggle): its segments, the view kept
+  // in `?view=`, and — together with folderNav — the hierarchical list.
+  const rawViewModes = node.props?.viewModes;
   // Opt-in folder navigation (?folder= deep-links) + result chips. Default
   // off → every other TileGrid consumer behaves exactly as before.
   const folderNav = node.props?.folderNav === true;
+  const viewModes = useMemo<OverviewView[] | null>(() => {
+    if (!Array.isArray(rawViewModes)) return null;
+    // The favorites view is a list of the folder navigation's dashboards.
+    const modes = OVERVIEW_VIEWS.filter(v => rawViewModes.includes(v) && (v !== 'favorites' || folderNav));
+    return modes.length ? modes : null;
+  }, [rawViewModes, folderNav]);
   const folderParam = (node.props?.folderParam as string) || 'folder';
   const foldersDatasetId = (node.props?.foldersDataset as string) || 'folders';
   const resultChips = folderNav && node.props?.resultChips === true;
+  // Columns of the hierarchical list and favorites view (`dashboard` | `test`).
+  const preset = listPreset(node.props?.listColumns);
+  // Result kinds read-only from the summary (status column, no runs) — the
+  // result chips imply `dashboard`.
+  const resultKinds = Array.isArray(node.props?.resultKinds)
+    ? (node.props.resultKinds as unknown[]).map(String)
+    : resultChips ? ['dashboard'] : [];
+  const readResults = folderNav && (resultChips || resultKinds.includes(preset.resultKind));
+  // Per-page storage keys, so two overviews never share view or expansion state.
+  const viewStorageKey = (node.props?.viewStorageKey as string) || VIEW_STORAGE_KEY;
+  const expandedStorageKey = node.props?.expandedStorageKey as string | undefined;
+  const favoriteKind = node.props?.favoriteKind === 'test' ? 'test' : 'dashboard';
   const rows = dataset?.data ?? [];
 
   const [viewMode, setViewMode] = useState<ViewMode>('tiles');
-  const [sortMode, setSortMode] = useState<'standard' | 'value' | 'state'>('standard');
+  // Receives the list's "expand all | collapse all" buttons (portal target).
+  const [bulkSlot, setBulkSlot] = useState<HTMLSpanElement | null>(null);
   // Collapsed subfolder sections of the filtered hierarchy view (default: expanded).
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [searchParams, setSearchParams] = useSearchParams();
-  const summary = useDashboardSummary(resultChips);
+  const summary = useDashboardSummary(resultChips || readResults);
+  // Favorites (workspace-wide, server-side): re-fetched on every overview mount.
+  const favoritesEnabled = !!viewModes?.includes('favorites');
+  const favorites = useFavorites(favoriteKind, { enabled: favoritesEnabled, refreshOnMount: true });
+  // Display label of a preset value column (test type) — stable per language,
+  // the list memoizes its tree on it.
+  const columnLabel = useMemo(
+    () => (column: ListColumnKey, raw: string): string =>
+      column === 'testType' ? t(`types:testTypes.${raw}`, { defaultValue: raw }) as string : raw,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [i18n.language],
+  );
 
-  const currentFolder = folderNav ? (searchParams.get(folderParam) ?? '') : '';
+  // Effective view: `?view=` (deep link, survives reload) → this tab's view →
+  // the view chosen last in any tab → the layout's `defaultView` → first segment.
+  const viewParam = searchParams.get('view');
+  const pickView = (v: unknown): OverviewView | null =>
+    viewModes && typeof v === 'string' && (viewModes as string[]).includes(v) ? (v as OverviewView) : null;
+  const overviewView = viewModes
+    ? (pickView(viewParam)
+      ?? pickView(readStoredView('tab', viewStorageKey))
+      ?? pickView(readStoredView('browser', viewStorageKey))
+      ?? pickView(node.props?.defaultView)
+      ?? viewModes[0])
+    : null;
+  // A deep-linked view counts as the last chosen one — links without `?view=`
+  // (breadcrumbs, dashboard crumbs) then land in the same view. Entered without
+  // `?view=`, the resolved view is pinned to the tab only: a later choice in
+  // another tab must not switch this one on the next re-render.
+  useEffect(() => {
+    if (!overviewView) return;
+    if (viewParam === overviewView) storeView(viewStorageKey, overviewView);
+    else if (!viewParam) storeView(viewStorageKey, overviewView, ['tab']);
+  }, [overviewView, viewParam, viewStorageKey]);
+  // View switches REPLACE the history entry: "back" steps through folder
+  // levels (pushed by setFolder), never toggles between views. The favorites
+  // view has no folder level and drops `?folder=`.
+  const selectView = (view: OverviewView) => {
+    storeView(viewStorageKey, view);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set('view', view);
+      if (view === 'favorites') next.delete(folderParam);
+      return next;
+    }, { replace: true });
+  };
+
+  const favoritesView = folderNav && overviewView === 'favorites';
+  // A deep link into the favorites view may still carry a folder — drop it,
+  // so the breadcrumb shows the root.
+  const strayFolder = favoritesView && searchParams.has(folderParam);
+  useEffect(() => {
+    if (!strayFolder) return;
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.delete(folderParam);
+      return next;
+    }, { replace: true });
+  }, [strayFolder, folderParam, setSearchParams]);
+
+  const currentFolder = folderNav && !favoritesView ? (searchParams.get(folderParam) ?? '') : '';
+
+  // Sorting (`?sort=<key>-<dir>`) by the column headers of the list and the
+  // favorites view; switches REPLACE the history entry like `?view=`. Without
+  // result envelopes only the preset's text columns sort. The folder view has
+  // no headers and keeps Name ↑.
+  const treeListView = folderNav && overviewView === 'list';
+  const sortKeys = presetSortKeys(preset, favoritesView);
+  const sortMode: TreeSortMode = favoritesView || treeListView
+    ? parseSort(searchParams.get('sort'), readResults ? sortKeys : preset.textSortKeys)
+    : DEFAULT_SORT;
+  const setSortMode = (mode: TreeSortMode) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      const value = formatSort(mode);
+      if (value) next.set('sort', value);
+      else next.delete('sort');
+      return next;
+    }, { replace: true });
+  };
   const stateFilter = useMemo(() => {
     if (!folderNav) return new Set<ResultDisplayState>();
     const raw = searchParams.get('state') ?? '';
@@ -173,6 +259,41 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
         (FILTERABLE_STATES as string[]).includes(s)),
     );
   }, [folderNav, searchParams]);
+
+  // Object-type filter (`?type=`): declared `object_types` of the overview
+  // rows — global like the search. Options carry their dashboard counts;
+  // an unknown value is ignored.
+  const typeOptions = useMemo(() => {
+    if (!folderNav) return { types: [] as { type: string; label: string; count: number }[], none: 0 };
+    const counts = new Map<string, number>();
+    let none = 0;
+    for (const row of rows) {
+      const types = Array.isArray(row.object_types) ? (row.object_types as unknown[]).map(String) : [];
+      if (types.length === 0) none += 1;
+      for (const type of new Set(types)) counts.set(type, (counts.get(type) ?? 0) + 1);
+    }
+    const types = [...counts.entries()]
+      .map(([type, count]) => ({ type, count, label: t(`types:objectTypes.${type}`, { defaultValue: type }) as string }))
+      .sort((a, b) => a.label.localeCompare(b.label, i18n.language));
+    return { types, none };
+  }, [folderNav, rows, t, i18n.language]);
+  const typeParam = searchParams.get('type');
+  const typeFilter = typeParam && (typeParam === TYPE_NONE
+    ? typeOptions.none > 0
+    : typeOptions.types.some(o => o.type === typeParam)) ? typeParam : null;
+  const matchesType = (row: Record<string, unknown>): boolean => {
+    if (!typeFilter) return true;
+    const types = Array.isArray(row.object_types) ? (row.object_types as unknown[]).map(String) : [];
+    return typeFilter === TYPE_NONE ? types.length === 0 : types.includes(typeFilter);
+  };
+  const setTypeFilter = (value: string) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (value) next.set('type', value);
+      else next.delete('type');
+      return next;
+    }, { replace: true });
+  };
 
   const folderRows = useMemo<FolderRow[]>(() => {
     if (!folderNav) return [];
@@ -211,6 +332,31 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resultChips, currentFolder, folderExists, pendingInFolder]);
 
+  // Favorites view: dataset rows of the favorite ids, in dataset order (the
+  // server sorts by localized title — the "standard" order).
+  const favoriteRows = useMemo(
+    () => (favoritesView ? rows.filter(r => favorites.ids.has(String(r.id ?? ''))) : []),
+    [favoritesView, rows, favorites.ids],
+  );
+  // Auto-run like entering a folder: up to AUTO_RUN_MAX_PENDING pending
+  // favorites run once with `missing`; a larger set stays explicit ("run all").
+  const pendingFavoriteIds = useMemo(() => {
+    if (!resultChips || !summary.results) return [];
+    const results = summary.results;
+    return favoriteRows
+      .map(r => String(r.id ?? ''))
+      .filter(id => results[`dashboard:${id}`]?.runStatus === 'pending');
+  }, [resultChips, summary.results, favoriteRows]);
+  const autoRunKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (pendingFavoriteIds.length === 0 || pendingFavoriteIds.length > AUTO_RUN_MAX_PENDING) return;
+    const key = [...pendingFavoriteIds].sort().join(',');
+    if (autoRunKey.current === key) return;
+    autoRunKey.current = key;
+    void summary.runDashboards(pendingFavoriteIds, 'missing');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingFavoriteIds]);
+
   const setFolder = (path: string) => {
     setSearchParams(prev => {
       const next = new URLSearchParams(prev);
@@ -241,11 +387,34 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
     return envelope.unit ?? '';
   };
 
+  // Favorite stars on dashboard tiles and list rows of the overview (toggle;
+  // the favorites view removes instead). Only with the favorites segment.
+  const rowId = (row: Record<string, unknown>) => String(row.id ?? '');
+  const canFavorite = (row: Record<string, unknown>) =>
+    favoritesEnabled && isFavoritableArea(preset, row.area);
+  /** Wraps a dashboard tile with its star — a sibling of the tile button, never nested in it. */
+  const withStar = (row: Record<string, unknown>, title: string, tileEl: ReactNode, key: number) =>
+    canFavorite(row) ? (
+      <div key={key} className="dash-tile-cell">
+        {tileEl}
+        <FavoriteButton
+          active={favorites.isFavorite(rowId(row))}
+          onToggle={() => favorites.toggle(rowId(row))}
+          name={title}
+          className="dash-favstar--tile"
+        />
+      </div>
+    ) : tileEl;
+
   if (rows.length === 0) {
     return <div className="dash-tilegrid__empty">{empty?.message ?? t('common:noEntries')}</div>;
   }
 
-  const mode: ViewMode = viewToggle ? viewMode : 'tiles';
+  const mode: ViewMode = overviewView
+    ? (overviewView === 'list' ? 'list' : 'tiles')
+    : viewToggle ? viewMode : 'tiles';
+  // The hierarchical list replaces the flat one only behind the view selector.
+  const treeList = treeListView;
 
   const gridStyle: React.CSSProperties = {
     display: 'grid',
@@ -253,40 +422,16 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
     gap: '12px',
   };
 
+  const badgeLabel = (raw: string): string =>
+    tile.badgeLabels && raw ? t(`${tile.badgeLabels}.${raw}`, { defaultValue: raw }) as string : tx(raw);
+
   // Shared per-row cell projection (used by both the tile grid and the list).
   const buildCell = (row: Record<string, unknown>) => ({
     title: tx(substituteString(tile.title, row)),
     subtitle: tile.subtitle ? tx(substituteString(tile.subtitle, row)) : '',
-    badge: tile.badge ? tx(substituteString(tile.badge, row)) : '',
+    badge: tile.badge ? badgeLabel(substituteString(tile.badge, row)) : '',
     clickable: !!tile.onClick,
   });
-
-  // Sorting of dashboard rows within the folder view / flat views.
-  const sortRows = (subset: Record<string, unknown>[]): Record<string, unknown>[] => {
-    if (!resultChips || sortMode === 'standard') return subset;
-    const sorted = [...subset];
-    if (sortMode === 'value') {
-      sorted.sort((a, b) => {
-        const ea = envelopeForRow(a);
-        const eb = envelopeForRow(b);
-        const va = ea && ea.runStatus === 'ran' && typeof ea.value === 'number' ? ea.value : null;
-        const vb = eb && eb.runStatus === 'ran' && typeof eb.value === 'number' ? eb.value : null;
-        if (va === null && vb === null) return 0;
-        if (va === null) return 1;
-        if (vb === null) return -1;
-        return vb - va;
-      });
-    } else {
-      sorted.sort((a, b) => {
-        const ea = envelopeForRow(a);
-        const eb = envelopeForRow(b);
-        const ra = ea ? STATE_RANK[displayState(ea)] : 99;
-        const rb = eb ? STATE_RANK[displayState(eb)] : 99;
-        return ra - rb;
-      });
-    }
-    return sorted;
-  };
 
   // Renders one block of dashboard rows as either tiles or a list. In tile
   // mode with active folderNav the description leaves the tile (it stays a
@@ -308,6 +453,8 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
                 disabled={!c.clickable}
               >
                 <span className="dash-navlist__title">{c.title}</span>
+                {folderNav && row.overrides === true && <OverrideBadge />}
+                {folderNav && row.legacy === true && <LegacyBadge />}
                 {c.subtitle && <span className="dash-navlist__subtitle">{c.subtitle}</span>}
                 {showRubric && row.folder_label != null && (
                   <span className="dash-navlist__rubric">{String(row.folder_label)}</span>
@@ -331,7 +478,7 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
           const c = buildCell(row);
           const envelope = envelopeForRow(row);
           const state = envelope ? displayState(envelope) : null;
-          return (
+          return withStar(row, c.title, (
             <button
               key={i}
               type="button"
@@ -341,6 +488,8 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
               title={folderNav ? (c.subtitle || undefined) : undefined}
             >
               <span className="dash-tile__title">{c.title}</span>
+              {folderNav && row.overrides === true && <OverrideBadge />}
+              {folderNav && row.legacy === true && <LegacyBadge />}
               {!folderNav && c.subtitle && <span className="dash-tile__subtitle">{c.subtitle}</span>}
               {showRubric && row.folder_label != null && (
                 <span className="dash-tile__rubric">{String(row.folder_label)}</span>
@@ -354,7 +503,7 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
               )}
               {c.badge && <span className="dash-tile__badge">{c.badge}</span>}
             </button>
-          );
+          ), i);
         })}
       </div>
     );
@@ -365,19 +514,26 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
       {folders.map(f => {
         const agg = resultChips ? aggregateFolder(summary.results, f.path) : null;
         const running = resultChips && summary.isFolderRunning(f.path);
-        const nested = f.total_count !== f.direct_count;
+        // Direct entries = sub-folders + dashboards directly inside, the same
+        // count the list shows; `direct_count` of the dataset holds dashboards only.
+        const subfolders = folderRows.filter(x => x.parent === f.path).length;
+        const entries = subfolders + f.direct_count;
+        const tooltip = [
+          `${t('dashboard:folderTree.entries', { count: entries })} · ${t(`dashboard:${preset.texts.total}`, { count: f.total_count })}`,
+          f.description,
+        ].filter(Boolean).join('\n');
         return (
           <button
             key={f.path}
             type="button"
             className={`dash-tile dash-tile--clickable dash-tile--folder${agg?.worst ? ` dash-tile--state-${agg.worst}` : ''}`}
             onClick={() => setFolder(f.path)}
-            title={f.description ?? undefined}
+            title={tooltip}
           >
             <span className="dash-tile__title">
-              <span className="dash-tile__foldericon" aria-hidden="true">▸</span>
+              <span className="dash-tile__foldericon"><FolderIcon /></span>
               {f.label}
-              <span className="dash-tilegroup__count">{formatEntryCount(f.direct_count, f.total_count, nested)}</span>
+              <span className="dash-tilegroup__count">{formatEntryCount(entries, f.total_count, subfolders > 0)}</span>
             </span>
             {agg && (
               <span className="dash-tile__chips-row">
@@ -419,7 +575,7 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
    * Entry count of a featured bundle: the number of result-capable dashboards
    * in the subtrees it declares (`badgeRoots`). Counted, never evaluated — the
    * summary map holds one entry per registry unit including pending stubs, so
-   * this is the same number the bundle's own "Rules" KPI shows, without a run
+   * this is the same number the bundle's own "Checks" KPI shows, without a run
    * and without an extra request. Absent while the summary is still loading.
    */
   const featuredCount = (row: Record<string, unknown>): number | null => {
@@ -442,7 +598,9 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
       {subset.map((row, i) => {
         const c = buildCell(row);
         const count = featuredCount(row);
-        return (
+        // The pulse moves while rules of the band still wait for a result.
+        const agg = resultChips ? aggregateBadgeRoots(summary.results, row._badge_roots) : null;
+        return withStar(row, c.title, (
           <button
             key={i}
             type="button"
@@ -450,17 +608,22 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
             onClick={c.clickable ? () => dispatchAction(tile.onClick, row, { navigate }) : undefined}
             disabled={!c.clickable}
           >
-            <span className="dash-featured__head">
-              <span className="dash-tile__title">{c.title}</span>
-              {count !== null && (
-                <span className="dash-featured__count">
-                  {t('dashboard:featured.ruleCount', { count, defaultValue: '{{count}} rules' })}
-                </span>
-              )}
+            <span className="dash-featured__icon">
+              <PulseIcon size={20} animated={!!agg && agg.covered < agg.total} />
             </span>
-            {c.subtitle && <span className="dash-featured__desc">{c.subtitle}</span>}
+            <span className="dash-featured__body">
+              <span className="dash-featured__head">
+                <span className="dash-tile__title">{c.title}</span>
+                {count !== null && (
+                  <span className="dash-featured__count">
+                    {t('dashboard:featured.ruleCount', { count, defaultValue: '{{count}} checks' })}
+                  </span>
+                )}
+              </span>
+              {c.subtitle && <span className="dash-featured__desc">{c.subtitle}</span>}
+            </span>
           </button>
-        );
+        ), i);
       })}
     </div>
   );
@@ -515,8 +678,10 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
   //   neither ⇒ plain folder level; counts always map to the shown level.
   // ---------------------------------------------------------------------------
   const filterActive = folderNav && stateFilter.size > 0;
-  const searchMode = folderNav && hasQuery;
-  const filterMode = folderNav && !hasQuery && filterActive;
+  // The favorites view resolves search, type and state filter itself (flat
+  // list). The object-type filter resolves globally like the search.
+  const searchMode = folderNav && !favoritesView && (hasQuery || typeFilter !== null);
+  const filterMode = folderNav && !favoritesView && !searchMode && filterActive;
 
   const inSubtree = (row: Record<string, unknown>, folderPath: string): boolean => {
     if (!folderPath) return true;
@@ -542,34 +707,34 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
   const plainRows = childRows.filter(r => r.featured !== true);
   // Search resolves globally (special case by design); an additionally active
   // state filter narrows the global hits further.
-  const globalMatches = searchMode ? search.filtered.filter(matchesStateFilter) : [];
+  const globalMatches = searchMode ? search.filtered.filter(matchesType).filter(matchesStateFilter) : [];
   // State filter resolves within the current subtree — the hierarchy context
   // stays visible instead of collapsing into a global list.
   const subtreeMatches = filterMode
     ? rows.filter(r => inSubtree(r, currentFolder)).filter(matchesStateFilter)
     : [];
+  // Favorites view: search and state filter narrow the favorites directly —
+  // there is no hierarchy to keep.
+  const favoriteMatches = favoritesView
+    ? search.filtered.filter(r => favorites.ids.has(String(r.id ?? ''))).filter(matchesType).filter(matchesStateFilter)
+    : [];
+  // Favorites without a row: ids the server reports missing plus ids without
+  // a row in the overview dataset (e.g. a bundle tagged `internal`).
+  const missingFavoriteIds = favoritesView
+    ? (() => {
+      const rowIds = new Set(rows.map(r => String(r.id ?? '')));
+      return [...favorites.missing, ...[...favorites.ids].filter(id => !rowIds.has(id))];
+    })()
+    : [];
+
   /** Total number of dashboards in the currently shown subtree. */
   const subtreeTotal = currentFolder
     ? (folderByPath.get(currentFolder)?.total_count ?? childRows.length)
     : rows.length;
 
   /** Consolidated aggregate over a concrete row set (collapsed section header). */
-  const aggregateRowSet = (set: Record<string, unknown>[]): FolderAggregate => {
-    const agg = emptyAggregate();
-    for (const row of set) {
-      const envelope = envelopeForRow(row);
-      if (!envelope) continue;
-      const state = displayState(envelope);
-      agg.counts[state] += 1;
-      agg.total += 1;
-      if (envelope.runStatus !== 'pending') agg.covered += 1;
-      if (envelope.runStatus === 'ran' && envelope.unit === 'findings' && typeof envelope.value === 'number') {
-        agg.findings += envelope.value;
-      }
-      if (agg.worst === null || STATE_RANK[state] < STATE_RANK[agg.worst]) agg.worst = state;
-    }
-    return agg;
-  };
+  const aggregateRowSet = (set: Record<string, unknown>[]): FolderAggregate =>
+    aggregateEnvelopes(set.map(envelopeForRow).filter((e): e is ResultEnvelope => !!e));
 
   const toggleSection = (path: string) => {
     setCollapsedSections(prev => {
@@ -602,7 +767,7 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
     }
     return (
       <div className="dash-tilegroups">
-        {direct.length > 0 && renderRows(sortRows(direct))}
+        {direct.length > 0 && renderRows(direct)}
         {sections.map(({ folder: f, matches }) => {
           const collapsed = collapsedSections.has(f.path);
           return (
@@ -614,7 +779,7 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
                   onClick={() => toggleSection(f.path)}
                   aria-expanded={!collapsed}
                 >
-                  <span aria-hidden="true">{collapsed ? '▸' : '▾'}</span>
+                  <DisclosureChevron open={!collapsed} />
                   {f.label}
                   <span className="dash-tilegroup__count">{formatEntryCount(matches.length, matches.length, false)}</span>
                 </button>
@@ -627,7 +792,7 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
                   {t('dashboard:folderNav.openFolder', { defaultValue: 'Ordner öffnen' })} →
                 </button>
               </h3>
-              {!collapsed && renderRows(sortRows(matches), true)}
+              {!collapsed && renderRows(matches, true)}
             </section>
           );
         })}
@@ -637,12 +802,16 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
 
   // "Run all" on the current level: root chunks per top-level folder
   // (frontend chunking instead of a queue system, O8); inside a folder it
-  // runs the subtree.
-  const runAllBusy = folderNav && (currentFolder
-    ? summary.isFolderRunning(currentFolder)
-    : childFolders.some(f => summary.isFolderRunning(f.path)));
+  // runs the subtree; in the favorites view it runs the shown favorites.
+  const runAllBusy = folderNav && (favoritesView
+    ? favoriteMatches.some(r => summary.isRefRunning('dashboard', String(r.id ?? '')))
+    : currentFolder
+      ? summary.isFolderRunning(currentFolder)
+      : childFolders.some(f => summary.isFolderRunning(f.path)));
   const runAll = () => {
-    if (currentFolder) {
+    if (favoritesView) {
+      void summary.runDashboards(favoriteMatches.map(r => String(r.id ?? '')), 'missing');
+    } else if (currentFolder) {
       void summary.runFolder(currentFolder, 'missing');
     } else {
       for (const f of folderRows.filter(f => f.parent === null)) {
@@ -654,43 +823,96 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
   const stateFilterLabel = (s: ResultDisplayState): string =>
     t(`dashboard:folderNav.state.${s}`, { defaultValue: s }) as string;
 
+  // Shown instead of an empty level when the user area holds no bundle yet.
+  const customEmptyHint = t(`dashboard:${preset.texts.customEmpty}`, { command: preset.texts.customCommand }) as string;
+  const currentFolderRow = currentFolder ? folderByPath.get(currentFolder) : undefined;
+
+  const viewButton =(key: string, active: boolean, label: string, icon: ReactNode, onSelect: () => void) => (
+    <button
+      key={key}
+      type="button"
+      className={`dash-viewbar__btn${active ? ' active' : ''}`}
+      aria-pressed={active}
+      title={label}
+      aria-label={label}
+      onClick={onSelect}
+    >
+      {icon}
+    </button>
+  );
+  const viewIcons: Record<OverviewView, ReactNode> = {
+    folders: <TilesIcon />, list: <ListIcon />, favorites: <StarIcon />,
+  };
+
+  /**
+   * Favorites view: the favorite dashboards as a flat list with the columns of
+   * the hierarchical list, a hint for favorites that are no longer available
+   * and the empty state.
+   */
+  const renderFavorites = () => {
+    if (!favorites.loaded) return null;
+    return (
+      <>
+        {missingFavoriteIds.length > 0 && (
+          <div className="dash-favmissing" role="note">
+            <span>{t('dashboard:favorites.missing', { count: missingFavoriteIds.length })}</span>
+            {' — '}
+            <button
+              type="button"
+              className="dash-folderbar__link"
+              onClick={() => favorites.removeMany(missingFavoriteIds)}
+            >
+              {t('dashboard:favorites.removeMissing')}
+            </button>
+          </div>
+        )}
+        <FolderTreeList
+          flat
+          folders={[]}
+          rows={favoriteMatches}
+          filtered={false}
+          root=""
+          sort={sortMode}
+          onSortChange={setSortMode}
+          summary={summary}
+          resultChips={resultChips}
+          preset={preset}
+          readResults={readResults}
+          columnLabel={columnLabel}
+          describe={row => {
+            const c = buildCell(row);
+            return { title: c.title, subtitle: c.subtitle };
+          }}
+          onOpen={row => dispatchAction(tile.onClick, row, { navigate })}
+          onDrillDown={() => { /* no folders in the flat list */ }}
+          onRemove={row => favorites.remove(String(row.id ?? ''), buildCell(row).title)}
+          unitLabel={unitLabel}
+          emptyMessage={favoriteRows.length === 0
+            ? t(`dashboard:${preset.texts.favoritesEmpty}`) as string
+            : hasQuery
+              ? null
+              : t('dashboard:folderNav.noFilterMatches') as string}
+          customEmptyHint={null}
+        />
+      </>
+    );
+  };
+
   return (
     <div className="dash-tilegrid-wrap">
-      {viewToggle && (
+      {(viewToggle || viewModes) && (
         <div className="dash-viewbar">
           <div className="dash-viewbar__toggle" role="group" aria-label={t('dashboard:view.label') as string}>
-            <button
-              type="button"
-              className={`dash-viewbar__btn${mode === 'tiles' ? ' active' : ''}`}
-              aria-pressed={mode === 'tiles'}
-              title={t('dashboard:view.tiles') as string}
-              aria-label={t('dashboard:view.tiles') as string}
-              onClick={() => setViewMode('tiles')}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <rect x="3" y="3" width="7" height="7" rx="1.5" />
-                <rect x="14" y="3" width="7" height="7" rx="1.5" />
-                <rect x="3" y="14" width="7" height="7" rx="1.5" />
-                <rect x="14" y="14" width="7" height="7" rx="1.5" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              className={`dash-viewbar__btn${mode === 'list' ? ' active' : ''}`}
-              aria-pressed={mode === 'list'}
-              title={t('dashboard:view.list') as string}
-              aria-label={t('dashboard:view.list') as string}
-              onClick={() => setViewMode('list')}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                <line x1="8" y1="6" x2="20" y2="6" />
-                <line x1="8" y1="12" x2="20" y2="12" />
-                <line x1="8" y1="18" x2="20" y2="18" />
-                <circle cx="4" cy="6" r="1.1" fill="currentColor" stroke="none" />
-                <circle cx="4" cy="12" r="1.1" fill="currentColor" stroke="none" />
-                <circle cx="4" cy="18" r="1.1" fill="currentColor" stroke="none" />
-              </svg>
-            </button>
+            {viewModes
+              ? viewModes.map(v => viewButton(
+                v, overviewView === v, t(`dashboard:view.${v}`) as string, viewIcons[v], () => selectView(v),
+              ))
+              : (
+                <>
+                  {viewButton('tiles', mode === 'tiles', t('dashboard:view.tiles') as string, <TilesIcon />, () => setViewMode('tiles'))}
+                  {viewButton('list', mode === 'list', t('dashboard:view.list') as string, <ListIcon />, () => setViewMode('list'))}
+                </>
+              )}
           </div>
 
           {resultChips && summary.results && (
@@ -709,16 +931,6 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
                   </button>
                 ))}
               </div>
-              <select
-                className="dash-viewbar__sort"
-                value={sortMode}
-                onChange={e => setSortMode(e.target.value as typeof sortMode)}
-                aria-label={t('dashboard:folderNav.sortLabel', { defaultValue: 'Sortierung' }) as string}
-              >
-                <option value="standard">{t('dashboard:folderNav.sortStandard', { defaultValue: 'Standard' }) as string}</option>
-                <option value="value">{t('dashboard:folderNav.sortValue', { defaultValue: 'Ergebnis-Anzahl ↓' }) as string}</option>
-                <option value="state">{t('dashboard:folderNav.sortState', { defaultValue: 'Ampel' }) as string}</option>
-              </select>
               <button
                 type="button"
                 className="dash-folderbar__runall"
@@ -734,19 +946,24 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
 
           {/* Entry-count meta — always mapped to the SHOWN level: search =
               global matches, filter = matches in the current subtree, plain
-              folder view = level items (subtree total). */}
+              folder view = level items (subtree total), hierarchical list =
+              dashboards in the shown tree. */}
           <span className="dash-viewbar__count">
             {!folderNav
               ? formatEntryCount(rootCount, rows.length, nestedCount)
-              : searchMode
+              : favoritesView
+                ? formatEntryCount(favoriteMatches.length, favoriteMatches.length, false)
+                : searchMode
                 ? formatEntryCount(globalMatches.length, globalMatches.length, false)
                 : filterMode
                   ? formatEntryCount(subtreeMatches.length, subtreeMatches.length, false)
-                  : formatEntryCount(
-                    childRows.length + childFolders.length,
-                    subtreeTotal,
-                    childFolders.length > 0,
-                  )}
+                  : treeList
+                    ? formatEntryCount(subtreeTotal, subtreeTotal, false)
+                    : formatEntryCount(
+                      childRows.length + childFolders.length,
+                      subtreeTotal,
+                      childFolders.length > 0,
+                    )}
           </span>
         </div>
       )}
@@ -757,7 +974,9 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
             {t('detail:autoTable.rowCount', {
               count: !folderNav
                 ? search.filtered.length
-                : searchMode
+                : favoritesView
+                  ? favoriteMatches.length
+                  : searchMode
                   ? globalMatches.length
                   : filterMode
                     ? subtreeMatches.length
@@ -769,10 +988,35 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
             {filterMode && subtreeMatches.length !== subtreeTotal && (
               <> · {t('detail:autoTable.filteredFrom', { count: subtreeTotal })}</>
             )}
+            {favoritesView && favoriteMatches.length !== favoriteRows.length && (
+              <> · {t('detail:autoTable.filteredFrom', { count: favoriteRows.length })}</>
+            )}
             {!folderNav && hasQuery && search.filtered.length !== search.totalCount && (
               <> · {t('detail:autoTable.filteredFrom', { count: search.totalCount })}</>
             )}
+            {/* The list hides its drill-down root while searching — say so. */}
+            {treeList && searchMode && currentFolder && (
+              <> · <span className="dash-search-bar__scope">{t(`dashboard:${preset.texts.searchAll}`)}</span></>
+            )}
           </span>
+          {treeList && <span ref={setBulkSlot} className="dash-search-bar__bulk" />}
+          {folderNav && typeOptions.types.length > 0 && (
+            <select
+              className="dash-search-bar__type"
+              value={typeFilter ?? ''}
+              onChange={e => setTypeFilter(e.target.value)}
+              aria-label={t('dashboard:typeFilter.label') as string}
+              title={t('dashboard:typeFilter.label') as string}
+            >
+              <option value="">{t('dashboard:typeFilter.all')}</option>
+              {typeOptions.types.map(o => (
+                <option key={o.type} value={o.type}>{`${o.label} (${o.count})`}</option>
+              ))}
+              {typeOptions.none > 0 && (
+                <option value={TYPE_NONE}>{`${t('dashboard:typeFilter.none')} (${typeOptions.none})`}</option>
+              )}
+            </select>
+          )}
           <input
             type="search"
             className="dash-search-bar__input"
@@ -792,10 +1036,48 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
               {t('dashboard:folderNav.backToRoot', { defaultValue: 'Zur Übersicht' })}
             </button>
           </div>
+        ) : favoritesView ? (
+          renderFavorites()
+        ) : treeList ? (
+          // Hierarchical list: search (global) and state filter (local)
+          // narrow it to a filtered tree instead of a flat result list.
+          <FolderTreeList
+            folders={folderRows}
+            rows={searchMode ? globalMatches : filterMode ? subtreeMatches : rows}
+            filtered={searchMode || filterMode}
+            root={searchMode ? '' : currentFolder}
+            sort={sortMode}
+            onSortChange={setSortMode}
+            bulkSlot={bulkSlot}
+            summary={summary}
+            resultChips={resultChips}
+            preset={preset}
+            readResults={readResults}
+            columnLabel={columnLabel}
+            expandedStorageKey={expandedStorageKey}
+            describe={row => {
+              const c = buildCell(row);
+              return { title: c.title, subtitle: c.subtitle };
+            }}
+            onOpen={row => dispatchAction(tile.onClick, row, { navigate })}
+            onDrillDown={setFolder}
+            favorites={favoritesEnabled ? {
+              available: canFavorite,
+              isFavorite: row => favorites.isFavorite(rowId(row)),
+              toggle: row => favorites.toggle(rowId(row)),
+            } : undefined}
+            unitLabel={unitLabel}
+            emptyMessage={searchMode
+              ? null
+              : filterMode
+                ? t('dashboard:folderNav.noFilterMatches') as string
+                : empty?.message ?? (t('common:noEntries') as string)}
+            customEmptyHint={customEmptyHint}
+          />
         ) : searchMode ? (
           // Search resolves GLOBALLY — flat hit list across the whole
           // hierarchy with the rubric path per tile.
-          renderRows(sortRows(globalMatches), true)
+          renderRows(globalMatches, true)
         ) : filterMode ? (
           // State filter resolves LOCALLY — filtered hierarchy of the
           // current folder with collapsible subfolder sections.
@@ -804,9 +1086,13 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
           <>
             {featuredRows.length > 0 && renderFeatured(featuredRows)}
             {childFolders.length > 0 && renderFolderTiles(childFolders)}
-            {plainRows.length > 0 && renderRows(sortRows(plainRows))}
+            {plainRows.length > 0 && renderRows(plainRows)}
             {childFolders.length === 0 && childRows.length === 0 && (
-              <div className="dash-tilegrid__empty">{empty?.message ?? t('common:noEntries')}</div>
+              <div className="dash-tilegrid__empty">
+                {currentFolderRow && isCustomAreaRoot(currentFolderRow)
+                  ? customEmptyHint
+                  : empty?.message ?? t('common:noEntries')}
+              </div>
             )}
           </>
         )
@@ -826,9 +1112,12 @@ export function TileGrid({ node, dataset, datasets, navigate }: PrimitiveProps) 
         renderRows(search.filtered)
       )}
 
-      {hasQuery && (searchMode ? globalMatches : search.filtered).length === 0 && (
+      {(hasQuery || typeFilter !== null) && (favoritesView ? favoriteRows.length > 0 && favoriteMatches.length === 0
+        : (searchMode ? globalMatches : search.filtered).length === 0) && (
         <div className="dash-search-bar__empty">
-          {t('detail:autoTable.noMatches', { query: search.query })}
+          {hasQuery
+            ? t('detail:autoTable.noMatches', { query: search.query })
+            : t('dashboard:typeFilter.noMatches')}
         </div>
       )}
     </div>

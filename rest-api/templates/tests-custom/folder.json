@@ -1,0 +1,6 @@
+{
+  "title": "Custom",
+  "icon": "user",
+  "description": "Your own Analysis Tests. Tests in this area are never tracked by git and never touched by updates.",
+  "order": 900
+}

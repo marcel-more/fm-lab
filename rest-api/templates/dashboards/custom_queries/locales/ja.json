@@ -1,8 +1,0 @@
-{
-  "manifest": {
-    "title": "分析とカスタムクエリ",
-    "description": "用意されたすべての SQL 分析を一覧で表示します。"
-  },
-  "layout": {
-  }
-}

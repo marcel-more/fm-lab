@@ -1,0 +1,19 @@
+{
+  "manifest": {
+    "title": "XML-import",
+    "description": "Importerar XML-exporter från xml/-katalogen till DuckDB-databasen."
+  },
+  "layout": {
+    "files_table.props.columns[1].label": "Fil",
+    "files_table.props.columns[2].label": "Format",
+    "files_table.props.columns[3].label": "DDR",
+    "files_table.props.columns[4].label": "Datum",
+    "files_table.props.columns[5].label": "Storlek",
+    "files_table.props.columns[6].label": "Importerad",
+    "files_table.props.empty.message": "Inga filer i XML-katalogen.",
+    "last_run.props.title": "Senaste konvertering",
+    "import_integrity.props.title": "Importintegritet",
+    "graph_communities.props.title": "Graf-communities",
+    "graph_communities_desc.props.content": "Struktur- och namngivningstäckning för de upptäckta modulerna. Bygg om partitionen med knappen; (om)döp nya moduler med färdigheten `/fm-graph-cluster`."
+  }
+}

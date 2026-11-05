@@ -116,15 +116,22 @@
 #
 # Exit codes:
 #   0 - Success
-#   1 - File not found / No files found / Validation error / Some files failed
+#   1 - File not found / No files found / Validation error / Some files failed /
+#       no importable file in a batch with at least one failed file
 #   2 - UTF-8 conversion failed
 #   3 - DuckDB conversion failed
-#   4 - Unsupported XML format (e.g. legacy FMDynamicTemplate)
+#   4 - Unsupported XML format (e.g. legacy FMDynamicTemplate, FileMaker 18): the
+#       single file, or every file of a batch, is not an FMSaveAsXML export — the
+#       format preflight stops the run before anything runs (event
+#       `aborted reason=no_importable_files`, stage "Preflight (format check)")
 #   5 - XML preprocessing failed
 #   6 - Schema drift detected (single mode or --no-auto-heal): manual rebuild required
 #   7 - Concurrency lock collided (another convert is already running)
-#   8 - webbed/xml extension too old (no read_xml 'streaming' parameter — stage b version gate)
-#       / memory-induced clean abort (EXIT_INSUFFICIENT_MEMORY)
+#   8 - Two causes share this code:
+#       a) webbed/xml extension too old (no read_xml 'streaming' parameter —
+#          stage b version gate, before any import), or
+#       b) memory-induced clean abort during the run (EXIT_INSUFFICIENT_MEMORY,
+#          event `aborted reason=oom`)
 #   9 - Reference seed missing (sql/generated/design_functions_seed.sql — regenerate
 #       with ingestion/gen_design_functions.sh; hard precondition since 2.29.0)
 
@@ -1896,7 +1903,9 @@ ERROR_LOG_FILE="$LOG_DIR/${LOG_PREFIX}_${TIMESTAMP}_errors.log"
 # actually happened" trace for post-mortem debugging.
 CONSOLE_LOG="$LOG_DIR/${LOG_PREFIX}_${TIMESTAMP}_console.log"
 # 2.2: additive — run.strategy gains 'source'/'sentinel_source' (policy-lock).
-LOG_SCHEMA="fmlab.convert-log/2.2"
+# 2.3: additive — files[].skip {reason, source_version, saxml_version} for root-check
+#      skips (null otherwise).
+LOG_SCHEMA="fmlab.convert-log/2.3"
 
 # Error-log run header, written lazily on the FIRST error append: the error log
 # must not exist for error-free runs ([ -s ] gates the "Error details" hint at
@@ -2141,7 +2150,7 @@ fi
 # including event history — rest-api/src/services/xml-convert.js), test mode
 # (fm_test.duckdb, not a production run) and runs without lock ownership (a
 # second run rejected at the lock must not overwrite the record of the ACTIVE
-# run). Schema additive to the API record ($schema_version 1); `source`
+# run). Schema additive to the API record ($schema_version 2); `source`
 # marks the CLI origin. LAST_RUN_STAMPED prevents a double stamp
 # (explicit call + EXIT-trap fallback).
 LAST_RUN_STAMPED=false
@@ -2154,10 +2163,20 @@ stamp_last_run() {
     [ -d "$SOLUTION_STATE_DIR" ] || return 0
     LAST_RUN_STAMPED=true
     local _now; _now=$(date -u '+%Y-%m-%dT%H:%M:%S.000Z')
-    printf '{\n  "$schema_version": 1,\n  "run_id": "%s",\n  "source": "cli",\n  "started_at": "%s",\n  "finished_at": "%s",\n  "duration_ms": null,\n  "ok": %s,\n  "exit_code": %s,\n  "processed": %s,\n  "total": %s,\n  "error_count": %s,\n  "events": []\n}\n' \
+    # Root-check skips (schema 2): count + per-file reason, never part of error_count.
+    local _skipped_json="" _j _fn _rs _sv
+    for _j in "${!FL_NAME[@]}"; do
+        [ "${FL_STATUS[$_j]}" = "skipped" ] || continue
+        _json_quote "${FL_NAME[$_j]}"; _fn="$_JSON_VAL"
+        _json_quote "${FL_SKIP_REASON[$_j]:-unknown_root}"; _rs="$_JSON_VAL"
+        if [ -n "${FL_SOURCE_VERSION[$_j]:-}" ]; then _json_quote "${FL_SOURCE_VERSION[$_j]}"; _sv="$_JSON_VAL"; else _sv=null; fi
+        _skipped_json="${_skipped_json:+$_skipped_json, }{\"filename\": $_fn, \"reason\": $_rs, \"source_version\": $_sv}"
+    done
+    printf '{\n  "$schema_version": 2,\n  "run_id": "%s",\n  "source": "cli",\n  "started_at": "%s",\n  "finished_at": "%s",\n  "duration_ms": null,\n  "ok": %s,\n  "exit_code": %s,\n  "processed": %s,\n  "total": %s,\n  "error_count": %s,\n  "skipped_count": %s,\n  "skipped_files": [%s],\n  "events": []\n}\n' \
         "${RUN_STARTED_AT:-$_now}" "${RUN_STARTED_AT:-$_now}" "$_now" \
         "$_ok" "$_rc" "$_processed" "$_total" \
         "$([ "$_ok" = "true" ] && echo 0 || echo 1)" \
+        "${SKIPPED_COUNT:-0}" "$_skipped_json" \
         > "$SOLUTION_STATE_DIR/last_xml_run.json.tmp" 2>/dev/null \
         && mv -f "$SOLUTION_STATE_DIR/last_xml_run.json.tmp" "$SOLUTION_STATE_DIR/last_xml_run.json" 2>/dev/null
     return 0
@@ -3072,6 +3091,74 @@ _saxml_header_probe() {
     fi
 }
 
+# ----------------------------------------------------------------------------
+# Skip reasons (root check, exit code 4)
+# ----------------------------------------------------------------------------
+# _skip_reason_line <file> <root> — prints the machine-readable record of a
+#   root-check skip next to the plain-text warning (same output stream):
+#     SKIP_REASON=legacy_format SOURCE_VERSION=18.0.3 SAXML_VERSION=2.0.0.0
+#     SKIP_REASON=unknown_root
+#   <root> is the detected root element (FMDynamicTemplate or empty). Source/
+#   version come from the root tag in the first 4 KB of the (UTF-8) file.
+# parse_skip_reason <output> — reads that record back from a captured file
+#   output and sets FILE_SKIP_REASON / FILE_SOURCE_VERSION / FILE_SAXML_VERSION
+#   (reason falls back to unknown_root when no record is present).
+# skip_reason_text <reason> <source_version> <saxml_version> — one-line
+#   human-readable reason incl. the remedy (CLI line, text log, error log).
+# ----------------------------------------------------------------------------
+_skip_reason_line() {
+    _skip_reason_from_head "$(head -c 4096 "$1" 2>/dev/null)" "$2"
+}
+# _skip_reason_from_head <head-text> <root> — same record from an already decoded head.
+_skip_reason_from_head() {
+    local head="$1" root="$2" hdr src ver
+    if [ "$root" = "FMDynamicTemplate" ]; then
+        hdr=$(printf '%s' "$head" | tr -d '\r\n' | grep -oE '<FMDynamicTemplate[^>]*' | head -1)
+        ver=$(printf '%s' "$hdr" | sed -n 's/.*[[:space:]]version="\([0-9.]*\)".*/\1/p')
+        src=$(printf '%s' "$hdr" | sed -n 's/.*[[:space:]]Source="\([0-9.]*\)".*/\1/p')
+        echo "  SKIP_REASON=legacy_format SOURCE_VERSION=${src:-unknown} SAXML_VERSION=${ver:-unknown}"
+    else
+        echo "  SKIP_REASON=unknown_root"
+    fi
+}
+
+# _xml_head_utf8 <file> — first 4 KB of a raw (not yet pre-processed) export,
+#   decoded to UTF-8 by its BOM (FileMaker 18–22 write UTF-16LE). A UTF-16 cut
+#   mid-character only loses the tail; the root tag sits in the first few hundred bytes.
+# _xml_root_of_head <head-text> — FMSaveAsXML | FMDynamicTemplate | empty.
+_xml_head_utf8() {
+    case "$(detect_encoding "$1")" in
+        utf-16le) head -c 4096 "$1" 2>/dev/null | iconv -f UTF-16LE -t UTF-8 2>/dev/null ;;
+        utf-16be) head -c 4096 "$1" 2>/dev/null | iconv -f UTF-16BE -t UTF-8 2>/dev/null ;;
+        *)        head -c 4096 "$1" 2>/dev/null ;;
+    esac
+}
+_xml_root_of_head() {
+    printf '%s' "$1" | grep -oE '<(FMSaveAsXML|FMDynamicTemplate)[ >]' | head -1 | sed 's/[< >]//g'
+}
+
+FILE_SKIP_REASON=""; FILE_SOURCE_VERSION=""; FILE_SAXML_VERSION=""
+parse_skip_reason() {
+    local rec
+    rec=$(printf '%s\n' "$1" | grep -oE 'SKIP_REASON=[a-z_]+( SOURCE_VERSION=[^ ]*)?( SAXML_VERSION=[^ ]*)?' | head -1)
+    FILE_SKIP_REASON=$(printf '%s' "$rec" | sed -n 's/.*SKIP_REASON=\([a-z_]*\).*/\1/p')
+    FILE_SOURCE_VERSION=$(printf '%s' "$rec" | sed -n 's/.*SOURCE_VERSION=\([^ ]*\).*/\1/p')
+    FILE_SAXML_VERSION=$(printf '%s' "$rec" | sed -n 's/.*SAXML_VERSION=\([^ ]*\).*/\1/p')
+    [ "$FILE_SOURCE_VERSION" = "unknown" ] && FILE_SOURCE_VERSION=""
+    [ "$FILE_SAXML_VERSION" = "unknown" ] && FILE_SAXML_VERSION=""
+    [ -n "$FILE_SKIP_REASON" ] || FILE_SKIP_REASON="unknown_root"
+    return 0
+}
+
+skip_reason_text() {
+    case "$1" in
+        legacy_format)
+            echo "FileMaker ${2:-18} export (SaXML ${3:-2.0.0.0}); re-export with FileMaker 19+" ;;
+        *)
+            echo "no FMSaveAsXML root element; re-export with FileMaker 19+ (Save a Copy as XML)" ;;
+    esac
+}
+
 # ============================================================================
 # Apply Phase 1 to ONE XML file (full file or chunk).
 # $1 = directory (FM_XML_DIR), $2 = filename, $3 = error log (appended to).
@@ -3441,11 +3528,13 @@ process_single_file() {
     if [[ "$ROOT_ELEMENT" == "FMDynamicTemplate" ]]; then
         echo "  WARNING: Skipped — legacy SaXML v2.0.0.0 format (FMDynamicTemplate)"
         echo "  This format (FileMaker 18.x) is not supported. Minimum: SaXML v2.1.0.0 (FileMaker 19+)."
+        _skip_reason_line "$PRE_OUTPUT" "$ROOT_ELEMENT"
         return 4
     fi
 
     if [[ -z "$ROOT_ELEMENT" ]]; then
         echo "  WARNING: Skipped — could not detect XML root element (expected FMSaveAsXML)"
+        _skip_reason_line "$PRE_OUTPUT" ""
         return 4
     fi
     # 4b. SaXML profile of the file (informational here; run_p1_on re-probes its
@@ -4613,6 +4702,145 @@ abort_pipeline_incomplete() {
     exit 1
 }
 
+# abort_no_importable_files — clean stop directly after P1 when not a single file
+# was imported or taken over unchanged (every file skipped by the root check
+# and/or failed). P2–P6 would only run on an empty or stale master; this exit
+# touches neither the master nor the read copy, the manifest or the
+# catalogs_built marker (a turbo run restores the value Phase S replaced).
+# Exit code: 4 (unsupported XML format) when every file was a root-check skip,
+# otherwise 1.
+abort_no_importable_files() {
+    local stage="${1:-Phase 1 Extract}"
+    local n_skip="${SKIPPED_COUNT:-0}" n_fail="${#FAILED_FILES[@]}" n_legacy=0 versions="" j v
+    for j in "${!FL_NAME[@]}"; do
+        [ "${FL_STATUS[$j]}" = "skipped" ] || continue
+        [ "${FL_SKIP_REASON[$j]:-}" = "legacy_format" ] || continue
+        n_legacy=$((n_legacy + 1))
+        v="${FL_SOURCE_VERSION[$j]:-}"
+        [ -n "$v" ] || continue
+        case ",$versions," in *",$v,"*) ;; *) versions="${versions:+$versions,}$v" ;; esac
+    done
+    local rc=1
+    [ "$n_fail" -eq 0 ] && [ "$n_skip" -gt 0 ] && rc=4
+    # Root-check skips never reach the master; a failed file may have left a
+    # partial P1 state there (serial path), so only the read copy is guaranteed.
+    local outcome="No catalogs were written from this run; the solution's existing data is unchanged."
+    [ "$n_fail" -gt 0 ] && outcome="No catalogs were rebuilt and nothing was published; the served read copy is unchanged."
+
+    if $TURBO_MODE && [ -n "${TURBO_PREV_CATALOGS_STATE:-}" ]; then
+        _catalogs_state_set "$TURBO_PREV_CATALOGS_STATE"
+    fi
+
+    finalize_logs
+    {
+        echo "Not a single file of this run could be imported:"
+        echo "  total $TOTAL · skipped $n_skip (FileMaker 18 format: $n_legacy) · failed $n_fail"
+        echo ""
+        for j in "${!FL_NAME[@]}"; do
+            case "${FL_STATUS[$j]}" in
+                skipped) echo "  ⊘ ${FL_NAME[$j]} — $(skip_reason_text "${FL_SKIP_REASON[$j]:-}" "${FL_SOURCE_VERSION[$j]:-}" "${FL_SAXML_VERSION[$j]:-}")" ;;
+                failed)  echo "  ✗ ${FL_NAME[$j]} — failed [${FL_ERR_CAT[$j]:-unknown}] (details above)" ;;
+            esac
+        done
+        echo ""
+        if [ "$n_legacy" -gt 0 ]; then
+            echo "fm-lab reads Save-a-Copy-as-XML exports from FileMaker 19 or newer (SaXML 2.1.0.0+)."
+            echo "Remedy: open the files in FileMaker Pro 19 or newer and export them again via"
+            echo "Tools > Save a Copy as XML (include details for analysis tools)."
+        fi
+        echo "The pipeline stopped at: $stage. $outcome"
+    } | log_error_section "Import aborted — no importable files"
+
+    if $QUIET_MODE; then
+        _emit_json aborted reason "no_importable_files" stage "$stage" \
+            total "int=${TOTAL:-0}" skipped "int=$n_skip" failed "int=$n_fail" \
+            legacy "int=$n_legacy" source_versions "$versions"
+    else
+        echo "" >&2
+        echo "=========================================" >&2
+        echo "✗ IMPORT ABORTED — no importable files" >&2
+        echo "=========================================" >&2
+        echo "Files:      $TOTAL (skipped $n_skip · failed $n_fail)" >&2
+        for j in "${!FL_NAME[@]}"; do
+            case "${FL_STATUS[$j]}" in
+                skipped) echo "  ⊘ ${FL_NAME[$j]} — $(skip_reason_text "${FL_SKIP_REASON[$j]:-}" "${FL_SOURCE_VERSION[$j]:-}" "${FL_SAXML_VERSION[$j]:-}")" >&2 ;;
+                failed)  echo "  ✗ ${FL_NAME[$j]} — failed [${FL_ERR_CAT[$j]:-unknown}]" >&2 ;;
+            esac
+        done
+        echo "" >&2
+        if [ "$n_legacy" -gt 0 ]; then
+            echo "fm-lab needs XML exports from FileMaker 19 or newer. Open the files in" >&2
+            echo "FileMaker Pro 19+ and export them again via Tools > Save a Copy as XML" >&2
+            echo "(include details for analysis tools), then re-run the import." >&2
+            echo "" >&2
+        fi
+        echo "$outcome" >&2
+        [ -f "$ERROR_LOG_FILE" ] && echo "Error log:  $ERROR_LOG_FILE" >&2
+        echo "" >&2
+    fi
+    emit_done false "Aborted (no importable files): skipped $n_skip, failed $n_fail of ${TOTAL:-0}"
+    stamp_last_run false "$rc" 0 "${TOTAL:-0}"
+    exit "$rc"
+}
+
+# preflight_importable_format — format check of the inbox BEFORE anything runs
+# (turbo init, schema check/auto-heal, Phase S). Probes the root element of every
+# input file (batch: the inbox, single mode: the one file) from its first 4 KB;
+# when NOT A SINGLE file is an FMSaveAsXML export (FileMaker 19+), the run stops
+# right here via abort_no_importable_files — the same event, error-log section and
+# exit code as the gate after P1, which stays as the safety net for files that
+# fail later. Missing inputs are left to the regular discovery/error paths.
+preflight_importable_format() {
+    local -a pf_files=()
+    if [[ "$MODE" == "batch" ]]; then
+        shopt -s nullglob; pf_files=("$XML_DIR"/*.xml); shopt -u nullglob
+    else
+        pf_files=("$XML_DIR/$FILENAME")
+    fi
+    [ ${#pf_files[@]} -gt 0 ] || return 0
+    local f
+    local -a pf_heads=() pf_roots=()
+    for f in "${pf_files[@]}"; do
+        [ -f "$f" ] || return 0
+        pf_heads+=("$(_xml_head_utf8 "$f")")
+        pf_roots+=("$(_xml_root_of_head "${pf_heads[${#pf_heads[@]}-1]}")")
+        [ "${pf_roots[${#pf_roots[@]}-1]}" = "FMSaveAsXML" ] && return 0
+    done
+
+    # Nothing importable: record every file as a root-check skip, then abort.
+    mkdir -p "$LOG_DIR"
+    collect_environment
+    collect_duckdb_settings
+    build_run_meta
+    BATCH_START=$(now_epoch)
+    RUN_STARTED_HUMAN=$(date '+%Y-%m-%d %H:%M:%S')
+    RUN_STARTED_ISO=$(iso_now)
+    TOTAL=${#pf_files[@]}; SUCCESS_COUNT=0; SKIPPED_COUNT=0; UNCHANGED_COUNT=0
+    FAILED_FILES=(); SKIPPED_FILES=(); FAILED_FILES_INFO=()
+    local i bn size
+    for i in "${!pf_files[@]}"; do
+        f="${pf_files[$i]}"; bn=$(basename "$f")
+        parse_skip_reason "$(_skip_reason_from_head "${pf_heads[$i]}" "${pf_roots[$i]}")"
+        size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null || echo "")
+        SKIPPED_COUNT=$((SKIPPED_COUNT + 1)); SKIPPED_FILES+=("$bn")
+        FL_NAME+=("$bn");              FL_SIZE+=("$size")
+        FL_ENC+=("$(detect_encoding "$f")"); FL_STATUS+=("skipped")
+        FL_DUR+=("0.000");             FL_COMPLETED+=("$(iso_now)")
+        FL_ERR_CAT+=("");              FL_ERR_RC+=("");   FL_ERR_HINT+=("")
+        FL_PEAKRSS+=("");              FL_MINAVAIL+=("")
+        FL_SKIP_REASON+=("$FILE_SKIP_REASON"); FL_SOURCE_VERSION+=("$FILE_SOURCE_VERSION")
+        FL_SAXML_VERSION+=("$FILE_SAXML_VERSION")
+        if $QUIET_MODE; then
+            _emit_json file filename "$bn" index "int=$((i + 1))" total "int=$TOTAL" ok "bool=false" status "skipped" \
+                reason "$FILE_SKIP_REASON" source_version "${FILE_SOURCE_VERSION:-null=}"
+        else
+            echo "[$((i + 1))/$TOTAL] $bn"
+            echo "  ⊘ Skipped — $(skip_reason_text "$FILE_SKIP_REASON" "$FILE_SOURCE_VERSION" "$FILE_SAXML_VERSION")"
+        fi
+    done
+    abort_no_importable_files "Preflight (format check)"
+}
+
 # ============================================================================
 # Main Script Execution
 # ============================================================================
@@ -4625,6 +4853,11 @@ if ! acquire_lock; then
     fi
     exit 7
 fi
+
+# Format preflight: an inbox without a single FileMaker 19+ export stops here,
+# before the turbo init, the schema check (auto-heal may delete the master) and
+# any phase run.
+preflight_importable_format
 
 # Initialize the turbo DBs (chunkmap/manifest) only AFTER the lock (A-B2):
 # the CREATE OR REPLACE of the chunkmap must not destroy the plan of a running
@@ -4814,6 +5047,12 @@ if [[ "$MODE" == "batch" ]]; then
 
     echo "Found $TOTAL XML files to process"
     echo ""
+    # batch_start: the total is known here already — preflight, environment
+    # probe and the first parse can take a while before the first file_start,
+    # and without it the web status line would show "0 of ?" meanwhile.
+    if $QUIET_MODE; then
+        _emit_json batch_start total "int=$TOTAL"
+    fi
 
     # 2. Create logs directory (text log + JSON are written at the end of the run).
     mkdir -p "$LOG_DIR"
@@ -4984,6 +5223,7 @@ if [[ "$MODE" == "batch" ]]; then
         FILE_ENC=$(printf '%s\n' "$ERROR_OUTPUT" | grep -oE 'enc=[^)]*' | head -1 | cut -d= -f2)
         FILE_FAILED=false
         FILE_ERR_CAT=""; FILE_ERR_RC=""; FILE_ERR_HINT=""
+        FILE_SKIP_REASON=""; FILE_SOURCE_VERSION=""; FILE_SAXML_VERSION=""
 
         if [ $RESULT -eq 0 ] && $P1_PREPROCESSED && [ -f "$PARTDB_DIR/${i}.unchanged" ]; then
             # Turbo --changed-only: unchanged file (manifest skip) — do not count as an import.
@@ -5007,10 +5247,12 @@ if [[ "$MODE" == "batch" ]]; then
             ((SKIPPED_COUNT++))
             SKIPPED_FILES+=("$BASENAME")
             FILE_STATUS="skipped"
+            parse_skip_reason "$ERROR_OUTPUT"
             if $QUIET_MODE; then
-                $PARALLEL_P1 || _emit_json file filename "$BASENAME" index "int=$CURRENT" total "int=$TOTAL" ok "bool=false" status "skipped"
+                $PARALLEL_P1 || _emit_json file filename "$BASENAME" index "int=$CURRENT" total "int=$TOTAL" ok "bool=false" status "skipped" \
+                    reason "$FILE_SKIP_REASON" source_version "${FILE_SOURCE_VERSION:-null=}"
             else
-                echo "  ⊘ Skipped (unsupported format)"
+                echo "  ⊘ Skipped — $(skip_reason_text "$FILE_SKIP_REASON" "$FILE_SOURCE_VERSION" "$FILE_SAXML_VERSION")"
             fi
         else
             FAILED_FILES+=("$BASENAME")
@@ -5076,6 +5318,8 @@ if [[ "$MODE" == "batch" ]]; then
         FL_DUR+=("$FILE_DURATION");    FL_COMPLETED+=("$(iso_now)")
         FL_ERR_CAT+=("$FILE_ERR_CAT"); FL_ERR_RC+=("$FILE_ERR_RC"); FL_ERR_HINT+=("$FILE_ERR_HINT")
         FL_PEAKRSS+=("$FILE_PEAKRSS_KB"); FL_MINAVAIL+=("$FILE_MINAVAIL_KB")
+        FL_SKIP_REASON+=("$FILE_SKIP_REASON"); FL_SOURCE_VERSION+=("$FILE_SOURCE_VERSION")
+        FL_SAXML_VERSION+=("$FILE_SAXML_VERSION")
 
         # Stop immediately if fail-fast mode is enabled (logs are written).
         if $FILE_FAILED && $FAIL_FAST; then
@@ -5095,6 +5339,16 @@ if [[ "$MODE" == "batch" ]]; then
     # Clean up the part-DB/sidecar working directory (file-parallel OR turbo).
     # FM_T3_KEEP (T-3 probe) holds the artifacts back (otherwise deleted globally here).
     $P1_PREPROCESSED && [ -z "${FM_T3_KEEP:-}" ] && rm -rf "$PARTDB_DIR"
+
+    # ── Gate: no importable file ────────────────────────────────────────────────
+    # Not a single file imported and none taken over unchanged (all skipped by the
+    # root check and/or failed) → there is nothing to build. Stop here with the real
+    # reason instead of running P2–P6 on an empty or stale master. Holds for the
+    # serial, file-parallel and turbo paths alike. A built solution with an extra
+    # unsupported file does not hit it (its other files count as unchanged).
+    if [ "$TOTAL" -gt 0 ] && [ "${SUCCESS_COUNT:-0}" -eq 0 ] && [ "${UNCHANGED_COUNT:-0}" -eq 0 ]; then
+        abort_no_importable_files
+    fi
 
     # ── Short-circuit: nothing changed → skip P2–P6 + sync ──────────────────────
     # (set by run_turbo_pipeline: 0 pending chunks + catalogs already 'ok').
@@ -5405,17 +5659,19 @@ elif [[ "$MODE" == "single" ]]; then
     phase_begin P1 Extract
     FILE_START=$(now_epoch)
     SINGLE_OUT=$(process_single_file "$FILENAME" 2>&1); SINGLE_RC=$?
-    printf '%s\n' "$SINGLE_OUT"
+    printf '%s\n' "$SINGLE_OUT" | grep -v '^  SKIP_REASON='   # machine record stays internal
     FILE_END=$(now_epoch)
     FILE_DURATION=$(awk -v a="$FILE_END" -v b="$FILE_START" 'BEGIN { printf "%.3f", a - b }')
     FILE_ENC=$(printf '%s\n' "$SINGLE_OUT" | grep -oE 'enc=[^)]*' | head -1 | cut -d= -f2)
 
     FILE_ERR_CAT=""; FILE_ERR_RC=""; FILE_ERR_HINT=""
+    FILE_SKIP_REASON=""; FILE_SOURCE_VERSION=""; FILE_SAXML_VERSION=""
     if [ "$SINGLE_RC" -eq 0 ]; then
         SUCCESS_COUNT=1; FILE_STATUS="success"
         echo "SUCCESS: Database created successfully from $FILENAME"
     elif [ "$SINGLE_RC" -eq 4 ]; then
         SKIPPED_COUNT=1; SKIPPED_FILES+=("$BASENAME"); FILE_STATUS="skipped"
+        parse_skip_reason "$SINGLE_OUT"
     else
         FAILED_FILES+=("$BASENAME"); FILE_STATUS="failed"
         classify_error "$SINGLE_RC" "$SINGLE_OUT"
@@ -5438,6 +5694,8 @@ elif [[ "$MODE" == "single" ]]; then
     FL_DUR+=("$FILE_DURATION");    FL_COMPLETED+=("$(iso_now)")
     FL_ERR_CAT+=("$FILE_ERR_CAT"); FL_ERR_RC+=("$FILE_ERR_RC"); FL_ERR_HINT+=("$FILE_ERR_HINT")
     FL_PEAKRSS+=("");              FL_MINAVAIL+=("")   # single-file path: no worker sampler
+    FL_SKIP_REASON+=("$FILE_SKIP_REASON"); FL_SOURCE_VERSION+=("$FILE_SOURCE_VERSION")
+    FL_SAXML_VERSION+=("$FILE_SAXML_VERSION")
 
     # P1 object counts for EXACTLY this file (the DB may already contain other files).
     load_per_file_objects
@@ -5445,6 +5703,9 @@ elif [[ "$MODE" == "single" ]]; then
     P1_DDR=$(pp_num "SELECT COUNT(*) FROM DDR_Calculations WHERE File_Name = '${BASENAME%.xml}'")
     phase_finish "$(group_de "$P1_OBJ") objects (+$(group_de "$P1_DDR") DDR chunks)" \
         "{\"objects_extracted\":$P1_OBJ,\"ddr_calc_chunks\":$P1_DDR}"
+
+    # Root-check skip: same abort (event, error-log section, exit 4) as the batch gate.
+    [ "$SINGLE_RC" -eq 4 ] && abort_no_importable_files
 
     if [ "$SINGLE_RC" -eq 0 ]; then
         # Track the table-only chain: manifest row + catalogs_built marker may only be

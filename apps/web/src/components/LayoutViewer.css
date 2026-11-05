@@ -13,7 +13,7 @@
   container-type: inline-size;
 }
 
-/* Aufklapp-Toggle „▸ Eigenschaften" — ersetzt den früheren Zwischentitel.
+/* Aufklapp-Toggle „Eigenschaften" (DisclosureChevron) — ersetzt den früheren Zwischentitel.
  * Optisch an .type-detail-heading angelehnt, aber als Button (klickbar). */
 .layout-props-toggle {
   display: inline-flex;
@@ -37,13 +37,6 @@
   opacity: 0.5;
 }
 
-.layout-props-caret {
-  display: inline-block;
-  width: 1.1em;
-  font-size: 1.15em;
-  line-height: 1;
-  color: var(--color-text-muted);
-}
 
 /* Ansichten-Chips: verfügbare Ansicht = gefüllt, nicht verfügbare = ausgegraut,
  * Standardansicht = akzentuierter Rahmen. */

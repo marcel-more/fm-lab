@@ -1,0 +1,18 @@
+{
+  "title": "Layouts",
+  "icon": "layout",
+  "description": "Analyses of layouts and their objects — conditional formatting, hide conditions, merge fields, tooltips, triggers, themes and complexity.",
+  "order": 6,
+  "locales": {
+    "de": "Layouts",
+    "es": "Layouts",
+    "fr": "Layouts",
+    "it": "Layout",
+    "ja": "レイアウト",
+    "ko": "레이아웃",
+    "nl": "Lay-outs",
+    "pt": "Layouts",
+    "sv": "Layouter",
+    "zh-Hans": "布局"
+  }
+}

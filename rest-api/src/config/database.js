@@ -281,6 +281,33 @@ const CORE_STUB_DDL = {
      Files BIGINT, Objects BIGINT, Bursts BIGINT, Mod1_Share DOUBLE,
      File_Names VARCHAR[], Object_Types VARCHAR[], Authors VARCHAR[]
    )`,
+  // Such-UNION (Wertelisten-Werte, Script-Step-Texte) und Ordnerbaum
+  // (list_with_folders) — eine leere Lösung liefert leere Treffer statt HTTP 500.
+  // FolderHierarchy ist in konvertierten DBs eine View; der Stub deckt die leere DB.
+  OptionsForValueLists: `CREATE TEMP TABLE OptionsForValueLists (
+     VL_ID BIGINT, VL_Name VARCHAR, VL_UUID VARCHAR, Source_Type VARCHAR, Custom_Values VARCHAR[],
+     Field_ID BIGINT, Field_Name VARCHAR, Field_UUID VARCHAR, TO_ID BIGINT, TO_Name VARCHAR,
+     TO_UUID VARCHAR, Field_Sort BOOLEAN, Secondary_Field_ID BIGINT, Secondary_Field_Name VARCHAR,
+     Secondary_Field_UUID VARCHAR, Secondary_TO_ID BIGINT, Secondary_TO_Name VARCHAR,
+     Secondary_TO_UUID VARCHAR, Secondary_Sort BOOLEAN, External_DS_ID BIGINT,
+     External_DS_Name VARCHAR, External_DS_UUID VARCHAR, External_VL_ID BIGINT,
+     External_VL_Name VARCHAR, File_Name VARCHAR
+   )`,
+  StepsForScripts: `CREATE TEMP TABLE StepsForScripts (
+     Script_ID BIGINT, Script_Name VARCHAR, Script_UUID VARCHAR, Step_Index BIGINT, Step_ID BIGINT,
+     Step_Name VARCHAR, Is_Enabled BOOLEAN, Step_UUID VARCHAR, DDR_Hash VARCHAR, DDR_UUID VARCHAR,
+     Parameters_XML VARCHAR, Step_XML VARCHAR, Parameter_Type VARCHAR, Variable_Name VARCHAR,
+     Calculation_Text VARCHAR, Boolean_Type VARCHAR, Boolean_Value VARCHAR, File_Name VARCHAR,
+     Inserted_Text VARCHAR, Comment_Text VARCHAR, Opens_Window BOOLEAN
+   )`,
+  DDR_ScriptSteps: `CREATE TEMP TABLE DDR_ScriptSteps (
+     Step_UUID VARCHAR, Step_Hash VARCHAR, Step_Text VARCHAR, File_Name VARCHAR
+   )`,
+  FolderHierarchy: `CREATE TEMP TABLE FolderHierarchy (
+     Source_UUID VARCHAR, Item_Name VARCHAR, File_Name VARCHAR, Source_Table VARCHAR,
+     Sequence_ID BIGINT, seq BIGINT, Folder_Type VARCHAR, Is_Separator BOOLEAN,
+     nesting_level HUGEINT, subtype VARCHAR, Parent_Folder_UUID VARCHAR
+   )`,
 };
 
 // Läuft INNERHALB der Pool-Factory → direkt auf der Entry-Verbindung

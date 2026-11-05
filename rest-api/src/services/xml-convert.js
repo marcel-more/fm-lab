@@ -6,7 +6,7 @@ const settingsStore = require('../plugins/settings-store');
 const db = require('../config/database');
 const annoDb = require('../config/annotations-db');
 const environment = require('../config/environment');
-const { readDdrInfoHead } = require('../utils/xml-head');
+const { readXmlHead } = require('../utils/xml-head');
 
 /**
  * XML-Convert Bridge
@@ -76,7 +76,9 @@ const CAN_REVEAL = RUNTIME === 'native'
   && REVEAL_COMMAND != null
   && (process.platform === 'darwin' || commandOnPath(REVEAL_COMMAND));
 
-const RUN_RECORD_SCHEMA_VERSION = 1;
+// 2: skipped_count / skipped_files (Root-Check-Skips zählen nicht mehr als
+//    error_count) und aborted_detail (Zusatzfelder des `aborted`-Events).
+const RUN_RECORD_SCHEMA_VERSION = 2;
 const MAX_EVENTS_RETAINED = 5000;
 
 // Transiente Live-Lebenszyklus-Events (Turbo-Pfad): treiben ausschließlich die
@@ -99,27 +101,38 @@ async function ensureStateDir(solutionId) {
   await fsp.mkdir(stateDirPath(solutionId), { recursive: true });
 }
 
-// DDR-Info-Probe je Datei (Header-Sniff, utils/xml-head.js): true/false aus
-// dem Root-Attribut `Has_DDR_INFO`, null = kein Urteil (v2.0-Format, fremde
-// Datei, Lesefehler). Gecacht über (size, mtime) — der 6-s-Soft-Refresh der
-// Import-Seite und jeder Dashboard-Reload listen das Verzeichnis neu; ohne
-// Cache würde jeder Aufruf N Dateien öffnen. Einträge verschwundener Dateien
-// räumt das Listing nach jedem Durchlauf aus.
-const ddrProbeCache = new Map(); // absoluter Pfad → { key, ddr_info }
+// Kopf-Probe je Datei (Header-Sniff, utils/xml-head.js): Root-Element
+// (FMSaveAsXML | FMDynamicTemplate | null), SaXML- und FileMaker-Version und
+// das DDR-Info-Urteil (true/false aus `Has_DDR_INFO`, null = kein Urteil).
+// Gecacht über (size, mtime) — der 6-s-Soft-Refresh der Import-Seite und jeder
+// Dashboard-Reload listen das Verzeichnis neu; ohne Cache würde jeder Aufruf
+// N Dateien öffnen. Einträge verschwundener Dateien räumt das Listing nach
+// jedem Durchlauf aus.
+const headProbeCache = new Map(); // absoluter Pfad → { key, head }
 
-async function probeDdrInfoCached(filePath, stat) {
+async function probeXmlHeadCached(filePath, stat) {
   const key = `${stat.size}|${stat.mtimeMs}`;
-  const hit = ddrProbeCache.get(filePath);
-  if (hit && hit.key === key) return hit.ddr_info;
-  const ddrInfo = await readDdrInfoHead(filePath);
-  ddrProbeCache.set(filePath, { key, ddr_info: ddrInfo });
-  return ddrInfo;
+  const hit = headProbeCache.get(filePath);
+  if (hit && hit.key === key) return hit.head;
+  const head = await readXmlHead(filePath);
+  headProbeCache.set(filePath, { key, head });
+  return head;
+}
+
+// Exportformat aus dem Root-Element: 'saxml' (FileMaker 19+, importierbar),
+// 'legacy' (FMDynamicTemplate, FileMaker 18 — der Konverter überspringt sie),
+// 'unknown' (kein Root im Kopf: fremde/abgeschnittene Datei, Lesefehler).
+function formatOfRoot(root) {
+  if (root === 'FMSaveAsXML') return 'saxml';
+  if (root === 'FMDynamicTemplate') return 'legacy';
+  return 'unknown';
 }
 
 /**
  * Listet den XML-Eingang einer Lösung (Default: aktive). Liefert
- * `{ filename, size, mtime, mtime_ms, ddr_info }`-Tupel (mtime als ISO-String,
- * ddr_info true|false|null aus der Header-Probe). Fehlende Verzeichnisse →
+ * `{ filename, size, mtime, mtime_ms, ddr_info, format, saxml_version,
+ * source_version }`-Tupel (mtime als ISO-String, ddr_info true|false|null und
+ * format saxml|legacy|unknown aus der Header-Probe). Fehlende Verzeichnisse →
  * leere Liste.
  */
 async function listXmlDirectory(solutionId) {
@@ -139,12 +152,16 @@ async function listXmlDirectory(solutionId) {
     try {
       const filePath = path.join(dir, e.name);
       const stat = await fsp.stat(filePath);
+      const head = await probeXmlHeadCached(filePath, stat);
       files.push({
         filename: e.name,
         size: stat.size,
         mtime: stat.mtime.toISOString(),
         mtime_ms: stat.mtimeMs,
-        ddr_info: await probeDdrInfoCached(filePath, stat),
+        ddr_info: head.ddr_info,
+        format: formatOfRoot(head.root),
+        saxml_version: head.saxml_version,
+        source_version: head.source_version,
       });
     } catch {
       // Datei verschwand zwischen readdir und stat — ignorieren
@@ -153,8 +170,8 @@ async function listXmlDirectory(solutionId) {
   // Cache-Hygiene: nur Einträge DIESES Verzeichnisses (andere Lösungen haben
   // eigene Eingänge) und nur die, deren Datei nicht mehr existiert.
   const seen = new Set(files.map(f => path.join(dir, f.filename)));
-  for (const k of ddrProbeCache.keys()) {
-    if (k.startsWith(dir + path.sep) && !seen.has(k)) ddrProbeCache.delete(k);
+  for (const k of headProbeCache.keys()) {
+    if (k.startsWith(dir + path.sep) && !seen.has(k)) headProbeCache.delete(k);
   }
   files.sort((a, b) => a.filename.localeCompare(b.filename, 'de'));
   return files;
@@ -231,6 +248,15 @@ async function readFilesCatalogAdhoc(solutionId) {
   try {
     instance = await DuckDBInstance.create(dbPath, { access_mode: 'READ_ONLY' });
     connection = await instance.connect();
+    // Leere/unkonvertierte Lösung: FilesCatalog fehlt — der Normalfall, kein
+    // Fehler. Still leer zurück; die Warnung unten bleibt echten Lesefehlern
+    // (gesperrte Datei, Korruption) vorbehalten.
+    const probe = await connection.prepare(
+      "SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_name = 'FilesCatalog'"
+    );
+    const probeRows = await (await probe.run()).getRowObjectsJS();
+    try { probe.destroySync(); } catch { /* freed */ }
+    if (Number(probeRows[0]?.n) === 0) return new Map();
     const stmt = await connection.prepare(FILES_CATALOG_SQL);
     const result = await stmt.run();
     const rows = await result.getRowObjectsJS();
@@ -250,6 +276,7 @@ function stripXmlSuffix(name) {
 }
 
 const STATUS_EMOJI = {
+  unsupported: '⛔',
   current: '✅',
   outdated: '✴️',
   new: '➡️',
@@ -258,10 +285,57 @@ const STATUS_EMOJI = {
 /**
  * Aggregiert die Datei-Liste mit dem FilesCatalog zu Status-Zeilen.
  * Emoji-Logik:
+ *   - Exportformat FileMaker 18 (legacy)         → 'unsupported' ⛔ (vor allen anderen)
  *   - in DB UND Datei-Mtime ≤ Import-Timestamp  → 'current'  ✅
  *   - in DB UND Datei-Mtime >  Import-Timestamp → 'outdated' ✴️
  *   - nicht in DB                                → 'new'      ➡️
  */
+/**
+ * Status-Zeilen der Inbox aus Datei-Liste (listXmlDirectory) und FilesCatalog-
+ * Map (filename-Basis → { imported_at, imported_ms, has_ddr_info }). Rein — kein
+ * I/O, damit die Status-Logik ohne Lösung/DB testbar bleibt.
+ */
+function buildStatusRows(files, catalog) {
+  return files.map(f => {
+    const base = stripXmlSuffix(f.filename).normalize('NFC').toLowerCase();
+    const entry = catalog.get(base);
+    const legacy = f.format === 'legacy';
+    let status;
+    if (legacy) {
+      status = 'unsupported';
+    } else if (!entry) {
+      status = 'new';
+    } else if (entry.imported_ms != null && f.mtime_ms > entry.imported_ms) {
+      status = 'outdated';
+    } else {
+      status = 'current';
+    }
+    // Nicht unterstützte Dateien tragen keine DDR-Aussage: das Format kennt das
+    // Flag nicht, und der Katalogwert beschriebe eine andere (frühere) Fassung.
+    const ddrInfo = legacy ? null : (f.ddr_info != null ? f.ddr_info : (entry?.has_ddr_info ?? null));
+    return {
+      filename: f.filename,
+      size: f.size,
+      mtime: f.mtime,
+      status,
+      emoji: STATUS_EMOJI[status],
+      imported_at: entry?.imported_at || null,
+      // Vorrang Header-Probe (beschreibt die Datei, die der nächste Lauf
+      // importieren würde) → Katalogwert der importierten Fassung → null.
+      ddr_info: ddrInfo,
+      // Nur der Mangel wird angezeigt: die Spalte bleibt für Dateien MIT
+      // DDR-Info (und für die ohne Urteil, ddr_info === null) leer, damit die
+      // wenigen Ausreißer in einer langen Liste sofort ins Auge fallen.
+      ddr_flag: ddrInfo === false ? 'missing' : null,
+      format: f.format,
+      saxml_version: f.saxml_version,
+      source_version: f.source_version,
+      // Badge-Spalte „Format": nur der nicht unterstützte Fall, analog ddr_flag.
+      format_flag: legacy ? 'fm18' : null,
+    };
+  });
+}
+
 /**
  * Ampel-Band für eine Coverage-Kennzahl: ≥warn → ok, ≥crit → warn, sonst critical.
  */
@@ -441,44 +515,26 @@ async function getStatus(ctx, solutionId) {
   // Billige Running-Detektion (Lock+PID ODER aktiver Hub-Lauf der Lösung) +
   // flaches active_run (phase/pct/processed/total) für den 6-s-Soft-Refresh → die
   // UI weiß beim Eintritt sofort „es läuft" und kann auf /convert/stream abonnieren.
+  // running_source: 'api' = hub run with live progress; otherwise the lock's source
+  // ('cli' = a terminal run such as tools/init.sh, 'cluster' = re-clustering) — those
+  // runs have no event stream, so the UI shows a waiting notice instead of a progress bar.
   let running = false;
+  let runningSource = null;
   let activeRun = null;
   try {
     const hub = require('./xml-convert-hub');
-    running = isRunning(id) || hub.isActive(id);
+    const hubActive = hub.isActive(id);
+    const lock = hubActive ? null : readLockSync(id);
+    const lockAlive = lock != null && lockOwnerAlive(lock.pid);
+    running = hubActive || lockAlive;
+    runningSource = hubActive ? 'api' : (lockAlive ? (lock.source || 'cli') : null);
     activeRun = hub.getActiveRunMeta(id);
   } catch (err) {
     console.warn(`[xml-convert] running-detection skipped: ${err.message}`);
   }
 
-  const rows = files.map(f => {
-    const base = stripXmlSuffix(f.filename).normalize('NFC').toLowerCase();
-    const entry = catalog.get(base);
-    let status;
-    if (!entry) {
-      status = 'new';
-    } else if (entry.imported_ms != null && f.mtime_ms > entry.imported_ms) {
-      status = 'outdated';
-    } else {
-      status = 'current';
-    }
-    const ddrInfo = f.ddr_info != null ? f.ddr_info : (entry?.has_ddr_info ?? null);
-    return {
-      filename: f.filename,
-      size: f.size,
-      mtime: f.mtime,
-      status,
-      emoji: STATUS_EMOJI[status],
-      imported_at: entry?.imported_at || null,
-      // Vorrang Header-Probe (beschreibt die Datei, die der nächste Lauf
-      // importieren würde) → Katalogwert der importierten Fassung → null.
-      ddr_info: ddrInfo,
-      // Nur der Mangel wird angezeigt: die Spalte bleibt für Dateien MIT
-      // DDR-Info (und für die ohne Urteil, ddr_info === null) leer, damit die
-      // wenigen Ausreißer in einer langen Liste sofort ins Auge fallen.
-      ddr_flag: ddrInfo === false ? 'missing' : null,
-    };
-  });
+  const rows = buildStatusRows(files, catalog);
+  const unsupportedCount = rows.filter(r => r.status === 'unsupported').length;
 
   const manifest = solutions.readManifest(id) || {};
   return {
@@ -491,9 +547,12 @@ async function getStatus(ctx, solutionId) {
     can_reveal: CAN_REVEAL,
     db_empty: dbEmpty,
     files: rows,
+    unsupported_count: unsupportedCount,
+    importable_count: rows.length - unsupportedCount,
     last_run: lastRun,
     semantic_names: semanticNames,
     running,
+    running_source: runningSource,
     active_run: activeRun,
   };
 }
@@ -576,6 +635,22 @@ async function readLastRunMeta(solutionId) {
     processed: r.processed,
     total: r.total,
     error_count: r.error_count,
+    ...skipFields(r),
+  };
+}
+
+/**
+ * Skip-/Abbruch-Felder eines Run-Records. Schema-1-Records kennen keine
+ * getrennte Skip-Zählung (dort stecken Skips in error_count) → null statt
+ * einer nachträglichen Umrechnung.
+ */
+function skipFields(r) {
+  const v2 = Number(r.$schema_version) >= 2;
+  return {
+    skipped_count: v2 && typeof r.skipped_count === 'number' ? r.skipped_count : null,
+    skipped_files: v2 && Array.isArray(r.skipped_files) ? r.skipped_files : null,
+    aborted_reason: r.aborted_reason ?? null,
+    aborted_detail: r.aborted_detail ?? null,
   };
 }
 
@@ -591,6 +666,7 @@ async function readLastRunLog(solutionId) {
     processed: r.processed,
     total: r.total,
     error_count: r.error_count,
+    ...skipFields(r),
     events: Array.isArray(r.events) ? r.events : [],
   };
 }
@@ -624,14 +700,77 @@ function newRunRecord() {
     ok: null,
     exit_code: null,
     // Set when the converter stops itself cleanly (event `aborted`): 'oom' (out of
-    // memory) or 'incomplete' (a batch-wide phase failed). Lets the status endpoint and
-    // a page reload show the memory-specific message instead of a generic failure.
+    // memory), 'incomplete' (a batch-wide phase failed) or 'no_importable_files'
+    // (every file skipped/failed, stop after Phase 1). Lets the status endpoint and
+    // a page reload show the specific message instead of a generic failure.
     aborted_reason: null,
+    // Extra fields of the `aborted` event (no_importable_files: total, skipped,
+    // failed, legacy, source_versions), null for the other reasons.
+    aborted_detail: null,
     processed: 0,
     total: 0,
+    // Failed files only — root-check skips (unsupported format) count separately.
     error_count: 0,
+    skipped_count: 0,
+    skipped_files: [], // [{ filename, reason, source_version }]
     events: [],
   };
+}
+
+/**
+ * Zieht die Zähler und Abbruch-Felder eines Run-Records aus einem Konverter-
+ * Event hoch, damit der Status-Endpoint ohne Event-Replay auskommt. Rein —
+ * mutiert nur `record`.
+ */
+function applyRunEvent(record, evt) {
+  // Counter aus bekannten Events hochziehen, damit der Status-Endpoint
+  // ohne Event-Replay auskommt.
+  if (evt.event === 'batch_start' || evt.event === 'file_start') {
+    // Trägt die Gesamtzahl schon vor dem ersten abgeschlossenen File —
+    // ohne das stünde `total` bis zum ersten `file`-Event auf 0.
+    if (typeof evt.total === 'number') record.total = evt.total;
+  }
+  if (evt.event === 'file') {
+    if (typeof evt.total === 'number') record.total = evt.total;
+    if (typeof evt.index === 'number' && evt.ok !== false) {
+      record.processed = Math.max(record.processed, evt.index);
+    }
+    if (evt.status === 'skipped') {
+      record.skipped_count += 1;
+      record.skipped_files.push({
+        filename: evt.filename ?? null,
+        reason: evt.reason ?? null,
+        source_version: evt.source_version ?? null,
+      });
+    } else if (evt.ok === false) {
+      record.error_count += 1;
+    }
+  }
+  if (evt.event === 'log' && evt.level === 'error') {
+    // Echte Error-Events zählen ebenfalls — aber nicht doppelt mit `file`.
+  }
+  if (evt.event === 'aborted' && typeof evt.reason === 'string') {
+    // Clean self-abort from the converter (memory / incomplete build / no importable
+    // file). Carried into the record so a late subscriber or a reload still sees
+    // the reason.
+    record.aborted_reason = evt.reason;
+    if (evt.reason === 'no_importable_files') {
+      record.aborted_detail = {
+        stage: evt.stage ?? null,
+        total: evt.total ?? null,
+        skipped: evt.skipped ?? null,
+        failed: evt.failed ?? null,
+        legacy: evt.legacy ?? null,
+        source_versions: evt.source_versions
+          ? String(evt.source_versions).split(',').filter(Boolean)
+          : [],
+      };
+    }
+  }
+  if (evt.event === 'done') {
+    record.ok = evt.ok !== false;
+    if (typeof evt.exit_code === 'number') record.exit_code = evt.exit_code;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -769,32 +908,7 @@ function runConverter({ onEvent, signal, changedOnly = true, solution } = {}) {
         }
       }
 
-      // Counter aus bekannten Events hochziehen, damit der Status-Endpoint
-      // ohne Event-Replay auskommt.
-      if (evt.event === 'file_start') {
-        // Trägt die Gesamtzahl schon vor dem ersten abgeschlossenen File —
-        // ohne das stünde `total` bis zum ersten `file`-Event auf 0.
-        if (typeof evt.total === 'number') record.total = evt.total;
-      }
-      if (evt.event === 'file') {
-        if (typeof evt.total === 'number') record.total = evt.total;
-        if (typeof evt.index === 'number' && evt.ok !== false) {
-          record.processed = Math.max(record.processed, evt.index);
-        }
-        if (evt.ok === false) record.error_count += 1;
-      }
-      if (evt.event === 'log' && evt.level === 'error') {
-        // Echte Error-Events zählen ebenfalls — aber nicht doppelt mit `file`.
-      }
-      if (evt.event === 'aborted' && typeof evt.reason === 'string') {
-        // Clean self-abort from the converter (memory / incomplete build). Carried into
-        // the record so a late subscriber or a reload still sees the reason.
-        record.aborted_reason = evt.reason;
-      }
-      if (evt.event === 'done') {
-        record.ok = evt.ok !== false;
-        if (typeof evt.exit_code === 'number') record.exit_code = evt.exit_code;
-      }
+      applyRunEvent(record, evt);
 
       // Transiente Events ändern den Record nicht → kein Persist nötig (spart bei
       // der import_progress-Flut tausende unnötige Schreibvorgänge). Live-Weitergabe
@@ -878,6 +992,10 @@ module.exports = {
   getDirectoryListing,
   revealXmlDir,
   readLastRunLog,
+  buildStatusRows,
+  applyRunEvent,
+  newRunRecord,
+  skipFields,
   isRunning,
   scanRunningLocks,
   runConverter,

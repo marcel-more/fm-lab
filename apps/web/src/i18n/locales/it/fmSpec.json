@@ -137,6 +137,52 @@
         "pasteDropped": "scartata all'incolla",
         "pasteDroppedHint": "FileMaker scarta questa opzione all'incolla qualunque sia il valore — un generatore la omette, il riferimento conserva il segnaposto per la lettura."
       },
+      "repeatGroups": "Gruppi di ripetizione (elenchi)",
+      "rg": {
+        "group": "Gruppo",
+        "container": "Contenitore",
+        "form": "Forma dell'elemento",
+        "fixedSlots": "{{n}} slot fissi",
+        "nestedIn": "annidato in {{parent}}",
+        "countAttr": "attributo di conteggio {{attr}}"
+      },
+      "knownBugHint": "Bug noto di FileMaker — una classe di avviso, non una regola di validità: il passo è valido, il rischio è la serializzazione di FileMaker stessa.",
+      "saxmlGapHint": "Lacuna dell'esportazione SaXML — l'esportazione non contiene mai questo slot, quindi un catalogo costruito a partire da essa non può mostrarlo; può farlo solo una copia dagli appunti. Non è un difetto dello snippet.",
+      "constraintCoverageHint": "Si applica solo alla serializzazione di FileMaker {{coverage}}",
+      "variableTargetMarker": "Marcatore di destinazione variabile",
+      "variableTargetMarkerHint": "Contiene un marcatore <Text/> vuoto a livello di passo esattamente quando lo slot di destinazione contiene una variabile invece di un riferimento a un campo.",
+      "consumerNote": "Nota per i consumatori",
+      "skeletons": "Involucri scheletro",
+      "sk": {
+        "in": "in {{parent}}",
+        "hull": "involucro — persiste con il contenuto predefinito anche se non configurato",
+        "hull_strip_children": "involucro — mantiene i suoi attributi, i figli non compilati vengono rimossi",
+        "condition": "solo con {{cond}}",
+        "help": "Elementi che FileMaker mantiene nello snippet anche quando al loro interno non è configurato nulla; mostrati come l'albero che formano, nell'ordine del modello. Un generatore li ripristina dopo aver rimosso il contenuto non compilato, un lettore può scartarne il contenuto predefinito."
+      },
+      "bindings": "Elementi vincolati a opzioni",
+      "bd": {
+        "requires": "esiste solo con {{cond}}",
+        "excludes": "scartato con {{cond}}",
+        "requiresOption": "esiste solo mentre {{option}} è impostata",
+        "excludesOption": "scartato mentre {{option}} è impostata",
+        "suppressEmpty": "l'elemento vuoto non viene mai emesso, in modo deterministico (residuo della finestra di dialogo)",
+        "help": "Elementi la cui presenza dipende da un'altra opzione. Più valori di un'opzione formano l'insieme in cui l'elemento esiste (o viene scartato): l'elemento viene scritto per ciascuno di essi e rimosso per ogni altro valore."
+      },
+      "mirrors": "Valori speculari",
+      "mr": {
+        "source_present": "copia di {{option}} — scritta da FileMaker ogni volta che la sorgente è impostata",
+        "help": "Valori che FileMaker scrive una seconda volta in un altro punto del passo e mantiene sincronizzati all'incolla. L'opzione sorgente è la verità: un generatore la copia, un lettore tratta la copia come ridondanza."
+      },
+      "implications": "Implicazioni della notazione",
+      "imp": {
+        "option_present": "opzione presente",
+        "value_form": "forma di riferimento",
+        "keyword": "parola chiave",
+        "mode_switch": "selettore di modalità",
+        "default": "modalità predefinita (senza etichetta del selettore)",
+        "help": "Opzioni che la notazione testuale canonica lascia implicite: una parola chiave, una forma di riferimento o una modalità etichettata implica il valore di un'altra opzione quando il passo viene analizzato."
+      },
       "coverage": "Copertura della forma",
       "coverageHint": "Versione di FileMaker rispetto alle cui evidenze accoppiate di esportazione e appunti è verificata questa forma. Una riga contrassegnata con una versione è un override di quella copertura e sostituisce la riga standard con la stessa chiave.",
       "coverageBase": "base",

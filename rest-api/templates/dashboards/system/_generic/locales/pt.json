@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Resultado de consulta personalizada",
+    "description": "Renderizador genérico para qualquer consulta."
+  },
+  "layout": {}
+}

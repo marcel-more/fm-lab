@@ -1,0 +1,78 @@
+{
+  "locked": true,
+  "id": "password_field_plaintext_display",
+  "version": "1.0.0",
+  "title": "Password field displayed as plain text",
+  "description": "Security rule — a password / PIN field is shown on a layout by an object that is not a concealed edit box, so the value is rendered in clear text. Listed per layout object (the same field can be exposed on several layouts).\n\nComplements the storage-level rule (password_field_plaintext): here the concern is the on-screen rendering, which is decided at the layout-object level, not on the field.",
+  "author": "fm-lab rules",
+  "icon": "eye",
+  "category": "security",
+  "tags": [
+    "rule",
+    "security",
+    "layout"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "warning",
+    "category": "security",
+    "rationale": "A secret shown in a plain edit box is readable over the shoulder, in screenshots and screen shares — the field is never masked.",
+    "remediation": "Set the field object to a concealed edit box (verschlüsseltes Bearbeitungsfeld), or do not place the secret on a layout at all.",
+    "meta": {
+      "name": "Password field displayed as plain text",
+      "author": "fm-lab rules",
+      "source": "fm-lab",
+      "url": null,
+      "description": "Security rule — password / PIN fields rendered unmasked on a layout (any object that is not a concealed edit box).",
+      "created": "2026-07-03",
+      "references": []
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Layout"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {}
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Password field displayed as plain text"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

@@ -66,7 +66,7 @@ A value list's own definition produces the outgoing edges; controls, validations
 
 - **XML schema:** [XML ValueListCatalog](../../xml/catalogs/XML%20ValueListCatalog.md) (identity + source kind) · [XML OptionsForValueLists](../../xml/catalogs/XML%20OptionsForValueLists.md) (definition details) — `Structure/AddAction` branch
 - **DB schema:** [ValueListCatalog](../catalog-tables/ValueListCatalog.md) · [OptionsForValueLists](../catalog-tables/OptionsForValueLists.md)
-- **Detail view template:** `rest-api/templates/sql/object_details_valuelist.sql`, served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md)
+- **Detail view template:** `rest-api/templates/queries/system/object-details/object_details_valuelist.sql`, served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md)
 - **Frontend:** object list at `http://localhost:5173/?type=ValueList`
 
 **See also:** [Object Types](../object-catalog/Object%20Types.md) · [Field](Field.md) · [LayoutObject](LayoutObject.md) · [ExternalDataSource](ExternalDataSource.md) · [Link Roles and Subroles](../object-catalog/Link%20Roles%20and%20Subroles.md)

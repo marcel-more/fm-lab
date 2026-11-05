@@ -1,0 +1,40 @@
+{
+  "manifest": {
+    "title": "Healthchecks",
+    "description": "La santé de toute la solution en un coup d'œil : résume par état les résultats calculés de tous les tableaux de bord de vérification, groupés par rubrique ; chaque ligne mène à son tableau de bord."
+  },
+  "layout": {
+    "results_kpi_strip.props.items[0].label": "Vérifications",
+    "results_kpi_strip.props.items[1].label": "Erreurs",
+    "results_kpi_strip.props.items[2].label": "Avertissements",
+    "results_kpi_strip.props.items[3].label": "OK",
+    "results_kpi_strip.props.items[4].label": "Neutre",
+    "results_kpi_strip.props.items[5].label": "En attente",
+    "results_kpi_strip.props.items[6].label": "Échouées",
+    "results_kpi_strip.props.items[7].label": "Résultats",
+    "results_kpi_strip.props.items[8].label": "Exécutées",
+    "results_run.props.label": "Exécuter toutes les vérifications",
+    "rp_performance_card.props.title": "Performance",
+    "rp_performance_list.props.empty.message": "Rien à signaler.",
+    "rp_error_prone_card.props.title": "Sujet aux erreurs",
+    "rp_error_prone_list.props.empty.message": "Rien à signaler.",
+    "rp_security_card.props.title": "Sécurité",
+    "rp_security_list.props.empty.message": "Rien à signaler.",
+    "rp_unused_code_card.props.title": "Code inutilisé",
+    "rp_unused_code_list.props.empty.message": "Rien à signaler.",
+    "rp_code_style_card.props.title": "Style de code",
+    "rp_code_style_list.props.empty.message": "Rien à signaler.",
+    "rp_layout_quality_card.props.title": "Qualité des Layouts",
+    "rp_layout_quality_list.props.empty.message": "Rien à signaler.",
+    "rp_documentation_card.props.title": "Documentation",
+    "rp_documentation_list.props.empty.message": "Rien à signaler.",
+    "rp_best_practices_card.props.title": "Bonnes pratiques",
+    "rp_best_practices_list.props.empty.message": "Rien à signaler.",
+    "rp_platform_card.props.title": "Compatibilité des plateformes",
+    "rp_platform_list.props.empty.message": "Rien à signaler.",
+    "rp_metadata_integrity_card.props.title": "Intégrité des métadonnées",
+    "rp_metadata_integrity_list.props.empty.message": "Rien à signaler.",
+    "rp_developer_workflow_card.props.title": "Flux de travail du développeur",
+    "rp_developer_workflow_list.props.empty.message": "Rien à signaler."
+  }
+}

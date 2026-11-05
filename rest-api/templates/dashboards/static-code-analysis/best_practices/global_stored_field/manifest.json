@@ -1,0 +1,77 @@
+{
+  "id": "global_stored_field",
+  "version": "1.0.0",
+  "title": "Global storage field",
+  "description": "Best-practice rule — flags fields with global storage. Globals are shared per session and per user; overusing them makes state hard to reason about.",
+  "author": "fm-lab rules",
+  "icon": "globe",
+  "category": "best_practices",
+  "tags": [
+    "rule",
+    "pmd",
+    "best_practices"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "info",
+    "category": "best_practices",
+    "rationale": "Global fields are convenient but hide shared mutable state across the whole session.",
+    "remediation": "Prefer variables / parameters for transient state; reserve globals for true constants.",
+    "meta": {
+      "name": "Global storage field",
+      "author": "fm-lab rules",
+      "source": "fm-lab",
+      "url": null,
+      "description": "Best-practice rule — flags fields with global storage. Globals are shared per session and per user; overusing them makes state hard to reason about.",
+      "created": "2026-07-01",
+      "references": []
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Field"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {}
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Global storage field"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

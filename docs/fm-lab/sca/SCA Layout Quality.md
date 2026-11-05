@@ -1,6 +1,6 @@
 # SCA Layout Quality
 
-**Rubric:** [Static Code Analysis](../Wiki/Static%20Code%20Analysis.md) · 17 rules + 1 explorer · `rest-api/templates/dashboards-custom/static-code-analysis/layout_quality/`
+**Rubric:** [Static Code Analysis](../Wiki/Static%20Code%20Analysis.md) · 17 rules + 1 explorer · `rest-api/templates/dashboards/static-code-analysis/layout_quality/`
 
 Layout-quality rules inspect what the Layout mode inspector won't tell you at scale: objects referencing deleted fields or value lists, objects lost outside their parent or buried behind a portal, calculations that never evaluate, Classic-theme leftovers, and geometry defects like stacked duplicates or off-layout objects. Because the catalog stores every layout object with its type, geometry, nesting and references, these checks run across thousands of layouts in one query.
 

@@ -81,7 +81,7 @@ Values marked *(corpus)* are the literals observed in the ooe-fm test corpus; th
 
 - **XML schema:** [XML RelationshipCatalog](../../xml/catalogs/XML%20RelationshipCatalog.md) — `Structure/AddAction` branch, one `<Relationship>` per graph edge
 - **DB schema:** [RelationshipCatalog](../catalog-tables/RelationshipCatalog.md) (one row per join predicate)
-- **Detail view template:** `rest-api/templates/sql/object_details_relationship.sql` (served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md))
+- **Detail view template:** `rest-api/templates/queries/system/object-details/object_details_relationship.sql` (served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md))
 - **Frontend:** object list at `http://localhost:5173/?type=Relationship`
 
 **See also:** [Object Types](../object-catalog/Object%20Types.md) · [TableOccurrence](TableOccurrence.md) · [BaseTable](BaseTable.md) · [Field](Field.md) · [Link Roles and Subroles](../object-catalog/Link%20Roles%20and%20Subroles.md)

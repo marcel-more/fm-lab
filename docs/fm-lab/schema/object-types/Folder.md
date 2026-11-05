@@ -53,7 +53,7 @@ Full role definitions: [Link Roles and Subroles](../object-catalog/Link%20Roles%
 
 - **XML schema:** no catalog of its own — derived from flagged entries in [XML ScriptCatalog](../../xml/catalogs/XML%20ScriptCatalog.md), [XML LayoutCatalog](../../xml/catalogs/XML%20LayoutCatalog.md) and [XML CustomFunctionsCatalog](../../xml/catalogs/XML%20CustomFunctionsCatalog.md)
 - **DB schema:** rows in [ScriptCatalog](../catalog-tables/ScriptCatalog.md) / [Layouts](../catalog-tables/Layouts.md) / [CustomFunctionsCatalog](../catalog-tables/CustomFunctionsCatalog.md) (`Folder_Type`, `Is_Separator`); reconstructed tree in the internal `FolderHierarchy` view
-- **Detail view template:** `rest-api/templates/sql/object_details_folder.sql` (served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md)) — distinguishes the subtype via the source table and labels it *Script Folder* / *Layout Folder* / *CustomFunction Folder*
+- **Detail view template:** `rest-api/templates/queries/system/object-details/object_details_folder.sql` (served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md)) — distinguishes the subtype via the source table and labels it *Script Folder* / *Layout Folder* / *CustomFunction Folder*
 - **Frontend:** object list at `http://localhost:5173/?type=Folder`
 
 **See also:** [Object Types](../object-catalog/Object%20Types.md) · [Script](Script.md) · [Layout](Layout.md) · [Link Roles and Subroles](../object-catalog/Link%20Roles%20and%20Subroles.md)

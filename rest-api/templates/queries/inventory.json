@@ -1,0 +1,271 @@
+{
+  "version": 1,
+  "queries": [
+    {
+      "name": "list_with_folders",
+      "path": "modules/hierarchy/list_with_folders.sql",
+      "area": "module"
+    },
+    {
+      "name": "display_layout_meta",
+      "path": "modules/layout-view/display_layout_meta.sql",
+      "area": "module"
+    },
+    {
+      "name": "display_layout_objects_data",
+      "path": "modules/layout-view/display_layout_objects_data.sql",
+      "area": "module"
+    },
+    {
+      "name": "display_layout_parts_data",
+      "path": "modules/layout-view/display_layout_parts_data.sql",
+      "area": "module"
+    },
+    {
+      "name": "display_layout_triggers",
+      "path": "modules/layout-view/display_layout_triggers.sql",
+      "area": "module"
+    },
+    {
+      "name": "object_change_meta",
+      "path": "modules/object-detail/object_change_meta.sql",
+      "area": "module"
+    },
+    {
+      "name": "graph_depth_profile",
+      "path": "system/graph/graph_depth_profile.sql",
+      "area": "system"
+    },
+    {
+      "name": "graph_logical_links",
+      "path": "system/graph/graph_logical_links.sql",
+      "area": "system"
+    },
+    {
+      "name": "graph_node_activity",
+      "path": "system/graph/graph_node_activity.sql",
+      "area": "system"
+    },
+    {
+      "name": "graph_overview_aggregate",
+      "path": "system/graph/graph_overview_aggregate.sql",
+      "area": "system"
+    },
+    {
+      "name": "graph_overview_leaf",
+      "path": "system/graph/graph_overview_leaf.sql",
+      "area": "system"
+    },
+    {
+      "name": "graph_overview_topology",
+      "path": "system/graph/graph_overview_topology.sql",
+      "area": "system"
+    },
+    {
+      "name": "graph_search",
+      "path": "system/graph/graph_search.sql",
+      "area": "system"
+    },
+    {
+      "name": "graph_subgraph",
+      "path": "system/graph/graph_subgraph.sql",
+      "area": "system"
+    },
+    {
+      "name": "graph_trace",
+      "path": "system/graph/graph_trace.sql",
+      "area": "system"
+    },
+    {
+      "name": "graph_trace_entries",
+      "path": "system/graph/graph_trace_entries.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_basetable",
+      "path": "system/object-details/object_details_basetable.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_builtinfunction",
+      "path": "system/object-details/object_details_builtinfunction.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_calculation",
+      "path": "system/object-details/object_details_calculation.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_calculation_tokens",
+      "path": "system/object-details/object_details_calculation_tokens.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_customfunction",
+      "path": "system/object-details/object_details_customfunction.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_customfunction_tokens",
+      "path": "system/object-details/object_details_customfunction_tokens.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_custommenu",
+      "path": "system/object-details/object_details_custommenu.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_custommenu_tokens",
+      "path": "system/object-details/object_details_custommenu_tokens.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_custommenuitem",
+      "path": "system/object-details/object_details_custommenuitem.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_custommenuitem_tokens",
+      "path": "system/object-details/object_details_custommenuitem_tokens.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_field",
+      "path": "system/object-details/object_details_field.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_field_tokens",
+      "path": "system/object-details/object_details_field_tokens.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_folder",
+      "path": "system/object-details/object_details_folder.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_generic",
+      "path": "system/object-details/object_details_generic.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_layout",
+      "path": "system/object-details/object_details_layout.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_layoutobject",
+      "path": "system/object-details/object_details_layoutobject.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_layoutobject_step_tokens",
+      "path": "system/object-details/object_details_layoutobject_step_tokens.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_plugincomponent",
+      "path": "system/object-details/object_details_plugincomponent.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_pluginfunction",
+      "path": "system/object-details/object_details_pluginfunction.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_privilegeset",
+      "path": "system/object-details/object_details_privilegeset.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_relationship",
+      "path": "system/object-details/object_details_relationship.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_script",
+      "path": "system/object-details/object_details_script.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_script_tokens",
+      "path": "system/object-details/object_details_script_tokens.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_scriptstep_tokens",
+      "path": "system/object-details/object_details_scriptstep_tokens.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_scriptsteptype",
+      "path": "system/object-details/object_details_scriptsteptype.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_theme",
+      "path": "system/object-details/object_details_theme.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_valuelist",
+      "path": "system/object-details/object_details_valuelist.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_variable",
+      "path": "system/object-details/object_details_variable.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_count_by_type",
+      "path": "system/object_count_by_type.sql",
+      "area": "system"
+    },
+    {
+      "name": "back_references",
+      "path": "system/references/back_references.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_references_layoutobject_step",
+      "path": "system/references/object_references_layoutobject_step.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_references_script",
+      "path": "system/references/object_references_script.sql",
+      "area": "system"
+    },
+    {
+      "name": "relationship_graph_fields",
+      "path": "system/relationship-graph/relationship_graph_fields.sql",
+      "area": "system"
+    },
+    {
+      "name": "relationship_graph_relationships",
+      "path": "system/relationship-graph/relationship_graph_relationships.sql",
+      "area": "system"
+    },
+    {
+      "name": "relationship_graph_tos",
+      "path": "system/relationship-graph/relationship_graph_tos.sql",
+      "area": "system"
+    }
+  ],
+  "folders": [
+    "modules",
+    "modules/hierarchy",
+    "modules/layout-view",
+    "modules/object-detail",
+    "system",
+    "system/graph",
+    "system/object-details",
+    "system/references",
+    "system/relationship-graph"
+  ]
+}

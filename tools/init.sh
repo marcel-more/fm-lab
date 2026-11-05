@@ -609,6 +609,36 @@ XML_SEARCH_PATHS=("$XML_INBOX")
 [ -d "$PROJECT_ROOT/xml" ] && XML_SEARCH_PATHS+=("$PROJECT_ROOT/xml")
 XML_FILES=$(find "${XML_SEARCH_PATHS[@]}" -maxdepth 1 -name "*.xml" 2>/dev/null | wc -l | tr -d ' ')
 
+# Start (or restart) the servers and record what actually happened in the summary.
+# --restart-running: the bootstrap above just ran npm install + build:shared, and a
+# server started before it keeps serving the old build (Vite even keeps an import of
+# packages/shared that failed while dist/ was missing) — so running servers are restarted
+# instead of re-attached. start-servers.sh reports the per-server state via a status file.
+start_servers() {
+  local status_file api_state="" fe_state="" line
+  status_file=$(mktemp "${TMPDIR:-/tmp}/fmlab-start-status.XXXXXX")
+  if ! FMLAB_START_STATUS_FILE="$status_file" bash "$SCRIPT_DIR/start-servers.sh" --restart-running; then
+    rm -f "$status_file"
+    return 1
+  fi
+  while IFS= read -r line; do
+    case "$line" in
+      api=*)      api_state=${line#api=} ;;
+      frontend=*) fe_state=${line#frontend=} ;;
+    esac
+  done < "$status_file"
+  rm -f "$status_file"
+  if [ "$api_state" = "running" ] || [ "$fe_state" = "running" ]; then
+    summary_warn "servers           already running, not restarted (api: ${api_state:-?}, frontend: ${fe_state:-?}) — restart with tools/stop-servers.sh && tools/start-servers.sh"
+  else
+    local label="servers started"
+    if [ "$api_state" = "restarted" ] || [ "$fe_state" = "restarted" ]; then
+      label="servers restarted"
+    fi
+    summary_add "$(printf '%-18s' "$label")http://localhost:3003  |  http://localhost:5173"
+  fi
+}
+
 print_summary() {
   local elapsed=$((SECONDS - INIT_START))
   echo ""
@@ -634,8 +664,7 @@ if [ "$XML_FILES" -eq 0 ]; then
   # immediately (export instructions → open folder → one-click convert, live progress) —
   # the native path reaches the same betriebsbereit UX as Docker.
   header "Starting servers"
-  if [ -f "$PROJECT_ROOT/rest-api/db/fm_catalog.duckdb" ] && bash "$SCRIPT_DIR/start-servers.sh"; then
-    summary_add "servers started   http://localhost:3003  |  http://localhost:5173"
+  if [ -f "$PROJECT_ROOT/rest-api/db/fm_catalog.duckdb" ] && start_servers; then
     print_summary
     echo ""
     echo "  → Open http://localhost:5173 — the guided empty-state walks you through"
@@ -663,21 +692,26 @@ fi
 # bootstrap.sh already seeded the placeholder catalog, so the READ_ONLY API boots now
 # and the web client is up while the convert runs. In production mode (--batch) the
 # convert syncs the finished catalog to the API copy and triggers /api/admin/reload, so
-# the already-running server picks up the real data automatically — no restart, and the
-# progress is watchable in the browser instead of a blocking terminal phase (F-A4).
+# the already-running server picks up the real data automatically — no restart. The
+# web client sees the run's lock: it shows "running in the terminal" instead of offering
+# a second start (a terminal run sends no events, so its progress shows only here).
 CURRENT_STEP="starting servers"
 header "Starting servers"
-bash "$SCRIPT_DIR/start-servers.sh"
-summary_add "servers started   http://localhost:3003  |  http://localhost:5173"
+start_servers
 
 # --batch picks the adaptive default itself (Turbo + --auto OOM-backoff, plus SAX
 # streaming when the patched webbed is present) — no manual mode flag needed; it
 # never hard-aborts on tight RAM. FM_FORCE_DOM=1 keeps turbo+auto but on DOM.
-CURRENT_STEP="converting XML (bash ingestion/convert_fm_xml.sh --batch)"
+# --changed-only (same default as the web convert button): an unchanged XML inbox is
+# skipped via the manifest instead of re-importing on every start; a converter or
+# schema change after an update still triggers the full re-conversion (version gate).
+CURRENT_STEP="converting XML (bash ingestion/convert_fm_xml.sh --batch --changed-only)"
 header "FileMaker XML conversion"
-CONVERT_ARGS=(--batch)
-info "Found $XML_FILES XML file(s) — starting conversion (adaptive mode)"
-echo "  Follow live progress in the web client:  http://localhost:5173  (XML import dashboard)"
+CONVERT_ARGS=(--batch --changed-only)
+info "Found $XML_FILES XML file(s) — converting changed files only (adaptive mode)"
+# Progress of this terminal run shows only here; the web client marks the run as
+# active (no second start) and shows the data once it is done.
+echo "  Progress shows below. The web client (http://localhost:5173) shows the data when the conversion is done."
 T0=$SECONDS
 bash "$SCRIPT_DIR/convert_fm_xml.sh" "${CONVERT_ARGS[@]}"
 summary_add "XML conversion    $XML_FILES file(s) → fm_catalog.duckdb ($((SECONDS - T0))s)"

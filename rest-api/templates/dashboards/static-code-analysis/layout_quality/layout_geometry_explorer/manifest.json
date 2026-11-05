@@ -1,0 +1,115 @@
+{
+  "id": "layout_geometry_explorer",
+  "version": "1.0.0",
+  "title": "Layout geometry explorer",
+  "description": "Inventory dashboard — every layout object with individually sortable geometry columns (X, Y, width, height, Z-order). Filter by layout part (header, body, footer …), object type, maximum width/height, and a layout-absolute coordinate window (X/Y from/to) to inspect specific layout regions. Coordinates of nested objects are relative to their parent container; the coordinate window matches top-level objects exactly, nested objects count via their top-level container. The URL-only parameters w_min/h_min complement the sliders. Click a row to open the layout with the object highlighted.",
+  "author": "fm-lab rules",
+  "icon": "ruler",
+  "category": "layout_quality",
+  "tags": [
+    "layout_quality",
+    "geometry",
+    "inventory"
+  ],
+  "entry": "layout.json",
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "objects",
+      "source": "bundle:data/objects.sql",
+      "pageSize": 500
+    },
+    {
+      "id": "extents",
+      "source": "bundle:data/extents.sql"
+    },
+    {
+      "id": "part_types",
+      "source": "bundle:data/part_types.sql"
+    },
+    {
+      "id": "object_types",
+      "source": "bundle:data/object_types.sql"
+    }
+  ],
+  "analysis": {
+    "objectTypes": [
+      "Layout"
+    ]
+  },
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "part",
+      "type": "string",
+      "required": false,
+      "description": "Layout-part filter select (Header, Body, Footer …); unset = all parts."
+    },
+    {
+      "name": "object_type",
+      "type": "string",
+      "required": false,
+      "description": "Layout-object-type filter select; unset = all."
+    },
+    {
+      "name": "x_min",
+      "type": "number",
+      "required": false,
+      "description": "Coordinate window, left edge (layout-absolute px); objects whose top-level container intersects the window match."
+    },
+    {
+      "name": "x_max",
+      "type": "number",
+      "required": false,
+      "description": "Coordinate window, right edge (layout-absolute px)."
+    },
+    {
+      "name": "y_min",
+      "type": "number",
+      "required": false,
+      "description": "Coordinate window, top edge (layout-absolute px)."
+    },
+    {
+      "name": "y_max",
+      "type": "number",
+      "required": false,
+      "description": "Coordinate window, bottom edge (layout-absolute px)."
+    },
+    {
+      "name": "w_min",
+      "type": "number",
+      "required": false,
+      "description": "Minimum object width in px (URL-only, no slider)."
+    },
+    {
+      "name": "w_max",
+      "type": "number",
+      "required": false,
+      "description": "Maximum object width in px (header slider)."
+    },
+    {
+      "name": "h_min",
+      "type": "number",
+      "required": false,
+      "description": "Minimum object height in px (URL-only, no slider)."
+    },
+    {
+      "name": "h_max",
+      "type": "number",
+      "required": false,
+      "description": "Maximum object height in px (header slider)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

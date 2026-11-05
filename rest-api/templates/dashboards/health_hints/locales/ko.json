@@ -1,0 +1,40 @@
+{
+  "manifest": {
+    "title": "Healthchecks",
+    "description": "솔루션 전체 상태를 한눈에: 모든 검사 대시보드의 계산된 결과를 상태별로 집계하여 루브릭별로 묶어 보여 주며, 각 행은 해당 대시보드로 이동합니다."
+  },
+  "layout": {
+    "results_kpi_strip.props.items[0].label": "검사",
+    "results_kpi_strip.props.items[1].label": "오류",
+    "results_kpi_strip.props.items[2].label": "경고",
+    "results_kpi_strip.props.items[3].label": "OK",
+    "results_kpi_strip.props.items[4].label": "중립",
+    "results_kpi_strip.props.items[5].label": "대기 중",
+    "results_kpi_strip.props.items[6].label": "실패",
+    "results_kpi_strip.props.items[7].label": "건수",
+    "results_kpi_strip.props.items[8].label": "실행됨",
+    "results_run.props.label": "모든 검사 실행",
+    "rp_performance_card.props.title": "성능",
+    "rp_performance_list.props.empty.message": "보고할 항목이 없습니다.",
+    "rp_error_prone_card.props.title": "오류 취약",
+    "rp_error_prone_list.props.empty.message": "보고할 항목이 없습니다.",
+    "rp_security_card.props.title": "보안",
+    "rp_security_list.props.empty.message": "보고할 항목이 없습니다.",
+    "rp_unused_code_card.props.title": "미사용 코드",
+    "rp_unused_code_list.props.empty.message": "보고할 항목이 없습니다.",
+    "rp_code_style_card.props.title": "코드 스타일",
+    "rp_code_style_list.props.empty.message": "보고할 항목이 없습니다.",
+    "rp_layout_quality_card.props.title": "Layout 품질",
+    "rp_layout_quality_list.props.empty.message": "보고할 항목이 없습니다.",
+    "rp_documentation_card.props.title": "문서화",
+    "rp_documentation_list.props.empty.message": "보고할 항목이 없습니다.",
+    "rp_best_practices_card.props.title": "모범 사례",
+    "rp_best_practices_list.props.empty.message": "보고할 항목이 없습니다.",
+    "rp_platform_card.props.title": "플랫폼 호환성",
+    "rp_platform_list.props.empty.message": "보고할 항목이 없습니다.",
+    "rp_metadata_integrity_card.props.title": "메타데이터 무결성",
+    "rp_metadata_integrity_list.props.empty.message": "보고할 항목이 없습니다.",
+    "rp_developer_workflow_card.props.title": "개발자 워크플로",
+    "rp_developer_workflow_list.props.empty.message": "보고할 항목이 없습니다."
+  }
+}

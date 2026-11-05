@@ -1,0 +1,62 @@
+{
+  "id": "email_integration",
+  "version": "1.0.0",
+  "title": "Email integration",
+  "description": "Inventory of outbound email: Send Mail steps (Step_ID 63) classified by delivery path (SMTP server vs. email client), with the extracted SMTP host and a flag for hard-coded credentials (security-relevant), plus MBS SendMail calls. cURL-SMTP downloads stay in the APIs dashboard.",
+  "author": "fm-lab",
+  "icon": "mail",
+  "tags": [
+    "template",
+    "modularization",
+    "email",
+    "smtp"
+  ],
+  "entry": "layout.json",
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "by_mode",
+      "source": "bundle:data/by_mode.sql",
+      "params": {
+        "limit": 20
+      }
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 400
+    }
+  ],
+  "analysis": {
+    "objectTypes": [
+      "Script"
+    ]
+  },
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "mode",
+      "type": "string",
+      "required": false,
+      "description": "Restricts the detail list to a delivery mode (SMTP / Client / MBS / unknown). 'All' (or empty) lifts the filter."
+    },
+    {
+      "name": "limit",
+      "type": "number",
+      "required": false,
+      "description": "Maximum number of rows returned by the detail list."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Resultat av anpassad fråga",
+    "description": "Generisk renderare för valfri fråga."
+  },
+  "layout": {}
+}

@@ -1,0 +1,21 @@
+{
+  "id": "test_detail",
+  "version": "1.0.2",
+  "title": "Test details",
+  "description": "Detail view of a single Analysis Test: metadata header, the contained dashboards with links to their original entry, and the shipped profiles.",
+  "author": "fm-lab core",
+  "icon": "check-square",
+  "tags": ["internal"],
+  "entry": "layout.json",
+  "datasets": [
+    { "id": "detail",   "source": "builtin:test_detail" },
+    { "id": "members",  "source": "builtin:test_members" },
+    { "id": "profiles", "source": "builtin:test_profiles" },
+    { "id": "issues",   "source": "builtin:test_issues" }
+  ],
+  "params": [
+    { "name": "id", "type": "string", "required": true,
+      "description": "Test id (directory name of the test.json bundle)." }
+  ],
+  "permissions": { "read_only": true, "allow_navigation": true }
+}

@@ -180,7 +180,7 @@ detail view's search (`sq` param), etc. See `references/primitives.md` §Actions
   LIMIT (SELECT _pg_size FROM pg) OFFSET (SELECT (_pg_page - 1) * _pg_size FROM pg);
   ```
 
-  Copy both blocks from `dashboards-custom/static-code-analysis/unused_code/variable_set_never_read/data/findings.sql`.
+  Copy both blocks from `rest-api/templates/dashboards/static-code-analysis/unused_code/variable_set_never_read/data/findings.sql`.
   `MATERIALIZED` is required (the frame reads `result` several times). The
   backend replaces `/*@sort*/` with a column the user clicked — only names it
   read from the query's own output — so never sort via `getvariable` or a
@@ -188,7 +188,8 @@ detail view's search (`sq` param), etc. See `references/primitives.md` §Actions
   search and without the chip itself. Name a CTE of your own `filtered`,
   `result`, `pg` or `searched` and the frame breaks — rename it. A unit test
   (`rest-api/tests/unit/paging-templates.test.js`) checks the frame, the block
-  copies and the page size.
+  copies and the page size of the shipped bundles; a custom bundle is not
+  covered by it, so keep the frame verbatim.
 
 ### Scope block (file filter + S-Block) — mandatory pattern for analysis datasets
 
@@ -299,14 +300,14 @@ the filtered list MUST agree:
 
 - Always plan an optional `file` filter param for multi-file solutions.
 - Lists page on the server (frame above, page size in the manifest). A
-  parameterised `LIMIT` remains only for Top-N rankings and short group lists,
-  each with an entry and a reason in the exception list of
-  `rest-api/tests/unit/paging-templates.test.js` ("no silent cap"); no LIMIT on
+  parameterised `LIMIT` remains only for Top-N rankings and short group lists
+  ("no silent cap" — shipped bundles list each one with a reason in the
+  exception list of `rest-api/tests/unit/paging-templates.test.js`); no LIMIT on
   single-row summary datasets.
-- Reference style: `rest-api/templates/dashboards/home/data/*.sql` (system),
-  `rest-api/templates/dashboards-custom/developer-workflow/script_todos/data/*.sql` and
-  `rest-api/templates/dashboards-custom/modularization/external_apis/data/*.sql`
-  (custom, incl. KPI-filter wiring).
+- Reference style: `rest-api/templates/dashboards/system/home/data/*.sql` (system),
+  `rest-api/templates/dashboards/developer-workflow/script_todos/data/*.sql` and
+  `rest-api/templates/dashboards/modularization/external_apis/data/*.sql`
+  (shipped content, incl. KPI-filter wiring).
 - Read-only: never `UPDATE` / `INSERT` / `DELETE` / DDL.
 - **Never regex a `*_XML` column for something `ObjectLinks` already resolves**
   (project rule; the link roles are resolved at import — query the edge).

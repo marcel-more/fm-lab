@@ -55,7 +55,7 @@ Script-carried edges qualify the position with the step index as `Link_Subrole`;
 
 - **XML schema:** no catalog of its own — derived from [XML DDR_INFO](../../xml/catalogs/XML%20DDR_INFO.md) chunks, [XML StepsForScripts](../../xml/catalogs/XML%20StepsForScripts.md) Set Variable steps and [XML LayoutCatalog](../../xml/catalogs/XML%20LayoutCatalog.md) merge variables
 - **DB schema:** [VariablesCatalog](../catalog-tables/VariablesCatalog.md) (aggregate) · [VariableUsages](../catalog-tables/VariableUsages.md) (per-usage detail)
-- **Detail view template:** `rest-api/templates/sql/object_details_variable.sql` (served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md))
+- **Detail view template:** `rest-api/templates/queries/system/object-details/object_details_variable.sql` (served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md))
 - **Frontend:** object list at `http://localhost:5173/?type=Variable`
 
 **See also:** [Object Types](../object-catalog/Object%20Types.md) · [Script](Script.md) · [DDR_Calculations](../catalog-tables/DDR_Calculations.md) · [Link Roles and Subroles](../object-catalog/Link%20Roles%20and%20Subroles.md)

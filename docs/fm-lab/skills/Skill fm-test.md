@@ -1,6 +1,6 @@
 # Skill: fm-test
 
-Runs curated [Analysis Tests](../Wiki/Analysis%20Tests.md) — declared collections of static-analysis rules and custom queries with a compact pass/fail result model — in solution, file, object, object-list or graph-cluster scope, and reports results and severity-sorted findings. Also discovers matching tests without running them.
+Runs curated [Analysis Tests](../Wiki/Analysis%20Tests.md) — declared collections of static-analysis rules and single-file dashboards with a compact pass/fail result model — in solution, file, object, object-list or graph-cluster scope, and reports results and severity-sorted findings. Also discovers matching tests without running them.
 
 | | |
 |---|---|
@@ -8,16 +8,16 @@ Runs curated [Analysis Tests](../Wiki/Analysis%20Tests.md) — declared collecti
 | **Slash command** | `/fm-test <test-id> [<object> \| --file <F> \| --list <a,b,…> \| --cluster <name>] [--profile <id>]` · `/fm-test --find "<keyword>"` |
 | **Say it naturally** | "run the error checks on script X", "test this script", "is something wrong with X", "which tests exist for scripts" — understood in 11 languages |
 | **Input** | a test id and a scope; or a keyword / object type for discovery |
-| **Reads** | the REST API (`GET /api/tests…`) when a server runs; otherwise the test declarations under `rest-api/templates/tests/` and `tests-custom/` plus `db/fm_catalog.duckdb` (read-only) |
+| **Reads** | the REST API (`GET /api/tests…`) when a server runs; otherwise the test declarations under `rest-api/templates/tests/`, `tests-custom/` and `tests-community/` plus `db/fm_catalog.duckdb` (read-only) |
 | **Writes** | nothing |
 | **Prerequisites** | a converted catalog; cluster scope needs a clustered catalog; some platform members need `reference/fm_spec.duckdb` and `reference/plugin_spec.duckdb` |
 | **Under the hood** | API path: `GET /api/tests/:id/run?include=findings`; direct path: member SQL executed with `duckdb` and `SET VARIABLE` (recipe in `references/direct-path.md`) |
 | **Skill directory** | `.claude/skills/fm-test/` |
-| **Related** | [Skill fm-analyze](Skill%20fm-analyze.md) · [Skill fm-show](Skill%20fm-show.md) · [Skill fm-graph-cluster](Skill%20fm-graph-cluster.md) · [Skill fm-deep-research](Skill%20fm-deep-research.md) |
+| **Related** | [Skill create-custom-test](Skill%20create-custom-test.md) · [Skill fm-analyze](Skill%20fm-analyze.md) · [Skill fm-show](Skill%20fm-show.md) · [Skill fm-graph-cluster](Skill%20fm-graph-cluster.md) · [Skill fm-deep-research](Skill%20fm-deep-research.md) |
 
 ## What it does
 
-A test is what you run when the question is not *show me the findings* but *is anything wrong here?* The skill resolves the requested scope, runs the test's members — each an ordinary rule dashboard or query template — and reports one default result per member, a run status (`ran` / `failed` / `skipped`) and a result state (`error` / `warning` / `neutral` / `ok`), followed by the findings. The same test yields identical results from the web client's Tests tab, from the [Tests API](../rest-api/endpoints/Tests%20API.md) and from this skill, because all three share one execution path.
+A test is what you run when the question is not *show me the findings* but *is anything wrong here?* The skill resolves the requested scope, runs the test's members — each an ordinary rule dashboard or single-file dashboard — and reports one default result per member, a run status (`ran` / `failed` / `skipped`) and a result state (`error` / `warning` / `neutral` / `ok`), followed by the findings. The same test yields identical results from the web client's Tests tab, from the [Tests API](../rest-api/endpoints/Tests%20API.md) and from this skill, because all three share one execution path.
 
 **Discovery** comes first when you don't know the test id: `--find "<keyword>"` lists matching tests (id, title, type, keywords, scopes); a bare object without a test id lists the tests that apply to its type and runs one directly when the match is unambiguous; `--type error-check <object>` runs every test of one type.
 

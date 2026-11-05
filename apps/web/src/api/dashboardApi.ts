@@ -94,6 +94,9 @@ export interface DashboardLayout {
   root: LayoutNode;
 }
 
+/** Storage area of a dashboard bundle (server-derived from its directory). */
+export type DashboardArea = 'system' | 'module' | 'builtin' | 'custom' | 'community';
+
 /** One folder crumb of a bundle's rubric path — partial path + localized label. */
 export interface DashboardNavCrumb {
   path: string;
@@ -107,9 +110,14 @@ export interface DashboardEnvelope {
    * Rubric of the bundle (additive since the folder breadcrumb). The route
    * carries only the flat bundle id, so without this the detail view cannot
    * know which folder it sits in. `crumbs` are localized server-side through
-   * the same cascade as the overview's folder labels.
+   * the same cascade as the overview's folder labels. `area` is the bundle's
+   * storage area; custom/community crumbs start with the fixed area level
+   * ("Custom"/"Community"), system/module bundles carry no folder at all.
    */
   nav?: {
+    area?: DashboardArea;
+    /** Content areas only (builtin, custom, community). */
+    favoritable?: boolean;
     folder: string | null;
     crumbs: DashboardNavCrumb[];
   };
@@ -207,14 +215,18 @@ export async function getDashboardData(
   return wrapper.datasets;
 }
 
+/**
+ * Rows of ONE dataset. The endpoint answers `{ success, data: rows, meta }`;
+ * `getJson` unwraps `data`, so the result is the row array itself.
+ */
 export async function getDashboardDataset(
   id: string,
   dataset: string,
   params?: Record<string, unknown>,
   lang?: string,
-): Promise<DatasetResult> {
+): Promise<Array<Record<string, unknown>>> {
   const merged = lang ? { ...(params || {}), lang } : params;
-  return getJson<DatasetResult>(
+  return getJson<Array<Record<string, unknown>>>(
     `/dashboards/${encodeURIComponent(id)}/data/${encodeURIComponent(dataset)}${buildQuery(merged)}`
   );
 }

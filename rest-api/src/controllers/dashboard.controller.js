@@ -46,17 +46,19 @@ async function listDashboards(req, res, next) {
     const localised = await Promise.all(
       bundles.map(async (b) => {
         const { manifest } = await dashboardI18nService.resolveBundleForLanguage(b, lang);
-        return { manifest, folder: b.folder || null };
+        return { manifest, bundle: b };
       }),
     );
-    const data = localised.map(({ manifest: m, folder }) => ({
+    const data = localised.map(({ manifest: m, bundle }) => ({
       id: m.id,
       title: m.title,
       description: m.description || null,
       icon: m.icon || null,
       tags: m.tags || [],
       category: m.category || null,
-      folder: folder || null,
+      area: bundle.area,
+      overrides: bundle.overrides === true,
+      folder: bundle.folder || null,
       author: m.author || null,
       version: m.version || null,
     }));
@@ -104,11 +106,16 @@ async function getDashboard(req, res, next) {
     const lang = pickLang(req.query);
     const bundle = await dashboardService.getBundle(id);
     const { manifest, layout } = await dashboardI18nService.resolveBundleForLanguage(bundle, lang);
-    // `nav` ist additiv: der Ordnerpfad des Bundles plus die lokalisierten
-    // Krumen mit ihren Teilpfaden. Ohne ihn kennt die Detailansicht ihre
-    // Rubrik gar nicht (die Route trägt nur die flache Bundle-ID) und müsste
-    // die komplette Bundle-Liste ziehen, um zwei Felder zu erfahren.
+    // `nav` ist additiv: Bereich und Ordnerpfad des Bundles plus die
+    // lokalisierten Krumen mit ihren Teilpfaden. Ohne ihn kennt die
+    // Detailansicht ihre Rubrik gar nicht (die Route trägt nur die flache
+    // Bundle-ID) und müsste die komplette Bundle-Liste ziehen, um ein paar
+    // Felder zu erfahren. Custom-/Community-Krumen beginnen mit der
+    // Zwischenebene „Custom“/„Community“ (virtuelles Präfix des Ordnerpfads);
+    // system/module-Bundles haben keinen Ordner und damit keine Krumen.
     const nav = {
+      area: bundle.area,
+      favoritable: dashboardService.isFavoritableArea(bundle.area),
       folder: bundle.folder || null,
       crumbs: await dashboardService.resolveFolderCrumbs(bundle.folder, lang),
     };

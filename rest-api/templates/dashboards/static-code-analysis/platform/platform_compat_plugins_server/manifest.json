@@ -1,0 +1,79 @@
+{
+  "id": "platform_compat_plugins_server",
+  "version": "1.1.0",
+  "title": "Plug-in compatibility: FileMaker Server",
+  "description": "Plug-in function calls in scope that do not run on FileMaker Server: MBS functions whose documentation marks Server=No (verbatim platform flags from the MBS docs mirror, interpreted onto this environment via the curated runtime map - scripts here execute under the FileMaker Server script engine). Includes one-level custom-function wrappers (via_custom_function) and layout/field calculation usages (evidence_kind='layout'). Functions of a known plugin without a doc entry appear as explicit 'unresolved' info rows. Server x OS cross-refinement: functions available on the server but not on every server operating system (practically: not for Linux) surface as 'warning' with finding_kind='os_conditional' and the carrying OS set in os_condition - they run on macOS/Windows servers but fail on Linux-based FileMaker Server (the host matrix comes from the curated FileMaker reference schema; on an older reference the member is skipped, never failed).",
+  "author": "fm-lab rules",
+  "icon": "server",
+  "category": "platform",
+  "tags": [
+    "rule",
+    "platform",
+    "plugin"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "warning",
+    "category": "platform",
+    "rationale": "Plug-in functions whose MBS documentation marks Server=No are unavailable under the FileMaker Server script engine, which executes scripts for this environment. The mapping is a curated interpretation with per-row provenance (plugin_runtime_map).",
+    "remediation": "Guard or replace the call for this runtime (e.g. branch on Get(Device)/execution context, or move the interactive part to a client script). Unresolved functions: update the MBS docs mirror (install-mbs-docs) and re-derive the plugin platform map."
+  },
+  "analysis": {
+    "objectTypes": [
+      "Script",
+      "LayoutObject"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
+    },
+    "requires": [
+      "plugin-spec",
+      "fm-spec-os"
+    ],
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Plug-in function calls in scope that do not run on FileMaker Server"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

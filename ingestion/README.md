@@ -70,5 +70,5 @@ P5 (`sql/convert_xml_05_homes.sql`) creates the graph views `LogicalLinks`
 `ClusterEdgesBase` inside the catalog. Consumers: the REST-API graph
 endpoints (read the views via the read-only copy) and
 `tools/graph-export/` (clustering). Changes to these view definitions are
-interface changes — see `rest-api/templates/sql/graph_logical_links.sql`
+interface changes — see `rest-api/templates/queries/system/graph/graph_logical_links.sql`
 (consumer stub) and `tools/graph-export/README.md`.

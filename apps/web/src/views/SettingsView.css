@@ -82,12 +82,9 @@
   gap: 0.5rem;
 }
 
+/* The title row aligns on the text baseline; the chevron centres on it. */
 .plugin-card-chevron {
-  display: inline-block;
-  width: 0.9rem;
-  color: var(--color-text-muted);
-  font-size: 0.85rem;
-  transform: translateY(-1px);
+  align-self: center;
 }
 
 .plugin-card-title h2 {

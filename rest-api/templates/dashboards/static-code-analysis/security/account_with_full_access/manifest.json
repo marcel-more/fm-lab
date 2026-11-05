@@ -1,0 +1,77 @@
+{
+  "id": "account_with_full_access",
+  "version": "1.0.0",
+  "title": "Account with [Full Access]",
+  "description": "Security rule — accounts assigned the [Full Access] privilege set. Every full-access account is an unrestricted key to the file; keep the count minimal.",
+  "author": "fm-lab rules",
+  "icon": "user-cog",
+  "category": "security",
+  "tags": [
+    "rule",
+    "pmd",
+    "security"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "warning",
+    "category": "security",
+    "rationale": "Full-access accounts bypass all record- and layout-level security.",
+    "remediation": "Grant the least privilege needed; reserve [Full Access] for a few named admins.",
+    "meta": {
+      "name": "Account with [Full Access]",
+      "author": "fm-lab rules",
+      "source": "fm-lab",
+      "url": null,
+      "description": "Security rule — accounts assigned the [Full Access] privilege set. Every full-access account is an unrestricted key to the file; keep the count minimal.",
+      "created": "2026-07-01",
+      "references": []
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Account"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {}
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Account with [Full Access]"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

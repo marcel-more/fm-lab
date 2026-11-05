@@ -12,10 +12,15 @@
     "ddrMissing": "DDR情報なし",
     "ddrMissing_partial": "DDR情報なし（{{total}} ファイル中 {{count}} ファイル）",
     "ddrMissingHint": "「分析ツールの詳細を含める」オプションを使用してエクスポートしてください",
+    "formatLegacy": "{{total}} ファイルすべてが FileMaker 18 形式 — インポートされません",
+    "formatLegacy_partial": "{{total}} ファイル中 {{count}} ファイルが FileMaker 18 形式 — インポートされません",
+    "formatLegacyHint": "FileMaker 19 以降で「名前を付けて XML として保存」により再エクスポートしてください",
     "page": "ページ {{current}} / {{total}}",
     "noMatches": "「{{query}}」に一致する項目はありません。",
     "prev": "← 前へ",
     "next": "次へ →",
+    "pageSize": "表示件数",
+    "pageSizeAll": "すべて",
     "rowAction": "リンク先を開く"
   },
   "layoutPreview": {
@@ -173,6 +178,11 @@
     "notNavigable": "対象がインポートされたデータセットに存在しません",
     "showInLayout": "レイアウトで表示 (Alt+クリック)",
     "showInFile": "ファイルで表示 (Alt+クリック)",
+    "dirFilterAria": "方向でフィルター",
+    "dirFilterLabel": "方向",
+    "dirIn": "参照元",
+    "dirOut": "参照先",
+    "dirBoth": "両方",
     "subroles": {
       "hide": {
         "short": "Hide",
@@ -311,7 +321,18 @@
     "storageIndexLanguage": "デフォルト言語",
     "summaryRestartGroup": "グループごとに再開",
     "summaryRepMode": "繰り返しを集計",
-    "calcEvaluatesWhenEmpty": "参照フィールドが空でも計算する"
+    "calcEvaluatesWhenEmpty": "参照フィールドが空でも計算する",
+    "validationMessageCalc": "メッセージの計算式",
+    "disabled": "無効",
+    "sectionExtended": "拡張オプション (FileMaker 26)",
+    "annotation": "注釈 (DDL)",
+    "displayNames": "表示名",
+    "displayNamesEnabled": "カスタム表示名が有効",
+    "displayNamesDisabled": "カスタマイズなし",
+    "displayNameElements": "要素",
+    "displayNameKey": "要素",
+    "displayNameValue": "ラベル / 計算式",
+    "displayNamesFormula": "表示名の計算式"
   },
   "typeDetail": {
     "loading": "読み込み中…",
@@ -390,6 +411,18 @@
     "settingsHeading": "設定",
     "saveLabel": "設定を保存",
     "savingLabel": "保存中…",
+    "versions": {
+      "fmlab": "FM-Lab",
+      "api": "API",
+      "frontend": "フロントエンド",
+      "xmlConverter": "XML コンバーター",
+      "xmlEngine": "エンジン",
+      "dbSchema": "DB スキーマ",
+      "fmSpec": "fm-spec",
+      "duckdb": "DuckDB",
+      "duckdbCli": "DuckDB CLI",
+      "duckdbCliMissing": "見つかりません"
+    },
     "api": {
       "heading": "REST API 接続",
       "label": "REST API の URL",
@@ -413,11 +446,22 @@
       "empty": "まだスキャンしていません。「再スキャン」をクリックしてください。",
       "colVersion": "バージョン"
     },
-    "versions": {
-      "fmSpec": "fm-spec",
-      "duckdb": "DuckDB",
-      "duckdbCli": "DuckDB CLI",
-      "duckdbCliMissing": "見つかりません"
+    "graphify": {
+      "enableFirst": "エクスポートを開始するには、上のプラグインを有効にしてください。",
+      "exportButton": "グラフをエクスポート",
+      "doneMessage": "エクスポートが完了しました。ファイルは output/ ディレクトリにあります。",
+      "failed": "エクスポートに失敗しました。",
+      "lastExport": "前回のエクスポート",
+      "colFile": "ファイル",
+      "colNodes": "ノード",
+      "colEdges": "エッジ",
+      "colSize": "サイズ",
+      "recentFiles": "以前のエクスポート ({{count}})",
+      "phase": {
+        "count": "オブジェクトを集計中…",
+        "export": "グラフをエクスポート中…",
+        "assemble": "JSON ファイルを書き込み中…"
+      }
     },
     "solutions": {
       "heading": "ソリューション",
@@ -484,6 +528,10 @@
     "source": "ソース:",
     "relationshipGraphLink": "↗ リレーショングラフ",
     "copyUuidAria": "UUID をクリップボードにコピー",
+    "copyOriginalUuidAria": "元の UUID をクリップボードにコピー (ソースファイル内で一意ではありません)",
+    "copySyntheticUuidAria": "FM-Lab の合成 UUID をクリップボードにコピー",
+    "syntheticBadge": "FM-Lab",
+    "syntheticTooltip": "FM-Lab 内部の代替 ID: このオブジェクトの元の UUID はソースファイル内で重複していたため、インポート時に修復されました。クリックすると合成 UUID (カタログ ID) をコピーします。",
     "change": {
       "modified": "最終更新",
       "containerModified": "コンテナの最終更新",

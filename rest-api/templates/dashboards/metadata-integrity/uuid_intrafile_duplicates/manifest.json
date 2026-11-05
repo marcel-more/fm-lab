@@ -1,0 +1,91 @@
+{
+  "id": "uuid_intrafile_duplicates",
+  "version": "1.1.0",
+  "title": "UUID Intra-File Duplicates",
+  "description": "Metadata-integrity check — UUIDs assigned twice within a single file (export defect, typically caused by copy/paste with old FileMaker versions). Since UUID healing (schema 1.19.0) the importer keeps EVERY occurrence: the twin with the smallest internal id keeps the source UUID, the others receive a deterministic replacement UUID (census mapping in Healed_UUID). This dashboard lists the healed occurrences with plaintext context; 'absorbed' rows remain only for double serialization, FM_UUID_HEAL=0 runs and pre-healing databases.",
+  "author": "fm-lab rules",
+  "icon": "copy",
+  "category": "metadata_integrity",
+  "tags": [
+    "rule",
+    "metadata",
+    "uuid",
+    "import-census"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "warning",
+    "category": "metadata_integrity",
+    "rationale": "A UUID assigned to two objects inside one file is a source defect of the FileMaker export. Since schema 1.19.0 FM-Lab heals the collision: both objects exist in the catalog (one under a deterministic replacement UUID), incoming references are distributed via the internal FileMaker ids, and the census keeps the original↔replacement mapping. The source defect itself persists — UUID-keyed external tooling and fmp:// URLs still work on ambiguous identities in the source file.",
+    "remediation": "The catalog is complete despite the defect (healed twins carry replacement UUIDs). A source-side fix still requires manual work in FileMaker: use the plaintext columns (container, position, decoded text) to locate both objects and recreate one of them. Claris' repair mode assigns entirely new UUIDs and breaks external references.",
+    "meta": {
+      "name": "UUID Intra-File Duplicates",
+      "author": "fm-lab rules",
+      "source": "fm-lab",
+      "url": null,
+      "description": "UUIDs assigned to more than one object within a single file, captured by the import census.",
+      "created": "2026-08-04",
+      "references": []
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Layout",
+      "LayoutObject",
+      "Script"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of censused duplicate-UUID occurrences (healed + kept-original + absorbed) — the catalog stays complete since UUID healing, but each occurrence marks a source defect"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    },
+    {
+      "id": "merge_absorptions",
+      "source": "bundle:data/merge_absorptions.sql"
+    },
+    {
+      "id": "absorption_stats",
+      "source": "bundle:data/absorption_stats.sql"
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

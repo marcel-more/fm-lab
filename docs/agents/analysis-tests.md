@@ -7,22 +7,30 @@
 
 ## Concept
 
-A **Test** is a declared, executable collection of dashboards and/or custom
-queries with a compact result model: one named **default result** per member
+A **Test** is a declared, executable collection of dashboards — bundles and
+single-file dashboards (one `.sql` file with a `-- @` header, the former custom
+queries) — with a compact result model: one named **default result** per member
 (e.g. `finding_count`), optionally enriched with the member's findings rows.
 A **pattern** (`analysis-patterns.md`) is a documented procedure without
 execution semantics; the `fm-test` skill is the interpreting bracket.
 
-## Storage (two tiers, custom-first)
+## Storage (three areas, custom-first)
 
-| Tier | Path | Write access |
-|---|---|---|
-| System | `rest-api/templates/tests/<folder>/<id>/test.json` | repo/release only |
-| Custom | `rest-api/templates/tests-custom/<folder>/<id>/test.json` | editor API (v1.1), package install (v1.2) |
+| Area (`tier`) | Path | Rubric (folder path) | Write access |
+|---|---|---|---|
+| builtin (`system`) | `rest-api/templates/tests/<folder>/<id>/test.json` | `<folder>` | repo/release only |
+| custom (`custom`) | `rest-api/templates/tests-custom/[<folder>/]<id>/test.json` | `custom[/<folder>]` | user, `create-custom-test` skill — gitignored except the scaffold |
+| community (`community`) | `rest-api/templates/tests-community/[<folder>/]<id>/test.json` | `community[/<folder>]` | package install (v1.2) — gitignored except the scaffold |
 
 Folders without `test.json` are category folders (optional `folder.json` with
-`title`/`icon`/`description`/`order`/`locales`). Custom wins on id collision
-(`overridesSystem` flag in the list response).
+`title`/`icon`/`description`/`order`/`locales`); the area roots carry their own
+`folder.json` ("Custom", "Community"). A custom test wins on id collision with
+a shipped one (`overrides` / `overridesSystem` in the list response); a
+community test never overrides (discarded with a warning). `tests-removed/`
+holds what the cleanup routine moved aside — never a discovery source.
+`rest-api/templates/tests/inventory.json` lists every shipped test
+(`node tools/templates/inventory.mjs --kind tests --write` after adding or
+moving one).
 
 ## test.json
 
@@ -39,7 +47,7 @@ Folders without `test.json` are category folders (optional `folder.json` with
   "outputs": ["count", "findings-table"],
   "members": [
     { "kind": "dashboard", "ref": "exit_script_in_loop" },
-    { "kind": "query", "ref": "script_todo_scan", "paramMap": { "file": "file" } }
+    { "kind": "dashboard", "ref": "script_todo_scan", "paramMap": { "file": "file" } }
   ]
 }
 ```
@@ -52,12 +60,21 @@ solution | file | object | object-list | cluster.
 
 ## Member metadata
 
-- **Dashboard**: `manifest.json → analysis` block (objectTypes, outputTypes,
+`members[].kind` is `dashboard` for both storage forms; `query` is still
+accepted as a read alias of `dashboard` (older test.json files) and resolves
+the same way. Resolution: `dashboards-custom/**` → `dashboards/**` →
+`dashboards-community/**`, a bundle directory `<ref>/` or a file `<ref>.sql`;
+own queries at the old location `sql-custom/` resolve as long as the cleanup
+has not moved them.
+
+- **Bundle**: `manifest.json → analysis` block (objectTypes, outputTypes,
   `scope { supported, anchor, mode }`, `defaultResult { dataset, column, type,
   name, meaning }`). No `analysis` block = not test-capable (M2).
-- **Custom query**: SQL frontmatter `@object_types:` / `@output_types:` /
+- **Single-file dashboard**: SQL header `@object_types:` / `@output_types:` /
   `@scope:` (comma lists) and `@default_result:` (one-line JSON with
-  `aggregate: "row_count" | "first_row:<column>"`).
+  `aggregate: "row_count" | "first_row:<column>"`) — the server derives the
+  manifest `analysis` block from it (dataset `results`). No `@default_result` =
+  not test-capable (M2). Its findings rows are the result rows.
 
 ## Scope mechanics (S-Block)
 
@@ -109,7 +126,7 @@ pass.
 `include=findings` adds severity-sorted (`error`→`warning`→`info`), capped
 findings rows per member with value > 0 — the agentic mode: the default result
 is a number, the finding is in the rows. `openTarget` per member is the ready
-frontend deep link (dashboard/query with context params).
+frontend deep link (`/dashboard/<ref>` with context params).
 
 ## Frontend
 
@@ -119,12 +136,12 @@ frontend deep link (dashboard/query with context params).
   the detail view.
 - Detail `/tests/:id` (`test_detail` bundle) — metadata header, the contained
   members with their resolved title/section/severity and a link to each
-  member's original entry (`/dashboard/<ref>` resp. `/query/<ref>`), shipped
+  member's original entry (`/dashboard/<ref>`), shipped
   profiles and the validation findings. Read-only; runs stay in the object
   tab and the skill.
 
 ## CLI / skill fallback without server
 
-`read_json('rest-api/templates/tests*/**/test.json')` with custom-first dedupe
-on `id`; member SQLs via `duckdb` + `SET VARIABLE` — recipe in
+`read_json('rest-api/templates/tests*/**/test.json')` without `tests-removed/`,
+custom-first dedupe on `id` (community last); member SQLs via `duckdb` + `SET VARIABLE` — recipe in
 `.claude/skills/fm-test/references/direct-path.md`.

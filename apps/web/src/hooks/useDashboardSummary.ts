@@ -2,7 +2,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 import type { ResultEnvelope } from '../api/resultsApi';
 import {
   ensureSummaryLoaded, getCachedSummary, getResultsStoreVersion,
-  isFolderRunning, isRefRunning, runFolder, runSingle, subscribeResultsStore,
+  isFolderRunning, isRefRunning, runDashboards, runFolder, runSingle, subscribeResultsStore,
 } from '../lib/resultsStore';
 
 /**
@@ -22,6 +22,7 @@ export interface DashboardSummary {
   isRefRunning: (kind: string, id: string) => boolean;
   runFolder: typeof runFolder;
   runSingle: typeof runSingle;
+  runDashboards: typeof runDashboards;
   refresh: () => Promise<void>;
 }
 
@@ -46,6 +47,7 @@ export function useDashboardSummary(enabled = true): DashboardSummary {
     isRefRunning,
     runFolder,
     runSingle,
+    runDashboards,
     refresh: () => ensureSummaryLoaded(true),
   };
 }

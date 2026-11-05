@@ -4,13 +4,13 @@ const path = require('path');
 const { createError } = require('../middleware/error-handler');
 const solutions = require('../config/solutions');
 const dashboardService = require('./dashboard.service');
-const templateService = require('./template.service');
 
 /**
  * Results Service — the shared result layer (Result Envelope v1).
  *
  * One normative result shape for every result-capable unit, regardless of
- * origin (`kind:id` with kind ∈ dashboard | query | test). The two-axis model
+ * origin (`kind:id` with kind ∈ dashboard | test; dashboards are bundles or
+ * single-file dashboards, `query` is accepted as a read alias of `dashboard`). The two-axis model
  * (`runStatus` × `resultState`) and its derivation move HERE from
  * tests.service; the tests runner is a consumer of this service, not a second
  * producer.
@@ -99,7 +99,7 @@ function firstRowValue(rows, column) {
 }
 
 function refKey(ref) {
-  return `${ref.kind}:${ref.id}`;
+  return `${canonicalKind(ref.kind)}:${ref.id}`;
 }
 
 function normalizeValue(v) {
@@ -136,6 +136,9 @@ async function resolveDashboardDeclaration(bundle) {
       source: 'defaultResult',
       dataset: dr.dataset || 'summary',
       column: dr.column || null,
+      // 'row_count' | 'first_row:<column>' (single-file dashboards); absent =
+      // the column value of the first row.
+      aggregate: dr.aggregate || null,
       type: dr.type || 'number',
       name: dr.name,
       meaning: dr.meaning || null,
@@ -163,17 +166,9 @@ async function resolveDashboardDeclaration(bundle) {
   };
 }
 
-function queryDeclaration(meta) {
-  if (!meta || !meta.default_result) return null;
-  const dr = meta.default_result;
-  return {
-    source: 'defaultResult',
-    aggregate: dr.aggregate || 'row_count',
-    type: dr.type || 'number',
-    name: dr.name || null,
-    meaning: dr.meaning || null,
-    unit: resolveUnit(dr),
-  };
+/** Read alias: `query` refs address the dashboard of the same id. */
+function canonicalKind(kind) {
+  return kind === 'query' ? 'dashboard' : kind;
 }
 
 // ---------------------------------------------------------------------------
@@ -183,12 +178,14 @@ function queryDeclaration(meta) {
 /**
  * One row per result-capable unit:
  * { ref: {kind,id}, rubric, title, icon, severity, unit, source }.
- * `rubric` is the folder path (dashboard/test) resp. category (query).
- * Units without a declaration are absent by design (inventories,
- * display-only queries) — they stay chipless.
+ * `rubric` is the folder path of the unit: relative to the shipped tree for
+ * builtin content, prefixed `custom/…` / `community/…` for those areas, null
+ * for system and module bundles. Single-file dashboards are dashboards like
+ * any other. Units without a declaration are absent by design (display-only
+ * dashboards) — they stay chipless.
  */
 async function listRegistry({ kinds } = {}) {
-  const wanted = new Set(kinds && kinds.length ? kinds : ['dashboard', 'query', 'test']);
+  const wanted = new Set((kinds && kinds.length ? kinds : ['dashboard', 'test']).map(canonicalKind));
   const rows = [];
   if (wanted.has('dashboard')) {
     const bundles = await dashboardService.listBundles();
@@ -206,26 +203,6 @@ async function listRegistry({ kinds } = {}) {
         meaning: decl.meaning,
         source: decl.source,
         tags: bundle.manifest.tags || [],
-      });
-    }
-  }
-  if (wanted.has('query')) {
-    const templates = await templateService.listTemplates('query');
-    for (const t of templates) {
-      const meta = await templateService.getTemplateMeta(t.name, 'query');
-      const decl = queryDeclaration(meta);
-      if (!decl) continue;
-      rows.push({
-        ref: { kind: 'query', id: t.name },
-        rubric: (meta && meta.category) || null,
-        title: (meta && meta.title) || t.name,
-        icon: (meta && meta.icon) || null,
-        severity: null,
-        unit: decl.unit,
-        name: decl.name,
-        meaning: decl.meaning,
-        source: decl.source,
-        tags: (meta && meta.tags) || [],
       });
     }
   }
@@ -325,18 +302,17 @@ async function runOne(ctx, ref, options = {}) {
   const started = Date.now();
   const meta = catalogMeta(ctx);
   const params = { ...(options.params || {}) };
+  const kind = canonicalKind(ref.kind);
   const base = {
-    ref: { kind: ref.kind, id: ref.id },
+    ref: { kind, id: ref.id },
     rubric: null,
     fingerprint: meta.catalogFingerprint,
     at: started,
   };
   try {
     let envelope;
-    if (ref.kind === 'dashboard') {
+    if (kind === 'dashboard') {
       envelope = await runDashboard(ctx, ref.id, params, options, base);
-    } else if (ref.kind === 'query') {
-      envelope = await runQuery(ctx, ref.id, params, options, base);
     } else {
       throw createError('VALIDATION_ERROR', `Cannot run kind '${ref.kind}' via results runner`);
     }
@@ -363,6 +339,17 @@ async function runOne(ctx, ref, options = {}) {
   }
 }
 
+/**
+ * `row_count` aggregate. A server-paged dataset delivers only its first page;
+ * the shared paging window block carries the full count as `_row_total` on
+ * every row, so that wins over the page length.
+ */
+function rowCount(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return 0;
+  const total = rows[0]._row_total;
+  return total != null && Number.isFinite(Number(total)) ? Number(total) : rows.length;
+}
+
 async function runDashboard(ctx, id, params, options, base) {
   const bundle = await dashboardService.getBundle(id);
   const decl = await resolveDashboardDeclaration(bundle);
@@ -387,22 +374,35 @@ async function runDashboard(ctx, id, params, options, base) {
     };
   }
   const result = await dashboardService.executeSingleDataset(ctx, bundle, decl.dataset, { ...params });
-  const value = normalizeValue(firstRowValue(result.data, decl.column));
+  let value;
+  if (decl.aggregate === 'row_count') {
+    value = rowCount(result.data);
+  } else if (decl.aggregate && decl.aggregate.startsWith('first_row:')) {
+    value = normalizeValue(firstRowValue(result.data, decl.aggregate.slice('first_row:'.length)));
+  } else {
+    value = normalizeValue(firstRowValue(result.data, decl.column));
+  }
   const envelope = {
     ...common,
     runStatus: 'ran',
     value,
     type: decl.type,
     unit: decl.unit,
-    name: decl.name,
+    name: decl.name || id,
     meaning: decl.meaning,
     source: decl.source,
   };
   // Findings mode (tests): fetch the findings-shaped dataset when the default
-  // result signals hits. Convention: dataset id 'findings'.
+  // result signals hits. Convention: dataset id 'findings'; a single-file
+  // dashboard has none — its result rows are the findings.
   if (options.includeFindings && Number(value) > 0) {
     const findingsSpec = (bundle.manifest.datasets || []).find(d => d.id === 'findings');
-    if (findingsSpec) {
+    if (!findingsSpec && decl.aggregate && Array.isArray(result.data)) {
+      const limit = options.findingsLimit || 20;
+      const rows = [...result.data];
+      rows.sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
+      envelope.findings = { truncated: rows.length > limit, rows: rows.slice(0, limit) };
+    } else if (findingsSpec) {
       const limit = options.findingsLimit || 20;
       const findings = await dashboardService.executeSingleDataset(ctx, bundle, 'findings', { ...params });
       const rows = [...(findings.data || [])];
@@ -413,57 +413,6 @@ async function runDashboard(ctx, id, params, options, base) {
   envelope.resultState = deriveResultState(
     value, severity, envelope.findings && envelope.findings.rows,
   );
-  return envelope;
-}
-
-async function runQuery(ctx, name, params, options, base) {
-  const meta = await templateService.getTemplateMeta(name, 'query');
-  const decl = queryDeclaration(meta);
-  const common = {
-    ...base,
-    rubric: (meta && meta.category) || null,
-    title: (meta && meta.title) || name,
-    severity: null,
-  };
-  if (!decl) {
-    return {
-      ...common,
-      runStatus: 'failed',
-      resultState: null,
-      value: null,
-      unit: null,
-      name: null,
-      meaning: null,
-      source: null,
-      error: 'query has no @default_result metadata',
-    };
-  }
-  const result = await templateService.executeTemplate(ctx, name, { ...params }, 'query');
-  let value;
-  if (decl.aggregate === 'row_count') {
-    value = Array.isArray(result.data) ? result.data.length : 0;
-  } else if (decl.aggregate.startsWith('first_row:')) {
-    value = normalizeValue(firstRowValue(result.data, decl.aggregate.slice('first_row:'.length)));
-  } else {
-    value = null;
-  }
-  const envelope = {
-    ...common,
-    runStatus: 'ran',
-    value,
-    type: decl.type,
-    unit: decl.unit,
-    name: decl.name || name,
-    meaning: decl.meaning,
-    source: decl.source,
-  };
-  if (options.includeFindings && Number(value) > 0 && Array.isArray(result.data)) {
-    const limit = options.findingsLimit || 20;
-    const rows = [...result.data];
-    rows.sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
-    envelope.findings = { truncated: rows.length > limit, rows: rows.slice(0, limit) };
-  }
-  envelope.resultState = deriveResultState(value, null, envelope.findings && envelope.findings.rows);
   return envelope;
 }
 
@@ -650,7 +599,7 @@ async function aggregate(ctx, { root = '', roots, kinds } = {}) {
 // Trigger (R5) — explicit runs; folder targets expand via the registry
 // ---------------------------------------------------------------------------
 
-const RUNNABLE_KINDS = new Set(['dashboard', 'query']);
+const RUNNABLE_KINDS = new Set(['dashboard']);
 
 /**
  * POST /api/results/run — body { targets, mode }.
@@ -673,7 +622,7 @@ async function runTargets(ctx, { targets, mode = 'missing', concurrency, timeout
       const p = String(target.path || '');
       const prefix = p ? `${p}/` : '';
       const kindsFilter = Array.isArray(target.kinds) && target.kinds.length
-        ? new Set(target.kinds) : RUNNABLE_KINDS;
+        ? new Set(target.kinds.map(canonicalKind)) : RUNNABLE_KINDS;
       for (const entry of registry) {
         if (!RUNNABLE_KINDS.has(entry.ref.kind) || !kindsFilter.has(entry.ref.kind)) continue;
         const rubric = entry.rubric || '';
@@ -681,10 +630,11 @@ async function runTargets(ctx, { targets, mode = 'missing', concurrency, timeout
           refs.set(refKey(entry.ref), entry.ref);
         }
       }
-    } else if (target && RUNNABLE_KINDS.has(target.kind) && target.id) {
+    } else if (target && RUNNABLE_KINDS.has(canonicalKind(target.kind)) && target.id) {
       // Singles run even without a registry entry — the runner then reports
       // the missing declaration as a per-unit failure, not a 400.
-      refs.set(refKey({ kind: target.kind, id: String(target.id) }), { kind: target.kind, id: String(target.id) });
+      const ref = { kind: canonicalKind(target.kind), id: String(target.id) };
+      refs.set(refKey(ref), ref);
     } else {
       throw createError('VALIDATION_ERROR', `Invalid target: ${JSON.stringify(target)}`);
     }

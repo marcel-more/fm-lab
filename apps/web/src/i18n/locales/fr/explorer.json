@@ -90,9 +90,17 @@
       "recency": "Colorer les nœuds selon l’âge de leur modification individuelle la plus récente (les classes de l’Atlas du graphe)"
     },
     "communityUnnamed": "Communauté {{id}}",
-    "resizePanel": "Redimensionner le panneau de filtres",
+    "detailsShort": "Détails",
+    "openDetails": "Ouvrir la vue détaillée de l’objet focus",
+    "openTypeList": "Ouvrir la liste des objets {{type}}",
+    "hideType": "Masquer {{type}}",
+    "showType": "Afficher {{type}}",
+    "depthOf": "(sur {{max}})",
+    "extendDepth": "plus profond",
+    "extendDepthHint": "Étendre le curseur au-delà de 4 (jusqu’à la profondeur maximale accessible).",
     "depthLoad": "{{count}} accessibles",
     "depthClipped": "{{count}} accessibles, chargement plafonné à {{limit}}",
+    "resizePanel": "Redimensionner le panneau de filtres",
     "partLoaded": "{{count}} chargés",
     "partConnected": "{{count}} connectés",
     "partIsland_one": "{{count}} îlot",
@@ -104,11 +112,6 @@
     "loadAllHint": "Charger tous les types ; désélectionner une puce la masque seulement",
     "loadSelectedHint": "Charger uniquement les types sélectionnés (recharge)"
   },
-  "unconnectedHidden_one": "{{count}} nœud sans lien avec le focus",
-  "unconnectedHidden_other": "{{count}} nœuds sans lien avec le focus",
-  "unconnectedToggleShow": "afficher",
-  "unconnectedToggleHide": "masquer",
-  "unconnectedToggleHint": "Les nœuds sans chemin vers le focus proviennent du filtre type/profondeur — les afficher ou les masquer",
   "typeList": {
     "ariaLabel": "Liste d’objets : {{type}}",
     "sortBy": "Trier",
@@ -124,6 +127,11 @@
     "empty": "Aucun objet de ce type dans le graphe.",
     "focus": "Objet focus"
   },
+  "unconnectedHidden_one": "{{count}} nœud sans lien avec le focus",
+  "unconnectedHidden_other": "{{count}} nœuds sans lien avec le focus",
+  "unconnectedToggleShow": "afficher",
+  "unconnectedToggleHide": "masquer",
+  "unconnectedToggleHint": "Les nœuds sans chemin vers le focus proviennent du filtre type/profondeur — les afficher ou les masquer",
   "edge": {
     "represents": "représente",
     "buttonAction": "Action de bouton",

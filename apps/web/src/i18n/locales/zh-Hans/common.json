@@ -10,6 +10,7 @@
   "empty": "没有可显示的内容。",
   "noData": "暂无数据。",
   "noEntries": "没有条目。",
+  "general": "常规",
   "unknown": "(未知)",
   "all": "全部",
   "filter": "筛选",
@@ -30,6 +31,7 @@
   "actions": {
     "openInFileMaker": "在 FileMaker 中打开",
     "copyUuid": "复制 UUID",
+    "copyOriginalUuid": "复制原始 UUID — 注意：此 UUID 在源文件中被多次分配",
     "expandAll": "全部展开",
     "collapseAll": "全部折叠",
     "collapseMultilineCalcs": "折叠多行计算式",

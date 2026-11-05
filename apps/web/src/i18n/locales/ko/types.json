@@ -34,5 +34,14 @@
     "ScriptStepType": "카테고리",
     "BuiltinFunction": "카테고리",
     "PluginFunction": "컴포넌트"
+  },
+  "testTypes": {
+    "exploration": "탐색",
+    "code-quality": "코드 품질",
+    "error-check": "오류 검사",
+    "security": "보안",
+    "inventory": "인벤토리",
+    "performance": "성능",
+    "platform": "플랫폼"
   }
 }

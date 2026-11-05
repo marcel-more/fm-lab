@@ -6,6 +6,7 @@ import { useCurrentFile } from '../lib/currentFileContext';
 import { LayoutCanvas, type LayoutCanvasHandle } from './LayoutCanvas';
 import { LayoutViewer } from './LayoutViewer';
 import { usePersistentState } from '../hooks/usePersistentState';
+import { DisclosureChevron } from './DisclosureChevron';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ErrorMessage } from './ErrorMessage';
 import { ScriptDetail } from './ScriptDetail';
@@ -118,7 +119,7 @@ const EmbeddedLayoutView: React.FC<{
           onClick={() => setPropsOpen(isOpen ? '0' : '1')}
           disabled={!data.meta || !hasObjects}
         >
-          <span className="layout-props-caret" aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
+          <DisclosureChevron open={isOpen} />
           {t('detail:layoutViewer.propertiesHeading')}
         </button>
         <Link

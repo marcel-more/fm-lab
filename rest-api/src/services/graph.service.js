@@ -79,7 +79,7 @@ function runExclusiveOverview(fn) {
  * Graph Service (Subgraph-Backend)
  *
  * Liefert fokus-zentrierte k-Hop-Subgraphen aus ObjectCatalog/ObjectLinks.
- * SQL-Kern: templates/sql/graph_subgraph.sql (Recursive CTE, mode=logical via
+ * SQL-Kern: templates/queries/system/graph/graph_subgraph.sql (Recursive CTE, mode=logical via
  * graph_logical_links.sql-Logik, Deckel + ehrliche Truncation).
  *
  * Dieser Service ist Core.

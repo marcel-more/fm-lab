@@ -23,6 +23,10 @@ tags:
     description: SQL template execution
   - name: System
     description: System information and health
+  - name: Favorites
+    description: Workspace-wide favorites of the web client
+  - name: Maintenance
+    description: Workspace housekeeping, independent of the selected solution
   - name: Reference
     description: >-
       fm-spec language reference (schema viewer backend). Only the grammar
@@ -641,6 +645,236 @@ paths:
         '400':
           description: Invalid targets/mode or oversized expansion
 
+  /favorites/{kind}:
+    parameters:
+      - $ref: '#/components/parameters/FavoriteKind'
+    get:
+      summary: Favorites of one kind (dashboards or tests) of the workspace
+      description: >-
+        Workspace-wide favorites from `.fmlab/favorites.json`, independent of
+        the selected solution (the X-Solution header plays no role).
+        `items` are the available favorites in the order they were added;
+        `missing` lists stored ids that no longer resolve — a dashboard the
+        discovery no longer knows or whose area can no longer be favorited, a
+        test that no longer exists. Read-only — missing ids are never removed
+        automatically.
+      tags: [Favorites]
+      responses:
+        '200':
+          description: Favorites split into available items and missing ids
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Favorites'
+        '400':
+          description: Unknown kind (VALIDATION_ERROR)
+
+  /favorites/{kind}/{id}:
+    parameters:
+      - $ref: '#/components/parameters/FavoriteKind'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: '^[a-zA-Z0-9_-]+$'
+        description: Dashboard id (bundle or single-file unit) resp. test id
+    put:
+      summary: Add a dashboard or test to the favorites (idempotent)
+      description: >-
+        Dashboards can be favorited in the content areas (builtin, custom,
+        community); tests in every area. Adding an existing favorite keeps its
+        `added_at`.
+      tags: [Favorites]
+      responses:
+        '200':
+          description: Current favorites of the kind after the change
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Favorites'
+        '400':
+          description: Unknown kind or invalid id (VALIDATION_ERROR)
+        '404':
+          description: Unknown dashboard or test (TEMPLATE_NOT_FOUND)
+        '422':
+          description: System or module page that cannot be favorited (NOT_FAVORITABLE, dashboards only)
+    delete:
+      summary: Remove a dashboard or test from the favorites (idempotent)
+      description: >-
+        Succeeds without an entry as well. Only the id pattern is checked, so
+        a favorite whose dashboard or test is gone stays removable.
+      tags: [Favorites]
+      responses:
+        '200':
+          description: Current favorites of the kind after the change
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Favorites'
+        '400':
+          description: Unknown kind or invalid id (VALIDATION_ERROR)
+
+  /maintenance/dashboards/cleanup:
+    get:
+      summary: Check for dashboards and queries left over from an older layout
+      description: >-
+        Read-only. Compares `rest-api/templates/dashboards/`,
+        `rest-api/templates/dashboards-custom/` and the old query locations
+        `sql-custom/`, `sql/`, `sql-custom-details/` with the shipped
+        inventories (`dashboards/inventory.json`, `queries/inventory.json`)
+        and lists what a cleanup would move: old copies of shipped bundles and
+        queries and emptied old folders to `dashboards-removed/<timestamp>/`,
+        own bundles and own queries to `dashboards-custom/` (own queries from
+        the old locations flat as `<name>.sql`). Independent of the selected
+        solution. Without a usable dashboard inventory nothing is classified
+        (`inventory: false`).
+      tags: [Maintenance]
+      responses:
+        '200':
+          description: Planned moves (empty on a clean installation)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/TemplateCleanupPreview'
+    post:
+      summary: Move the leftover dashboards and queries
+      description: >-
+        Classifies anew (the client list is never taken over), leaves the
+        entries named in `exclude` in place, checks every source and target
+        before the first move and writes `cleanup.json` into the run folder
+        `dashboards-removed/<timestamp>/`. Nothing is deleted. Requires the
+        `X-Admin-Token` header when `ADMIN_RELOAD_TOKEN` is set.
+      tags: [Maintenance]
+      parameters:
+        - name: X-Admin-Token
+          in: header
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                exclude:
+                  type: array
+                  description: '`from` values of the preview to leave in place'
+                  items:
+                    type: string
+                  example: ['dashboards-custom/static-code-analysis/unused_code/unused_layout']
+      responses:
+        '200':
+          description: Report of the run
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/TemplateCleanupReport'
+        '400':
+          description: '`exclude` is not an array of strings (VALIDATION_ERROR)'
+        '401':
+          description: Missing or wrong X-Admin-Token (UNAUTHORIZED)
+        '409':
+          description: Another dashboard cleanup run is active (CLEANUP_RUNNING)
+
+  /maintenance/tests/cleanup:
+    get:
+      summary: Check for Analysis Tests left over from an older layout
+      description: >-
+        Read-only. Compares `rest-api/templates/tests/` with the shipped
+        inventory (`tests/inventory.json`) and lists what a cleanup would
+        move: shipped tests away from their path and folders without a test to
+        `tests-removed/<timestamp>/`, own tests to `tests-custom/`.
+        `tests-custom/` and `tests-community/` are never touched.
+        Independent of the selected solution. Without a usable inventory
+        nothing is classified (`inventory: false`).
+      tags: [Maintenance]
+      responses:
+        '200':
+          description: Planned moves (empty on a clean installation)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/TemplateCleanupPreview'
+    post:
+      summary: Move the leftover Analysis Tests
+      description: >-
+        Same procedure as the dashboard cleanup, with its own lock: classifies
+        anew, leaves the entries named in `exclude` in place, checks every
+        source and target first and writes `cleanup.json` into
+        `tests-removed/<timestamp>/`. Nothing is deleted. Requires the
+        `X-Admin-Token` header when `ADMIN_RELOAD_TOKEN` is set.
+      tags: [Maintenance]
+      parameters:
+        - name: X-Admin-Token
+          in: header
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                exclude:
+                  type: array
+                  description: '`from` values of the preview to leave in place'
+                  items:
+                    type: string
+                  example: ['tests/script/my-test']
+      responses:
+        '200':
+          description: Report of the run
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/TemplateCleanupReport'
+        '400':
+          description: '`exclude` is not an array of strings (VALIDATION_ERROR)'
+        '401':
+          description: Missing or wrong X-Admin-Token (UNAUTHORIZED)
+        '409':
+          description: Another test cleanup run is active (CLEANUP_RUNNING)
+
   /reference/steps/{idOrSlug}/grammar:
     get:
       summary: XMLSnippet grammar of one script step (fm-spec emission layer)
@@ -823,6 +1057,15 @@ paths:
 
 components:
   parameters:
+    FavoriteKind:
+      name: kind
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [dashboard, test]
+      description: Kind of favorite — dashboard (bundle or single-file unit) or Analysis Test
+
     FileFilter:
       name: file
       in: query
@@ -1429,6 +1672,156 @@ components:
             timestamp:
               type: string
               format: date-time
+
+    Favorites:
+      type: object
+      required:
+        - items
+        - missing
+      properties:
+        items:
+          type: array
+          description: Available favorites in the order they were added
+          items:
+            type: object
+            required:
+              - id
+            properties:
+              id:
+                type: string
+                example: unused_layout
+              added_at:
+                type: string
+                format: date-time
+                nullable: true
+                example: '2026-11-01T10:12:00Z'
+        missing:
+          type: array
+          description: >-
+            Stored ids that no longer resolve (dashboard: unknown to the
+            discovery or no longer in a favoritable area; test: unknown)
+          items:
+            type: string
+
+    TemplateCleanupItem:
+      type: object
+      required: [case, from, to, target]
+      properties:
+        case:
+          type: string
+          enum: [a1, a2, a3, b1, b2, b3, f1, f2, f3, f4, f5, t1, t2, t3, t4]
+          description: >-
+            Dashboards — a1 old copy in dashboards/ · a2 old copy at a shipped
+            path in dashboards-custom/ · a3 emptied old folder · b1 own bundle
+            or folder of own bundles in dashboards/ · b2 other foreign folder
+            in dashboards/ · b3 own bundle whose id or target already exists in
+            dashboards-custom/ · f1 old copy of a shipped query at an old
+            location · f2 own query at an old location · f3 own query whose id
+            or target already exists in dashboards-custom/ · f4 other rest at
+            an old location · f5 foreign .sql file in dashboards/.
+            Tests — t1 shipped test away from its path · t2 own test or folder
+            of own tests in tests/ · t3 own test whose id or target already
+            exists in tests-custom/ · t4 folder without a test
+        from:
+          type: string
+          example: dashboards-custom/static-code-analysis/unused_code/unused_layout
+        to:
+          type: string
+          example: dashboards-removed/2026-11-02T14-30-05Z/dashboards-custom/static-code-analysis/unused_code/unused_layout
+        target:
+          type: string
+          enum: [custom, removed]
+        id:
+          type: string
+          nullable: true
+          description: Id when `from` is a bundle, a query file or a test; null for folders
+        ids:
+          type: array
+          description: Ids moved with this entry
+          items:
+            type: string
+        modified:
+          type: boolean
+          description: a2, f1 — the copy differs from the shipped one (f1 ignores `-- @category:` lines)
+        conflict:
+          type: boolean
+          description: b3, f3, t3 — own content that could not move to the user area
+        note:
+          type: string
+          nullable: true
+          enum: [report_template, null]
+          description: 'f2 from `sql/`: a former report template, now reachable via /api/query'
+        canonical:
+          type: string
+          nullable: true
+          description: f1 — the shipped file the copy was compared with (relative to rest-api/templates/)
+          example: dashboards/layouts/tooltip_inventory.sql
+    TemplateCleanupSummary:
+      type: object
+      properties:
+        total:
+          type: integer
+        to_custom:
+          type: integer
+        to_removed:
+          type: integer
+        modified:
+          type: integer
+        conflicts:
+          type: integer
+    TemplateCleanupPreview:
+      type: object
+      required: [inventory, stamp, items, summary]
+      properties:
+        inventory:
+          type: boolean
+          description: false when no usable inventory.json exists (nothing classified)
+        stamp:
+          type: string
+          description: Run folder name a cleanup started now would use
+          example: 2026-11-02T14-30-05Z
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateCleanupItem'
+        summary:
+          $ref: '#/components/schemas/TemplateCleanupSummary'
+        running:
+          type: boolean
+          description: A run of this cleanup is active right now
+    TemplateCleanupReport:
+      type: object
+      required: [inventory, stamp, moved, skipped, errors, summary]
+      properties:
+        inventory:
+          type: boolean
+        stamp:
+          type: string
+        moved:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateCleanupItem'
+        skipped:
+          type: array
+          description: Entries not moved because of an error
+          items:
+            $ref: '#/components/schemas/TemplateCleanupItem'
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              from:
+                type: string
+              message:
+                type: string
+        summary:
+          $ref: '#/components/schemas/TemplateCleanupSummary'
+        removed_dir:
+          type: string
+          nullable: true
+          description: Run folder with cleanup.json, relative to rest-api/templates/
+          example: dashboards-removed/2026-11-02T14-30-05Z
 
   responses:
     NotFound:

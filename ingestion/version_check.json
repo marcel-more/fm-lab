@@ -8,7 +8,7 @@
     "webbed_min_version": "2.13.0",
     "update_url": "https://duckdb.org/docs/installation/",
     "install_command": "curl https://install.duckdb.org | sh",
-    "node_recommended_version": "22.23.4",
+    "node_recommended_version": "26.13.0",
     "node_comment": "Node.js des oeffentlichen Docker-Images = empfohlene Node-Version. tools/build-container-env.mjs schreibt den Wert in die FROM-Zeile von deploy/devcontainer-public/Dockerfile (--check meldet Abweichungen), tools/init.sh gibt bei einem kleineren Major einer noch unterstuetzten Linie einen Hinweis aus (kein Abbruch). Die Untergrenze steht in engines.node (package.json, rest-api/package.json) und als harte Grenze in init.sh; Sicherheitsstaende je Linie in NODE_SECURITY_FLOOR (init.sh). Wechsel des Image-Node = nur diesen Wert anheben und build-container-env.mjs laufen lassen.",
     "storage_compatibility_version": "v1.0.0",
     "storage_comment": "Speicherformat aller DuckDB-Dateien, die fm-lab NEU anlegt (Kataloge, Chunk-/Part-DBs, Chunkmap, Manifest, Sidecars der REST-API, Platzhalter-Katalog). v1.0.0 = Storage 64: lesbar ab DuckDB 1.0, identisch mit dem Standard von 1.5.x. DuckDB 2.0 schreibt ohne diese Angabe Storage 69, das keine 1.x-CLI oeffnen kann. Shell-Leser: fmlab_duckdb_storage_version (tools/lib/duckdb_binding.sh) -> CLI-Startflag -storage-version; Node-Leser: rest-api/src/config/duckdb-storage.js -> DuckDBInstance-Option storage_compatibility_version. Ein SET im laufenden Prozess wirkt NICHT auf die beim Start geoeffnete Datenbank. Bestehende Dateien behalten ihre Version. Umeinstellen (z. B. auf latest) erst mit dem Ende der 1.5-Unterstuetzung. Uebersteuerbar per Umgebungsvariable FMLAB_DUCKDB_STORAGE_VERSION.",

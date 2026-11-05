@@ -179,6 +179,11 @@ const ERROR_CODES = {
   // details tragen die verfuegbaren Presets mit Zaehlern (statt leerem Graph).
   TRACE_UNSUPPORTED_START: { code: "TRACE_UNSUPPORTED_START", status: 422 },
   TRACE_EMPTY_ENTRY: { code: "TRACE_EMPTY_ENTRY", status: 422 },
+  // Favorites: the bundle exists but lives in an area that cannot be
+  // favorited (system/module pages) — 422, not 404.
+  NOT_FAVORITABLE: { code: "NOT_FAVORITABLE", status: 422 },
+  // Template cleanup (dashboards, tests): a second run of the same routine while one is still moving.
+  CLEANUP_RUNNING: { code: "CLEANUP_RUNNING", status: 409 },
 };
 
 /**
@@ -254,7 +259,7 @@ const MERMAID_DIRECTIONS = {
 
 /**
  * Detail Template Map
- * Maps Object_Type (PascalCase) to the SQL template name in templates/sql/
+ * Maps Object_Type (PascalCase) to the SQL template name in templates/queries/system/object-details/
  * Used by /get-details endpoint to dispatch to type-specific detail views
  */
 const DETAIL_TEMPLATE_MAP = {

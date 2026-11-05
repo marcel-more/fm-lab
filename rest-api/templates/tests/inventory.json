@@ -1,0 +1,119 @@
+{
+  "version": 1,
+  "tests": [
+    {
+      "id": "layout-error-checks",
+      "path": "layout/layout-error-checks"
+    },
+    {
+      "id": "layout-hygiene",
+      "path": "layout/layout-hygiene"
+    },
+    {
+      "id": "layout-merge-anchors",
+      "path": "layout/layout-merge-anchors"
+    },
+    {
+      "id": "layout-render-performance",
+      "path": "layout/layout-render-performance"
+    },
+    {
+      "id": "platform-cloud",
+      "path": "platform/platform-cloud"
+    },
+    {
+      "id": "platform-cwp",
+      "path": "platform/platform-cwp"
+    },
+    {
+      "id": "platform-dataapi",
+      "path": "platform/platform-dataapi"
+    },
+    {
+      "id": "platform-ios",
+      "path": "platform/platform-ios"
+    },
+    {
+      "id": "platform-odata",
+      "path": "platform/platform-odata"
+    },
+    {
+      "id": "platform-os-binding",
+      "path": "platform/platform-os-binding"
+    },
+    {
+      "id": "platform-server",
+      "path": "platform/platform-server"
+    },
+    {
+      "id": "platform-webdirect",
+      "path": "platform/platform-webdirect"
+    },
+    {
+      "id": "script-code-quality",
+      "path": "script/script-code-quality"
+    },
+    {
+      "id": "script-error-checks",
+      "path": "script/script-error-checks"
+    },
+    {
+      "id": "script-performance-checks",
+      "path": "script/script-performance-checks"
+    },
+    {
+      "id": "script-plugin-maintenance",
+      "path": "script/script-plugin-maintenance"
+    },
+    {
+      "id": "script-todos",
+      "path": "script/script-todos"
+    },
+    {
+      "id": "wan-script-patterns",
+      "path": "script/wan-script-patterns"
+    },
+    {
+      "id": "calc-variable-hygiene",
+      "path": "solution/calc-variable-hygiene"
+    },
+    {
+      "id": "field-integrity",
+      "path": "solution/field-integrity"
+    },
+    {
+      "id": "naming-hygiene",
+      "path": "solution/naming-hygiene"
+    },
+    {
+      "id": "plugin-availability",
+      "path": "solution/plugin-availability"
+    },
+    {
+      "id": "schema-performance",
+      "path": "solution/schema-performance"
+    },
+    {
+      "id": "sql-performance-checks",
+      "path": "solution/sql-performance-checks"
+    },
+    {
+      "id": "unfinished-work",
+      "path": "solution/unfinished-work"
+    },
+    {
+      "id": "uuid-integrity",
+      "path": "solution/uuid-integrity"
+    },
+    {
+      "id": "version-floor",
+      "path": "solution/version-floor"
+    }
+  ],
+  "folders": [
+    "layout",
+    "platform",
+    "script",
+    "solution"
+  ]
+}

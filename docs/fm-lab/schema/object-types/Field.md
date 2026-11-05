@@ -139,7 +139,7 @@ Values marked *(corpus)* are the literals observed in the ooe-fm test corpus; th
 
 - **XML schema:** [XML FieldsForTables](../../xml/catalogs/XML%20FieldsForTables.md) — `<FieldsForTables>` branch, one `<FieldCatalog>` per base table
 - **DB schema:** [FieldsForTables](../catalog-tables/FieldsForTables.md) · formulas tokenized in [DDR_Calculations](../catalog-tables/DDR_Calculations.md)
-- **Detail view template:** `rest-api/templates/sql/object_details_field.sql` (+ `object_details_field_tokens.sql` for the calculation token view), served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md)
+- **Detail view template:** `rest-api/templates/queries/system/object-details/object_details_field.sql` (+ `object_details_field_tokens.sql` for the calculation token view), served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md)
 - **Frontend:** object list at `http://localhost:5173/?type=Field`
 
 **See also:** [Object Types](../object-catalog/Object%20Types.md) · [BaseTable](BaseTable.md) · [TableOccurrence](TableOccurrence.md) · [ValueList](ValueList.md) · [Link Roles and Subroles](../object-catalog/Link%20Roles%20and%20Subroles.md)

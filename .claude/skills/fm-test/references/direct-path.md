@@ -4,21 +4,27 @@ Fallback recipe when `http://localhost:3003` does not respond. Same semantics
 as the API path: the member SQLs only ever see the two params `file` and
 `scope_uuids`; all object-like scopes are normalised BEFORE execution.
 
-## 1. Discovery — `read_json` over both tiers
+## 1. Discovery — `read_json` over the three areas
 
-Tests live in `rest-api/templates/tests/<…>/<id>/test.json` (system tier) and
-`rest-api/templates/tests-custom/<…>/<id>/test.json` (custom tier). Custom
-wins on id collision — dedupe explicitly (`read_json` has no precedence):
+Tests live in `rest-api/templates/tests/<…>/<id>/test.json` (shipped),
+`rest-api/templates/tests-custom/<…>/<id>/test.json` (own tests) and
+`rest-api/templates/tests-community/<…>/<id>/test.json` (installed community
+tests). A custom test wins on id collision, a community test never does —
+dedupe explicitly (`read_json` has no precedence). `tests-removed/` holds
+copies moved aside by the cleanup routine and must be excluded:
 
 ```sql
 WITH all_tests AS (
   SELECT *, filename,
-         filename LIKE '%tests-custom%' AS is_custom
+         CASE WHEN filename LIKE '%/tests-custom/%' THEN 0
+              WHEN filename LIKE '%/tests-community/%' THEN 2
+              ELSE 1 END AS area_rank
   FROM read_json('rest-api/templates/tests*/**/test.json',
                  union_by_name = true, filename = true)
+  WHERE filename NOT LIKE '%/tests-removed/%'
 ),
 ranked AS (
-  SELECT *, row_number() OVER (PARTITION BY id ORDER BY is_custom DESC) AS rn
+  SELECT *, row_number() OVER (PARTITION BY id ORDER BY area_rank) AS rn
   FROM all_tests
 )
 SELECT id, title, testType, keywords, objectTypes, scopes
@@ -39,16 +45,24 @@ the rest as skipped.
 
 For each `members[]` entry of the chosen `test.json`:
 
-- `kind: "dashboard"` → bundle dir under
-  `rest-api/templates/dashboards-custom/**/<ref>/` (custom first, then
-  `rest-api/templates/dashboards/**/<ref>/`). Read `manifest.json`:
-  - `analysis.defaultResult` names the dataset (usually `summary`) and column
-    (usually `finding_count`).
-  - dataset SQL file: `datasets[]` entry with that id → `bundle:data/….sql`.
-  - findings rows: the dataset with id `findings`.
-- `kind: "query"` → `rest-api/templates/sql-custom/<ref>.sql`; frontmatter
-  `@default_result` gives `{ type, name, meaning, aggregate }`
-  (`row_count` = number of rows, `first_row:<col>` = first row's column).
+- `kind: "dashboard"` (and its read alias `kind: "query"`) → the dashboard
+  `<ref>`: a bundle dir `<ref>/` (the one holding `manifest.json`) **or** a
+  single-file dashboard `<ref>.sql` (the id is unique across both forms),
+  searched under `rest-api/templates/dashboards-custom/**` first — the user's
+  own dashboards override shipped content dashboards of the same id — then
+  `rest-api/templates/dashboards/**`, then
+  `rest-api/templates/dashboards-community/**`, finally the old location
+  `rest-api/templates/sql-custom/<ref>.sql` (own queries not yet moved by the
+  cleanup). Never a file inside a bundle (`data/`, `queries/`).
+  - Bundle → read `manifest.json`:
+    - `analysis.defaultResult` names the dataset (usually `summary`) and column
+      (usually `finding_count`).
+    - dataset SQL file: `datasets[]` entry with that id → `bundle:data/….sql`.
+    - findings rows: the dataset with id `findings`.
+  - Single-file dashboard → the file itself is the one dataset; its header
+    `@default_result` gives `{ type, name, meaning, aggregate }`
+    (`row_count` = number of rows, `first_row:<col>` = first row's column);
+    findings rows = the result rows.
 
 ## 3. Scope params → `SET VARIABLE`
 
@@ -57,7 +71,7 @@ duckdb -readonly db/fm_catalog.duckdb \
   -c "SET VARIABLE file = 'MyDatabase'" \
   -c "SET VARIABLE scope_uuids = '<uuid1>,<uuid2>'" \
   -c ".mode markdown" \
-  -c ".read rest-api/templates/dashboards-custom/static-code-analysis/error_prone/exit_script_in_loop/data/summary.sql"
+  -c ".read rest-api/templates/dashboards/static-code-analysis/error_prone/exit_script_in_loop/data/summary.sql"
 ```
 
 - Solution scope: set NO variables (unset `getvariable` → NULL → predicates
@@ -109,7 +123,7 @@ attaches the reference DB automatically; on the direct path attach it first:
 duckdb -readonly db/fm_catalog.duckdb \
   -c "ATTACH 'reference/fm_spec.duckdb' AS ref (READ_ONLY)" \
   -c "SET VARIABLE scope_uuids = '<uuid>'" -c "SET VARIABLE file = '<file>'" \
-  -c ".read rest-api/templates/dashboards-custom/static-code-analysis/platform/platform_compat_server/data/summary.sql"
+  -c ".read rest-api/templates/dashboards/static-code-analysis/platform/platform_compat_server/data/summary.sql"
 ```
 
 Aspect profiles: `platform-ios`/`platform-server` ship two members —
@@ -136,7 +150,7 @@ member needs BOTH since v7: its Server × OS cross-refinement reads
 duckdb -readonly db/fm_catalog.duckdb \
   -c "ATTACH 'reference/fm_spec.duckdb' AS ref (READ_ONLY)" \
   -c "ATTACH 'reference/plugin_spec.duckdb' AS plugref (READ_ONLY)" \
-  -c ".read rest-api/templates/dashboards-custom/static-code-analysis/platform/platform_compat_plugins_server/data/summary.sql"
+  -c ".read rest-api/templates/dashboards/static-code-analysis/platform/platform_compat_plugins_server/data/summary.sql"
 ```
 
 If `reference/plugin_spec.duckdb` is missing, skip those members with the

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useTranslation } from 'react-i18next';
 import { useTemplateQuery } from '../hooks/useTemplateQuery';
+import { BulkToggleButton, BulkToggleGroup, CollapseAllIcon, ExpandAllIcon } from './BulkToggle';
+import { DisclosureChevron } from './DisclosureChevron';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ErrorMessage } from './ErrorMessage';
 import { NoDataYet } from './NoDataYet';
@@ -277,24 +279,22 @@ export const FolderTree: React.FC<FolderTreeProps> = ({ subtype, file, filter })
             })
           )}
         </span>
-        <button
-          type="button"
-          onClick={expandAll}
-          className="folder-tree-toolbar-button"
-          disabled={filterActive}
-          title={(filterActive ? t('nav:folderTree.disabledDuringFilter') : t('nav:folderTree.expandAll')) as string}
-        >
-          {t('nav:folderTree.expandAll')}
-        </button>
-        <button
-          type="button"
-          onClick={collapseAll}
-          className="folder-tree-toolbar-button"
-          disabled={filterActive}
-          title={(filterActive ? t('nav:folderTree.disabledDuringFilter') : t('nav:folderTree.collapseAll')) as string}
-        >
-          {t('nav:folderTree.collapseAll')}
-        </button>
+        <BulkToggleGroup>
+          <BulkToggleButton
+            icon={<ExpandAllIcon />}
+            label={t('nav:folderTree.expandAll') as string}
+            onClick={expandAll}
+            disabled={filterActive}
+            title={filterActive ? (t('nav:folderTree.disabledDuringFilter') as string) : undefined}
+          />
+          <BulkToggleButton
+            icon={<CollapseAllIcon />}
+            label={t('nav:folderTree.collapseAll') as string}
+            onClick={collapseAll}
+            disabled={filterActive}
+            title={filterActive ? (t('nav:folderTree.disabledDuringFilter') as string) : undefined}
+          />
+        </BulkToggleGroup>
       </div>
 
       <div ref={parentRef} className="folder-tree-scroll">
@@ -343,6 +343,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({ subtype, file, filter })
                     style={{ paddingLeft: indent + 8 }}
                     role="button"
                     tabIndex={0}
+                    aria-expanded={isContainer ? isExpanded : undefined}
                     onClick={() => {
                       // Container (Folder/Datei) klappen auf; Datei-Knoten haben
                       // keine Detail-Seite, navigieren also nie.
@@ -357,9 +358,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({ subtype, file, filter })
                       }
                     }}
                   >
-                    <span className="folder-tree-toggle">
-                      {isContainer ? (isExpanded ? '▾' : '▸') : ''}
-                    </span>
+                    <DisclosureChevron open={isContainer ? isExpanded : null} />
                     <span className={`folder-tree-badge folder-tree-badge-${row.type.toLowerCase()}`}>
                       {badgeForType(row.type)}
                     </span>

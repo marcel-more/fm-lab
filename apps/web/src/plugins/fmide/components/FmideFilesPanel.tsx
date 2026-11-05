@@ -43,7 +43,7 @@ export const FmideFilesPanel: React.FC = () => {
 
   return (
     <details className="fmide-files-panel">
-      <summary>{t('detail:settingsView.fmide.showFiles')}</summary>
+      <summary className="disclosure-summary">{t('detail:settingsView.fmide.showFiles')}</summary>
 
       <div className="fmide-files-toolbar">
         <button type="button" className="fmide-rescan-button" onClick={rescan} disabled={rescanning}>

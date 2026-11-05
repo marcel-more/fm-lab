@@ -140,11 +140,45 @@ lists):
   search without hits keeps the search field; `FilterChips` in that card set
   `"resetParams": ["page"]`.
 - A `chipFilter` without `param` on a paged table is not allowed (it would count
-  one page); a unit test enforces this and the two rules above.
+  one page); a unit test enforces this and the two rules above for the shipped
+  bundles — a custom bundle is not covered by it, so follow them by hand.
 - Without `pageParam`, a `_row_total` above the loaded rows only names the
   cut-off of a LIMIT-capped result ("500 of 3,104").
-- Reference bundles: `dashboards-custom/static-code-analysis/unused_code/variable_set_never_read`
+- Reference bundles: `dashboards/static-code-analysis/unused_code/variable_set_never_read`
   (FilterChips + paging), `…/best_practices/relationship_with_sort` (server chip).
+
+**Client paging, page-size select, keyboard navigation** — for a list whose
+rows are all loaded anyway (small, bounded sets such as the files of a
+solution). Not for a result that can grow large: that one pages on the server.
+
+```json
+{ "type": "Table", "props": {
+  "rowKey": "File_Name", "sortable": true,
+  "defaultSort": { "field": "File_Name", "dir": "asc" },
+  "pageSizeOptions": ["all", 10, 25, 50, 100],
+  "defaultPageSize": "auto", "autoPageSizeThreshold": 100,
+  "keyboardNav": true,
+  "stateKey": "fmlab.<dashboard>.<table>",
+  "columns": [ … ], "onRowClick": { … }
+}}
+```
+- `defaultSort`: start sort of a client-sorted table, shown with its indicator.
+  Sortable headers are buttons (Tab, Enter/Space) and carry `aria-sort`.
+- `pageSizeOptions`: renders a page-size select in the count bar (only above
+  the smallest numeric option) and pages the rows after chip, search and sort;
+  the pager shows above and below. A new search, sort or chip returns to page 1.
+- `defaultPageSize`: `"all"` (default), a number, or `"auto"` — every row up to
+  `autoPageSizeThreshold` rows (default 100), above it the threshold option. A
+  choice of the user overrides it.
+- `keyboardNav`: the rows are one tab stop; ↑/↓ move the focus (across pages),
+  Home/End jump within the page, PageUp/PageDown turn it, Enter runs
+  `onRowClick`.
+- `stateKey`: sort, chosen page size, page and focus row survive reload and
+  "back" (tab level); sort and page size also seed a new tab (browser level).
+  After Enter opened a row, "back" puts the keyboard focus on that row again.
+  Use a unique key per table.
+- Ignored together with `pageParam` (server paging owns sort and pages there).
+- Reference bundle: `dashboards/system/home` (`files_overview_table`).
 
 ### `AutoTable`
 Columns derived automatically from the dataset (columns prefixed `_` are always
@@ -223,7 +257,7 @@ included — plus levels, series slots, labels and the drill-down window as text
 Each chart loads lazily on first use, has one tab stop (arrow keys move, Enter
 opens) and passes the clicked row's tokens to its click action. Reference
 bundle: `rest-api/templates/dashboards/changelog/changes/` (`activity_map.sql`,
-`activity_series.sql`) and the file view's `file/data/change_trend.sql`.
+`activity_series.sql`) and the file view's `system/file/data/change_trend.sql`.
 
 | Primitive | Props | Dataset contract (one row per …) |
 |---|---|---|
@@ -350,11 +384,22 @@ use `badge`, or format in SQL.)
 - Every `data.dataset` name used in `layout.json` must exist in
   `manifest.datasets[].id` — the loader does NOT catch this (empty card at runtime).
 - `permissions`: `{ "read_only": true, "allow_navigation": true }`.
+- `analysis.objectTypes` (optional array of `ObjectCatalog.Object_Type` values):
+  the object types the rows point at. Required in practice whenever a dataset
+  emits `AS nav_uuid` — the dashboard overview filters by object type from this
+  declaration only (no run); a bundle without it appears only under
+  *Without object type*. Bundles without object rows (statistics, change
+  lists) omit it.
 
 Dataset sources: `bundle:data/<name>.sql` (preferred, self-contained) ·
-`custom:<template>` (sql-custom resolver chain) · `report:<template>`
-(`rest-api/templates/sql/`) · `builtin:<name>` (server builtins:
-`list_dashboards`, `list_custom_queries`, `files`, `query_meta`, …).
+`custom:<template>` (a single-file dashboard — `dashboards-custom/` overrides
+`dashboards/`, then `dashboards-community/` and the old location `sql-custom/` —,
+else a module template of `queries/modules/`, else the `queries/` folder of a
+dashboard bundle) ·
+`report:<template>` (internal templates in `rest-api/templates/queries/system/`) ·
+`builtin:<name>` (server builtins:
+`list_dashboards` — bundles and single-file dashboards, with `unit` and
+`object_types` per row —, `files`, `query_meta`, …).
 
 Icons (`manifest.icon`, Lucide names): `database`, `code`, `layout-list`,
 `git-fork`, `table-2`, `search`, `variable`, `function-square`, `tag`,

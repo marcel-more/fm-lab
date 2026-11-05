@@ -1,0 +1,83 @@
+{
+  "id": "custom_function_many_params",
+  "version": "1.0.0",
+  "title": "Custom Function with many parameters",
+  "description": "Code-style rule — custom functions with five or more parameters. Long signatures are hard to call correctly.\n\nBased on the PMD rule ExcessiveParameterList — https://docs.pmd-code.org/latest/pmd_rules_java_design.html#excessiveparameterlist",
+  "author": "fm-lab rules",
+  "icon": "function-square",
+  "category": "code_style",
+  "tags": [
+    "rule",
+    "pmd",
+    "code_style"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "info",
+    "category": "code_style",
+    "rationale": "Many positional parameters are easy to mix up and hint at a missing structure.",
+    "remediation": "Pass a single JSON / dictionary parameter, or split the function.",
+    "meta": {
+      "name": "Custom Function with many parameters",
+      "author": "fm-lab rules",
+      "source": "PMD",
+      "url": "https://docs.pmd-code.org/latest/pmd_rules_java_design.html#excessiveparameterlist",
+      "description": "Code-style rule — custom functions with five or more parameters. Long signatures are hard to call correctly.",
+      "created": "2026-07-01",
+      "references": [
+        {
+          "project": "PMD",
+          "rule": "ExcessiveParameterList",
+          "url": "https://docs.pmd-code.org/latest/pmd_rules_java_design.html#excessiveparameterlist"
+        }
+      ]
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "CustomFunction"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {}
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Custom Function with many parameters"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

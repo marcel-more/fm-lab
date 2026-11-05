@@ -34,6 +34,8 @@ const REFRESH_EVENT = 'fmlab:refresh-datasets';
 const DISSOLVE_MS = 600;
 /** Kurzes „Aktualisiert …"-Feedback nach einem Klick auf „Neu scannen". */
 const RESCAN_FEEDBACK_MS = 600;
+// Status poll while a terminal run (no event stream) is active.
+const EXTERNAL_POLL_MS = 4000;
 
 /**
  * Die SQL-Pipeline als beschriftete Balken-Segmente. `start`/`end` sind die
@@ -92,6 +94,55 @@ function dispatchStatus(detail: XmlConvertStatusDetail) {
   window.dispatchEvent(new CustomEvent<XmlConvertStatusDetail>(STATUS_EVENT, { detail }));
 }
 
+// Clean self-abort reasons the converter reports with an `aborted` event.
+const ABORT_REASONS = new Set(['oom', 'incomplete', 'no_importable_files']);
+
+interface AbortNotice {
+  reason: string;
+  // no_importable_files only (0 for the other reasons)
+  total: number;
+  skipped: number;
+  failed: number;
+  legacy: number;
+  versions: string;
+}
+
+interface SkippedFile {
+  filename: string;
+  reason: string | null;
+  sourceVersion: string | null;
+}
+
+// Skipped-files notice handed across the dashboard reload a successful run
+// triggers (the reload rebuilds the view and remounts this control). Set right
+// before the reload, read by the next mount of the same solution (pure, so a
+// StrictMode double call of the state initializer is harmless) and cleared by
+// that mount's effect.
+let pendingSkippedNotice: { solution: string | null; files: SkippedFile[] } | null = null;
+
+function peekPendingSkippedNotice(solution: string | null): SkippedFile[] | null {
+  const p = pendingSkippedNotice;
+  return p && p.solution === solution ? p.files : null;
+}
+
+// Banner title/body keys per abort reason. no_importable_files has two bodies:
+// every file a FileMaker-18 export (remedy: re-export) or any other mix.
+function abortBannerKeys(n: AbortNotice): { title: string; body: string } {
+  switch (n.reason) {
+    case 'incomplete':
+      return { title: 'xmlConvert.abortIncompleteTitle', body: 'xmlConvert.abortIncompleteBody' };
+    case 'no_importable_files':
+      return {
+        title: 'xmlConvert.abortNoInputTitle',
+        body: n.failed === 0 && n.legacy > 0 && n.legacy === n.skipped
+          ? 'xmlConvert.abortNoInputBody'
+          : 'xmlConvert.abortNoInputBodyMixed',
+      };
+    default:
+      return { title: 'xmlConvert.abortOomTitle', body: 'xmlConvert.abortOomBody' };
+  }
+}
+
 export function XmlConvertControl({ node, datasets }: PrimitiveProps) {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
@@ -115,13 +166,25 @@ export function XmlConvertControl({ node, datasets }: PrimitiveProps) {
     ?? datasets?.xml_directory_listing?.data
     ?? null) as Array<Record<string, unknown>> | null;
   const directoryEmpty = directoryRows != null && directoryRows.length === 0;
+  // Nur nicht unterstützte Dateien (FileMaker-18-Exporte, Status `unsupported`
+  // aus `directory_status`) → nichts Importierbares; der Konverter würde nach P1
+  // abbrechen. Bei gemischter Inbox bleibt der Button aktiv (Summenzeile genügt).
+  const nothingImportable = directoryRows != null && directoryRows.length > 0
+    && directoryRows.every(r => r.status === 'unsupported');
 
   const [status, setStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
   const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState('');
-  // Reason of a clean self-abort ('oom' | 'incomplete') → renders a localized banner
-  // with actionable guidance; null when no such abort is pending.
-  const [abortNotice, setAbortNotice] = useState<string | null>(null);
+  // Reason of a clean self-abort ('oom' | 'incomplete' | 'no_importable_files') plus
+  // the event's extra fields → renders a localized banner with actionable guidance;
+  // null when no such abort is pending.
+  const [abortNotice, setAbortNotice] = useState<AbortNotice | null>(null);
+  // Files skipped by the root check in a run that otherwise succeeded → warning
+  // banner (not an error); null when there were none.
+  const [skippedNotice, setSkippedNotice] = useState<SkippedFile[] | null>(
+    () => peekPendingSkippedNotice(contextSolution),
+  );
+  useEffect(() => { pendingSkippedNotice = null; }, []);
   // "Nur geänderte Dateien" (Manifest-Skip auf Datei-Ebene) ist Default; nur
   // geänderte XML werden neu geparst. Toggle aus → voller (Turbo-)Build aller Dateien.
   const [changedOnly, setChangedOnly] = useState(true);
@@ -129,6 +192,10 @@ export function XmlConvertControl({ node, datasets }: PrimitiveProps) {
   // finalen Zustand sichtbar und blendet animiert aus, bevor wieder der Button
   // erscheint.
   const [dissolving, setDissolving] = useState(false);
+  // A conversion runs outside the API (terminal run, e.g. tools/init.sh): it holds the
+  // lock but sends no events, so there is no stream to follow — the control shows a
+  // waiting notice and polls the status until the run is over.
+  const [external, setExternal] = useState(false);
   // Kurzes Klick-Feedback für „Neu scannen" (der eigentliche Refresh läuft im
   // DashboardHost und tauscht die Tabelle in-place aus).
   const [rescanning, setRescanning] = useState(false);
@@ -196,7 +263,8 @@ export function XmlConvertControl({ node, datasets }: PrimitiveProps) {
       let errorCount = 0;
       let doneOk: boolean | null = null;
       let idle = false;
-      let abortReason: string | null = null;
+      let abortReason: AbortNotice | null = null;
+      const skippedFiles: SkippedFile[] = [];
 
       while (true) {
         const { value, done } = await reader.read();
@@ -227,7 +295,16 @@ export function XmlConvertControl({ node, datasets }: PrimitiveProps) {
                 break;
               }
               case 'file': {
-                if (evt.ok === false) errorCount += 1;
+                // Root-check skips (unsupported format) are reported, not counted as errors.
+                if (evt.status === 'skipped') {
+                  skippedFiles.push({
+                    filename: String(evt.filename ?? ''),
+                    reason: typeof evt.reason === 'string' ? evt.reason : null,
+                    sourceVersion: typeof evt.source_version === 'string' ? evt.source_version : null,
+                  });
+                } else if (evt.ok === false) {
+                  errorCount += 1;
+                }
                 break;
               }
               case 'idle': {
@@ -236,11 +313,20 @@ export function XmlConvertControl({ node, datasets }: PrimitiveProps) {
                 break;
               }
               case 'aborted': {
-                // The converter self-aborts cleanly with a reason (oom / incomplete);
-                // a user cancel (or a legacy bare event) carries no such reason → idle.
+                // The converter self-aborts cleanly with a reason (oom / incomplete /
+                // no_importable_files); a user cancel (or a legacy bare event) carries
+                // no such reason → idle.
                 const reason = typeof evt.reason === 'string' ? (evt.reason as string) : '';
-                if (reason === 'oom' || reason === 'incomplete') {
-                  abortReason = reason;   // surfaced as an error banner after the loop
+                if (ABORT_REASONS.has(reason)) {
+                  // surfaced as an error banner after the loop
+                  abortReason = {
+                    reason,
+                    total: Number(evt.total ?? 0),
+                    skipped: Number(evt.skipped ?? 0),
+                    failed: Number(evt.failed ?? 0),
+                    legacy: Number(evt.legacy ?? 0),
+                    versions: typeof evt.source_versions === 'string' ? evt.source_versions : '',
+                  };
                 } else {
                   idle = true;
                 }
@@ -265,10 +351,14 @@ export function XmlConvertControl({ node, datasets }: PrimitiveProps) {
         if (hadError || doneOk === false) {
           setStatus('error');
           if (abortReason) setAbortNotice(abortReason);
+          setSkippedNotice(null);   // the abort banner already names the skipped files
           dispatchStatus({ status: 'error', ok: false, startedAt, finishedAt, durationMs, errorCount });
         } else {
           setStatus('done');
           setAbortNotice(null);
+          const notice = skippedFiles.length > 0 ? skippedFiles : null;
+          setSkippedNotice(notice);
+          pendingSkippedNotice = notice ? { solution: contextSolution, files: notice } : null;
           dispatchStatus({ status: 'done', ok: true, startedAt, finishedAt, durationMs, errorCount: 0 });
           // Datei-Tabelle UND Community-Gauges neu laden.
           window.dispatchEvent(new CustomEvent('fmlab:reload-dashboard'));
@@ -294,7 +384,34 @@ export function XmlConvertControl({ node, datasets }: PrimitiveProps) {
     } finally {
       abortRef.current = null;
     }
-  }, [triggerDissolve, solutionQuery]);
+  }, [triggerDissolve, solutionQuery, contextSolution]);
+
+  /** True when a conversion runs without a hub run of the API (no event stream). */
+  const fetchExternalRun = useCallback(async (): Promise<boolean> => {
+    try {
+      const apiBase = (API_BASE).replace(/\/+$/, '');
+      const res = await fetch(`${apiBase}/api/xml/status${solutionQuery}`, { headers: { Accept: 'application/json' } });
+      if (!res.ok) return false;
+      const json = await res.json().catch(() => null);
+      const data = json?.data ?? json;
+      return data?.running === true && !data.active_run;
+    } catch {
+      return false;
+    }
+  }, [solutionQuery]);
+
+  // While a terminal run is active: poll until it is over, then reload the file table
+  // and the result summary like after an own run.
+  useEffect(() => {
+    if (!external) return undefined;
+    const timer = window.setInterval(async () => {
+      if (await fetchExternalRun()) return;
+      setExternal(false);
+      window.dispatchEvent(new CustomEvent('fmlab:reload-dashboard'));
+      window.dispatchEvent(new CustomEvent(REFRESH_EVENT));
+    }, EXTERNAL_POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [external, fetchExternalRun]);
 
   /**
    * Startet einen Lauf: POST /api/xml/convert (202, streamt NICHT mehr selbst) →
@@ -312,7 +429,8 @@ export function XmlConvertControl({ node, datasets }: PrimitiveProps) {
     setStatus('running');
     setProgress(0);
     setPhase('');
-    setAbortNotice(null);   // clear a prior memory/incomplete banner on a fresh run
+    setAbortNotice(null);   // clear a prior abort/skip banner on a fresh run
+    setSkippedNotice(null);
     dispatchStatus({ status: 'running', startedAt });
 
     const apiBase = (API_BASE).replace(/\/+$/, '');
@@ -323,7 +441,14 @@ export function XmlConvertControl({ node, datasets }: PrimitiveProps) {
         body: JSON.stringify(contextSolution ? { changedOnly, solution: contextSolution } : { changedOnly }),
       });
       if (res.status === 409) {
-        // Es läuft bereits (anderer Tab/CLI) → einfach auf den Stream aufspringen.
+        // Es läuft bereits: ein Terminal-Lauf hat keinen Stream → Wartehinweis;
+        // ein Lauf aus einem anderen Tab → auf seinen Stream aufspringen.
+        if (await fetchExternalRun()) {
+          setStatus('idle');
+          dispatchStatus({ status: 'idle' });
+          setExternal(true);
+          return;
+        }
         await subscribeToStream(startedAt);
         return;
       }
@@ -345,7 +470,7 @@ export function XmlConvertControl({ node, datasets }: PrimitiveProps) {
       dispatchEvent({ event: 'log', level: 'error', msg: (err as Error).message || String(err) });
       dispatchStatus({ status: 'error' });
     }
-  }, [status, changedOnly, subscribeToStream, contextSolution]);
+  }, [status, changedOnly, subscribeToStream, contextSolution, fetchExternalRun]);
 
   // Mount-Detektion: fragt den Server, ob bereits ein Lauf
   // aktiv ist. Falls ja → OHNE POST auf den Stream abonnieren (Wiedereintritt
@@ -374,6 +499,11 @@ export function XmlConvertControl({ node, datasets }: PrimitiveProps) {
           }, { replace: true });
         }
 
+        if (data?.running && !data.active_run) {
+          // Terminal run (no hub run, no stream) → waiting notice instead of a bar.
+          setExternal(true);
+          return;
+        }
         if (data?.running) {
           const startedAt = data.active_run?.started_at ?? new Date().toISOString();
           setStatus('running');
@@ -384,8 +514,9 @@ export function XmlConvertControl({ node, datasets }: PrimitiveProps) {
           return;
         }
 
-        // Nichts läuft → Auto-Start aus dem Empty-State feuern (nur wenn Dateien da sind).
-        if (wantAutostart && !directoryEmpty) {
+        // Nichts läuft → Auto-Start aus dem Empty-State feuern (nur wenn Dateien da
+        // sind und mindestens eine davon importierbar ist).
+        if (wantAutostart && !directoryEmpty && !nothingImportable) {
           startConvert();
         }
       } catch {
@@ -405,23 +536,49 @@ export function XmlConvertControl({ node, datasets }: PrimitiveProps) {
     startConvert();
   }, [mode, navigate, startConvert]);
 
-  const isRunning = status === 'running';
-  const disabled = isRunning || directoryEmpty;
+  const isRunning = status === 'running' || external;
+  const disabled = isRunning || directoryEmpty || nothingImportable;
   const label = isRunning
     ? (t('xmlConvert.running', { defaultValue: 'XML wird konvertiert …' }) as string)
     : (t('xmlConvert.start', { defaultValue: 'XML konvertieren' }) as string);
 
   const showBar = isRunning || dissolving;
 
-  const abortTitleKey = abortNotice === 'incomplete' ? 'xmlConvert.abortIncompleteTitle' : 'xmlConvert.abortOomTitle';
-  const abortBodyKey = abortNotice === 'incomplete' ? 'xmlConvert.abortIncompleteBody' : 'xmlConvert.abortOomBody';
+  const abortKeys = abortNotice ? abortBannerKeys(abortNotice) : null;
 
   return (
     <div className="xml-convert-control">
-      {abortNotice && !showBar && (
+      {abortNotice && abortKeys && !showBar && (
         <div className="xml-convert-abort" role="alert">
-          <strong className="xml-convert-abort__title">{t(abortTitleKey) as string}</strong>
-          <span className="xml-convert-abort__body">{t(abortBodyKey) as string}</span>
+          <strong className="xml-convert-abort__title">{t(abortKeys.title) as string}</strong>
+          <span className="xml-convert-abort__body">
+            {t(abortKeys.body, {
+              total: abortNotice.total,
+              skipped: abortNotice.skipped,
+              failed: abortNotice.failed,
+              legacy: abortNotice.legacy,
+              versions: abortNotice.versions || '18',
+            }) as string}
+          </span>
+        </div>
+      )}
+      {external && !showBar && (
+        <div className="xml-convert-abort xml-convert-abort--running" role="status">
+          <strong className="xml-convert-abort__title">{t('xmlConvert.externalTitle') as string}</strong>
+          <span className="xml-convert-abort__body">{t('xmlConvert.externalBody') as string}</span>
+        </div>
+      )}
+      {skippedNotice && !abortNotice && !showBar && !external && (
+        <div className="xml-convert-abort xml-convert-abort--warning" role="status">
+          <strong className="xml-convert-abort__title">
+            {t('xmlConvert.skippedNoticeTitle', { count: skippedNotice.length }) as string}
+          </strong>
+          <span className="xml-convert-abort__body">
+            {t('xmlConvert.skippedNoticeBody', {
+              count: skippedNotice.length,
+              files: skippedNotice.map(f => f.filename).join(', '),
+            }) as string}
+          </span>
         </div>
       )}
       {showBar ? (
@@ -494,6 +651,9 @@ export function XmlConvertControl({ node, datasets }: PrimitiveProps) {
             className={`xml-convert-btn${mode === 'navigate' ? ' xml-convert-btn--outline' : ''}`}
             onClick={handleClick}
             disabled={disabled}
+            title={nothingImportable && !isRunning
+              ? (t('xmlConvert.nothingImportableHint') as string)
+              : undefined}
           >
             {label}
           </button>

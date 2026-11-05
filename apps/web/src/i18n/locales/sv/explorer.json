@@ -90,9 +90,17 @@
       "recency": "Färga noder efter åldern på deras senaste enskilda ändring (Grafatlasens klasser)"
     },
     "communityUnnamed": "Community {{id}}",
-    "resizePanel": "Ändra bredd på filterpanelen",
+    "detailsShort": "Detaljer",
+    "openDetails": "Öppna fokusobjektets detaljvy",
+    "openTypeList": "Öppna objektlistan för {{type}}",
+    "hideType": "Dölj {{type}}",
+    "showType": "Visa {{type}}",
+    "depthOf": "(av {{max}})",
+    "extendDepth": "djupare",
+    "extendDepthHint": "Utöka reglaget förbi 4 (upp till det maximala nåbara djupet).",
     "depthLoad": "{{count}} nåbara",
     "depthClipped": "{{count}} nåbara, laddning begränsad till {{limit}}",
+    "resizePanel": "Ändra bredd på filterpanelen",
     "partLoaded": "{{count}} laddade",
     "partConnected": "{{count}} anslutna",
     "partIsland_one": "{{count}} ö",
@@ -104,11 +112,6 @@
     "loadAllHint": "Ladda alla typer; att avmarkera en chip döljer den bara",
     "loadSelectedHint": "Ladda endast de valda typerna (laddar om)"
   },
-  "unconnectedHidden_one": "{{count}} nod utan koppling till fokus",
-  "unconnectedHidden_other": "{{count}} noder utan koppling till fokus",
-  "unconnectedToggleShow": "visa",
-  "unconnectedToggleHide": "dölj",
-  "unconnectedToggleHint": "Noder utan väg till fokus uppstår genom typ-/djupfiltret — visa eller dölj dem",
   "typeList": {
     "ariaLabel": "Objektlista: {{type}}",
     "sortBy": "Sortera",
@@ -124,6 +127,11 @@
     "empty": "Inga objekt av den här typen i grafen.",
     "focus": "Fokusobjekt"
   },
+  "unconnectedHidden_one": "{{count}} nod utan koppling till fokus",
+  "unconnectedHidden_other": "{{count}} noder utan koppling till fokus",
+  "unconnectedToggleShow": "visa",
+  "unconnectedToggleHide": "dölj",
+  "unconnectedToggleHint": "Noder utan väg till fokus uppstår genom typ-/djupfiltret — visa eller dölj dem",
   "edge": {
     "represents": "representerar",
     "buttonAction": "Knappåtgärd",

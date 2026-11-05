@@ -101,3 +101,35 @@ apps/*/.env.production
 .fmlab/workspace/
 .fmlab/stream_verify/*.snap
 .fmlab/open-requests/
+.fmlab/favorites.json
+# Backups of tools/update.sh (files an update would have replaced)
+.fmlab/update-backup/
+
+# Your own dashboards (user area) — never tracked, only the scaffold ships.
+# Shipped dashboards live in rest-api/templates/dashboards/; an update never
+# touches the bundles in this folder.
+rest-api/templates/dashboards-custom/*
+!rest-api/templates/dashboards-custom/.gitkeep
+!rest-api/templates/dashboards-custom/folder.json
+!rest-api/templates/dashboards-custom/README.md
+# Your own Analysis Tests (user area) — never tracked, only the scaffold
+# ships. Shipped ones live in rest-api/templates/tests/.
+rest-api/templates/tests-custom/*
+!rest-api/templates/tests-custom/.gitkeep
+!rest-api/templates/tests-custom/folder.json
+!rest-api/templates/tests-custom/README.md
+# Community areas = install target of community packages — only the scaffold
+# ships; installed content is never tracked.
+rest-api/templates/dashboards-community/*
+!rest-api/templates/dashboards-community/.gitkeep
+!rest-api/templates/dashboards-community/folder.json
+!rest-api/templates/dashboards-community/README.md
+rest-api/templates/tests-community/*
+!rest-api/templates/tests-community/.gitkeep
+!rest-api/templates/tests-community/folder.json
+!rest-api/templates/tests-community/README.md
+# Dashboards and tests moved aside by the cleanup routines (one
+# time-stamped folder per run, with cleanup.json) — local only; delete their
+# content when no longer needed.
+rest-api/templates/dashboards-removed/
+rest-api/templates/tests-removed/

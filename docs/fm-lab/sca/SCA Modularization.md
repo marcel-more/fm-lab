@@ -1,6 +1,6 @@
 # SCA Modularization
 
-**Rubric:** [Static Code Analysis (neighboring rubric)](../Wiki/Static%20Code%20Analysis.md) · 9 inventories · `rest-api/templates/dashboards-custom/modularization/`
+**Rubric:** [Static Code Analysis (neighboring rubric)](../Wiki/Static%20Code%20Analysis.md) · 9 inventories · `rest-api/templates/dashboards/modularization/`
 
 Modularization dashboards map where logic leaves the solution: into other FileMaker files, onto the file system, across the network, into external processes, onto the server, into plug-ins. They are **descriptive inventories with drilldown, not rules** — always "green", because an external dependency is an architectural fact, not a defect. The severity-carrying versions of some of these questions (deprecated/removed plug-in calls, platform limits, hard-coded hosts) live in the [Static Code Analysis](../Wiki/Static%20Code%20Analysis.md) rubrics.
 

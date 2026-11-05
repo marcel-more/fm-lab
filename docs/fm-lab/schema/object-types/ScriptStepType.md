@@ -36,7 +36,7 @@ None — no link role targets ScriptStepType.
 
 - **XML schema:** no catalog of its own — derived from the steps in [XML StepsForScripts](../../xml/catalogs/XML%20StepsForScripts.md) and the button-embedded steps in [XML LayoutCatalog](../../xml/catalogs/XML%20LayoutCatalog.md)
 - **DB schema:** [StepsForScripts](../catalog-tables/StepsForScripts.md) (instances) · vocabulary reference in [fm-spec](../../Wiki/fm-spec.md) ([script_steps](../fm-spec-tables/script_steps.md) and satellites)
-- **Detail view template:** `rest-api/templates/sql/object_details_scriptsteptype.sql` — all caller scripts and buttons of the step type (served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md))
+- **Detail view template:** `rest-api/templates/queries/system/object-details/object_details_scriptsteptype.sql` — all caller scripts and buttons of the step type (served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md))
 - **Frontend:** object list at `http://localhost:5173/?type=ScriptStepType`
 
 **See also:** [Object Types](../object-catalog/Object%20Types.md) · [ScriptStep](ScriptStep.md) · [Script](Script.md) · [fm-spec](../../Wiki/fm-spec.md)

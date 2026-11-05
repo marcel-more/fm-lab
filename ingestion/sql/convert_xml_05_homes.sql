@@ -169,7 +169,7 @@ CREATE INDEX IF NOT EXISTS idx_tor_file    ON TableOccurrenceResolution(File_Nam
 -- werden vom convert-xml-Sync automatisch in die READ_ONLY-API-Kopie gespiegelt.
 --
 -- KANONISCHE QUELLE: DIESE Datei — die LogicalLinks-Definition lebt genau
--- einmal, hier in P5. rest-api/templates/sql/graph_logical_links.sql ist nur
+-- einmal, hier in P5. rest-api/templates/queries/system/graph/graph_logical_links.sql ist nur
 -- noch ein Konsumenten-Stub (SELECT auf die View, read-only-Vorschau im
 -- Template-Pool) und trägt keine eigene Definition mehr — es gibt KEINE
 -- Sync-Pflicht mehr. Konsumenten der View: Graph-Endpoints

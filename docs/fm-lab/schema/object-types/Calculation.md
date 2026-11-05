@@ -39,7 +39,7 @@ Because `has_calculation` is structural, Calculation objects never enter the log
 ## Schema & tooling
 
 - **DB schema:** [CalculationsCatalog](../catalog-tables/CalculationsCatalog.md) (instances) · [DDR_Calculations](../catalog-tables/DDR_Calculations.md) (chunks, via `DDR_Calc_UUID`/`Formula_Hash`) · [StepCalculations](../catalog-tables/StepCalculations.md) (step slots)
-- **Detail view template:** `rest-api/templates/sql/object_details_calculation.sql` (served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md)); `/api/get-calc?uuid=<Calculation_UUID>` returns the token stream (the hash form stays as a dedup alias)
+- **Detail view template:** `rest-api/templates/queries/system/object-details/object_details_calculation.sql` (served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md)); `/api/get-calc?uuid=<Calculation_UUID>` returns the token stream (the hash form stays as a dedup alias)
 - **Frontend:** object list at `http://localhost:5173/?type=Calculation` (excluded from *unfiltered* name search — the generated names would flood every owner-name match)
 
 **See also:** [Object Types](../object-catalog/Object%20Types.md) · [CalculationsCatalog](../catalog-tables/CalculationsCatalog.md) · [Field](Field.md) · [ScriptStep](ScriptStep.md) · [LayoutObject](LayoutObject.md)

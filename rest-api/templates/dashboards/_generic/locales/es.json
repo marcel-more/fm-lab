@@ -1,7 +1,0 @@
-{
-  "manifest": {
-    "title": "Resultado de consulta personalizada",
-    "description": "Renderizador genérico para cualquier plantilla sql-custom."
-  },
-  "layout": {}
-}

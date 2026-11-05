@@ -1,18 +1,22 @@
 # Dashboard Datasets
 
-**Directories:** `rest-api/templates/dashboards/` (system) ·
-`rest-api/templates/dashboards-custom/` (custom / plugin) ·
-**Config:** `DASHBOARDS_DIR`, `DASHBOARDS_CUSTOM_DIR`
+**Directories:** `rest-api/templates/dashboards/` (shipped) ·
+`rest-api/templates/dashboards-custom/` (your own) ·
+`rest-api/templates/dashboards-community/` (reserved) ·
+**Config:** `DASHBOARDS_DIR`, `DASHBOARDS_CUSTOM_DIR`, `DASHBOARDS_COMMUNITY_DIR`, `DASHBOARDS_REMOVED_DIR`
 
-A dashboard is a **bundle**: a folder with a manifest, a layout, localisations,
-and a `data/` directory of SQL datasets — one `.sql` per tile. These datasets
-are the SQL-template tier that feeds dashboards. Part of the [SQL Templates](SQL%20Templates.md)
+A dashboard comes in two forms. This page describes the **bundle**: a folder
+with a manifest, a layout, localisations, and a `data/` directory of SQL
+datasets — one `.sql` per tile. These datasets are the SQL-template tier that
+feeds dashboards. The smaller form — one `.sql` file with a header, rendered as
+a table — is described in [Single-file Dashboards](Single-file%20Dashboards.md); both live side by side
+in the same folders and share one id namespace. Part of the [SQL Templates](SQL%20Templates.md)
 family.
 
 ## Anatomy of a bundle
 
 ```
-dashboards/home/
+dashboards/system/home/
 ├── manifest.json     # id, version, title, datasets[], params[], permissions
 ├── layout.json       # the tiles and how they arrange
 ├── locales/          # per-language strings (de, fr, ja, …)
@@ -22,14 +26,18 @@ dashboards/home/
     └── files_overview.sql
 ```
 
-The shipped system bundles under `dashboards/` cover the app surfaces — among
-them **home** (project summary, object counts, files overview, recently
-changed objects), **file** (per-file info, change stamps, triggers, start
-layout, accounts), **changes** (the [recent changes](../schema/catalog-tables/ObjectChangeMeta.md#recent-changes-dashboard)
-with work sessions and mass events), the dashboards/tests/docs overview pages
-and the docset views. Custom and plugin dashboards live under
-`dashboards-custom/<id>/data/` (e.g. static-code-analysis, modularization,
-developer-workflow).
+The shipped bundles under `dashboards/` fall into three areas. `system/` holds
+the app surfaces — among them **home** (project summary, object counts, files
+overview, recently changed objects) and **file** (per-file info, change stamps,
+triggers, start layout, accounts). `modules/` holds the overview and index
+pages of the modules (dashboards, tests, docs incl. the docset views).
+Everything else is shipped content in its rubric folder —
+`static-code-analysis/`, `modularization/`, `developer-workflow/`,
+`metadata-integrity/` and `changelog/` with the
+[recent changes](../schema/catalog-tables/ObjectChangeMeta.md#recent-changes-dashboard) (work sessions and
+mass events), and the rubrics of [Single-file Dashboards](Single-file%20Dashboards.md) (`layouts/`,
+`scripts/`, `schema/`, `top/`). Your own dashboards live under
+`dashboards-custom/`, directly on that level or grouped in sub-folders.
 
 ## The manifest wires datasets to tiles
 
@@ -45,8 +53,8 @@ Each entry in `datasets[]` names a source. Four source kinds:
 ```
 
 - **`bundle:data/<file>.sql`** — a dataset SQL file inside this bundle.
-- **`custom:<template>`** — reuse a [custom query template](Custom%20Query%20Templates.md) (`sql-custom/<template>.sql`) as a dataset.
-- **`report:<template>`** — reuse a [built-in query template](Built-in%20Query%20Templates.md) (`sql/<template>.sql`).
+- **`custom:<name>`** — reuse a [single-file dashboard](Single-file%20Dashboards.md) as a dataset (`dashboards-custom/` first, then `dashboards/`, `dashboards-community/` and the old location `sql-custom/`), else a [module template](Detail%20View%20Templates.md) (`queries/modules/`), else a bundle's own `queries/` folder.
+- **`report:<template>`** — reuse a [built-in system template](Built-in%20Query%20Templates.md) (`queries/system/**/<template>.sql`).
 - **`builtin:<name>`** — reuse a shared built-in dataset (with optional `params`).
 
 A bundle can also ship its own drilldown templates in an optional `queries/`
@@ -110,7 +118,7 @@ function, a script step or a page).
 
 Every list that can return more than one page pages, sorts and searches **on
 the server**; a fixed `LIMIT` remains only for deliberate rankings and short
-group lists (see *No silent cap* in [Custom Query Templates](Custom%20Query%20Templates.md)).
+group lists (see *No silent cap* in [Single-file Dashboards](Single-file%20Dashboards.md)).
 
 **The SQL frame** is the one of the paged custom queries, with three bundle
 specifics:
@@ -162,6 +170,20 @@ allowed.
 A unit test (`rest-api/tests/unit/paging-templates.test.js`) checks the frame,
 the shared blocks and these layout rules for every paged dataset.
 
+**Small, fully loaded lists** page in the browser instead — no paging
+parameters, no SQL frame. The table opts in with props:
+
+| Prop | Effect |
+|---|---|
+| `pageSizeOptions: ["all", 10, 25, 50, 100]` | page-size select in the count bar (shown above the smallest numeric option) and a pager above and below the table |
+| `defaultPageSize` | `"all"` (default), a number, or `"auto"`: every row up to `autoPageSizeThreshold` rows (default 100), above it the threshold option; a choice of the user overrides it |
+| `defaultSort: { field, dir }` | start sort of a client-sorted table (`sortable: true`), shown with its indicator |
+| `keyboardNav: true` | ↑/↓ move between the rows (across pages), Home/End within the page, PageUp/PageDown turn it, Enter opens the row |
+| `stateKey` | sort, page size, page and focus row survive reload and "back"; sort and page size also seed a new browser tab |
+
+These props are ignored on a table with `pageParam`. The files table on the
+start page (bundle `system/home`) uses all of them.
+
 **Changelog lists.** The datasets of the Changelog dashboards
 (`dashboards/changelog/`) search in their shared filter block, because the term
 filters the KPIs and charts of the dashboard as well. They therefore run
@@ -198,19 +220,70 @@ dataset delivers every bucket, level and drill-down window ready-made.
 The datasets `activity_map.sql` and `activity_series.sql` of the bundle
 `changes` are the reference.
 
-## Override behaviour
+## Areas and overrides
 
-On an ID collision a **custom bundle wins** over a system bundle of the same id
-— the override pattern for local extensions.
+The storage location decides a bundle's area, and the area decides where it
+appears in the dashboard overview:
+
+| Area | Location | In the overview |
+|---|---|---|
+| system | `dashboards/system/**` | no — app pages, reached through the main navigation |
+| module | `dashboards/modules/**` | no — module overview and index pages |
+| builtin | `dashboards/<rubric>/…` | yes, in its rubric folder |
+| custom | `dashboards-custom/**` | yes, under **Custom** |
+| community | `dashboards-community/**` | yes, under **Community** (shown once it holds dashboards) |
+
+The areas hold bundles and single-file dashboards alike.
+
+The folder path of a custom bundle starts with `custom/` (a community bundle's
+with `community/`), so your own folders never collide with shipped rubrics. The
+names `system`, `modules`, `custom` and `community` are reserved at the top of
+`dashboards/`.
+
+On an id collision a **custom dashboard overrides a builtin one** — bundle or
+file on either side — the overview marks it with the badge *overrides
+standard*, and the shipped original drops out of the list. Ids of system and
+module bundles are reserved: a custom bundle with such an id is ignored (logged
+as a warning), and a community dashboard never overrides anything.
+
+`rest-api/templates/dashboards/inventory.json` lists every bundle, single-file
+dashboard (`unit: "file"`) and folder the release ships. It is not a bundle setting — the dashboard cleanup compares
+the installed tree with it to find folders left over from an earlier layout
+and own files at old locations (see [Dashboard overview](../Wiki/Components.md#dashboard-overview)) and moves them to
+`rest-api/templates/dashboards-removed/<timestamp>/`. That folder is ignored by
+git, never listed in the overview and belongs to you: delete its content when
+you no longer need it.
+
+## Object types
+
+The block `analysis.objectTypes` of a manifest — for a single-file dashboard
+the header key `@object_types` — names the object types the dashboard's rows
+point at — the values of `ObjectCatalog.Object_Type`
+(`Script`, `Layout`, `Field`, `CustomFunction`, `TableOccurrence`, …):
+
+```json
+"analysis": {
+  "objectTypes": ["Script", "LayoutObject"]
+}
+```
+
+The object-type filter of the dashboard overview reads only this declaration,
+so it works without computing anything. Declare it whenever a dataset emits an
+`AS nav_uuid` column; a bundle without object rows (statistics, change lists)
+leaves it out and appears under *Without object type*. The same list tells
+[Analysis Tests](../Wiki/Analysis%20Tests.md) which objects a dashboard member applies to in object scope.
 
 ## Creating a dashboard
 
-Use the **create-custom-dashboard** skill: it clarifies the goal, drafts and
-confirms the SQL, recommends an interactive pattern, and scaffolds the full
-bundle under `dashboards-custom/<id>/` (manifest, layout, `data/*.sql`, locales).
+Use the [create-custom-dashboard](../skills/Skill%20create-custom-dashboard.md) skill: it
+clarifies the goal, drafts and confirms the SQL, recommends the build form —
+single file or bundle — and an interactive pattern, and writes either
+`dashboards-custom/[<folder>/]<id>.sql` or the full bundle under
+`dashboards-custom/[<folder>/]<id>/` (manifest, layout, `data/*.sql`, locales),
+including the object types of its rows.
 
 ## See also
 
 - [SQL Templates](SQL%20Templates.md) — overview, metadata header, parameters
-- [Custom Query Templates](Custom%20Query%20Templates.md) — a single named query instead of a full dashboard
+- [Single-file Dashboards](Single-file%20Dashboards.md) — one query as a dashboard instead of a full bundle
 - [Query and Report API](../rest-api/endpoints/Query%20and%20Report%20API.md) — how datasets ultimately execute

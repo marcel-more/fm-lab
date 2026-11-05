@@ -1,6 +1,6 @@
 # SCA Performance
 
-**Rubric:** [Static Code Analysis](../Wiki/Static%20Code%20Analysis.md) · 20 rules · `rest-api/templates/dashboards-custom/static-code-analysis/performance/`
+**Rubric:** [Static Code Analysis](../Wiki/Static%20Code%20Analysis.md) · 20 rules · `rest-api/templates/dashboards/static-code-analysis/performance/`
 
 Performance rules flag constructs that are cheap once but expensive in aggregate: work repeated inside loops, calculations re-evaluated per displayed record, step *sequences* and *options* that cause avoidable network round trips, and index settings that defer their cost to the first find. Most of them are structural — they don't need timing data, because the pattern itself predicts the cost.
 

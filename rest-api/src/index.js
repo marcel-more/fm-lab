@@ -182,6 +182,11 @@ async function start() {
     // umschalten (ein REALES File am Linkort bleibt bewusst unberührt).
     require('./config/solutions').ensureWorkspaceSymlinks();
 
+    // Leftovers of an earlier version leave the template folders before the
+    // first request — after an update they would otherwise show up twice.
+    // Never blocks the start (errors are logged inside).
+    await require('./services/startup-cleanup').runStartupCleanup();
+
     // Initialize database connection
     console.log('Initializing database connection...');
     await db.initialize();

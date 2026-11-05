@@ -12,10 +12,15 @@
     "ddrMissing": "DDR 정보 없음",
     "ddrMissing_partial": "DDR 정보 없음 ({{total}}개 파일 중 {{count}}개)",
     "ddrMissingHint": "“분석 도구용 세부 정보 포함” 옵션으로 내보내 주세요",
+    "formatLegacy": "{{total}}개 파일 모두 FileMaker 18 형식 — 가져오지 않습니다",
+    "formatLegacy_partial": "{{total}}개 파일 중 {{count}}개가 FileMaker 18 형식 — 가져오지 않습니다",
+    "formatLegacyHint": "FileMaker 19 이상에서 “XML로 복사본 저장”으로 다시 내보내 주세요",
     "page": "{{current}} / {{total}} 페이지",
     "noMatches": "「{{query}}」에 대한 일치 항목이 없습니다.",
     "prev": "← 이전",
     "next": "다음 →",
+    "pageSize": "표시 개수",
+    "pageSizeAll": "전체",
     "rowAction": "대상 열기"
   },
   "layoutPreview": {
@@ -173,6 +178,11 @@
     "notNavigable": "대상이 가져온 데이터 집합에 없습니다",
     "showInLayout": "레이아웃에서 보기 (Alt+클릭)",
     "showInFile": "파일에서 보기 (Alt+클릭)",
+    "dirFilterAria": "방향으로 필터",
+    "dirFilterLabel": "방향",
+    "dirIn": "들어옴",
+    "dirOut": "나감",
+    "dirBoth": "양방향",
     "subroles": {
       "hide": {
         "short": "Hide",
@@ -311,7 +321,18 @@
     "storageIndexLanguage": "기본 언어",
     "summaryRestartGroup": "그룹마다 다시 시작",
     "summaryRepMode": "반복 집계",
-    "calcEvaluatesWhenEmpty": "참조 필드가 비어도 계산함"
+    "calcEvaluatesWhenEmpty": "참조 필드가 비어도 계산함",
+    "validationMessageCalc": "메시지 계산식",
+    "disabled": "비활성화됨",
+    "sectionExtended": "확장 옵션 (FileMaker 26)",
+    "annotation": "어노테이션 (DDL)",
+    "displayNames": "표시 이름",
+    "displayNamesEnabled": "사용자 지정 표시 이름 활성",
+    "displayNamesDisabled": "사용자 지정 안 함",
+    "displayNameElements": "요소",
+    "displayNameKey": "요소",
+    "displayNameValue": "레이블 / 수식",
+    "displayNamesFormula": "표시 이름 수식"
   },
   "typeDetail": {
     "loading": "로딩 중…",
@@ -390,6 +411,18 @@
     "settingsHeading": "설정",
     "saveLabel": "설정 저장",
     "savingLabel": "저장 중…",
+    "versions": {
+      "fmlab": "FM-Lab",
+      "api": "API",
+      "frontend": "프런트엔드",
+      "xmlConverter": "XML 변환기",
+      "xmlEngine": "엔진",
+      "dbSchema": "DB 스키마",
+      "fmSpec": "fm-spec",
+      "duckdb": "DuckDB",
+      "duckdbCli": "DuckDB CLI",
+      "duckdbCliMissing": "찾을 수 없음"
+    },
     "api": {
       "heading": "REST API 연결",
       "label": "REST API URL",
@@ -413,11 +446,22 @@
       "empty": "아직 스캔하지 않았습니다. \"다시 스캔\"을 클릭하세요.",
       "colVersion": "버전"
     },
-    "versions": {
-      "fmSpec": "fm-spec",
-      "duckdb": "DuckDB",
-      "duckdbCli": "DuckDB CLI",
-      "duckdbCliMissing": "찾을 수 없음"
+    "graphify": {
+      "enableFirst": "내보내기를 시작하려면 위의 플러그인을 활성화하세요.",
+      "exportButton": "그래프 내보내기",
+      "doneMessage": "내보내기가 완료되었습니다. 파일은 output/ 디렉터리에 있습니다.",
+      "failed": "내보내기에 실패했습니다.",
+      "lastExport": "마지막 내보내기",
+      "colFile": "파일",
+      "colNodes": "노드",
+      "colEdges": "에지",
+      "colSize": "크기",
+      "recentFiles": "이전 내보내기 ({{count}})",
+      "phase": {
+        "count": "오브젝트 수 세는 중…",
+        "export": "그래프 내보내는 중…",
+        "assemble": "JSON 파일 쓰는 중…"
+      }
     },
     "solutions": {
       "heading": "솔루션",
@@ -484,6 +528,10 @@
     "source": "출처:",
     "relationshipGraphLink": "↗ 관계 그래프",
     "copyUuidAria": "UUID를 클립보드에 복사",
+    "copyOriginalUuidAria": "원본 UUID를 클립보드에 복사 (소스 파일에서 고유하지 않음)",
+    "copySyntheticUuidAria": "FM-Lab 합성 UUID를 클립보드에 복사",
+    "syntheticBadge": "FM-Lab",
+    "syntheticTooltip": "FM-Lab 내부 대체 ID: 이 오브젝트의 원본 UUID가 소스 파일에서 중복되어 가져오기 시 복구되었습니다. 클릭하면 합성 UUID(카탈로그 ID)를 복사합니다.",
     "change": {
       "modified": "마지막 수정",
       "containerModified": "컨테이너 마지막 수정",

@@ -7,9 +7,12 @@ const environment = require('../config/environment');
 const { createError } = require('../middleware/error-handler');
 const db = require('../config/database');
 const templateService = require('./template.service');
+const queryDiscovery = require('./query-discovery');
+const dashboardInventory = require('./dashboard-inventory');
 const paging = require('./paging.service');
 const dashboardI18nService = require('./dashboard-i18n.service');
 const { schemas: dashboardSchemas } = require('./dashboard-schemas');
+const { SCOPES, OUTPUT_TYPES, schemas: testsSchemas } = require('./tests-schemas');
 const settingsStore = require('../plugins/settings-store');
 
 // API-Filter-Sets (external_apis): eine austauschbare URL→Familie-Klassifikation.
@@ -26,27 +29,95 @@ const API_SETS_INSTALL_DIR = path.join(
 /**
  * Dashboard Service
  *
- * Lädt Dashboard-Bundles (manifest.json + layout.json + data/*.sql + style.css + assets/*)
- * aus zwei Verzeichnissen:
- *   - templates/dashboards/         → System-Bundles (home, _generic, Navigation)
- *   - templates/dashboards-custom/  → Custom-/Plugin-Bundles
+ * Lädt Dashboards aus drei Bereichsverzeichnissen (DASHBOARD_SOURCES) in zwei
+ * Bauformen (`unit`):
+ *   bundle  Ordner mit manifest.json + layout.json + data/*.sql + style.css + assets/*
+ *   file    eine `.sql`-Datei mit `-- @`-Kopf direkt in einem Gruppierungsordner
+ *           (oder auf Bereichsebene von dashboards-custom/ bzw. -community/);
+ *           Manifest abgeleitet aus dem Kopf (deriveFileManifest), Darstellung
+ *           über das Layout von `_generic`. Nie auf oberster Ebene von
+ *           dashboards/, nie innerhalb eines Bundles.
+ * Bundle-IDs und Datei-Einheiten teilen einen Namensraum. Jedes Dashboard trägt
+ * einen Bereich (`area`) und einen Ordner-Pfad (`folder` — zugleich die Rubrik
+ * im Results-Layer):
  *
- * Bei ID-Kollision hat das Custom-Verzeichnis Vorrang (Override-Pattern für lokale Erweiterungen).
+ *   area       Ablage                        folder
+ *   system     dashboards/system/**          null
+ *   module     dashboards/modules/**         null
+ *   builtin    dashboards/<rest>             Eltern-Pfad relativ zu dashboards/
+ *   custom     dashboards-custom/**          custom[/<Eltern-Pfad>]
+ *   community  dashboards-community/**       community[/<Eltern-Pfad>]
+ *
+ * system/ und modules/ sind reine Ablage-Gruppierung und tauchen nie als
+ * Ordner-Pfad auf. Custom und Community bekommen ein virtuelles Präfix — es
+ * erscheint in Übersicht und Breadcrumb als Zwischenebene „Custom“/„Community“
+ * und hält die Bereiche aus dem Ordner-Namensraum der mitgelieferten Inhalte heraus.
+ *
+ * ID-Kollisionen: Custom überschreibt nur builtin-Dashboards (`overrides: true`);
+ * eine Kollision mit system/module sowie jede Community-Kollision wird verworfen.
+ * Eine Datei-Einheit, die wie ein internes Template (queries/system,
+ * queries/modules) heißt, wird verworfen — `custom:<name>` löst Datei-Einheiten
+ * vor den Modul-Templates auf, sie würde ein UI-Template kapern.
+ *
+ * Alter Ablageort eigener Queries: `sql-custom/` (LEGACY_SOURCE) wird read-only
+ * als Datei-Einheiten des Bereichs custom mit `legacy: true` gelesen — nur
+ * Namen, die weder das Dashboard- noch das Query-Inventar kennt; Altkopien
+ * mitgelieferter Queries werden so nie zu Overrides.
  *
  * Dataset-Quellen (manifest.datasets[].source):
  *   bundle:<rel-path>       → SQL im selben Bundle (data/*.sql)
- *   custom:<template-name>  → bestehende sql-custom/<name>.sql
- *   report:<template-name>  → bestehende sql/<name>.sql
- *   builtin:<key>           → server-bereitgestellte Quelle (list_custom_queries, list_dashboards, files)
+ *   custom:<template-name>  → Datei-Einheit, sonst Modul-Template, sonst Bundle-Query
+ *   report:<template-name>  → internes Template aus queries/system/
+ *   builtin:<key>           → server-bereitgestellte Quelle (list_dashboards, query_meta, files, …)
  */
 
-// Suchreihenfolge: Custom zuerst, damit lokale Bundles System-Bundles bei ID-Kollision überschreiben.
-const DASHBOARDS_DIRS = [
-  environment.templates.dashboardsCustomDir,
-  environment.templates.dashboardsDir,
+// Bundle-Quellen in Rang-Reihenfolge der Override-Regel (s. buildDiscovery).
+// `prefix` = virtuelles erstes Ordner-Segment des Bereichs; die ausgelieferte
+// Quelle (prefix null) leitet den Bereich aus dem ersten Pfadsegment ab.
+const DASHBOARD_SOURCES = [
+  { key: 'custom', base: environment.templates.dashboardsCustomDir, area: 'custom', prefix: 'custom' },
+  { key: 'shipped', base: environment.templates.dashboardsDir, area: null, prefix: null },
+  { key: 'community', base: environment.templates.dashboardsCommunityDir, area: 'community', prefix: 'community' },
 ];
+const SHIPPED_SOURCE = DASHBOARD_SOURCES.find(s => s.key === 'shipped');
 
-// Discovery-Cache: ID → { manifest, layout, dir, folder, mtime }
+// Alter Ablageort eigener Queries (nur Dateien der obersten Ebene). Rang nach
+// custom, vor shipped — aber nur für Namen außerhalb beider Inventare.
+const LEGACY_SOURCE = {
+  key: 'legacy',
+  base: environment.templates.queriesLegacyDir,
+  area: 'custom',
+  prefix: 'custom',
+  legacy: true,
+  flat: true,
+};
+
+// Das Bundle, dessen Layout jede Datei-Einheit rendert.
+const GENERIC_BUNDLE_ID = '_generic';
+
+// Bereiche, deren Dashboards als mitgeliefert gesperrt sind (manifest.locked).
+const LOCKED_AREAS = new Set(['builtin', 'system', 'module']);
+
+// Ablage-Gruppierungsordner in dashboards/ → Bereich ihrer Bundles.
+const SHIPPED_GROUP_AREAS = { system: 'system', modules: 'module' };
+
+// Reservierte Namen auf oberster Ebene von dashboards/: die Gruppierungsordner
+// und die virtuellen Bereichs-Präfixe (ein Ordner `custom/` würde sonst die
+// Zwischenebene des Nutzer-Bereichs verdecken).
+const RESERVED_TOP_LEVEL = new Set([
+  ...Object.keys(SHIPPED_GROUP_AREAS),
+  ...DASHBOARD_SOURCES.map(s => s.prefix).filter(Boolean),
+]);
+
+// Inhaltsbereiche: in der Übersicht gelistet (Default des `areas`-Parameters)
+// und favorisierbar. system/module erreicht man über die Hauptnavigation.
+const CONTENT_AREAS = ['builtin', 'custom', 'community'];
+
+function isFavoritableArea(area) {
+  return CONTENT_AREAS.includes(area);
+}
+
+// Discovery-Cache: ID → { manifest, layout, dir, area, folder, overrides, mtime }
 const bundleCache = new LRUCache({
   max: 50,
   ttl: 1000 * 60 * 60, // 1h
@@ -56,20 +127,35 @@ const bundleCache = new LRUCache({
 // Max. Ordner-Tiefe für die rekursive Bundle-Discovery (Baum ≤4).
 const MAX_FOLDER_DEPTH = 4;
 
-// Discovery-Map: id → { id, dir, base, folder }. Einmalig pro Cache-Generation
+// Discovery-Map: id → { id, dir, file?, base, area, folder, overrides, legacy, unit }. Einmalig pro Cache-Generation
 // aufgebaut (gemeinsame Promise → kein paralleler Doppel-Scan) und in clearCache
 // invalidiert. So bleibt findBundleDir O(1) statt pro Lookup den Baum zu scannen.
+// Spätestens nach DISCOVERY_TTL_MS wird neu gescannt: ein abgelegtes Dashboard
+// (v. a. eine einzelne .sql-Datei) erscheint ohne Reload.
+const DISCOVERY_TTL_MS = 2000;
 let discoveryPromise = null;
+let discoveryBuiltAt = 0;
 
 // Folder-Metadaten-Cache (folder.json je Ordner): folderPath → { mtime, title, locales }.
 // Trägt die lokalisierten Ordner-Anzeigenamen für die Übersicht (Datenschicht mit
 // Fallback: locales[lang] → title → humanisiertes Segment). mtime-invalidiert.
 const folderMetaCache = new Map();
 
+// Warnungen des Discovery-Scans einmal je Text — der Scan läuft nach der TTL
+// erneut und soll dieselbe Kollision nicht wiederholt melden.
+const discoveryWarned = new Set();
+function warnDiscovery(message) {
+  if (discoveryWarned.has(message)) return;
+  discoveryWarned.add(message);
+  console.warn(message);
+}
+
 function clearCache() {
   bundleCache.clear();
   discoveryPromise = null;
+  discoveryBuiltAt = 0;
   folderMetaCache.clear();
+  discoveryWarned.clear();
 }
 
 async function readJsonFile(filePath) {
@@ -91,24 +177,68 @@ async function tryStatMtime(filePath) {
 }
 
 /**
- * Rekursiver Verzeichnis-Walk: sammelt alle Bundle-Verzeichnisse (= Ordner mit
- * `manifest.json`) unter `base` bis Tiefe MAX_FOLDER_DEPTH. Ein Bundle-Ordner wird
- * NICHT weiter durchsucht (Bundles verschachteln nicht). `folder` = relativer Pfad
- * des Eltern-Ordners (ohne `<id>`), null an der Wurzel.
+ * Bereich und Ordner-Pfad eines Bundles aus seiner Quelle und dem relativen
+ * Eltern-Pfad (`relDir`, '' an der Wurzel). Siehe Tabelle im Kopf der Datei.
  */
-async function walkBundleDir(base, relDir, depth, out) {
-  const absDir = path.join(base, relDir);
+function classifyBundle(source, relDir) {
+  if (source.prefix) {
+    return { area: source.area, folder: relDir ? `${source.prefix}/${relDir}` : source.prefix };
+  }
+  const groupArea = relDir ? SHIPPED_GROUP_AREAS[relDir.split('/')[0]] : null;
+  if (groupArea) return { area: groupArea, folder: null };
+  return { area: 'builtin', folder: relDir || null };
+}
+
+/**
+ * Rekursiver Verzeichnis-Walk: sammelt alle Bundle-Verzeichnisse (= Ordner mit
+ * `manifest.json`) und Datei-Einheiten (`*.sql`) unter `source.base` bis Tiefe
+ * MAX_FOLDER_DEPTH. Ein Bundle-Ordner wird NICHT weiter durchsucht (Bundles
+ * verschachteln nicht, ihre data/- und queries/-Dateien sind keine Einheiten).
+ * Die reservierten Namen auf oberster Ebene von dashboards/ sind nie Bundles:
+ * Gruppierungsordner werden durchsucht, virtuelle Präfix-Namen übersprungen;
+ * `.sql`-Dateien auf dieser Ebene sind nicht erlaubt. Eine flache Quelle
+ * (LEGACY_SOURCE) liefert nur die Dateien ihrer obersten Ebene.
+ */
+async function walkBundleDir(source, relDir, depth, out) {
+  const absDir = path.join(source.base, relDir);
   let entries;
   try {
     entries = await fs.readdir(absDir, { withFileTypes: true });
   } catch (err) {
-    if (err.code === 'ENOENT') return;
+    if (err.code === 'ENOENT' || err.code === 'ENOTDIR') return;
     throw err;
   }
+  entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
   for (const e of entries) {
-    if (!e.isDirectory() || e.name.startsWith('.')) continue;
-    const childRel = relDir ? path.join(relDir, e.name) : e.name;
-    const childAbs = path.join(base, childRel);
+    if (e.name.startsWith('.')) continue;
+    if (e.isFile() && e.name.endsWith('.sql')) {
+      const fileAbs = path.join(absDir, e.name);
+      if (source === SHIPPED_SOURCE && !relDir) {
+        warnDiscovery(`[dashboard] "${fileAbs}" — single-file dashboards are not allowed on the top level of dashboards/, skipped`);
+        continue;
+      }
+      const id = e.name.slice(0, -4);
+      if (!isValidBundleId(id)) {
+        warnDiscovery(`[dashboard] "${fileAbs}" — invalid dashboard id (allowed: letters, digits, _ and -), skipped`);
+        continue;
+      }
+      out.push({
+        id, dir: absDir, file: fileAbs, base: source.base, ...classifyBundle(source, relDir),
+        overrides: false, legacy: source.legacy === true, unit: 'file', depth,
+      });
+      continue;
+    }
+    if (!e.isDirectory() || source.flat) continue;
+    const childRel = relDir ? `${relDir}/${e.name}` : e.name;
+    const childAbs = path.join(source.base, childRel);
+    if (source === SHIPPED_SOURCE && !relDir && RESERVED_TOP_LEVEL.has(e.name)) {
+      if (SHIPPED_GROUP_AREAS[e.name]) {
+        await walkBundleDir(source, childRel, depth + 1, out);
+      } else {
+        warnDiscovery(`[dashboard] "${childAbs}" uses the reserved folder name "${e.name}" — skipped`);
+      }
+      continue;
+    }
     let isBundle = false;
     try {
       isBundle = (await fs.stat(path.join(childAbs, 'manifest.json'))).isFile();
@@ -116,39 +246,109 @@ async function walkBundleDir(base, relDir, depth, out) {
       // kein manifest.json → entweder Kategorie-Ordner oder Bundle-Unterordner
     }
     if (isBundle) {
-      out.push({ id: e.name, dir: childAbs, base, folder: relDir || null });
+      out.push({
+        id: e.name, dir: childAbs, base: source.base, ...classifyBundle(source, relDir),
+        overrides: false, legacy: false, unit: 'bundle', depth,
+      });
     } else if (depth < MAX_FOLDER_DEPTH) {
-      await walkBundleDir(base, childRel, depth + 1, out);
+      await walkBundleDir(source, childRel, depth + 1, out);
     }
   }
 }
 
+// Reihenfolge innerhalb einer Quelle für die Dubletten-Regel: die flachere
+// Einheit zuerst, bei gleicher Tiefe das Bundle vor der Datei (stabil).
+function byPrecedence(a, b) {
+  return (a.depth - b.depth) || ((a.unit === 'file') - (b.unit === 'file'));
+}
+
+// Öffentlicher Discovery-Eintrag (ohne die Hilfsfelder des Walks).
+function publicEntry({ depth, ...entry }) {
+  return entry;
+}
+
 /**
- * Baut die Discovery-Map (id → {id, dir, base, folder}) aus beiden DASHBOARDS_DIRS.
- * Custom-Verzeichnis wird zuerst gescannt → gewinnt bei ID-Kollision (Override-Pattern).
- * Doppelter Basename (innerhalb desselben Scans, anderes Verzeichnis) → Warn + verwerfen.
+ * Baut die Discovery-Map (id → Eintrag) aus allen DASHBOARD_SOURCES und der
+ * LEGACY_SOURCE. Override-Regel bei gleicher ID (Bundle ↔ Bundle, Bundle ↔
+ * Datei, Datei ↔ Datei gleichermaßen):
+ *   - custom gewinnt gegen builtin (`overrides: true`, behält seinen custom/…-Pfad);
+ *     gegen system/module wird es verworfen — ein Nutzer-Dashboard darf `home`
+ *     oder `_generic` nicht kapern;
+ *   - legacy (sql-custom/) nur für Namen außerhalb beider Inventare, die keine
+ *     andere Quelle führt;
+ *   - community überschreibt nie (verworfen);
+ *   - doppelte ID innerhalb einer Quelle → die flachere Einheit bleibt, bei
+ *     gleicher Tiefe das Bundle (byPrecedence).
+ * Datei-Einheiten mit dem Namen eines internen Templates werden verworfen.
+ * Jede verworfene Kollision wird als Warnung geloggt.
  */
 async function buildDiscovery() {
-  const found = [];
-  for (const base of DASHBOARDS_DIRS) {
-    await walkBundleDir(base, '', 0, found);
+  const scanned = {};
+  for (const source of [...DASHBOARD_SOURCES, LEGACY_SOURCE]) {
+    scanned[source.key] = [];
+    await walkBundleDir(source, '', 0, scanned[source.key]);
+    scanned[source.key].sort(byPrecedence);
   }
   const map = new Map();
-  for (const entry of found) {
+  const discard = (entry, existing, reason) => warnDiscovery(
+    `[dashboard:${entry.id}] ${entry.unit} at "${entry.file || entry.dir}" collides with "${existing.file || existing.dir}" — ${reason}, discarding`,
+  );
+  // Datei-Einheit ↔ internes Template (queries/system, queries/modules).
+  const internalClash = async entry => {
+    if (entry.unit !== 'file') return false;
+    const area = await queryDiscovery.internalArea(entry.id);
+    if (!area) return false;
+    warnDiscovery(`[dashboard:${entry.id}] file at "${entry.file}" is named like an internal ${area} template — discarding`);
+    return true;
+  };
+
+  for (const entry of scanned.shipped) {
     const existing = map.get(entry.id);
-    if (existing) {
-      console.warn(
-        `[dashboard:${entry.id}] duplicate bundle id at "${entry.dir}" — keeping "${existing.dir}", discarding`,
-      );
+    if (existing) { discard(entry, existing, 'duplicate dashboard id'); continue; }
+    if (await internalClash(entry)) continue;
+    map.set(entry.id, publicEntry(entry));
+  }
+
+  const customSeen = new Map();
+  for (const entry of scanned.custom) {
+    const sibling = customSeen.get(entry.id);
+    if (sibling) { discard(entry, sibling, 'duplicate dashboard id'); continue; }
+    const shipped = map.get(entry.id);
+    if (shipped && shipped.area !== 'builtin') {
+      discard(entry, shipped, `custom dashboards may only override builtin dashboards, not ${shipped.area}`);
       continue;
     }
-    map.set(entry.id, entry);
+    if (await internalClash(entry)) continue;
+    customSeen.set(entry.id, entry);
+    map.set(entry.id, publicEntry(shipped ? { ...entry, overrides: true } : entry));
+  }
+
+  if (scanned.legacy.length) {
+    const known = dashboardInventory.knownNames();
+    for (const entry of scanned.legacy) {
+      // Altkopie eines mitgelieferten Namens oder eigener Name, den der Nutzer
+      // schon nach dashboards-custom/ übernommen hat → still übergehen.
+      if (!dashboardInventory.isUnknownName(entry.id, known) || customSeen.has(entry.id)) continue;
+      const existing = map.get(entry.id);
+      if (existing) { discard(entry, existing, 'the old query location never overrides'); continue; }
+      if (await internalClash(entry)) continue;
+      map.set(entry.id, publicEntry(entry));
+    }
+  }
+
+  for (const entry of scanned.community) {
+    const existing = map.get(entry.id);
+    if (existing) { discard(entry, existing, 'community dashboards never override'); continue; }
+    if (await internalClash(entry)) continue;
+    map.set(entry.id, publicEntry(entry));
   }
   return map;
 }
 
 function getDiscovery() {
+  if (discoveryPromise && Date.now() - discoveryBuiltAt > DISCOVERY_TTL_MS) discoveryPromise = null;
   if (!discoveryPromise) {
+    discoveryBuiltAt = Date.now();
     discoveryPromise = buildDiscovery().catch(err => {
       // Scan-Fehler nicht cachen — nächster Aufruf versucht es erneut.
       discoveryPromise = null;
@@ -167,17 +367,54 @@ async function findBundleDir(id) {
   return map.get(id)?.dir || null;
 }
 
+// Template-Eintrag einer Datei-Einheit für die Auflösung per Name
+// (template.service): dieselbe Form wie ein Eintrag der Query-Discovery.
+function fileUnitEntry(entry) {
+  return {
+    name: entry.id,
+    path: entry.file,
+    dir: entry.dir,
+    area: entry.area,
+    folder: entry.folder,
+    overrides: entry.overrides === true,
+    legacy: entry.legacy === true,
+    unit: 'file',
+  };
+}
+
 /**
- * Lädt ein einzelnes Bundle (manifest + layout). Validiert beides per Joi.
+ * Datei-Einheit eines Namens (inkl. Override und alter Ablage), sonst null —
+ * erster Schritt der Auflösung von `custom:<name>` und `/api/query`.
+ */
+async function findFileUnit(name) {
+  if (!isValidBundleId(name)) return null;
+  const entry = (await getDiscovery()).get(name);
+  return entry && entry.unit === 'file' ? fileUnitEntry(entry) : null;
+}
+
+/** Alle Datei-Einheiten der Inhaltsbereiche als Template-Einträge, nach Name sortiert. */
+async function listFileUnits() {
+  return [...(await getDiscovery()).values()]
+    .filter(e => e.unit === 'file' && CONTENT_AREAS.includes(e.area))
+    .map(fileUnitEntry)
+    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+}
+
+/**
+ * Lädt ein einzelnes Dashboard. Bundles: manifest + layout, beides per Joi
+ * validiert. Datei-Einheiten: abgeleitetes Manifest (loadFileUnit).
  * Bei Fehler: gibt null zurück und loggt — App soll nicht crashen.
  */
 async function loadBundle(id) {
-  const cacheKey = id;
   const map = await getDiscovery();
   const entry = map.get(id);
   if (!entry) return null;
-  const dir = entry.dir;
-  const folder = entry.folder; // relativer Ordnerpfad (ohne <id>), null = Wurzel
+  return entry.unit === 'file' ? loadFileUnit(entry) : loadDirBundle(entry);
+}
+
+async function loadDirBundle(entry) {
+  const { id, dir, area, folder } = entry; // folder: Ordner-Pfad (ohne <id>), null = ohne Ordner
+  const cacheKey = id;
   const manifestPath = path.join(dir, 'manifest.json');
   const layoutPath = path.join(dir, 'layout.json');
 
@@ -190,7 +427,9 @@ async function loadBundle(id) {
 
   if (environment.templates.cacheEnabled) {
     const cached = bundleCache.get(cacheKey);
-    if (cached && cached.mtime === combinedMtime) {
+    // dir-Vergleich: ein neues/entferntes Custom-Override verlegt die ID in ein
+    // anderes Verzeichnis, ohne dass sich dort eine mtime ändern muss.
+    if (cached && cached.unit === 'bundle' && cached.mtime === combinedMtime && cached.dir === dir) {
       return cached;
     }
   }
@@ -236,7 +475,11 @@ async function loadBundle(id) {
     const bundle = {
       id,
       dir,
+      unit: 'bundle',
+      area,
       folder,
+      overrides: entry.overrides === true,
+      legacy: false,
       manifest,
       layout,
       mtime: combinedMtime,
@@ -252,10 +495,196 @@ async function loadBundle(id) {
   }
 }
 
+// Warnungen einer Datei-Einheit einmal je Dateistand loggen — ohne Cache
+// (Entwicklung) lädt jede Übersicht alle Einheiten neu.
+const fileUnitWarned = new Set();
+function warnFileUnitOnce(entry, mtime, message) {
+  const key = `${entry.file}:${mtime}:${message}`;
+  if (fileUnitWarned.has(key)) return;
+  fileUnitWarned.add(key);
+  console.warn(`[dashboard:${entry.id}] ${message}`);
+}
+
 /**
- * Listet alle gefundenen Dashboard-Bundles aus allen DASHBOARDS_DIRS.
- * Custom-Verzeichnis hat Vorrang (gleicher Override wie loadBundle).
- * Fehlerhafte Bundles werden übersprungen.
+ * Parameter-Liste aus der `-- @params:`-Zeile des Kopfs (letzte gewinnt, wie
+ * in parseTemplateMetadata): Kommas trennen nur außerhalb von Klammern;
+ * `name (optional|required, default <wert>, <beschreibung>)`; `none` = keine.
+ */
+function parseHeaderParams(content) {
+  let raw = null;
+  for (const line of String(content).split('\n')) {
+    const m = line.match(/^\s*--\s*@params\s*:\s*(.*)$/i);
+    if (m) raw = m[1].trim();
+  }
+  if (!raw || /^none$/i.test(raw)) return [];
+  const splitTopLevel = text => {
+    const parts = [];
+    let depth = 0;
+    let cur = '';
+    for (const ch of text) {
+      if (ch === '(') depth += 1;
+      if (ch === ')') depth = Math.max(0, depth - 1);
+      if (ch === ',' && depth === 0) { parts.push(cur); cur = ''; } else { cur += ch; }
+    }
+    parts.push(cur);
+    return parts.map(p => p.trim()).filter(Boolean);
+  };
+  const out = [];
+  for (const part of splitTopLevel(raw)) {
+    const m = /^([A-Za-z_][\w-]*)\s*(?:\((.*)\))?\s*$/.exec(part);
+    if (!m) continue;
+    const param = { name: m[1], type: 'string', required: false };
+    const description = [];
+    for (const item of splitTopLevel(m[2] || '')) {
+      let d;
+      if (/^required$/i.test(item)) param.required = true;
+      else if (/^optional$/i.test(item)) param.required = false;
+      else if ((d = /^optional\s*:\s*(.+)$/i.exec(item))) description.push(d[1]);
+      else if ((d = /^default\s+(.+)$/i.exec(item))) param.default = d[1];
+      else description.push(item);
+    }
+    if (description.length) param.description = description.join(', ');
+    out.push(param);
+  }
+  return out;
+}
+
+/**
+ * Abgeleitetes Manifest einer Datei-Einheit aus ihrem `-- @`-Kopf: Titel
+ * (Fallback humanisierte ID), Beschreibung, Icon (Default `query`), Version,
+ * Autor, Tags, `locked` für mitgelieferte Bereiche, die Datasets des
+ * `_generic`-Layouts (`query_meta` mit fester ID, `results` = `custom:<id>`),
+ * die Parameter aus `@params` (+ `query`, `file`) und der `analysis`-Block aus
+ * `@object_types`/`@output_types`/`@scope`/`@default_result`. Unbrauchbare
+ * Analyse-Angaben werden mit Warnung verworfen, die Einheit bleibt sichtbar.
+ */
+function deriveFileManifest(entry, meta, content, warn) {
+  const id = entry.id;
+  if (!meta.title) warn('no @title in the SQL header — using the humanized file name');
+  const params = [
+    { name: 'query', type: 'string', required: false, default: id,
+      description: 'Name of the query (fixed: this single-file dashboard).' },
+  ];
+  for (const p of parseHeaderParams(content)) {
+    if (!params.some(q => q.name === p.name)) params.push(p);
+  }
+  if (!params.some(p => p.name === 'file')) {
+    params.push({ name: 'file', type: 'string', required: false,
+      description: 'Optional file filter — forwarded to the query.' });
+  }
+  const manifest = {
+    id,
+    version: meta.version || '1.0.0',
+    title: meta.title || humanizeFolderSegment(id),
+    ...(meta.description ? { description: meta.description } : {}),
+    ...(meta.author ? { author: meta.author } : {}),
+    icon: meta.icon || 'query',
+    tags: meta.tags || [],
+    ...(LOCKED_AREAS.has(entry.area) ? { locked: true } : {}),
+    entry: 'layout.json',
+    datasets: [
+      { id: 'query_meta', source: 'builtin:query_meta', params: { query: id } },
+      { id: 'results', source: `custom:${id}` },
+    ],
+    params,
+    permissions: { read_only: true, allow_navigation: true },
+  };
+
+  const pickValid = (values, allowed, key) => {
+    const bad = values.filter(v => !allowed.includes(v));
+    if (bad.length) warn(`ignoring unknown @${key} value(s): ${bad.join(', ')}`);
+    return values.filter(v => allowed.includes(v));
+  };
+  const objectTypes = meta.object_types || [];
+  const outputTypes = pickValid(meta.output_types || [], OUTPUT_TYPES, 'output_types');
+  const scope = pickValid(meta.scope || [], SCOPES, 'scope');
+  let defaultResult = null;
+  if (meta.default_result) {
+    const dr = meta.default_result;
+    const aggregate = typeof dr.aggregate === 'string' && dr.aggregate ? dr.aggregate : 'row_count';
+    const candidate = {
+      dataset: 'results',
+      aggregate,
+      ...(aggregate.startsWith('first_row:') ? { column: aggregate.slice('first_row:'.length) } : {}),
+      type: dr.type || 'number',
+      name: dr.name,
+      ...(dr.meaning != null ? { meaning: dr.meaning } : {}),
+      ...(dr.unit != null ? { unit: dr.unit } : {}),
+    };
+    const { error } = testsSchemas.defaultResult.validate(candidate);
+    if (error) warn(`ignoring invalid @default_result (${error.message})`);
+    else defaultResult = candidate;
+  }
+  if (objectTypes.length || outputTypes.length || scope.length || defaultResult) {
+    manifest.analysis = {
+      objectTypes,
+      outputTypes,
+      ...(scope.length ? { scope: { supported: scope } } : {}),
+      ...(defaultResult ? { defaultResult } : {}),
+    };
+  }
+  return manifest;
+}
+
+/**
+ * Lädt eine Datei-Einheit: Kopf lesen, Manifest ableiten und wie ein Bundle
+ * validieren, Layout von `_generic` referenzieren (nicht kopieren). Das
+ * Bundle-Objekt trägt zusätzlich `file` und `queryMeta` (die vollständigen
+ * Kopf-Metadaten für query_meta). `dir` ist das Verzeichnis der Datei.
+ * Cache-Invalidierung über die mtime der Datei und des `_generic`-Bundles.
+ */
+async function loadFileUnit(entry) {
+  const { id, dir, file, area, folder } = entry;
+  const generic = await loadBundle(GENERIC_BUNDLE_ID);
+  if (!generic) {
+    console.warn(`[dashboard:${id}] cannot render single-file dashboard — bundle "${GENERIC_BUNDLE_ID}" is missing or invalid`);
+    return null;
+  }
+  const fileMtime = await tryStatMtime(file);
+  const combinedMtime = Math.max(fileMtime, generic.mtime);
+  if (environment.templates.cacheEnabled) {
+    const cached = bundleCache.get(id);
+    if (cached && cached.unit === 'file' && cached.mtime === combinedMtime && cached.file === file) return cached;
+  }
+  try {
+    const content = await fs.readFile(file, 'utf-8');
+    const queryMeta = templateService.parseTemplateMetadata(content);
+    const warn = message => warnFileUnitOnce(entry, fileMtime, message);
+    const raw = deriveFileManifest(entry, queryMeta, content, warn);
+    const { error, value: manifest } = dashboardSchemas.manifest.validate(raw, {
+      abortEarly: false,
+      stripUnknown: false,
+      convert: true,
+    });
+    if (error) {
+      warn(`derived manifest invalid: ${error.message}`);
+      return null;
+    }
+    const bundle = {
+      id,
+      dir,
+      file,
+      unit: 'file',
+      area,
+      folder,
+      overrides: entry.overrides === true,
+      legacy: entry.legacy === true,
+      manifest,
+      layout: generic.layout,
+      queryMeta,
+      mtime: combinedMtime,
+    };
+    if (environment.templates.cacheEnabled) bundleCache.set(id, bundle);
+    return bundle;
+  } catch (err) {
+    console.warn(`[dashboard:${id}] failed to load: ${err.message}`);
+    return null;
+  }
+}
+
+/**
+ * Listet alle gefundenen Dashboard-Bundles aus allen DASHBOARD_SOURCES (nach
+ * Anwendung der Override-Regel). Fehlerhafte Bundles werden übersprungen.
  */
 async function listBundles() {
   const map = await getDiscovery();
@@ -263,12 +692,17 @@ async function listBundles() {
   return bundles.filter(b => b !== null);
 }
 
+// Dashboard id = directory name (bundle) or file name without `.sql` (file
+// unit); the pattern also rules out path traversal.
+function isValidBundleId(id) {
+  return typeof id === 'string' && /^[a-zA-Z0-9_-]+$/.test(id);
+}
+
 /**
  * Holt ein Bundle anhand der ID. Wirft TEMPLATE_NOT_FOUND, wenn nicht vorhanden.
  */
 async function getBundle(id) {
-  // Pfad-Traversal verhindern
-  if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+  if (!isValidBundleId(id)) {
     throw createError('VALIDATION_ERROR', `Invalid dashboard id: ${id}`);
   }
   const bundle = await loadBundle(id);
@@ -429,23 +863,39 @@ async function runReportTemplate(ctx, name, params) {
 // builtin: Datasets
 // ---------------------------------------------------------------------------
 
+// Category label of a single-file dashboard: the title of its folder (joined
+// for nested paths, "Custom / Team"), else its own `@category`, else
+// "Allgemein". The folder titles of the shipped rubrics equal the former
+// category labels, so grouping and `?category=` deep links keep working.
+async function queryCategory(folder, meta) {
+  return (await resolveFolderLabel(folder)) || (meta && meta.category) || 'Allgemein';
+}
+
+/**
+ * builtin:list_custom_queries — alias for dashboards of the former query
+ * catalog: one row per single-file dashboard of the content areas, in the
+ * fields of the former catalog rows.
+ */
 async function builtinListCustomQueries(params = {}) {
-  const templates = await templateService.listTemplates('query');
-  const rows = templates.map(t => ({
-    name: t.name,
-    title: t.title || t.name,
-    description: t.description || null,
-    template_type: t.template_type,
-    category: t.category || 'Allgemein',
-    icon: t.icon || 'query',
-    display: t.display || 'auto',
-    // Klick-Konfiguration der Query — technisch ('_'-Präfix): sie beschreibt,
-    // was das Ergebnis-Dashboard beim Zeilenklick tut, und gehört nicht in die
-    // Suche über den Query-Katalog.
-    _click_action: t.click_action || null,
-    _click_args: t.click_args || null,
-    tags: t.tags || [],
-    params: Array.isArray(t.params) ? t.params.join(', ') : (t.params || ''),
+  const units = (await listBundles()).filter(b => b.unit === 'file' && CONTENT_AREAS.includes(b.area));
+  const rows = await Promise.all(units.map(async b => {
+    const t = b.queryMeta;
+    return {
+      name: b.id,
+      title: t.title || b.id,
+      description: t.description || null,
+      template_type: t.template_type,
+      category: await queryCategory(b.folder, t),
+      icon: t.icon || 'query',
+      display: t.display || 'auto',
+      // Klick-Konfiguration der Query — technisch ('_'-Präfix): sie beschreibt,
+      // was das Ergebnis-Dashboard beim Zeilenklick tut, und gehört nicht in die
+      // Suche über den Query-Katalog.
+      _click_action: t.click_action || null,
+      _click_args: t.click_args || null,
+      tags: t.tags || [],
+      params: Array.isArray(t.params) ? t.params.join(', ') : (t.params || ''),
+    };
   }));
 
   if (params.category) {
@@ -460,9 +910,22 @@ async function builtinListCustomQueries(params = {}) {
   return rows;
 }
 
+// Kopf-Metadaten einer Query über die Auflösungskette von `custom:<name>`:
+// eine Datei-Einheit liefert ihr Bundle-Objekt (queryMeta), Modul-Templates und
+// Bundle-Queries kommen über den Template-Service.
+async function resolveQueryMeta(name) {
+  const unit = await findFileUnit(name);
+  if (unit) {
+    const bundle = await loadBundle(name);
+    if (bundle) {
+      return { ...bundle.queryMeta, folder: bundle.folder, area: bundle.area, overrides: bundle.overrides, legacy: bundle.legacy };
+    }
+  }
+  return templateService.getTemplateMeta(name, 'query');
+}
+
 /**
- * builtin:query_meta — gibt eine einzelne Zeile mit Metadaten eines sql-custom-Templates
- * zurück. Benötigt Param `query`. Wird vom `_generic`-Bundle genutzt, um Titel,
+ * builtin:query_meta — gibt eine einzelne Zeile mit Metadaten einer Query zurück. Benötigt Param `query`. Wird vom `_generic`-Bundle genutzt, um Titel,
  * Beschreibung und Klick-Action-Konfiguration an das Layout zu übergeben.
  */
 async function builtinQueryMeta(params = {}) {
@@ -470,9 +933,9 @@ async function builtinQueryMeta(params = {}) {
   if (!queryName) {
     throw createError('VALIDATION_ERROR', 'builtin:query_meta requires param "query"');
   }
-  // Wichtig: auch Bundle-eigene Templates aus dashboards*/<bundle>/queries/
-  // auflösen — listTemplates('query') würde nur sql-custom/ scannen.
-  const t = await templateService.getTemplateMeta(queryName, 'query');
+  // Wichtig: auch Modul- und Bundle-eigene Queries (dashboards*/…/<bundle>/queries/)
+  // auflösen — die Dashboard-Übersicht listet nur die Datei-Einheiten.
+  const t = await resolveQueryMeta(queryName);
   if (!t) {
     // Leere Zeile statt Fehler — Dashboard soll trotzdem rendern können
     return [{
@@ -482,6 +945,10 @@ async function builtinQueryMeta(params = {}) {
       template_type: null,
       icon: null,
       category: null,
+      folder: null,
+      area: null,
+      overrides: false,
+      legacy: false,
       display: 'auto',
       click_action: null,
       click_args: null,
@@ -504,7 +971,11 @@ async function builtinQueryMeta(params = {}) {
     description: t.description || null,
     template_type: t.template_type || null,
     icon: t.icon || null,
-    category: t.category || null,
+    category: (await resolveFolderLabel(t.folder)) || t.category || null,
+    folder: t.folder || null,
+    area: t.area || null,
+    overrides: t.overrides === true,
+    legacy: t.legacy === true,
     display: t.display || 'auto',
     click_action: t.click_action || null,
     click_args: t.click_args || null,
@@ -531,32 +1002,45 @@ function humanizeFolderSegment(seg) {
   return seg.replace(/[-_]/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase());
 }
 
-// Lädt folder.json eines Ordners (relativer Pfad ohne Bundle-ID) aus einem der
-// DASHBOARDS_DIRS, mtime-gecacht. Liefert { title, icon, description, order,
-// locales } oder null. Joi-validiert (folderManifest) — defekte Dateien
-// degradieren zu leeren Metadaten statt die Discovery zu kippen.
+// Quelle eines Ordner-Pfads: ein Bereichs-Präfix (custom/…, community/…) zeigt
+// in dessen Verzeichnis, jeder andere Pfad nur nach dashboards/.
+function folderSource(folderPath) {
+  const head = String(folderPath).split('/')[0];
+  return DASHBOARD_SOURCES.find(s => s.prefix && s.prefix === head) || SHIPPED_SOURCE;
+}
+
+// Bereich eines Ordner-Pfads der Übersicht (custom, community oder builtin).
+function folderArea(folderPath) {
+  return folderSource(folderPath).area || 'builtin';
+}
+
+// Lädt folder.json eines Ordners (Ordner-Pfad ohne Bundle-ID), mtime-gecacht.
+// Das Präfix löst in sein Bereichsverzeichnis auf (`custom` →
+// dashboards-custom/folder.json, `custom/x` → dashboards-custom/x/folder.json);
+// die Bereiche teilen sich keinen Ordner-Namensraum. Liefert { title, icon,
+// description, order, locales } oder null. Joi-validiert (folderManifest) —
+// defekte Dateien degradieren zu leeren Metadaten statt die Discovery zu kippen.
 async function loadFolderMeta(folderPath) {
-  for (const base of DASHBOARDS_DIRS) {
-    const fp = path.join(base, folderPath, 'folder.json');
-    const mtime = await tryStatMtime(fp);
-    if (!mtime) continue;
-    const cached = folderMetaCache.get(folderPath);
-    if (cached && cached.mtime === mtime) return cached;
-    let raw = null;
-    try { raw = await readJsonFile(fp); } catch { raw = null; }
-    const { value } = dashboardSchemas.folderManifest.validate(raw || {}, { convert: true });
-    const meta = {
-      mtime,
-      title: value?.title || null,
-      icon: value?.icon || null,
-      description: value?.description || null,
-      order: Number.isFinite(value?.order) ? value.order : null,
-      locales: value?.locales || null,
-    };
-    folderMetaCache.set(folderPath, meta);
-    return meta;
-  }
-  return null;
+  const source = folderSource(folderPath);
+  const rel = source.prefix ? String(folderPath).split('/').slice(1).join('/') : String(folderPath);
+  const fp = path.join(source.base, rel, 'folder.json');
+  const mtime = await tryStatMtime(fp);
+  if (!mtime) return null;
+  const cached = folderMetaCache.get(folderPath);
+  if (cached && cached.mtime === mtime) return cached;
+  let raw = null;
+  try { raw = await readJsonFile(fp); } catch { raw = null; }
+  const { value } = dashboardSchemas.folderManifest.validate(raw || {}, { convert: true });
+  const meta = {
+    mtime,
+    title: value?.title || null,
+    icon: value?.icon || null,
+    description: value?.description || null,
+    order: Number.isFinite(value?.order) ? value.order : null,
+    locales: value?.locales || null,
+  };
+  folderMetaCache.set(folderPath, meta);
+  return meta;
 }
 
 // Zerlegt einen Ordner-Pfad in lokalisierte Krumen: "a/b" → [{path:"a",label},
@@ -587,22 +1071,31 @@ async function resolveFolderLabel(folderPath, lang) {
   return (await resolveFolderCrumbs(folderPath, lang)).map(c => c.label).join(' / ');
 }
 
+// Komma-Liste oder Array → getrimmte, nicht-leere Strings.
+function parseListParam(value) {
+  if (!value) return [];
+  return (Array.isArray(value) ? value : String(value).split(','))
+    .map(s => String(s).trim())
+    .filter(Boolean);
+}
+
+// Gemeinsamer Sichtbarkeitsfilter beider Übersichts-Builtins, damit Zähler und
+// Liste exakt dasselbe sehen: Bereich ∈ `areas` (Default: die Inhaltsbereiche)
+// und kein Tag aus `excludeTags` (z. B. `internal` innerhalb eines Bereichs).
+function visibleBundles(bundles, params) {
+  const areas = parseListParam(params.areas);
+  const wanted = areas.length ? areas : CONTENT_AREAS;
+  const excludeTags = parseListParam(params.excludeTags);
+  return {
+    areas: wanted,
+    bundles: bundles.filter(b => wanted.includes(b.area)
+      && !(b.manifest.tags || []).some(t => excludeTags.includes(t))),
+  };
+}
+
 async function builtinListDashboards(params = {}) {
-  const bundles = await listBundles();
   const lang = params._lang || params.lang || 'en';
-
-  let excludeTags = [];
-  if (params.excludeTags) {
-    excludeTags = Array.isArray(params.excludeTags)
-      ? params.excludeTags
-      : String(params.excludeTags).split(',').map(s => s.trim()).filter(Boolean);
-  }
-
-  const filtered = bundles.filter(b => {
-    if (!excludeTags.length) return true;
-    const tags = b.manifest.tags || [];
-    return !tags.some(t => excludeTags.includes(t));
-  });
+  const { bundles: filtered } = visibleBundles(await listBundles(), params);
 
   // Titel/Beschreibung über die i18n-Schicht auflösen (Fallback = Basis-Manifest);
   // Ordner-Label als zusätzliche Anzeige-Datenschicht (folder bleibt der Identifier).
@@ -615,6 +1108,13 @@ async function builtinListDashboards(params = {}) {
       icon: manifest.icon || null,
       tags: manifest.tags || [],
       category: manifest.category || null,
+      area: b.area,
+      // Custom dashboard replacing a builtin dashboard of the same id.
+      overrides: b.overrides === true,
+      // Storage form: a bundle directory or a single `.sql` file.
+      unit: b.unit || 'bundle',
+      // Single-file dashboard read from the old query location (sql-custom/).
+      legacy: b.legacy === true,
       folder: b.folder || null,
       folder_label: await resolveFolderLabel(b.folder, lang),
       author: manifest.author || null,
@@ -624,6 +1124,9 @@ async function builtinListDashboards(params = {}) {
       // grid instead of as an equal tile below it.
       featured: manifest.featured === true,
       _badge_roots: manifest.badgeRoots || null,
+      // Declared object types of the result rows (`analysis.objectTypes`) —
+      // the source of the overview's object-type filter; [] = none declared.
+      object_types: [...((b.manifest.analysis && b.manifest.analysis.objectTypes) || [])],
     };
   }));
 
@@ -638,24 +1141,15 @@ async function builtinListDashboards(params = {}) {
  * Zwischenebenen), mit lokalisiertem Label des EIGENEN Segments, Icon,
  * Description, order (folder.json) und Zählern:
  *   direct_count = Bundles direkt im Ordner, total_count = inkl. Teilbaum.
- * Respektiert denselben excludeTags-Filter wie list_dashboards, damit die
- * Zähler exakt das spiegeln, was die Übersicht anzeigt.
+ * Respektiert denselben areas-/excludeTags-Filter wie list_dashboards, damit
+ * die Zähler exakt das spiegeln, was die Übersicht anzeigt.
+ * Bereichs-Ordner: `custom` erscheint immer, sobald der Bereich angefragt ist
+ * (auch leer — dort legt der Nutzer eigene Dashboards an), `community` nur mit
+ * Inhalt. Label, order & Co. kommen aus der folder.json des Bereichsverzeichnisses.
  */
 async function builtinListDashboardFolders(params = {}) {
-  const bundles = await listBundles();
   const lang = params._lang || params.lang || 'en';
-
-  let excludeTags = [];
-  if (params.excludeTags) {
-    excludeTags = Array.isArray(params.excludeTags)
-      ? params.excludeTags
-      : String(params.excludeTags).split(',').map(s => s.trim()).filter(Boolean);
-  }
-  const visible = bundles.filter(b => {
-    if (!excludeTags.length) return true;
-    const tags = b.manifest.tags || [];
-    return !tags.some(t => excludeTags.includes(t));
-  });
+  const { areas, bundles: visible } = visibleBundles(await listBundles(), params);
 
   // Alle Ordner-Pfade (inkl. Zwischenebenen) + Zähler aufsammeln.
   const folders = new Map(); // path → { direct, total }
@@ -663,6 +1157,7 @@ async function builtinListDashboardFolders(params = {}) {
     if (!folders.has(p)) folders.set(p, { direct: 0, total: 0 });
     return folders.get(p);
   };
+  if (areas.includes('custom')) ensure('custom');
   for (const b of visible) {
     if (!b.folder) continue;
     const segs = String(b.folder).split('/');
@@ -683,6 +1178,7 @@ async function builtinListDashboardFolders(params = {}) {
     return {
       path: folderPath,
       parent,
+      area: folderArea(folderPath),
       label,
       // Voll lokalisierter Pfad (für flache Treffer-/Filteransichten).
       path_label: await resolveFolderLabel(folderPath, lang),
@@ -694,10 +1190,13 @@ async function builtinListDashboardFolders(params = {}) {
     };
   }));
 
-  // Sortierung je Ebene: order (fehlend = hinten), dann Label.
+  // Sortierung je Ebene: Bereich (Inhalte vor Custom vor Community — auch ohne
+  // order in einer folder.json), dann order (fehlend = hinten), dann Label.
   rows.sort((a, b) => {
     const depth = a.path.split('/').length - b.path.split('/').length;
     if (depth !== 0) return depth;
+    const area = CONTENT_AREAS.indexOf(a.area) - CONTENT_AREAS.indexOf(b.area);
+    if (area !== 0) return area;
     const ao = a.order ?? Number.MAX_SAFE_INTEGER;
     const bo = b.order ?? Number.MAX_SAFE_INTEGER;
     if (ao !== bo) return ao - bo;
@@ -1001,6 +1500,15 @@ async function builtinXmlDirectoryMeta(ctx, params = {}) {
     host_xml_dir: status.host_xml_dir ?? null,
     runtime: status.runtime,
     can_reveal: status.can_reveal === true,
+    // Format-Probe der Inbox (FileMaker-18-Exporte sind nicht importierbar):
+    // die Home-Karte startet den Import nur, wenn mindestens eine Datei
+    // importierbar ist, sonst wechselt sie nur zur Import-Seite.
+    unsupported_count: status.unsupported_count ?? 0,
+    importable_count: status.importable_count ?? files.length,
+    // A conversion already runs (e.g. the terminal run of tools/init.sh) → the card
+    // shows that instead of offering a second start.
+    running: status.running === true,
+    running_source: status.running_source ?? null,
   }];
 }
 
@@ -1188,11 +1696,16 @@ async function builtinListTests(params = {}) {
     description: t.definition.description || null,
     test_type: t.definition.testType,
     keywords: (t.definition.keywords || []).join(', '),
-    object_types: (t.definition.objectTypes || []).join(', '),
+    // Declared object types as an array — the source of the overview's
+    // object-type filter (same contract as list_dashboards); [] = none declared.
+    object_types: [...(t.definition.objectTypes || [])],
     scopes: (t.definition.scopes || []).join(', '),
     member_count: (t.definition.members || []).length,
     folder: t.folder || null,
     folder_label: await testsService.resolveFolderLabel(t.folder, lang),
+    area: t.area,
+    // Custom test replacing a builtin test of the same id.
+    overrides: t.overrides === true,
     tier: t.tier,
     // Pflege-Metadaten der Kachel — technisch ('_'-Präfix). Die Detailseite
     // (builtin:test_detail) zeigt den Validierungsstatus prominent; in der
@@ -1216,10 +1729,11 @@ async function builtinListTests(params = {}) {
  * (folder.json) und den Zählern
  *   direct_count = Tests direkt im Ordner, total_count = inkl. Teilbaum.
  *
- * Gezählt wird über beide Tiers hinweg (`templates/tests` + `tests-custom`) —
- * der Ordnerpfad ist der Schlüssel, ein in beiden Tiers vorhandener Pfad ist
- * EINE Rubrik. Die Anzeigedaten kommen aus `loadFolderMeta`, das seinerseits
- * schon tierübergreifend auflöst.
+ * Die Bereiche teilen sich keinen Ordner-Namensraum: eigene Tests hängen unter
+ * dem virtuellen Ordner `custom`, Community-Tests unter `community`.
+ * Bereichs-Ordner: `custom` erscheint immer (dort legt der Nutzer eigene Tests
+ * an), `community` nur mit Inhalt. Label, order & Co. kommen aus der
+ * folder.json des Bereichsverzeichnisses (`loadFolderMeta` löst das Präfix auf).
  */
 async function builtinListTestFolders(params = {}) {
   const testsService = require('./tests.service');
@@ -1232,6 +1746,7 @@ async function builtinListTestFolders(params = {}) {
     if (!folders.has(p)) folders.set(p, { direct: 0, total: 0 });
     return folders.get(p);
   };
+  ensure('custom');
   for (const t of all) {
     if (!t.folder) continue;
     const segs = String(t.folder).split('/');
@@ -1252,6 +1767,7 @@ async function builtinListTestFolders(params = {}) {
     return {
       path: folderPath,
       parent,
+      area: testsService.folderArea(folderPath),
       label,
       // Voll lokalisierter Pfad (für die flache Trefferansicht der Suche).
       path_label: await testsService.resolveFolderLabel(folderPath, lang),
@@ -1263,10 +1779,14 @@ async function builtinListTestFolders(params = {}) {
     };
   }));
 
-  // Sortierung je Ebene: order (fehlend = hinten), dann Label.
+  // Sortierung je Ebene: Bereich (mitgelieferte vor Custom vor Community —
+  // auch ohne order in einer folder.json), dann order (fehlend = hinten),
+  // dann Label.
   rows.sort((a, b) => {
     const depth = a.path.split('/').length - b.path.split('/').length;
     if (depth !== 0) return depth;
+    const area = CONTENT_AREAS.indexOf(a.area) - CONTENT_AREAS.indexOf(b.area);
+    if (area !== 0) return area;
     const ao = a.order ?? Number.MAX_SAFE_INTEGER;
     const bo = b.order ?? Number.MAX_SAFE_INTEGER;
     if (ao !== bo) return ao - bo;
@@ -1299,12 +1819,10 @@ async function loadTestForDetail(id) {
   }
 }
 
-/** Der Original-Eintrag eines Members: Regel-Dashboard bzw. Custom Query. */
+/** Der Original-Eintrag eines Members: das Dashboard (Bundle oder Datei-Einheit). */
 function memberTargetPath(member) {
   if (!member.resolved) return '';
-  return member.kind === 'dashboard'
-    ? `/dashboard/${encodeURIComponent(member.ref)}`
-    : `/query/${encodeURIComponent(member.ref)}`;
+  return `/dashboard/${encodeURIComponent(member.ref)}`;
 }
 
 /**
@@ -1507,7 +2025,7 @@ async function builtinResultsAggregate(ctx, params = {}) {
 /**
  * builtin:results_list — flache Envelope-Liste eines Teilbaums
  * (Params `root` bzw. `roots` als Komma-Liste, `state`, `kinds`, `limit`).
- * Mit `open_target` für openDashboard/runQuery-Links; `pending`-Einheiten
+ * Mit `open_target` für openDashboard-Links; `pending`-Einheiten
  * erscheinen sichtbar mit.
  */
 async function builtinResultsList(ctx, params = {}) {
@@ -1550,9 +2068,7 @@ async function builtinResultsList(ctx, params = {}) {
       _source: envelope.source,
       // '_'-Präfix = technisches Feld: Navigationsziel, keine Anzeige und
       // nicht Teil der Zeilensuche (siehe _useRowSearch).
-      _open_target: envelope.ref.kind === 'dashboard' ? `/dashboard/${envelope.ref.id}`
-        : envelope.ref.kind === 'query' ? `/query/${envelope.ref.id}`
-          : `/tests/${envelope.ref.id}`,
+      _open_target: envelope.ref.kind === 'test' ? `/tests/${envelope.ref.id}` : `/dashboard/${envelope.ref.id}`,
     });
   }
   const rank = { error: 0, warning: 1, failed: 2, neutral: 3, ok: 4, pending: 5 };
@@ -1751,9 +2267,17 @@ async function executeSingleDataset(ctx, bundle, datasetId, requestParams = {}) 
 }
 
 module.exports = {
-  DASHBOARDS_DIRS,
+  DASHBOARD_SOURCES,
+  LEGACY_SOURCE,
+  RESERVED_TOP_LEVEL,
+  CONTENT_AREAS,
+  isFavoritableArea,
+  isValidBundleId,
   listBundles,
   getBundle,
+  findFileUnit,
+  listFileUnits,
+  parseHeaderParams,
   resolveFolderCrumbs,
   resolveFolderLabel,
   executeAllDatasets,

@@ -1,0 +1,40 @@
+{
+  "manifest": {
+    "title": "Healthchecks",
+    "description": "一眼掌握整个解决方案的健康状况：按状态汇总所有检查仪表板的已计算结果，并按栏目分组；每一行都可进入对应的仪表板。"
+  },
+  "layout": {
+    "results_kpi_strip.props.items[0].label": "检查",
+    "results_kpi_strip.props.items[1].label": "错误",
+    "results_kpi_strip.props.items[2].label": "警告",
+    "results_kpi_strip.props.items[3].label": "OK",
+    "results_kpi_strip.props.items[4].label": "中性",
+    "results_kpi_strip.props.items[5].label": "待定",
+    "results_kpi_strip.props.items[6].label": "失败",
+    "results_kpi_strip.props.items[7].label": "发现项",
+    "results_kpi_strip.props.items[8].label": "已执行",
+    "results_run.props.label": "运行所有检查",
+    "rp_performance_card.props.title": "性能",
+    "rp_performance_list.props.empty.message": "无可报告项。",
+    "rp_error_prone_card.props.title": "易出错",
+    "rp_error_prone_list.props.empty.message": "无可报告项。",
+    "rp_security_card.props.title": "安全",
+    "rp_security_list.props.empty.message": "无可报告项。",
+    "rp_unused_code_card.props.title": "未使用的代码",
+    "rp_unused_code_list.props.empty.message": "无可报告项。",
+    "rp_code_style_card.props.title": "代码风格",
+    "rp_code_style_list.props.empty.message": "无可报告项。",
+    "rp_layout_quality_card.props.title": "Layout 质量",
+    "rp_layout_quality_list.props.empty.message": "无可报告项。",
+    "rp_documentation_card.props.title": "文档",
+    "rp_documentation_list.props.empty.message": "无可报告项。",
+    "rp_best_practices_card.props.title": "最佳实践",
+    "rp_best_practices_list.props.empty.message": "无可报告项。",
+    "rp_platform_card.props.title": "平台兼容性",
+    "rp_platform_list.props.empty.message": "无可报告项。",
+    "rp_metadata_integrity_card.props.title": "元数据完整性",
+    "rp_metadata_integrity_list.props.empty.message": "无可报告项。",
+    "rp_developer_workflow_card.props.title": "开发者工作流",
+    "rp_developer_workflow_list.props.empty.message": "无可报告项。"
+  }
+}

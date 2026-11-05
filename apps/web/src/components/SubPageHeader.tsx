@@ -17,7 +17,7 @@ interface SubPageHeaderProps {
 /**
  * SubPageHeader — composition of the unified `<SubNav>` (Ebene 3) and
  * `<StatusBar>` (Ebene 4) plus an optional title row (Ebene 6). Used by the
- * dashboard/query route wrappers. The LanguageSelector + ThemeToggle meta navi
+ * dashboard route wrappers. The LanguageSelector + ThemeToggle meta navi
  * now comes for free via `<SubNav>`.
  */
 export function SubPageHeader({

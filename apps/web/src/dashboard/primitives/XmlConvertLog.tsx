@@ -24,6 +24,8 @@ interface LastRun {
   processed: number;
   total: number;
   error_count: number;
+  // Root-check skips (run record schema 2); null on older records.
+  skipped_count?: number | null;
   events: Record<string, unknown>[];
 }
 
@@ -59,12 +61,29 @@ function eventToLine(evt: Record<string, unknown>, t: Translate): LogLine | null
       return { text: `[${phase} ${pct}%]${msg}`, level: 'info' };
     }
     case 'file': {
-      // Opt 2 (Log-Entrümpelung): Unveränderte/übersprungene Dateien erzeugen keine
-      // Log-Zeile — die ⏭️-Status-Tabelle (file_skip) deckt sie ab. Die Live-Zähler
+      // Opt 2 (Log-Entrümpelung): Unveränderte Dateien erzeugen keine Log-Zeile —
+      // die ⏭️-Status-Tabelle (file_skip) deckt sie ab. Die Live-Zähler
       // (processed/total) laufen unabhängig in der pushEvent-Logik weiter.
+      // Root-Check-Skips (nicht unterstütztes Format) bekommen eine Zeile mit Grund.
       const status = String(evt.status ?? '');
-      if (status === 'unchanged' || status === 'skipped') return null;
+      if (status === 'unchanged') return null;
       const filename = String(evt.filename ?? '');
+      if (status === 'skipped') {
+        const legacy = evt.reason === 'legacy_format';
+        return {
+          text: legacy
+            ? t('xmlConvert.logSkippedFile', {
+                defaultValue: '⊘ {{filename}} — FileMaker {{version}} export, not supported (re-export with FileMaker 19+)',
+                filename,
+                version: String(evt.source_version ?? '18'),
+              })
+            : t('xmlConvert.logSkippedFileUnknown', {
+                defaultValue: '⊘ {{filename}} — no FileMaker XML export recognized, skipped',
+                filename,
+              }),
+          level: 'warn',
+        };
+      }
       const idx = typeof evt.index === 'number' ? evt.index : Number(evt.index ?? 0);
       const total = typeof evt.total === 'number' ? evt.total : Number(evt.total ?? 0);
       const ok = evt.ok !== false;
@@ -106,6 +125,17 @@ function eventToLine(evt: Record<string, unknown>, t: Translate): LogLine | null
         return {
           text: t('xmlConvert.logAbortedOom', {
             defaultValue: '⚠ Aborted — not enough memory (solution too large for this environment).',
+          }),
+          level: 'error',
+        };
+      }
+      if (reason === 'no_importable_files') {
+        return {
+          text: t('xmlConvert.logAbortedNoInput', {
+            defaultValue: '⚠ Aborted — no importable file ({{skipped}} skipped, {{failed}} failed of {{total}}).',
+            total: Number(evt.total ?? 0),
+            skipped: Number(evt.skipped ?? 0),
+            failed: Number(evt.failed ?? 0),
           }),
           level: 'error',
         };
@@ -189,9 +219,10 @@ export function XmlConvertLog({}: PrimitiveProps) {
       const evt = detail.evt;
       setEvents(prev => [...prev, evt]);
 
-      if (evt.event === 'file_start') {
+      if (evt.event === 'batch_start' || evt.event === 'file_start') {
         // Gesamtzahl steht damit schon vor dem ersten abgeschlossenen File —
-        // sonst zeigt die Statuszeile beim ersten File "0 von ?".
+        // batch_start kommt direkt nach der Dateisuche, file_start pro Datei;
+        // sonst zeigt die Statuszeile bis dahin "0 von ?".
         const total = typeof evt.total === 'number' ? evt.total : Number(evt.total ?? 0);
         if (total) setLiveCounts(prev => ({ ...prev, total }));
       }
@@ -199,10 +230,12 @@ export function XmlConvertLog({}: PrimitiveProps) {
         const idx = typeof evt.index === 'number' ? evt.index : Number(evt.index ?? 0);
         const total = typeof evt.total === 'number' ? evt.total : Number(evt.total ?? 0);
         const okFile = evt.ok !== false;
+        // Root-check skips are no errors (counted as skipped in the run record).
+        const isError = !okFile && evt.status !== 'skipped';
         setLiveCounts(prev => ({
           processed: okFile ? Math.max(prev.processed, idx) : prev.processed,
           total: total || prev.total,
-          errorCount: okFile ? prev.errorCount : prev.errorCount + 1,
+          errorCount: isError ? prev.errorCount + 1 : prev.errorCount,
         }));
       }
       if (evt.event === 'start') {
@@ -286,6 +319,20 @@ export function XmlConvertLog({}: PrimitiveProps) {
             ts: tsLabel,
           }) as string);
       statusClass += ' xml-convert-status--ok';
+    } else if (run.ok === false && (run.error_count || 0) === 0) {
+      // Failed without a counted file error — a clean self-abort (no importable
+      // file, out of memory, incomplete build); the banner names the reason.
+      statusText = durLabel
+        ? (t('xmlConvert.statusAbortedWithDuration', {
+            defaultValue: 'Datum: {{ts}}, Dauer: {{dur}}, abgebrochen 🚫',
+            ts: tsLabel,
+            dur: durLabel,
+          }) as string)
+        : (t('xmlConvert.statusAborted', {
+            defaultValue: 'Datum: {{ts}}, abgebrochen 🚫',
+            ts: tsLabel,
+          }) as string);
+      statusClass += ' xml-convert-status--error';
     } else {
       statusText = durLabel
         ? (t('xmlConvert.statusErrorWithDuration', {
@@ -318,7 +365,7 @@ export function XmlConvertLog({}: PrimitiveProps) {
       open={open}
       onToggle={(e) => setUserToggled((e.currentTarget as HTMLDetailsElement).open)}
     >
-      <summary className={`${statusClass} xml-convert-log-summary`}>{statusText}</summary>
+      <summary className={`${statusClass} xml-convert-log-summary disclosure-summary`}>{statusText}</summary>
       <div ref={logRef} className="xml-convert-log" role="log" aria-live="polite">
         {lines.length === 0 ? (
           <div className="xml-convert-log__empty">

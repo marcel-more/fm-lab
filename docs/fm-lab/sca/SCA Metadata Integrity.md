@@ -1,6 +1,6 @@
 # SCA Metadata Integrity
 
-**Rubric:** [Static Code Analysis (neighboring rubric)](../Wiki/Static%20Code%20Analysis.md) · 5 rules · `rest-api/templates/dashboards-custom/metadata-integrity/`
+**Rubric:** [Static Code Analysis (neighboring rubric)](../Wiki/Static%20Code%20Analysis.md) · 5 rules · `rest-api/templates/dashboards/metadata-integrity/`
 
 Metadata-integrity rules check the invisible layer of the FileMaker file format: the native UUIDs every object carries, and what the XML export did or did not carry over. Duplicate UUIDs never affect runtime behavior — FileMaker itself doesn't care — but they quietly break every tool that assumes UUID uniqueness: DDR analyzers, fmIDE, diff/merge tooling, and FM-Lab's own reference resolution. Export artifacts are the second family: a file saved without DDR info or with a plug-in not loaded on the exporting client imports without error and looks complete, yet its formula references (fields, functions, custom functions, plug-in calls) never reach the catalog. FM-Lab detects and lists these defects; it deliberately does **not** repair them (Claris' repair mode assigns entirely new UUIDs and breaks external references; the export defects are only fixed by exporting again).
 

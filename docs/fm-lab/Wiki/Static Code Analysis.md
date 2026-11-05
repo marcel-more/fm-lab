@@ -12,7 +12,7 @@
 
 For FileMaker this is a particularly good fit — much of a solution *is* structure (schema, relationships, layouts, references between objects), and a lot of what goes wrong (broken references, dead code, untidy layouts, unindexed fields) is visible in that structure long before it bites at runtime.
 
-In FM-Lab, static code analysis runs as **SQL over the [Object Catalog](Architecture.md#duckdb-powered-object-catalog)**: the solution is exported once via `Save a Copy as XML` and converted into a DuckDB database in which every object — scripts, steps, fields, layouts, relationships, value lists, accounts — is a row, and every reference between objects is a resolved link. Rules are queries against these tables. This page explains why that model is so effective, where the rules come from, and how the three delivery forms — [dashboards](#rule-dashboards), [custom queries](#custom-queries) and [tests](#analysis-tests) — fit together.
+In FM-Lab, static code analysis runs as **SQL over the [Object Catalog](Architecture.md#duckdb-powered-object-catalog)**: the solution is exported once via `Save a Copy as XML` and converted into a DuckDB database in which every object — scripts, steps, fields, layouts, relationships, value lists, accounts — is a row, and every reference between objects is a resolved link. Rules are queries against these tables. This page explains why that model is so effective, where the rules come from, and how the three delivery forms — [rule dashboards](#rule-dashboards), [single-file dashboards](#single-file-dashboards) and [tests](#analysis-tests) — fit together.
 
 ---
 
@@ -74,13 +74,13 @@ Each rule is a self-contained [dashboard bundle](../templates/Dashboard%20Datase
 
 Severity is part of the rule declaration: `critical`/`error` findings are defects, `warning` deserves review, `info` marks inventories and style observations that count but never turn a traffic light red. Some bundles are deliberately **explorers** with no severity at all — inventories like the layout geometry explorer that describe rather than judge.
 
-### Custom queries
+### Single-file dashboards
 
-A [custom query](../templates/Custom%20Query%20Templates.md) is the lightweight form: one `.sql` file with a metadata header, hot-reloaded, surfaced as a card in the Custom Queries dashboard and callable by name through the [Query and Report API](../rest-api/endpoints/Query%20and%20Report%20API.md). This is the fastest path from "I wonder…" to a permanent, shareable analysis — the shipped examples include a script complexity ranking (cyclomatic complexity), a layout-overlap explorer and a theme/style usage map. When a custom query matures and wants severity, findings semantics and test membership, it can be promoted to a rule bundle.
+A [single-file dashboard](../templates/Single-file%20Dashboards.md) is the lightweight form: one `.sql` file with a metadata header in a dashboard folder, hot-reloaded, listed in the dashboard overview next to the rule bundles and callable by name through the [Query and Report API](../rest-api/endpoints/Query%20and%20Report%20API.md). This is the fastest path from "I wonder…" to a permanent, shareable analysis — the shipped examples include a script complexity ranking (cyclomatic complexity), a layout-overlap explorer and a theme/style usage map. With a declared default result it shows a value in the overview and can be a test member; when it wants severity, tiles and several panels, it grows into a bundle without rewriting the SQL.
 
 ### Analysis Tests
 
-[Analysis Tests](Analysis%20Tests.md) make rule results **consumable as verdicts**: a test is a declared collection of rule dashboards and query templates with a result model on top — pass/fail states, severity aggregation, scopes (solution, file, single object, object list, graph cluster) and profiles. Tests are what you run when the question is not "show me the findings" but "is anything wrong with this script?" — from the web frontend, the [REST API](../rest-api/endpoints/Tests%20API.md) or the `fm-test` agent skill, with identical results in all three.
+[Analysis Tests](Analysis%20Tests.md) make rule results **consumable as verdicts**: a test is a declared collection of dashboards — rule bundles and single-file dashboards — with a result model on top — pass/fail states, severity aggregation, scopes (solution, file, single object, object list, graph cluster) and profiles. Tests are what you run when the question is not "show me the findings" but "is anything wrong with this script?" — from the web frontend, the [REST API](../rest-api/endpoints/Tests%20API.md) or the `fm-test` agent skill, with identical results in all three.
 
 ---
 
@@ -90,7 +90,7 @@ There are different ways to use the SCA tools, depending on the workflow and the
 
 #### Dashboard navigation
 
-Each **Dashboard Rule** and **Custom Query** is represented by its own dashboard card, accessible and discoverable from the start page of the FM-Lab web frontend. Navigate through the folder hierarchy or enter a search term on the overview page of each section.
+Each **rule dashboard** and **single-file dashboard** is represented by its own dashboard card, accessible and discoverable from the start page of the FM-Lab web frontend. Navigate through the folder hierarchy or enter a search term on the overview page of each section. The dashboard overview also offers a hierarchical list with status and findings columns per folder, and a favorites view for the rules you check regularly (see [Dashboard overview](Components.md#dashboard-overview)).
 
 Dashboard cards are designed to run at **global scope**, making it easy to explore and discover issues across the entire solution.
 
@@ -113,7 +113,7 @@ For a more explicit and targeted entry point, the `fm-test` skill can be used to
 
 The rule library is a **curated collection of community experience**: each rule encodes something developers have learned to watch out for — sourced from PMD, from fmCheckMate, from vendor documentation and from practice — expressed once as a reviewable query and then applied consistently to every solution.
 
-The collection is designed to be extended continuously: new rules ship with FM-Lab releases, and your own installation can add rules and queries at any time (the `create-custom-dashboard` skill scaffolds a full rule bundle; a custom query is a single file). Because custom bundles override built-ins by id, you can also tune a shipped rule's thresholds or exclusions locally without forking anything.
+The collection is designed to be extended continuously: new rules ship with FM-Lab releases, and your own installation can add rules and queries at any time (the `create-custom-dashboard` skill builds a single-file dashboard or a full rule bundle, `create-custom-test` bundles them into a test). Because custom bundles override built-ins by id, you can also tune a shipped rule's thresholds or exclusions locally without forking anything.
 
 
 ## Standing on prior art
@@ -131,5 +131,5 @@ Many of the shipped rules are FileMaker translations of established analysis rul
 
 - [4 Code Analysis Approaches](4%20Code%20Analysis%20Approaches.md) — where SCA sits among FM-Lab's analysis modes
 - [Analysis Tests](Analysis%20Tests.md) — the declarative layer on top of the rules
-- [Dashboard Datasets](../templates/Dashboard%20Datasets.md) · [Custom Query Templates](../templates/Custom%20Query%20Templates.md) · [SQL Templates](../templates/SQL%20Templates.md) — the template machinery
+- [Dashboard Datasets](../templates/Dashboard%20Datasets.md) · [Single-file Dashboards](../templates/Single-file%20Dashboards.md) · [SQL Templates](../templates/SQL%20Templates.md) — the template machinery
 - [Schema](../schema/Schema.md) — the catalog tables the rules query

@@ -16,6 +16,12 @@ import type { PrimitiveProps } from '../types';
  *  2. **Dateien erkannt** — die Karte kollabiert auf eine einzige Zeile:
  *     „N XML file(s) found • <Größe>" mit dem Convert-Button direkt dahinter.
  *     Der Klick wechselt zum Import-Dashboard UND startet sofort (`?autostart=1`).
+ *     Ist keine Datei importierbar (nur FileMaker-18-Exporte, `importable_count`
+ *     = 0 aus `xml_directory_meta`), wechselt er nur zur Import-Seite — dort
+ *     stehen Grund und Abhilfe — und die Zeile nennt den Formatbefund.
+ *     Läuft bereits eine Konvertierung, ersetzt ein Hinweis den Button (Lauf aus
+ *     dem Terminal, z. B. tools/init.sh) bzw. der Button zeigt den Fortschritt
+ *     (Lauf aus dem Web-Client).
  *
  * Datasets:
  *   - project_summary       (für den `db_empty`-Marker)
@@ -62,6 +68,13 @@ export function XmlEmptyStateCard({ node, datasets }: PrimitiveProps) {
   const displayPath = hostXmlDir || xmlDir || 'xml/';
   const pathIsHost = hostXmlDir != null;
   const directoryEmpty = count === 0;
+  const unsupportedCount = meta?.unsupported_count != null ? Number(meta.unsupported_count) : 0;
+  const nothingImportable = !directoryEmpty && unsupportedCount >= count;
+  // A conversion already runs: from the web client ('api', live progress on the import
+  // page) or from the terminal (tools/init.sh — no live progress, the 6-s refresh swaps
+  // the card for the data once it is done).
+  const running = meta?.running === true;
+  const runningInTerminal = running && meta?.running_source !== 'api';
 
   const [copied, setCopied] = useState(false);
   const [revealFailed, setRevealFailed] = useState(false);
@@ -104,10 +117,20 @@ export function XmlEmptyStateCard({ node, datasets }: PrimitiveProps) {
 
   const onConvert = useCallback(() => {
     if (directoryEmpty) return;
+    // A run from the web client is already active → only show its progress.
+    if (running) {
+      navigate('/xml-import');
+      return;
+    }
+    // Nichts importierbar → nur zur Import-Seite wechseln (kein Autostart).
+    if (nothingImportable) {
+      navigate('/xml-import');
+      return;
+    }
     // Wechseln UND starten: das xml_convert-Sub-Dashboard liest `autostart=1`
     // beim Mount und feuert die Konvertierung sofort.
     navigate('/xml-import?autostart=1');
-  }, [directoryEmpty, navigate]);
+  }, [directoryEmpty, nothingImportable, running, navigate]);
 
   if (!dbEmpty) return null;
 
@@ -118,16 +141,37 @@ export function XmlEmptyStateCard({ node, datasets }: PrimitiveProps) {
   // ── Zustand 2: Dateien erkannt → nur die Anzahl-Zeile + Convert-Button ──────
   if (!directoryEmpty) {
     return (
-      <section className="dash-card xml-empty-card" style={style}>
+      <section className={`dash-card xml-empty-card${runningInTerminal ? ' xml-empty-card--running' : ''}`} style={style}>
         <div className="dash-card__body">
           <div className="xml-empty-card__ready">
             <span className="xml-empty-card__count">
               {t('xmlEmpty.countFound', { count, defaultValue: '{{count}} XML file(s) found' })}
               {totalBytes != null ? ` • ${formatBytes(totalBytes)}` : ''}
+              {unsupportedCount > 0 && (
+                <>
+                  {' • '}
+                  <span className="dash-search-bar__flag dash-search-bar__flag--error">
+                    {t(
+                      nothingImportable ? 'detail:autoTable.formatLegacy' : 'detail:autoTable.formatLegacy_partial',
+                      { count: unsupportedCount, total: count },
+                    ) as string}
+                  </span>
+                </>
+              )}
             </span>
-            <button type="button" className="xml-convert-btn" onClick={onConvert}>
-              {t('xmlConvert.start', { defaultValue: 'XML konvertieren' })}
-            </button>
+            {runningInTerminal ? (
+              <span className="xml-empty-card__running" role="status">
+                {t('xmlEmpty.runningTerminal') as string}
+              </span>
+            ) : (
+              <button type="button" className="xml-convert-btn" onClick={onConvert}>
+                {running
+                  ? t('xmlEmpty.showProgress')
+                  : nothingImportable
+                    ? t('nav:crumbs.xmlImport', { defaultValue: 'XML-Import' })
+                    : t('xmlConvert.start', { defaultValue: 'XML konvertieren' })}
+              </button>
+            )}
           </div>
         </div>
       </section>
@@ -152,7 +196,7 @@ export function XmlEmptyStateCard({ node, datasets }: PrimitiveProps) {
         <p className="xml-empty-card__step">
           <span className="xml-empty-card__step-num">1.</span>
           <span>{t('xmlEmpty.hintExport', {
-            defaultValue: 'Export from FileMaker Pro via “File ▸ Save a Copy as XML” — enable “Include details for analysis tools”.',
+            defaultValue: 'Export from FileMaker Pro via “Tools ▸ Save a Copy as XML” — enable “Include details for analysis tools”.',
           })}</span>
         </p>
 

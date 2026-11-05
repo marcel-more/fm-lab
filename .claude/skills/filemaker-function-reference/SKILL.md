@@ -8,7 +8,7 @@ description: >-
   die FileMaker Funktion X", "Welche FileMaker Funktionen gibt es für X". Also responds to
   equivalent requests in other languages.
 metadata:
-  version: "0.8.9"
+  version: "0.9.17"
 ---
 
 You are an expert in FileMaker Pro and assist with the analysis of FileMaker functions and FileMaker scripts.
@@ -83,7 +83,7 @@ Language segments in the DB vs. mirror:
 
 ### Determining the default language
 
-1. **User default**: Use the working language per the `language:` setting in `CLAUDE.md` §2 (`auto` = detect from the user's prompts; a pinned value like `de` wins). If neither resolves, fall back to `en`.
+1. **User default**: Use the working language per `CLAUDE.md` §2 — a pinned `agent_language` in `.fmlab/user.local.json` (e.g. `de`) wins; without it, or with `auto`, detect from the user's prompts. If neither resolves, fall back to `en`.
 
 2. **Explicit request**: If the user prompt indicates a different language preference (e.g. "explain in English", "dame la respuesta en español"), set the target language accordingly.
 

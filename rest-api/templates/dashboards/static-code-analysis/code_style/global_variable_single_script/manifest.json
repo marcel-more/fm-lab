@@ -1,0 +1,84 @@
+{
+  "locked": true,
+  "id": "global_variable_single_script",
+  "version": "1.0.0",
+  "title": "Global variable used in one script only",
+  "description": "Code-style rule — global ($$) variables that are set and read within a single script. A local ($) variable would express the intent better.\n\nBased on the PMD rule GlobalVariable — https://docs.pmd-code.org/latest/pmd_rules_ecmascript_bestpractices.html#globalvariable",
+  "author": "fm-lab rules",
+  "icon": "variable",
+  "category": "code_style",
+  "tags": [
+    "rule",
+    "pmd",
+    "code_style"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "info",
+    "category": "code_style",
+    "rationale": "A global used in one script leaks session-wide state for no reason.",
+    "remediation": "Downgrade the variable to local scope ($).",
+    "meta": {
+      "name": "Global variable used in one script only",
+      "author": "fm-lab rules",
+      "source": "PMD",
+      "url": "https://docs.pmd-code.org/latest/pmd_rules_ecmascript_bestpractices.html#globalvariable",
+      "description": "Code-style rule — global ($$) variables that are set and read within a single script. A local ($) variable would express the intent better.",
+      "created": "2026-07-01",
+      "references": [
+        {
+          "project": "PMD",
+          "rule": "GlobalVariable",
+          "url": "https://docs.pmd-code.org/latest/pmd_rules_ecmascript_bestpractices.html#globalvariable"
+        }
+      ]
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Variable"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {}
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Global variable used in one script only"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": false
+  }
+}

@@ -36,7 +36,7 @@ None registered.
 
 - **XML schema:** [XML BaseDirectoryCatalog](../../xml/catalogs/XML%20BaseDirectoryCatalog.md) — `Structure/AddAction` branch, one `<BaseDirectory>` per entry
 - **DB schema:** [BaseDirectoryCatalog](../catalog-tables/BaseDirectoryCatalog.md)
-- **Detail view template:** generic fallback `rest-api/templates/sql/object_details_generic.sql` (served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md))
+- **Detail view template:** generic fallback `rest-api/templates/queries/system/object-details/object_details_generic.sql` (served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md))
 - **Frontend:** object list at `http://localhost:5173/?type=BaseDirectory`
 
 **See also:** [Object Types](../object-catalog/Object%20Types.md) · [Field](Field.md) · [FileOptionsCatalog](../catalog-tables/FileOptionsCatalog.md) · [Link Roles and Subroles](../object-catalog/Link%20Roles%20and%20Subroles.md)

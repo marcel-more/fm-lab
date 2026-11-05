@@ -123,7 +123,27 @@ conventions), NOT the target solution's FileMaker conventions.
 
 Use the **`create-custom-dashboard`** skill for new dashboard bundles. It interviews
 for the content, drafts the SQL, shows sample results and generates the bundle under
-`rest-api/templates/dashboards-custom/<id>/`.
+`rest-api/templates/dashboards-custom/[<folder>/]<id>/`.
+
+Dashboard bundles live in three area directories under `rest-api/templates/`:
+`dashboards/` (shipped: `system/` and `modules/` are storage groups without a
+folder path, everything else is shipped content whose folder path is its
+results rubric), `dashboards-custom/` (the user's own bundles — gitignored
+except its scaffold, shown under "Custom", rubric `custom/…`) and
+`dashboards-community/` (reserved, "Community", rubric `community/…`). A custom
+bundle overrides a shipped content bundle with the same id; system/module ids
+are reserved. The top-level names `system`, `modules`, `custom` and `community`
+are reserved inside `dashboards/`. `rest-api/templates/dashboards/inventory.json` lists every
+shipped bundle, single-file dashboard and folder (reference of the dashboard
+cleanup, which moves leftovers of older layouts — including the old query
+locations `sql-custom/`, `sql/`, `sql-custom-details/` — to the gitignored
+`dashboards-removed/`, own content to `dashboards-custom/`; `rest-api/templates/tests/inventory.json`
+plays the same role for the test cleanup); it is generated, never hand-edited.
+
+A bundle whose datasets emit `AS nav_uuid` declares the object types of those
+rows in `manifest.analysis.objectTypes` (`ObjectCatalog.Object_Type` values) —
+the overview's object-type filter and the object-scope gate of the Analysis
+Tests read only this declaration.
 
 Constraints for dashboard SQL (REST API layer):
 
@@ -144,12 +164,14 @@ Constraints for dashboard SQL (REST API layer):
 ## B2. Custom queries & analysis SQL (converter, datasets, tools)
 
 - DuckDB syntax; verify uncertain functions/syntax via `duckdb-skills:duckdb-docs`
-  instead of guessing. Reusable queries: promote into
-  `rest-api/templates/sql-custom/`; the cookbook lives at
+  instead of guessing. Reusable queries: save as an own analysis (one `.sql` file with a
+  `-- @` header = a single-file dashboard) in `rest-api/templates/dashboards-custom/` —
+  shipped ones live in rubric folders under `rest-api/templates/dashboards/`, the
+  internal API templates under `rest-api/templates/queries/{system,modules}`; the cookbook lives at
   `docs/agents/sql/sample_queries.sql` (see `query-cookbook.md`).
 - Locale independence: never gate on `Step_Name`/`Step/@name` literals — use `Step_ID`
   (`ScriptStepRoleMap`, `step_metadata`).
-- **Persisted SQL** (dashboard datasets, `sql-custom` queries, API templates, analysis
+- **Persisted SQL** (dashboard datasets, single-file dashboards, API templates under `templates/queries/`, analysis
   tests): every statement or CTE with more than one table qualifies **every** column
   with its table alias, even when the name is unique today; no `SELECT *` / `t.*` over a
   join. New schema versions add columns — a bare name that a later version adds to a
@@ -226,7 +248,7 @@ lowest supported line until its end-of-life.
   newer APIs. Exception `apps/vscode`: it runs on the Node bundled with VS Code.
 
 Maintainer gate: `tools/tests/node-compat.sh` — syntax check, API lint (reference-only
-built-ins without the marker) and Jest under the image's Node and the floor
+built-ins without the marker), the `apps/web` unit tests and Jest under the image's Node and the floor
 (`--static` ≈ 1 s, `--quick` ≈ 12 s, full ≈ 13 min). The floor Node comes from
 `NODE_COMPAT_FLOOR`.
 
@@ -240,7 +262,7 @@ Never mix these up; each has its own source of truth:
 
 | Layer | Rule | Source |
 |---|---|---|
-| **Conversation & reports** | The working language: auto-detected from the user's prompts, or pinned via the `language:` setting in CLAUDE.md §2 | CLAUDE.md §2 |
+| **Conversation & reports** | The working language: auto-detected from the user's prompts, or pinned via `agent_language` in `.fmlab/user.local.json` (untracked; `bash tools/fmlab.sh language <code>`) | CLAUDE.md §2 |
 | **Skill authoring** | fm-lab's own skills are written in English; third-party skills may be written in any language. A skill's body language has **zero** influence on the response or artifact language | fm-lab skill conventions |
 | **Artifact internals** | **Axis A:** identifier language, FileMaker function-name locale (e.g. German calc function names), comment language *inside generated scripts* follow the **target solution's existing convention** — derive it from the catalog (existing script names, step texts, field comments) or read it from the registry's conventions block; never from the conversation language. **Axis B:** fm-lab standards — English code/comments; user-visible labels via locale JSONs | Axis A: `codegen-registry.md` / catalog inspection · Axis B: project standards |
 

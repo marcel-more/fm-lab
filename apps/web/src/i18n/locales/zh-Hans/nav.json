@@ -1,9 +1,9 @@
 {
+  "modeTabsAriaLabel": "查看模式",
   "fileActions": {
     "search": "搜索",
     "drilldown": "下钻"
   },
-  "modeTabsAriaLabel": "查看模式",
   "breadcrumbs": {
     "search": "搜索",
     "analyses": "分析",
@@ -17,7 +17,6 @@
     "graph": "图谱",
     "relationships": "关系",
     "dashboards": "仪表板",
-    "customQueries": "自定义查询",
     "docs": "文档",
     "xmlImport": "XML 导入",
     "cluster": "聚类",
@@ -25,17 +24,18 @@
     "fmSpec": "fm-spec",
     "tests": "测试"
   },
+  "entryType": {
+    "dashboard": "仪表板"
+  },
   "leitDescription": {
     "dashboards": "所有可用仪表板的概览。",
-    "customQueries": "可重用的 SQL 模板——点击卡片即可打开分析。",
     "docs": "已安装的文档来源。",
     "xmlImport": "将 xml/ 目录中的所有文件导入 DuckDB。",
     "xmlImportContextNote": "导入的是非活动解决方案——显示的分析数据只有在激活后才会变化。",
     "tests": "精选分析测试 — 对解决方案、文件或单个对象运行捆绑检查。"
   },
   "errors": {
-    "noDashboardId": "未提供仪表板 ID。",
-    "noQueryName": "未提供查询名称。"
+    "noDashboardId": "未提供仪表板 ID。"
   },
   "home": {
     "title": "首页(重置筛选器)",
@@ -122,6 +122,18 @@
     "folderDetailsTitle": "显示文件夹详情",
     "noName": "(无名称)"
   },
+  "docs": {
+    "langFallback": "此文档没有所选语言的版本 — 正在显示 {{lang}}。",
+    "openOnline": "在线打开 ↗",
+    "openInFmSpec": "fm-spec →",
+    "openInBrowser": "在浏览器中打开",
+    "edit": "编辑 ↗",
+    "source": "来源",
+    "noContent": "暂无内容。",
+    "category": "类别",
+    "docset": "Docset",
+    "references": "代码引用"
+  },
   "noData": {
     "title": "暂无数据",
     "message": "尚未导入任何 FileMaker 解决方案。请先导入 XML 导出文件以使用此视图。",
@@ -134,8 +146,9 @@
     "run": "运行",
     "running": "运行中…",
     "showFindings": "显示发现项",
+    "showChecks": "显示检查",
     "memberError": "错误",
-    "openMember": "打开仪表板/查询",
+    "openMember": "打开仪表板",
     "openFinding": "在详情视图中打开",
     "openMemberFindings": "在详情视图中打开所有发现项",
     "truncated": "更多发现项已截断 — 打开成员查看完整列表。",

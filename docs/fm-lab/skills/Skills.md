@@ -91,7 +91,8 @@ FM-Lab ships the following skills with every release under `.claude/skills/`. Ea
 
 ### Extending FM-Lab
 
-- [create-custom-dashboard](Skill%20create-custom-dashboard.md) — Scaffold a new dashboard bundle interactively, with a verification gate
+- [create-custom-dashboard](Skill%20create-custom-dashboard.md) — Build a new dashboard interactively — a single `.sql` file or a full bundle — with a verification gate
+- [create-custom-test](Skill%20create-custom-test.md) — Bundle existing dashboards into an own Analysis Test, validated and run once
 - [skill-creator](Skill%20skill-creator.md) — Build, validate and package your own skills
 
 ## Shared building blocks

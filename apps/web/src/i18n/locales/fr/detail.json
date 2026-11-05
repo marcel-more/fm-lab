@@ -12,10 +12,15 @@
     "ddrMissing": "Infos DDR manquantes",
     "ddrMissing_partial": "Infos DDR manquantes dans {{count}} fichiers sur {{total}}",
     "ddrMissingHint": "exportez avec l’option « Inclure les détails pour les outils d'analyse »",
+    "formatLegacy": "Les {{total}} fichiers sont au format FileMaker 18 — ils ne seront pas importés",
+    "formatLegacy_partial": "{{count}} fichiers sur {{total}} au format FileMaker 18 — ils ne seront pas importés",
+    "formatLegacyHint": "exportez-les à nouveau avec FileMaker 19 ou ultérieur via « Enregistrer en XML »",
     "page": "Page {{current}} / {{total}}",
     "noMatches": "Aucun résultat pour « {{query}} ».",
     "prev": "← Précédent",
     "next": "Suivant →",
+    "pageSize": "Lignes",
+    "pageSizeAll": "Toutes",
     "rowAction": "Ouvrir la cible"
   },
   "layoutPreview": {
@@ -173,6 +178,11 @@
     "notNavigable": "Cible absente du jeu de données importé",
     "showInLayout": "Afficher dans la mise en page (Alt+clic)",
     "showInFile": "Afficher dans le fichier (Alt+clic)",
+    "dirFilterAria": "Filtrer par direction",
+    "dirFilterLabel": "Direction",
+    "dirIn": "Entrant",
+    "dirOut": "Sortant",
+    "dirBoth": "Les deux",
     "subroles": {
       "hide": {
         "short": "Hide",
@@ -311,7 +321,18 @@
     "storageIndexLanguage": "Langue par défaut",
     "summaryRestartGroup": "Réinitialiser à chaque groupe",
     "summaryRepMode": "Calculer les répétitions",
-    "calcEvaluatesWhenEmpty": "Calcule même si champs vides"
+    "calcEvaluatesWhenEmpty": "Calcule même si champs vides",
+    "validationMessageCalc": "Calcul du message",
+    "disabled": "désactivé",
+    "sectionExtended": "Options étendues (FileMaker 26)",
+    "annotation": "Annotation (DDL)",
+    "displayNames": "Noms d’affichage",
+    "displayNamesEnabled": "Noms d’affichage personnalisés activés",
+    "displayNamesDisabled": "Non personnalisés",
+    "displayNameElements": "Éléments",
+    "displayNameKey": "Élément",
+    "displayNameValue": "Libellé / formule",
+    "displayNamesFormula": "Formule des noms d’affichage"
   },
   "typeDetail": {
     "loading": "Chargement…",
@@ -390,6 +411,18 @@
     "settingsHeading": "Réglages",
     "saveLabel": "Enregistrer les réglages",
     "savingLabel": "Enregistrement…",
+    "versions": {
+      "fmlab": "FM-Lab",
+      "api": "API",
+      "frontend": "Frontend",
+      "xmlConverter": "Convertisseur XML",
+      "xmlEngine": "Moteur",
+      "dbSchema": "Schéma de BD",
+      "fmSpec": "fm-spec",
+      "duckdb": "DuckDB",
+      "duckdbCli": "DuckDB CLI",
+      "duckdbCliMissing": "introuvable"
+    },
     "api": {
       "heading": "Connexion à l'API REST",
       "label": "URL de l'API REST",
@@ -413,11 +446,22 @@
       "empty": "Aucune analyse pour le moment. Cliquez sur « Réanalyser ».",
       "colVersion": "Version"
     },
-    "versions": {
-      "fmSpec": "fm-spec",
-      "duckdb": "DuckDB",
-      "duckdbCli": "DuckDB CLI",
-      "duckdbCliMissing": "introuvable"
+    "graphify": {
+      "enableFirst": "Activez le plugin ci-dessus pour lancer l’export.",
+      "exportButton": "Exporter le graphe",
+      "doneMessage": "Export terminé. Le fichier se trouve dans le répertoire output/.",
+      "failed": "Échec de l’export.",
+      "lastExport": "Dernier export",
+      "colFile": "Fichier",
+      "colNodes": "Nœuds",
+      "colEdges": "Arêtes",
+      "colSize": "Taille",
+      "recentFiles": "Exports précédents ({{count}})",
+      "phase": {
+        "count": "Comptage des objets…",
+        "export": "Export du graphe…",
+        "assemble": "Écriture du fichier JSON…"
+      }
     },
     "solutions": {
       "heading": "Solutions",
@@ -484,6 +528,10 @@
     "source": "Source :",
     "relationshipGraphLink": "↗ Graphe de relations",
     "copyUuidAria": "Copier l’UUID dans le presse-papiers",
+    "copyOriginalUuidAria": "Copier l’UUID d’origine dans le presse-papiers (ambigu dans le fichier source)",
+    "copySyntheticUuidAria": "Copier l’UUID synthétique FM-Lab dans le presse-papiers",
+    "syntheticBadge": "FM-Lab",
+    "syntheticTooltip": "Identité de remplacement interne à FM-Lab : l’UUID d’origine de cet objet était en double dans le fichier source et a été réparé à l’import. Cliquez pour copier l’UUID synthétique (identité du catalogue).",
     "change": {
       "modified": "Dernière modification",
       "containerModified": "Dernière modification du conteneur",

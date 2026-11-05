@@ -105,7 +105,9 @@ function broadcast(run, evt) {
   }
   // Flaches phase/pct + Zähler aus den bekannten Events ableiten (active_run).
   if (evt.event === 'progress') run.lastProgress = evt;
-  if (evt.event === 'file_start' && typeof evt.total === 'number') run.total = evt.total;
+  if ((evt.event === 'batch_start' || evt.event === 'file_start') && typeof evt.total === 'number') {
+    run.total = evt.total;
+  }
   if (evt.event === 'file') {
     if (typeof evt.total === 'number') run.total = evt.total;
     if (typeof evt.index === 'number' && evt.ok !== false) {
@@ -188,7 +190,8 @@ function startRun({ changedOnly = true, solution } = {}) {
 
       if (controller.signal.aborted) {
         // reason disambiguates a USER cancel from the converter's own memory/incomplete
-        // self-abort (which also uses the `aborted` event, but with reason oom/incomplete).
+        // self-abort (which also uses the `aborted` event, but with reason
+        // oom/incomplete/no_importable_files).
         broadcast(run, { event: 'aborted', reason: 'cancelled' });
       } else if (exit_code === 0) {
         // Im --quiet-Modus triggert das Skript den Reload NICHT selbst (überlässt

@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "type": "Grid",
+    "props": { "columns": 12, "gap": 16 },
+    "children": [
+      {
+        "type": "Card",
+        "id": "test_not_found",
+        "props": { "span": 12, "title": "Test not found", "variant": "hero" },
+        "visibleWhen": { "dataset": "detail", "field": "not_found", "truthy": true },
+        "children": [
+          {
+            "type": "Markdown",
+            "id": "test_not_found_md",
+            "props": { "content": "No Analysis Test with this id exists — it may have been renamed or removed. Pick one from the **Tests** overview below." }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "test_meta",
+        "props": { "span": 12, "title": "Metadata", "variant": "hero" },
+        "visibleWhen": { "dataset": "detail", "field": "not_found", "truthy": false },
+        "data": { "dataset": "detail" },
+        "children": [
+          {
+            "type": "KPIStrip",
+            "id": "test_meta_kpistrip",
+            "props": {
+              "items": [
+                { "label": "Members", "field": "member_count", "format": "number" },
+                { "label": "Profiles", "field": "profile_count", "format": "number" },
+                { "label": "Test type", "field": "test_type", "format": "badge" },
+                { "label": "Tier", "field": "tier", "format": "badge" },
+                { "label": "Version", "field": "version" },
+                { "label": "Validation", "field": "validation_status", "format": "badge" },
+                { "label": "Unresolved", "field": "unresolved_count", "format": "number" }
+              ]
+            }
+          },
+          {
+            "type": "DefinitionList",
+            "id": "test_meta_list",
+            "props": {
+              "items": [
+                { "label": "Section", "field": "folder_label" },
+                { "label": "Object types", "field": "object_types" },
+                { "label": "Scopes", "field": "scopes" },
+                { "label": "Outputs", "field": "outputs" },
+                { "label": "Keywords", "field": "keywords" },
+                { "label": "Test ID", "field": "id" },
+                { "label": "Skill call", "field": "skill_call" }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "test_issues",
+        "props": { "span": 12, "title": "Validation findings" },
+        "visibleWhen": { "dataset": "detail", "field": "validation_status", "notEquals": "ok" },
+        "data": { "dataset": "issues" },
+        "children": [
+          {
+            "type": "Table",
+            "id": "test_issues_table",
+            "props": {
+              "density": "comfortable",
+              "columns": [
+                { "field": "level", "label": "Level", "format": "badge" },
+                { "field": "rule", "label": "Rule" },
+                { "field": "message", "label": "Finding" }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "test_profiles",
+        "props": { "span": 12, "title": "Profiles" },
+        "visibleWhen": { "dataset": "detail", "field": "profile_count", "truthy": true },
+        "data": { "dataset": "profiles" },
+        "children": [
+          {
+            "type": "Table",
+            "id": "test_profiles_table",
+            "props": {
+              "rowKey": "profile_id",
+              "density": "comfortable",
+              "selectionKey": "profile",
+              "selectField": "profile_id",
+              "columns": [
+                { "field": "title", "label": "Profile" },
+                { "field": "scope_label", "label": "Scope" },
+                { "field": "description", "label": "Description" },
+                { "field": "profile_id", "label": "ID", "format": "copy" }
+              ]
+            }
+          },
+          {
+            "type": "Markdown",
+            "id": "test_profiles_hint",
+            "props": { "content": "Click a profile to highlight its members in the list below — click it again to clear." }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "test_members",
+        "props": { "span": 12, "title": "Contained tests" },
+        "visibleWhen": { "dataset": "detail", "field": "not_found", "truthy": false },
+        "data": { "dataset": "members" },
+        "children": [
+          {
+            "type": "Table",
+            "id": "test_members_table",
+            "props": {
+              "rowKey": "ref",
+              "density": "comfortable",
+              "sortable": true,
+              "searchable": "auto",
+              "selectionKey": "profile",
+              "highlightField": "profiles",
+              "columns": [
+                { "field": "index", "label": "#", "align": "right" },
+                { "field": "kind", "label": "Kind", "format": "badge" },
+                { "field": "title", "label": "Title" },
+                { "field": "rubric", "label": "Section" },
+                { "field": "severity", "label": "Severity", "format": "badge" },
+                { "field": "default_result_meaning", "label": "Default result" },
+                { "field": "ref", "label": "ID", "format": "copy" }
+              ],
+              "onRowClick": { "action": "navigate", "args": { "path": "{{target_path}}" } },
+              "empty": { "message": "This test declares no members." }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Row",
+        "id": "test_links",
+        "props": { "span": 12, "gap": 20 },
+        "children": [
+          {
+            "type": "NavButton",
+            "id": "test_links_tests",
+            "props": {
+              "variant": "link",
+              "label": "All Analysis Tests",
+              "onClick": { "action": "navigate", "args": { "path": "/tests" } }
+            }
+          },
+          {
+            "type": "NavButton",
+            "id": "test_links_dashboards",
+            "props": {
+              "variant": "link",
+              "label": "All dashboards",
+              "onClick": { "action": "navigate", "args": { "path": "/dashboard" } }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -10,10 +10,10 @@ the system, and has its own page:
 
 | Page | Directory | In one line |
 |---|---|---|
-| [Built-in Query Templates](Built-in%20Query%20Templates.md) | `rest-api/templates/sql/` | The shipped backbone of `/api/query` — object details, counts, graph. |
-| [Custom Query Templates](Custom%20Query%20Templates.md) | `rest-api/templates/sql-custom/` | Your own named queries; appear in the *Custom Queries* dashboard. |
-| [Detail View Templates](Detail%20View%20Templates.md) | `rest-api/templates/sql-custom-details/` | Internal detail-view SQL loaded by UI hooks; not listed publicly. |
-| [Dashboard Datasets](Dashboard%20Datasets.md) | `rest-api/templates/dashboards/` · `dashboards-custom/` | Per-tile datasets inside dashboard bundles. |
+| [Single-file Dashboards](Single-file%20Dashboards.md) | `rest-api/templates/dashboards/<folder>/` · `dashboards-custom/` | One `.sql` file with a header is a dashboard — shipped and your own; also callable through `/api/query`. |
+| [Dashboard Datasets](Dashboard%20Datasets.md) | `rest-api/templates/dashboards/` · `dashboards-custom/` | Per-tile datasets inside dashboard bundles — shipped and your own. |
+| [Built-in Query Templates](Built-in%20Query%20Templates.md) | `rest-api/templates/queries/system/` | Internal backbone of `/api/report` — object details, references, counts, graph. |
+| [Detail View Templates](Detail%20View%20Templates.md) | `rest-api/templates/queries/modules/` | Internal SQL of `/api/query` loaded by UI hooks; never listed. |
 | [Ingestion Pipeline (XML Import)](Ingestion%20Pipeline%20%28XML%20Import%29.md) | `ingestion/sql/` | The build SQL (P1–P6) that produces the catalog — **not** via REST. |
 
 The rest of this page explains what the tiers share: how a template works, the
@@ -50,8 +50,8 @@ web frontend can all reuse the same `.sql`.
 ## The metadata header
 
 Every REST-served template starts with `-- @key: value` comment lines. They are
-parsed by the template service and drive discovery, the Custom Queries listing
-and dashboard tiles. Common keys:
+parsed by the template service; for a [single-file dashboard](Single-file%20Dashboards.md)
+they *are* the dashboard definition (the full key list is there). Common keys:
 
 | Key | Purpose |
 |---|---|
@@ -61,7 +61,8 @@ and dashboard tiles. Common keys:
 | `@output_format` | the columns the template returns |
 | `@display` | tile rendering hint (`table`, …) |
 | `@click_action` / `@click_args` | make a row navigate (e.g. `openObject`) |
-| `@icon` / `@category` / `@tags` | grouping and iconography |
+| `@icon` / `@tags` | iconography and search terms (the folder groups a dashboard — `@category` has no effect) |
+| `@object_types` / `@default_result` | object-type filter and findings value of a single-file dashboard |
 | `@author` / `@version` | provenance |
 
 ## Parameters
@@ -71,9 +72,9 @@ substitution styles are supported and may be mixed:
 
 | Style | Example | Typical use |
 |---|---|---|
-| Named | `:file_name` | dashboard bundles, the file view |
+| DuckDB variable | `getvariable('file_name')` | the rule — every shipped template and dashboard |
+| Named | `:file_name` | older dashboard datasets, the file view |
 | Positional | `$1`, `$2` | short, order-based calls |
-| DuckDB variable | `getvariable('file_name')` | built-in query templates |
 
 Values are escaped server-side (single quotes doubled, `NULL` for missing
 params, `TRUE`/`FALSE` for booleans), so a template stays injection-safe. A
@@ -158,7 +159,7 @@ ORDER BY tgt.Object_Name;
 
 - **Flexible architecture** — queries, parameters, and output formats are independent, allowing a single `.sql` template to serve many callers and interfaces.
 - **Extensibility** — dropping a file into the appropriate template tier adds a new capability without code changes, redeployment, or restarts. Templates are hot-reloaded automatically.
-- **Adaptability** — custom templates override built-in ones by name, allowing every installation to tailor analyses to its own conventions.
+- **Adaptability** — your own dashboards override shipped ones by name, allowing every installation to tailor analyses to its own conventions.
 - **Expressive DuckDB SQL** — window functions, `GROUP BY ALL`, `COLUMNS(...)`, list/struct types, recursive CTEs, and graph-style traversals are all fair game. Even advanced analyses such as dependency walks, dead-code detection, or coupling metrics remain concise, readable SQL templates.
 - **Multiple output formats** — templates are responsible only for producing results. Output adapters selected by request parameters transform those results into tabular data, generated text, or other predefined representations. Queries that already produce their final format can bypass adaptation entirely through the `raw` adapter.
 

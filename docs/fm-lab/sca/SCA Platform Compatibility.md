@@ -1,6 +1,6 @@
 # SCA Platform Compatibility
 
-**Rubric:** [Static Code Analysis](../Wiki/Static%20Code%20Analysis.md) · 19 bundles · `rest-api/templates/dashboards-custom/static-code-analysis/platform/`
+**Rubric:** [Static Code Analysis](../Wiki/Static%20Code%20Analysis.md) · 19 bundles · `rest-api/templates/dashboards/static-code-analysis/platform/`
 
 The platform rubric answers deployment questions from documentation evidence instead of trial and error. It covers **two orthogonal axes** — *compatibility* ("can this run under environment X?") and *platform binding* ("was this built for X?") — plus the operating-system sub-axis ("does this assume macOS / Windows / Linux / iOS?"). Every statement traces back to curated reference data: the Claris step-compatibility table and OS-affinity curation in [fm-spec](../Wiki/fm-spec.md), and the vendor platform flags in [plugin-spec](../schema/plugin-spec.md) — never guessed from names.
 

@@ -1,0 +1,90 @@
+{
+  "locked": true,
+  "id": "undocumented_script",
+  "version": "1.0.0",
+  "title": "Undocumented Script",
+  "description": "Documentation rule — non-trivial scripts (10+ steps) without a single comment step. Hard to hand over or maintain.\n\nBased on the PMD rule CommentRequired — https://docs.pmd-code.org/latest/pmd_rules_java_documentation.html#commentrequired A filter switch above the table toggles between items without and with a comment (the commented ones serve as documentation inspiration).",
+  "author": "fm-lab rules",
+  "icon": "file-question",
+  "category": "documentation",
+  "tags": [
+    "rule",
+    "pmd",
+    "documentation"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "info",
+    "category": "documentation",
+    "rationale": "A script of any size with no comment is a maintenance liability.",
+    "remediation": "Add a header comment describing purpose, parameters and result.",
+    "meta": {
+      "name": "Undocumented Script",
+      "author": "fm-lab rules",
+      "source": "PMD",
+      "url": "https://docs.pmd-code.org/latest/pmd_rules_java_documentation.html#commentrequired",
+      "description": "Documentation rule — non-trivial scripts (10+ steps) without a single comment step. Hard to hand over or maintain. A filter switch above the table toggles between items without and with a comment (the commented ones serve as documentation inspiration).",
+      "created": "2026-07-01",
+      "references": [
+        {
+          "project": "PMD",
+          "rule": "CommentRequired",
+          "url": "https://docs.pmd-code.org/latest/pmd_rules_java_documentation.html#commentrequired"
+        }
+      ]
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Script"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {}
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Undocumented Script"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "comment",
+      "type": "string",
+      "required": false,
+      "description": "Filter switch: 'without' (default) or 'with' — show items lacking or carrying a comment."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

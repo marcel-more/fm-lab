@@ -90,9 +90,17 @@
       "recency": "ノードを最新の個別変更の経過期間で色分けします（グラフアトラスと同じ分類）"
     },
     "communityUnnamed": "コミュニティ {{id}}",
-    "resizePanel": "フィルターパネルの幅を変更",
+    "detailsShort": "詳細",
+    "openDetails": "フォーカスオブジェクトの詳細ビューを開く",
+    "openTypeList": "{{type}} のオブジェクト一覧を開く",
+    "hideType": "{{type}} を非表示",
+    "showType": "{{type}} を表示",
+    "depthOf": "(最大 {{max}})",
+    "extendDepth": "さらに深く",
+    "extendDepthHint": "スライダーを 4 より先まで拡張します (到達可能な最大深さまで)。",
     "depthLoad": "到達可能 {{count}} 件",
     "depthClipped": "到達可能 {{count}} 件、読み込みは {{limit}} 件に制限",
+    "resizePanel": "フィルターパネルの幅を変更",
     "partLoaded": "読み込み {{count}} 件",
     "partConnected": "接続 {{count}} 件",
     "partIsland_one": "島 {{count}} 個",
@@ -104,11 +112,6 @@
     "loadAllHint": "すべての種類を読み込みます。チップの選択解除は表示を隠すだけです",
     "loadSelectedHint": "選択した種類のみを読み込みます（再読み込み）"
   },
-  "unconnectedHidden_one": "フォーカスに接続されていないノード {{count}} 件",
-  "unconnectedHidden_other": "フォーカスに接続されていないノード {{count}} 件",
-  "unconnectedToggleShow": "表示",
-  "unconnectedToggleHide": "非表示",
-  "unconnectedToggleHint": "フォーカスへの経路がないノードは種類/深さフィルターによって生じます — 表示または非表示にします",
   "typeList": {
     "ariaLabel": "オブジェクト一覧: {{type}}",
     "sortBy": "並べ替え",
@@ -124,6 +127,11 @@
     "empty": "このタイプのオブジェクトはグラフにありません。",
     "focus": "フォーカスオブジェクト"
   },
+  "unconnectedHidden_one": "フォーカスに接続されていないノード {{count}} 件",
+  "unconnectedHidden_other": "フォーカスに接続されていないノード {{count}} 件",
+  "unconnectedToggleShow": "表示",
+  "unconnectedToggleHide": "非表示",
+  "unconnectedToggleHint": "フォーカスへの経路がないノードは種類/深さフィルターによって生じます — 表示または非表示にします",
   "edge": {
     "represents": "表す",
     "buttonAction": "ボタンアクション",

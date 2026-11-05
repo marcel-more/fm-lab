@@ -109,7 +109,7 @@ The practical consequence for every consumer: **after import, the XML is done.**
 
 ## Version notes: SaXML v2.2 and v2.3
 
-FM-Lab imports SaXML **v2.1.0.0 and newer** (root element `FMSaveAsXML`); the old v2.0.0.0 format (`FMDynamicTemplate`, FileMaker 18) is skipped with a warning. The importer reads the root attribute `version` of every export and imports the file under one of two **profiles**:
+FM-Lab imports SaXML **v2.1.0.0 and newer** (root element `FMSaveAsXML`); the old v2.0.0.0 format (`FMDynamicTemplate`, FileMaker 18) is skipped with a warning — see [Exports from FileMaker 18](#exports-from-filemaker-18). The importer reads the root attribute `version` of every export and imports the file under one of two **profiles**:
 
 | `version` | Profile | FileMaker | Encoding of the export |
 |---|---|---|---|
@@ -119,6 +119,18 @@ FM-Lab imports SaXML **v2.1.0.0 and newer** (root element `FMSaveAsXML`); the ol
 The profile is a property of the **file**, not of the catalog: one solution may mix exports of both profiles, and the decision is made per file. It is recorded in [FilesCatalog](../schema/object-catalog/FilesCatalog.md) (`SaXML_Version`, `SaXML_Profile`) and [XMLMetadata](../schema/catalog-tables/XMLMetadata.md) (`SaXML_Profile`), and the import summary prints the tally. Extractions that exist in only one form run only under their profile — an explicit version switch, not structure tolerance.
 
 > **Do not import the FileMaker 22 and the FileMaker 26 export of the *same* file into one catalog.** They share every object UUID, so the two exports collide instead of replacing one another — see [Troubleshooting](../Wiki/Troubleshooting.md#filemaker-22-and-26-exports-of-the-same-file).
+
+### Exports from FileMaker 18
+
+FileMaker 18 writes the older template format (`<FMDynamicTemplate version="2.0.0.0" Source="18.0.3">`). It carries no object UUIDs, no DDR info and no change stamps, so FM-Lab does not import it. The XML-import page recognizes such files before the import, from the head of every file in the inbox:
+
+- the file row shows the status ⛔ and the badge **FM 18** in the *Format* column;
+- the file-list header names the count (*2 of 3 files in FileMaker 18 format — will not be imported*) and the remedy;
+- when **every** file in the inbox is a FileMaker 18 export, *Convert XML* stays disabled.
+
+A run with some FileMaker 18 files next to supported ones imports the supported files, ends successfully and shows a notice listing the skipped files. A run started on an inbox without a single FileMaker 19+ export stops before the import begins with the banner *No importable file* (the home page and the import page do not start such a run in the first place); nothing is written, the solution's existing data stays unchanged (CLI: `✗ IMPORT ABORTED — no importable files`, exit code `4`).
+
+**Remedy:** open the `.fmp12` files in FileMaker Pro 19 or newer — no migration of the files is needed — and export them again via *Tools › Save a Copy as XML* with *Include details for analysis tools*. Then replace the old exports in the inbox and import again.
 
 ### What changed in v2.3.0.0
 

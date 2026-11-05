@@ -69,7 +69,7 @@ Part types with their `@kind` codes as observed in the ooe-fm corpus *(corpus)*;
 
 - **XML schema:** [XML LayoutCatalog](../../xml/catalogs/XML%20LayoutCatalog.md) — `<Part>` elements inside each layout's `<PartsList>`
 - **DB schema:** [LayoutParts](../catalog-tables/LayoutParts.md)
-- **Detail view:** hoisted — parts render as bands inside the layout wireframe (`display_layout_parts_data.sql` under `rest-api/templates/sql-custom-details/layout/`, see [Detail View Templates](../../templates/Detail%20View%20Templates.md)); for the standalone object, the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md) falls back to the generic detail template (`object_details_generic.sql`)
+- **Detail view:** hoisted — parts render as bands inside the layout wireframe (`display_layout_parts_data.sql` under `rest-api/templates/queries/modules/layout-view/`, see [Detail View Templates](../../templates/Detail%20View%20Templates.md)); for the standalone object, the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md) falls back to the generic detail template (`object_details_generic.sql`)
 - **Frontend:** object list at `http://localhost:5173/?type=LayoutPart`
 
 **See also:** [Object Types](../object-catalog/Object%20Types.md) · [Layout](Layout.md) · [LayoutObject](LayoutObject.md) · [Field](Field.md) · [Link Roles and Subroles](../object-catalog/Link%20Roles%20and%20Subroles.md)

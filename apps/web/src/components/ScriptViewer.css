@@ -136,25 +136,11 @@
   border-color: var(--fm-ui-accent);
 }
 
+/* Sammel-Falten: gemeinsames Segment-Control (BulkToggle.tsx). */
 .fm-script-fold-buttons {
   display: flex;
-  gap: 0.3rem;
-}
-
-.fm-script-fold-buttons button {
-  background: var(--fm-ui-bg);
-  border: 1px solid var(--fm-ui-border);
-  color: var(--fm-ui-text);
-  padding: 0.25rem 0.6rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.fm-script-fold-buttons button:hover {
-  border-color: var(--fm-ui-accent);
-  color: var(--fm-ui-active-text);
+  flex-wrap: wrap;
+  gap: 0.4rem;
 }
 
 /* Filter-Toggle (Dimmen/Ausblenden) */
@@ -265,15 +251,24 @@
   user-select: none;
 }
 
+/* Höhe = eine Textzeile (früher Glyph mit line-height 1.4), damit das Chevron
+   auf der ersten Zeile mehrzeiliger Steps zentriert sitzt. */
 .fm-fold-btn {
+  display: flex;
+  align-items: center;
+  height: 1.4em;
   background: none;
   border: none;
   color: var(--fm-line-num);
   cursor: pointer;
   padding: 0 0.1rem;
   font-size: 0.95rem;
-  line-height: 1.4;
   border-radius: 3px;
+}
+
+/* Farbe kommt vom Button (Editor-Palette + Hover), nicht vom Chevron-Default. */
+.fm-fold-btn .disclosure-chevron {
+  color: inherit;
 }
 
 .fm-fold-btn:hover {

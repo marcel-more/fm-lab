@@ -17,7 +17,6 @@
     "graph": "Graph",
     "relationships": "Relationships",
     "dashboards": "Dashboards",
-    "customQueries": "Custom Queries",
     "docs": "Docs",
     "xmlImport": "XML Import",
     "cluster": "Clusters",
@@ -30,15 +29,13 @@
   },
   "leitDescription": {
     "dashboards": "Overview of every available dashboard.",
-    "customQueries": "Reusable SQL templates — click a tile to open an analysis.",
     "docs": "Installed documentation sources.",
     "xmlImport": "Imports all files from the xml/ directory into DuckDB.",
     "xmlImportContextNote": "Importing a non-active solution — the displayed analysis data only changes after activating it.",
     "tests": "Curated Analysis Tests — run bundled checks on the solution, a file or a single object."
   },
   "errors": {
-    "noDashboardId": "No dashboard id supplied.",
-    "noQueryName": "No query name supplied."
+    "noDashboardId": "No dashboard id supplied."
   },
   "home": {
     "title": "Home (reset filters)",
@@ -149,8 +146,9 @@
     "run": "Run",
     "running": "Running…",
     "showFindings": "Show findings",
+    "showChecks": "Show checks",
     "memberError": "Error",
-    "openMember": "Open dashboard/query",
+    "openMember": "Open dashboard",
     "openFinding": "Open in detail view",
     "openMemberFindings": "Open all findings in the detail view",
     "truncated": "Further findings truncated — open the member for the full list.",

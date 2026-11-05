@@ -1,9 +1,9 @@
 {
+  "modeTabsAriaLabel": "Mode d’affichage",
   "fileActions": {
     "search": "Recherche",
     "drilldown": "Exploration"
   },
-  "modeTabsAriaLabel": "Mode d’affichage",
   "breadcrumbs": {
     "search": "Recherche",
     "analyses": "Analyses",
@@ -17,7 +17,6 @@
     "graph": "Graphe",
     "relationships": "Relations",
     "dashboards": "Tableaux de bord",
-    "customQueries": "Requêtes personnalisées",
     "docs": "Documentation",
     "xmlImport": "Import XML",
     "cluster": "Clusters",
@@ -25,17 +24,18 @@
     "fmSpec": "fm-spec",
     "tests": "Tests"
   },
+  "entryType": {
+    "dashboard": "Tableau de bord"
+  },
   "leitDescription": {
     "dashboards": "Vue d’ensemble de tous les tableaux de bord disponibles.",
-    "customQueries": "Modèles SQL réutilisables — cliquez sur une tuile pour ouvrir une analyse.",
     "docs": "Sources de documentation installées.",
     "xmlImport": "Importe tous les fichiers du répertoire xml/ dans DuckDB.",
     "xmlImportContextNote": "Import d’une solution non active — les données d’analyse affichées ne changent qu’après son activation.",
     "tests": "Tests d’analyse sélectionnés — exécutez des contrôles groupés sur la solution, un fichier ou un objet."
   },
   "errors": {
-    "noDashboardId": "Aucun identifiant de tableau de bord fourni.",
-    "noQueryName": "Aucun nom de requête fourni."
+    "noDashboardId": "Aucun identifiant de tableau de bord fourni."
   },
   "home": {
     "title": "Accueil (réinitialiser les filtres)",
@@ -122,6 +122,18 @@
     "folderDetailsTitle": "Afficher les détails du dossier",
     "noName": "(sans nom)"
   },
+  "docs": {
+    "langFallback": "Cette documentation n’est pas disponible dans la langue sélectionnée — affichage : {{lang}}.",
+    "openOnline": "Ouvrir en ligne ↗",
+    "openInFmSpec": "fm-spec →",
+    "openInBrowser": "Ouvrir dans le navigateur",
+    "edit": "Modifier ↗",
+    "source": "Source",
+    "noContent": "Aucun contenu disponible.",
+    "category": "Catégorie",
+    "docset": "Docset",
+    "references": "Références de code"
+  },
   "noData": {
     "title": "Aucune donnée pour l’instant",
     "message": "Aucune solution FileMaker n’a encore été importée. Importez d’abord un export XML pour utiliser cette vue.",
@@ -134,8 +146,9 @@
     "run": "Exécuter",
     "running": "En cours…",
     "showFindings": "Afficher les résultats",
+    "showChecks": "Afficher les vérifications",
     "memberError": "Erreur",
-    "openMember": "Ouvrir le dashboard/la requête",
+    "openMember": "Ouvrir le dashboard",
     "openFinding": "Ouvrir dans la vue détaillée",
     "openMemberFindings": "Ouvrir tous les résultats dans la vue détaillée",
     "truncated": "Résultats supplémentaires tronqués — ouvrez le membre pour la liste complète.",

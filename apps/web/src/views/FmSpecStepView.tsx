@@ -41,7 +41,7 @@ function ConstraintDetail({ detail }: { detail: string | null }) {
   }
   return (
     <details className="fmspec-constraint__detail">
-      <summary>{firstSentence}.</summary>
+      <summary className="disclosure-summary">{firstSentence}.</summary>
       {detail}
     </details>
   );

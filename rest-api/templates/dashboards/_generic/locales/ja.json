@@ -1,7 +1,0 @@
-{
-  "manifest": {
-    "title": "カスタムクエリ結果",
-    "description": "任意の sql-custom テンプレートの汎用レンダラーです。"
-  },
-  "layout": {}
-}

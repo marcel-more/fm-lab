@@ -1,9 +1,9 @@
 {
+  "modeTabsAriaLabel": "表示モード",
   "fileActions": {
     "search": "検索",
     "drilldown": "ドリルダウン"
   },
-  "modeTabsAriaLabel": "表示モード",
   "breadcrumbs": {
     "search": "検索",
     "analyses": "分析",
@@ -17,7 +17,6 @@
     "graph": "グラフ",
     "relationships": "リレーション",
     "dashboards": "ダッシュボード",
-    "customQueries": "カスタムクエリ",
     "docs": "ドキュメント",
     "xmlImport": "XMLインポート",
     "cluster": "クラスタ",
@@ -25,17 +24,18 @@
     "fmSpec": "fm-spec",
     "tests": "テスト"
   },
+  "entryType": {
+    "dashboard": "ダッシュボード"
+  },
   "leitDescription": {
     "dashboards": "利用可能なすべてのダッシュボードの一覧。",
-    "customQueries": "再利用可能な SQL テンプレート — タイルをクリックすると分析が開きます。",
     "docs": "インストールされているドキュメントソース。",
     "xmlImport": "xml/ ディレクトリのすべてのファイルを DuckDB にインポートします。",
     "xmlImportContextNote": "アクティブでないソリューションのインポートです — 表示される分析データはアクティブ化後に初めて変わります。",
     "tests": "キュレーションされた分析テスト — ソリューション、ファイル、または単一オブジェクトに対してまとめてチェックを実行します。"
   },
   "errors": {
-    "noDashboardId": "ダッシュボード ID が指定されていません。",
-    "noQueryName": "クエリ名が指定されていません。"
+    "noDashboardId": "ダッシュボード ID が指定されていません。"
   },
   "home": {
     "title": "ホーム (フィルターをリセット)",
@@ -122,6 +122,18 @@
     "folderDetailsTitle": "フォルダーの詳細を表示",
     "noName": "(名前なし)"
   },
+  "docs": {
+    "langFallback": "このドキュメントは選択した言語では利用できません — {{lang}} で表示しています。",
+    "openOnline": "オンラインで開く ↗",
+    "openInFmSpec": "fm-spec →",
+    "openInBrowser": "ブラウザーで開く",
+    "edit": "編集 ↗",
+    "source": "ソース",
+    "noContent": "コンテンツがありません。",
+    "category": "カテゴリ",
+    "docset": "Docset",
+    "references": "コード参照"
+  },
   "noData": {
     "title": "データがまだありません",
     "message": "FileMaker ソリューションがまだインポートされていません。このビューを使用するには、まず XML エクスポートをインポートしてください。",
@@ -134,8 +146,9 @@
     "run": "実行",
     "running": "実行中…",
     "showFindings": "検出結果を表示",
+    "showChecks": "チェックを表示",
     "memberError": "エラー",
-    "openMember": "ダッシュボード／クエリを開く",
+    "openMember": "ダッシュボードを開く",
     "openFinding": "詳細ビューで開く",
     "openMemberFindings": "すべての検出結果を詳細ビューで開く",
     "truncated": "以降の検出結果は省略されています — 全リストはメンバーを開いてください。",

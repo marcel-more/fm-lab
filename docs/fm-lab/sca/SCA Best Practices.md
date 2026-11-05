@@ -1,6 +1,6 @@
 # SCA Best Practices
 
-**Rubric:** [Static Code Analysis](../Wiki/Static%20Code%20Analysis.md) · 10 rules · `rest-api/templates/dashboards-custom/static-code-analysis/best_practices/`
+**Rubric:** [Static Code Analysis](../Wiki/Static%20Code%20Analysis.md) · 10 rules · `rest-api/templates/dashboards/static-code-analysis/best_practices/`
 
 Best-practice rules flag settings and constructs that are legal, sometimes even useful — but risky enough that each occurrence deserves a conscious decision: user abort disabled, finds without error capture, sorted relationships, repeating fields, global storage, deprecated plug-in functions. The rubric is the "worth a second look" tier between hard error checks and pure style.
 

@@ -1,9 +1,9 @@
 {
+  "modeTabsAriaLabel": "Weergavemodus",
   "fileActions": {
     "search": "Zoeken",
     "drilldown": "Drill-down"
   },
-  "modeTabsAriaLabel": "Weergavemodus",
   "breadcrumbs": {
     "search": "Zoeken",
     "analyses": "Analyses",
@@ -17,7 +17,6 @@
     "graph": "Grafiek",
     "relationships": "Relaties",
     "dashboards": "Dashboards",
-    "customQueries": "Aangepaste query's",
     "docs": "Documentatie",
     "xmlImport": "XML-import",
     "cluster": "Clusters",
@@ -25,17 +24,18 @@
     "fmSpec": "fm-spec",
     "tests": "Tests"
   },
+  "entryType": {
+    "dashboard": "Dashboard"
+  },
   "leitDescription": {
     "dashboards": "Overzicht van alle beschikbare dashboards.",
-    "customQueries": "Herbruikbare SQL-sjablonen — klik op een tegel om een analyse te openen.",
     "docs": "Geïnstalleerde documentatiebronnen.",
     "xmlImport": "Importeert alle bestanden uit de map xml/ in DuckDB.",
     "xmlImportContextNote": "Import van een niet-actieve oplossing — de getoonde analysegegevens veranderen pas na het activeren.",
     "tests": "Samengestelde analysistests — voer gebundelde controles uit op de oplossing, een bestand of een object."
   },
   "errors": {
-    "noDashboardId": "Geen dashboard-id opgegeven.",
-    "noQueryName": "Geen querynaam opgegeven."
+    "noDashboardId": "Geen dashboard-id opgegeven."
   },
   "home": {
     "title": "Home (filters herstellen)",
@@ -122,6 +122,18 @@
     "folderDetailsTitle": "Mapdetails tonen",
     "noName": "(geen naam)"
   },
+  "docs": {
+    "langFallback": "Deze documentatie is niet beschikbaar in de gekozen taal — weergave: {{lang}}.",
+    "openOnline": "Online openen ↗",
+    "openInFmSpec": "fm-spec →",
+    "openInBrowser": "Openen in browser",
+    "edit": "Bewerken ↗",
+    "source": "Bron",
+    "noContent": "Geen inhoud beschikbaar.",
+    "category": "Categorie",
+    "docset": "Docset",
+    "references": "Codereferenties"
+  },
   "noData": {
     "title": "Nog geen gegevens",
     "message": "Er is nog geen FileMaker-oplossing geïmporteerd. Importeer eerst een XML-export om deze weergave te gebruiken.",
@@ -134,8 +146,9 @@
     "run": "Uitvoeren",
     "running": "Bezig…",
     "showFindings": "Bevindingen tonen",
+    "showChecks": "Controles tonen",
     "memberError": "Fout",
-    "openMember": "Dashboard/query openen",
+    "openMember": "Dashboard openen",
     "openFinding": "Openen in detailweergave",
     "openMemberFindings": "Alle bevindingen openen in de detailweergave",
     "truncated": "Meer bevindingen afgekapt — open het lid voor de volledige lijst.",

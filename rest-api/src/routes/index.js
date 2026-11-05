@@ -19,6 +19,8 @@ const pluginSpecRoutes = require('./plugin-spec.routes');
 const dashboardRoutes = require('./dashboard.routes');
 const testsRoutes = require('./tests.routes');
 const resultsRoutes = require('./results.routes');
+const favoritesRoutes = require('./favorites.routes');
+const maintenanceRoutes = require('./maintenance.routes');
 const debugRoutes = require('./debug.routes');
 const { loadPlugins } = require('../plugins/loader');
 
@@ -80,6 +82,12 @@ router.use('/', testsRoutes);
 
 // Results-Layer (/api/results/*) — Envelope-Summary, Aggregat, Trigger
 router.use('/', resultsRoutes);
+
+// Favorites (/api/favorites/:kind[/:id], kind = dashboard | test) — workspace-wide, solution-independent
+router.use('/', favoritesRoutes);
+
+// Maintenance (/api/maintenance/dashboards/cleanup) — solution-independent
+router.use('/', maintenanceRoutes);
 
 // Debug-Session (Frontend-Interaktions-Ingestion + Logging-Status)
 router.use('/', debugRoutes);

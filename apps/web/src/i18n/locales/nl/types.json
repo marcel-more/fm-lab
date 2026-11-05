@@ -34,5 +34,14 @@
     "ScriptStepType": "Categorie",
     "BuiltinFunction": "Categorie",
     "PluginFunction": "Component"
+  },
+  "testTypes": {
+    "exploration": "Verkenning",
+    "code-quality": "Codekwaliteit",
+    "error-check": "Foutcontrole",
+    "security": "Beveiliging",
+    "inventory": "Inventaris",
+    "performance": "Prestaties",
+    "platform": "Platform"
   }
 }

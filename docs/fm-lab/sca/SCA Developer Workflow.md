@@ -1,6 +1,6 @@
 # SCA Developer Workflow
 
-**Rubric:** [Static Code Analysis (neighboring rubric)](../Wiki/Static%20Code%20Analysis.md) · 6 rules + 1 explorer · `rest-api/templates/dashboards-custom/developer-workflow/`
+**Rubric:** [Static Code Analysis (neighboring rubric)](../Wiki/Static%20Code%20Analysis.md) · 6 rules + 1 explorer · `rest-api/templates/dashboards/developer-workflow/`
 
 The developer-workflow rubric surfaces the open work that lives in the code instead of the tracker: TODO and FIXME markers in script comments, on layout objects, and inside calculation comments. The two marker classes are deliberately kept apart — a **FIXME** states a known defect that was shipped (`warning`), a **TODO** describes planned work (`info`) — so a fixable defect never hides inside a pile of nice-to-haves.
 

@@ -24,6 +24,7 @@ _PH_CUR_ID=""; _PH_CUR_NAME=""; _PH_CUR_START_EPOCH=""; _PH_CUR_START_ISO=""
 FL_NAME=(); FL_SIZE=(); FL_ENC=(); FL_STATUS=()
 FL_DUR=();  FL_COMPLETED=(); FL_ERR_CAT=(); FL_ERR_RC=(); FL_ERR_HINT=()
 FL_PEAKRSS=(); FL_MINAVAIL=()   # memory forensics (KB; empty = not sampled/non-Linux)
+FL_SKIP_REASON=(); FL_SOURCE_VERSION=(); FL_SAXML_VERSION=()   # root-check skips (exit 4); empty otherwise
 
 # --- Per-file object counts (filled after P1) ---
 FO_NAME=(); FO_COUNT=()
@@ -366,7 +367,13 @@ write_text_log() {
 
         if [ "$SKIPPED_COUNT" -gt 0 ]; then
             printf '\nSkipped Files (unsupported format):\n'
-            for j in "${SKIPPED_FILES[@]}"; do printf '  - %s\n' "$j"; done
+            for j in "${!FL_NAME[@]}"; do
+                [ "${FL_STATUS[$j]}" = "skipped" ] || continue
+                printf '  ⊘ %s  [%s]\n      → %s\n' "${FL_NAME[$j]}" "${FL_SKIP_REASON[$j]:-unknown_root}" \
+                    "$(skip_reason_text "${FL_SKIP_REASON[$j]:-}" "${FL_SOURCE_VERSION[$j]:-}" "${FL_SAXML_VERSION[$j]:-}")"
+            done
+            printf '  Remedy: open the files in FileMaker Pro 19 or newer and export them again via\n'
+            printf '          Tools > Save a Copy as XML (include details for analysis tools).\n'
         fi
         if [ "${#FAILED_FILES[@]}" -gt 0 ]; then
             printf '\nFailed Files:\n'
@@ -400,17 +407,18 @@ write_json_sidecar() {
     for j in "${!FL_NAME[@]}"; do
         local objs; objs=$(lookup_file_objects "${FL_NAME[$j]}")
         [ -z "$objs" ] && objs="null"
-        printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+        printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
             "$j" "${FL_NAME[$j]}" "${FL_SIZE[$j]:-null}" "${FL_ENC[$j]}" "${FL_STATUS[$j]}" \
             "${FL_DUR[$j]}" "${FL_COMPLETED[$j]}" "$objs" \
-            "${FL_ERR_CAT[$j]}" "${FL_ERR_RC[$j]}" "${FL_ERR_HINT[$j]}" >> "$fl_tsv"
+            "${FL_ERR_CAT[$j]}" "${FL_ERR_RC[$j]}" "${FL_ERR_HINT[$j]}" \
+            "${FL_SKIP_REASON[$j]:-}" "${FL_SOURCE_VERSION[$j]:-}" "${FL_SAXML_VERSION[$j]:-}" >> "$fl_tsv"
     done
 
     # read_csv fails on an EMPTY file (can happen with fail-fast before P1 finishes
     # → 0 phases). In that case create an empty, typed table instead, so the COPY
     # query (with COALESCE → '[]') still writes a valid document.
     local ph_cols="{'idx':'INT','id':'VARCHAR','name':'VARCHAR','started_at':'VARCHAR','ended_at':'VARCHAR','duration_s':'VARCHAR','produced':'VARCHAR'}"
-    local fl_cols="{'idx':'INT','name':'VARCHAR','size':'VARCHAR','encoding':'VARCHAR','status':'VARCHAR','duration_s':'VARCHAR','completed_at':'VARCHAR','objects':'VARCHAR','ecat':'VARCHAR','erc':'VARCHAR','ehint':'VARCHAR'}"
+    local fl_cols="{'idx':'INT','name':'VARCHAR','size':'VARCHAR','encoding':'VARCHAR','status':'VARCHAR','duration_s':'VARCHAR','completed_at':'VARCHAR','objects':'VARCHAR','ecat':'VARCHAR','erc':'VARCHAR','ehint':'VARCHAR','skip_reason':'VARCHAR','source_version':'VARCHAR','saxml_version':'VARCHAR'}"
     local ph_create fl_create
     if [ -s "$ph_tsv" ]; then
         ph_create="CREATE TEMP TABLE _ph AS SELECT * FROM read_csv('$ph_tsv', delim='\t', header=false, quote='', escape='', columns=$ph_cols);"
@@ -420,7 +428,7 @@ write_json_sidecar() {
     if [ -s "$fl_tsv" ]; then
         fl_create="CREATE TEMP TABLE _fl AS SELECT * FROM read_csv('$fl_tsv', delim='\t', header=false, quote='', escape='', columns=$fl_cols);"
     else
-        fl_create="CREATE TEMP TABLE _fl(idx INT, name VARCHAR, size VARCHAR, encoding VARCHAR, status VARCHAR, duration_s VARCHAR, completed_at VARCHAR, objects VARCHAR, ecat VARCHAR, erc VARCHAR, ehint VARCHAR);"
+        fl_create="CREATE TEMP TABLE _fl(idx INT, name VARCHAR, size VARCHAR, encoding VARCHAR, status VARCHAR, duration_s VARCHAR, completed_at VARCHAR, objects VARCHAR, ecat VARCHAR, erc VARCHAR, ehint VARCHAR, skip_reason VARCHAR, source_version VARCHAR, saxml_version VARCHAR);"
     fi
 
     local rc=0
@@ -529,7 +537,12 @@ COPY (
         'objects', CASE WHEN objects IN ('','null') THEN NULL ELSE TRY_CAST(objects AS BIGINT) END,
         'error', CASE WHEN status='failed'
                       THEN json_object('category', nullif(ecat,''), 'exit_code', TRY_CAST(nullif(erc,'') AS INT), 'hint', nullif(ehint,''))
-                      ELSE NULL END
+                      ELSE NULL END,
+        'skip', CASE WHEN status='skipped'
+                     THEN json_object('reason', COALESCE(nullif(skip_reason,''), 'unknown_root'),
+                                      'source_version', nullif(source_version,''),
+                                      'saxml_version', nullif(saxml_version,''))
+                     ELSE NULL END
       ) ORDER BY idx)) FROM _fl), '[]'::JSON) AS files
 ) TO '$jsonfile.tmp' (FORMAT json);
 SQL

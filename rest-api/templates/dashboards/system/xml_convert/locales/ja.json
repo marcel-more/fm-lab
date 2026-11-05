@@ -1,0 +1,19 @@
+{
+  "manifest": {
+    "title": "XMLインポート",
+    "description": "xml/ ディレクトリの XML エクスポートを DuckDB データベースにインポートします。"
+  },
+  "layout": {
+    "files_table.props.columns[1].label": "ファイル",
+    "files_table.props.columns[2].label": "形式",
+    "files_table.props.columns[3].label": "DDR",
+    "files_table.props.columns[4].label": "日付",
+    "files_table.props.columns[5].label": "サイズ",
+    "files_table.props.columns[6].label": "インポート済み",
+    "files_table.props.empty.message": "XML ディレクトリにファイルがありません。",
+    "last_run.props.title": "最後の変換",
+    "import_integrity.props.title": "インポート整合性",
+    "graph_communities.props.title": "グラフコミュニティ",
+    "graph_communities_desc.props.content": "検出されたモジュールの構造と命名のカバレッジ。ボタンでパーティションを再構築し、新しいモジュールは `/fm-graph-cluster` スキルで（再）命名します。"
+  }
+}

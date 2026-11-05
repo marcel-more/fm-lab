@@ -11,11 +11,16 @@
     "totalSize": "Totale grootte {{size}}",
     "ddrMissing": "DDR-info ontbreekt",
     "ddrMissing_partial": "DDR-info ontbreekt in {{count}} van {{total}} bestanden",
-    "ddrMissingHint": "exporteer met de optie “Details opnemen voor analysetools”",
+    "ddrMissingHint": "exporteer met de optie “Inclusief gegevens voor analysetools”",
+    "formatLegacy": "Alle {{total}} bestanden in FileMaker 18-formaat — worden niet geïmporteerd",
+    "formatLegacy_partial": "{{count}} van {{total}} bestanden in FileMaker 18-formaat — worden niet geïmporteerd",
+    "formatLegacyHint": "exporteer ze opnieuw met FileMaker 19 of nieuwer via “Kopie opslaan als XML”",
     "page": "Pagina {{current}} / {{total}}",
     "noMatches": "Geen overeenkomsten voor „{{query}}”.",
     "prev": "← Vorige",
     "next": "Volgende →",
+    "pageSize": "Rijen",
+    "pageSizeAll": "Alle",
     "rowAction": "Doel openen"
   },
   "layoutPreview": {
@@ -173,6 +178,11 @@
     "notNavigable": "Doel niet in de geïmporteerde dataset",
     "showInLayout": "Toon in layout (Alt+klik)",
     "showInFile": "Toon in bestand (Alt+klik)",
+    "dirFilterAria": "Filteren op richting",
+    "dirFilterLabel": "Richting",
+    "dirIn": "Inkomend",
+    "dirOut": "Uitgaand",
+    "dirBoth": "Beide",
     "subroles": {
       "hide": {
         "short": "Hide",
@@ -311,7 +321,18 @@
     "storageIndexLanguage": "Standaardtaal",
     "summaryRestartGroup": "Opnieuw beginnen per groep",
     "summaryRepMode": "Herhalingen berekenen",
-    "calcEvaluatesWhenEmpty": "Berekent ook bij lege velden"
+    "calcEvaluatesWhenEmpty": "Berekent ook bij lege velden",
+    "validationMessageCalc": "Berekening van de melding",
+    "disabled": "uitgeschakeld",
+    "sectionExtended": "Uitgebreide opties (FileMaker 26)",
+    "annotation": "Annotatie (DDL)",
+    "displayNames": "Weergavenamen",
+    "displayNamesEnabled": "Aangepaste weergavenamen actief",
+    "displayNamesDisabled": "Niet aangepast",
+    "displayNameElements": "Elementen",
+    "displayNameKey": "Element",
+    "displayNameValue": "Label / formule",
+    "displayNamesFormula": "Formule voor weergavenamen"
   },
   "typeDetail": {
     "loading": "Laden…",
@@ -390,6 +411,18 @@
     "settingsHeading": "Instellingen",
     "saveLabel": "Instellingen opslaan",
     "savingLabel": "Opslaan…",
+    "versions": {
+      "fmlab": "FM-Lab",
+      "api": "API",
+      "frontend": "Frontend",
+      "xmlConverter": "XML-converter",
+      "xmlEngine": "Engine",
+      "dbSchema": "DB-schema",
+      "fmSpec": "fm-spec",
+      "duckdb": "DuckDB",
+      "duckdbCli": "DuckDB CLI",
+      "duckdbCliMissing": "niet gevonden"
+    },
     "api": {
       "heading": "REST-API-verbinding",
       "label": "REST-API-URL",
@@ -413,11 +446,22 @@
       "empty": "Nog geen scan. Klik op \"Opnieuw scannen\".",
       "colVersion": "Versie"
     },
-    "versions": {
-      "fmSpec": "fm-spec",
-      "duckdb": "DuckDB",
-      "duckdbCli": "DuckDB CLI",
-      "duckdbCliMissing": "niet gevonden"
+    "graphify": {
+      "enableFirst": "Schakel de plug-in hierboven in om de export te starten.",
+      "exportButton": "Graaf exporteren",
+      "doneMessage": "Export voltooid. Het bestand staat in de map output/.",
+      "failed": "Export mislukt.",
+      "lastExport": "Laatste export",
+      "colFile": "Bestand",
+      "colNodes": "Knopen",
+      "colEdges": "Randen",
+      "colSize": "Grootte",
+      "recentFiles": "Eerdere exports ({{count}})",
+      "phase": {
+        "count": "Objecten tellen…",
+        "export": "Graaf exporteren…",
+        "assemble": "JSON-bestand schrijven…"
+      }
     },
     "solutions": {
       "heading": "Oplossingen",
@@ -484,6 +528,10 @@
     "source": "Bron:",
     "relationshipGraphLink": "↗ Relatiegrafiek",
     "copyUuidAria": "UUID kopiëren naar klembord",
+    "copyOriginalUuidAria": "Originele UUID kopiëren naar klembord (dubbelzinnig in het bronbestand)",
+    "copySyntheticUuidAria": "Synthetische FM-Lab-UUID kopiëren naar klembord",
+    "syntheticBadge": "FM-Lab",
+    "syntheticTooltip": "FM-Lab-interne vervangende identiteit: de originele UUID van dit object kwam dubbel voor in het bronbestand en is bij de import hersteld. Klik om de synthetische UUID (catalogusidentiteit) te kopiëren.",
     "change": {
       "modified": "Laatst gewijzigd",
       "containerModified": "Container laatst gewijzigd",

@@ -47,7 +47,7 @@ A theme with no incoming `uses_theme` edge is dead weight in the file — the cl
 
 - **XML schema:** [XML ThemeCatalog](../../xml/catalogs/XML%20ThemeCatalog.md) — `<ThemeCatalog>` branch, one `<Theme>` per theme
 - **DB schema:** [ThemeCatalog](../catalog-tables/ThemeCatalog.md)
-- **Detail view template:** `rest-api/templates/sql/object_details_theme.sql`, served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md)
+- **Detail view template:** `rest-api/templates/queries/system/object-details/object_details_theme.sql`, served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md)
 - **Frontend:** object list at `http://localhost:5173/?type=Theme`
 
 **See also:** [Object Types](../object-catalog/Object%20Types.md) · [Layout](Layout.md) · [LayoutObject](LayoutObject.md) · [Link Roles and Subroles](../object-catalog/Link%20Roles%20and%20Subroles.md)

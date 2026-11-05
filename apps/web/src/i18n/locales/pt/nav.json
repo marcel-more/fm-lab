@@ -1,9 +1,9 @@
 {
+  "modeTabsAriaLabel": "Modo de visualização",
   "fileActions": {
     "search": "Pesquisa",
     "drilldown": "Análise"
   },
-  "modeTabsAriaLabel": "Modo de visualização",
   "breadcrumbs": {
     "search": "Pesquisar",
     "analyses": "Análises",
@@ -17,7 +17,6 @@
     "graph": "Grafo",
     "relationships": "Relações",
     "dashboards": "Painéis",
-    "customQueries": "Consultas personalizadas",
     "docs": "Documentação",
     "xmlImport": "Importar XML",
     "cluster": "Clusters",
@@ -25,17 +24,18 @@
     "fmSpec": "fm-spec",
     "tests": "Testes"
   },
+  "entryType": {
+    "dashboard": "Painel"
+  },
   "leitDescription": {
     "dashboards": "Visão geral de todos os painéis disponíveis.",
-    "customQueries": "Modelos SQL reutilizáveis — clique em um bloco para abrir uma análise.",
     "docs": "Fontes de documentação instaladas.",
     "xmlImport": "Importa todos os arquivos do diretório xml/ para o DuckDB.",
     "xmlImportContextNote": "Importação de uma solução não ativa — os dados de análise exibidos só mudam após a ativação.",
     "tests": "Testes de análise selecionados — execute verificações agrupadas na solução, num ficheiro ou num objeto."
   },
   "errors": {
-    "noDashboardId": "Nenhum id de dashboard fornecido.",
-    "noQueryName": "Nenhum nome de consulta fornecido."
+    "noDashboardId": "Nenhum id de dashboard fornecido."
   },
   "home": {
     "title": "Início (repor filtros)",
@@ -122,6 +122,18 @@
     "folderDetailsTitle": "Mostrar detalhes da pasta",
     "noName": "(sem nome)"
   },
+  "docs": {
+    "langFallback": "Esta documentação não está disponível no idioma selecionado — a mostrar: {{lang}}.",
+    "openOnline": "Abrir online ↗",
+    "openInFmSpec": "fm-spec →",
+    "openInBrowser": "Abrir no navegador",
+    "edit": "Editar ↗",
+    "source": "Fonte",
+    "noContent": "Nenhum conteúdo disponível.",
+    "category": "Categoria",
+    "docset": "Docset",
+    "references": "Referências no código"
+  },
   "noData": {
     "title": "Ainda sem dados",
     "message": "Nenhuma solução FileMaker foi importada ainda. Importe primeiro uma exportação XML para usar esta visualização.",
@@ -134,8 +146,9 @@
     "run": "Executar",
     "running": "A executar…",
     "showFindings": "Mostrar resultados",
+    "showChecks": "Mostrar verificações",
     "memberError": "Erro",
-    "openMember": "Abrir dashboard/consulta",
+    "openMember": "Abrir dashboard",
     "openFinding": "Abrir na vista de detalhes",
     "openMemberFindings": "Abrir todos os resultados na vista de detalhes",
     "truncated": "Mais resultados truncados — abra o membro para a lista completa.",

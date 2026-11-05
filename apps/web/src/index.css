@@ -98,3 +98,34 @@ li {
 small {
   color: var(--color-text-muted);
 }
+
+/* Native <details>: same chevron as DisclosureChevron.tsx instead of the
+ * browser marker, rotated by the [open] state (no React state needed). Opt-in
+ * per summary via `.disclosure-summary`. */
+details > summary.disclosure-summary {
+  list-style: none;
+  cursor: pointer;
+}
+details > summary.disclosure-summary::-webkit-details-marker {
+  display: none;
+}
+details > summary.disclosure-summary::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 12px;
+  margin-right: 4px;
+  vertical-align: -1px;
+  background-color: var(--color-text-muted);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 6 15 12 9 18'/%3E%3C/svg%3E") center / 12px 12px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 6 15 12 9 18'/%3E%3C/svg%3E") center / 12px 12px no-repeat;
+  transition: transform 0.12s;
+}
+details[open] > summary.disclosure-summary::before {
+  transform: rotate(90deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  details > summary.disclosure-summary::before {
+    transition: none;
+  }
+}

@@ -1,6 +1,6 @@
 # SCA Error-Prone
 
-**Rubric:** [Static Code Analysis](../Wiki/Static%20Code%20Analysis.md) · 22 rules · `rest-api/templates/dashboards-custom/static-code-analysis/error_prone/`
+**Rubric:** [Static Code Analysis](../Wiki/Static%20Code%20Analysis.md) · 22 rules · `rest-api/templates/dashboards/static-code-analysis/error_prone/`
 
 Error-prone rules target patterns that hide real defects: code that silently never runs, references that resolve to nothing, control flow that doesn't balance, and constructs whose failure mode is invisible until a user hits it. This is the rubric with the highest defect density — several rules report at `error` severity because the finding *is* the bug, not a style opinion about it.
 

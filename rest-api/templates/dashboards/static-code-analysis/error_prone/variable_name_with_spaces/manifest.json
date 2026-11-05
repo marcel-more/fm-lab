@@ -1,0 +1,101 @@
+{
+  "id": "variable_name_with_spaces",
+  "version": "1.0.1",
+  "title": "Variable name with spaces",
+  "description": "Error-prone rule — a variable name contains a space. FileMaker accepts it in the name field of Set Variable, but every read has to use the ${name with spaces} notation; a plain $name with spaces silently reads something else. Covers local, global, Let() and MBS superglobal variables.\n\nBased on the fmCheckMate check \"ListScriptsWithBadVariableNames\" — https://github.com/mrwatson-de/fmCheckMate-XSLT",
+  "author": "fm-lab rules",
+  "icon": "variable",
+  "category": "error_prone",
+  "tags": [
+    "rule",
+    "fmcheckmate",
+    "error_prone"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "warning",
+    "category": "error_prone",
+    "rationale": "The name field of Set Variable is literal text, the reading side is a formula — so a space is allowed on the writing side but changes the parsing on the reading side. What looks like one variable becomes two, and neither the compiler nor the runtime complains.",
+    "remediation": "Rename the variable without spaces (underscores read just as well) and update the reads. Where the name has to stay, make every read use the ${…} notation.",
+    "meta": {
+      "name": "Variable name with spaces",
+      "author": "fm-lab rules",
+      "source": "fmCheckMate-XSLT",
+      "url": "https://github.com/mrwatson-de/fmCheckMate-XSLT",
+      "description": "Error-prone rule — a variable name contains a space, so every read depends on the ${…} notation.",
+      "created": "2026-08-16",
+      "references": [
+        {
+          "project": "fmCheckMate-XSLT",
+          "rule": "XMSC_Text.Lines_ListScriptsWithBadVariableNames.xsl",
+          "url": "https://github.com/mrwatson-de/fmCheckMate-XSLT"
+        }
+      ]
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Script",
+      "CustomFunction",
+      "Field",
+      "Variable"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Variable name with spaces"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "variable_scope",
+      "type": "string",
+      "required": false,
+      "description": "Variable-scope filter chip (local, global, let_local, superglobal); unset = all."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  },
+  "messages": {
+    "name-with-spaces": "Variable name contains a space"
+  }
+}

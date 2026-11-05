@@ -137,6 +137,52 @@
         "pasteDropped": "descartada al pegar",
         "pasteDroppedHint": "FileMaker descarta esta opción al pegar sea cual sea su valor — un generador la omite, la referencia conserva el marcador para la lectura."
       },
+      "repeatGroups": "Grupos de repetición (listas)",
+      "rg": {
+        "group": "Grupo",
+        "container": "Contenedor",
+        "form": "Forma del elemento",
+        "fixedSlots": "{{n}} ranuras fijas",
+        "nestedIn": "anidado en {{parent}}",
+        "countAttr": "atributo de recuento {{attr}}"
+      },
+      "knownBugHint": "Bug conocido de FileMaker — una clase de advertencia, no una regla de validez: el paso es válido, el riesgo está en la propia serialización de FileMaker.",
+      "saxmlGapHint": "Laguna de la exportación SaXML — la exportación nunca incluye esta ranura, por lo que un catálogo construido a partir de ella no puede mostrarla; solo una copia del portapapeles lo hace. No es un defecto del snippet.",
+      "constraintCoverageHint": "Solo se aplica a la serialización de FileMaker {{coverage}}",
+      "variableTargetMarker": "Marcador de destino variable",
+      "variableTargetMarkerHint": "Lleva un marcador <Text/> vacío a nivel de paso exactamente cuando la ranura de destino contiene una variable en lugar de una referencia de campo.",
+      "consumerNote": "Nota para consumidores",
+      "skeletons": "Envolturas de esqueleto",
+      "sk": {
+        "in": "en {{parent}}",
+        "hull": "envoltura — persiste con contenido predeterminado incluso sin configurar",
+        "hull_strip_children": "envoltura — conserva sus atributos, se eliminan los hijos sin rellenar",
+        "condition": "solo con {{cond}}",
+        "help": "Elementos que FileMaker conserva en el snippet aunque no haya nada configurado en ellos; se muestran como el árbol que forman, en el orden de la plantilla. Un generador los restaura tras podar el contenido sin rellenar; un lector puede descartar su contenido predeterminado."
+      },
+      "bindings": "Elementos vinculados a opciones",
+      "bd": {
+        "requires": "solo existe con {{cond}}",
+        "excludes": "se descarta con {{cond}}",
+        "requiresOption": "solo existe mientras {{option}} está establecida",
+        "excludesOption": "se descarta mientras {{option}} está establecida",
+        "suppressEmpty": "el elemento vacío nunca se emite, de forma determinista (residuo del diálogo)",
+        "help": "Elementos cuya presencia depende de otra opción. Varios valores de una opción forman el conjunto en el que el elemento existe (o se descarta): el elemento se escribe para cualquiera de ellos y se poda para cualquier otro valor."
+      },
+      "mirrors": "Valores reflejados",
+      "mr": {
+        "source_present": "copia de {{option}} — FileMaker la escribe siempre que el origen está establecido",
+        "help": "Valores que FileMaker escribe una segunda vez en otro lugar del paso y mantiene sincronizados al pegar. La opción de origen es la verdad: un generador la copia, un lector trata la copia como redundancia."
+      },
+      "implications": "Implicaciones de notación",
+      "imp": {
+        "option_present": "opción presente",
+        "value_form": "forma de referencia",
+        "keyword": "palabra clave",
+        "mode_switch": "selector de modo",
+        "default": "modo predeterminado (sin etiqueta de selector)",
+        "help": "Opciones que la notación de texto canónica deja implícitas: una palabra clave, una forma de referencia o un modo etiquetado implica el valor de otra opción al analizar el paso."
+      },
       "coverage": "Cobertura de forma",
       "coverageHint": "Versión de FileMaker contra cuyas evidencias emparejadas de exportación y portapapeles se verifica esta forma. Una fila marcada con una versión es una anulación de esa cobertura y sustituye a la fila estándar con la misma clave.",
       "coverageBase": "base",

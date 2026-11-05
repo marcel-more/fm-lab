@@ -1,9 +1,9 @@
 {
+  "modeTabsAriaLabel": "보기 모드",
   "fileActions": {
     "search": "검색",
     "drilldown": "드릴다운"
   },
-  "modeTabsAriaLabel": "보기 모드",
   "breadcrumbs": {
     "search": "검색",
     "analyses": "분석",
@@ -17,7 +17,6 @@
     "graph": "그래프",
     "relationships": "관계",
     "dashboards": "대시보드",
-    "customQueries": "사용자 쿼리",
     "docs": "문서",
     "xmlImport": "XML 가져오기",
     "cluster": "클러스터",
@@ -25,17 +24,18 @@
     "fmSpec": "fm-spec",
     "tests": "테스트"
   },
+  "entryType": {
+    "dashboard": "대시보드"
+  },
   "leitDescription": {
     "dashboards": "사용 가능한 모든 대시보드 개요.",
-    "customQueries": "재사용 가능한 SQL 템플릿 — 타일을 클릭하면 분석이 열립니다.",
     "docs": "설치된 문서 소스.",
     "xmlImport": "xml/ 디렉터리의 모든 파일을 DuckDB로 가져옵니다.",
     "xmlImportContextNote": "활성 상태가 아닌 솔루션을 가져옵니다 — 표시되는 분석 데이터는 활성화한 후에야 바뀝니다.",
     "tests": "선별된 분석 테스트 — 솔루션, 파일 또는 단일 객체에 대해 묶음 검사를 실행합니다."
   },
   "errors": {
-    "noDashboardId": "대시보드 ID가 지정되지 않았습니다.",
-    "noQueryName": "쿼리 이름이 지정되지 않았습니다."
+    "noDashboardId": "대시보드 ID가 지정되지 않았습니다."
   },
   "home": {
     "title": "홈 (필터 초기화)",
@@ -122,6 +122,18 @@
     "folderDetailsTitle": "폴더 세부 정보 표시",
     "noName": "(이름 없음)"
   },
+  "docs": {
+    "langFallback": "이 문서는 선택한 언어로 제공되지 않습니다 — {{lang}}(으)로 표시합니다.",
+    "openOnline": "온라인으로 열기 ↗",
+    "openInFmSpec": "fm-spec →",
+    "openInBrowser": "브라우저에서 열기",
+    "edit": "편집 ↗",
+    "source": "소스",
+    "noContent": "사용 가능한 콘텐츠가 없습니다.",
+    "category": "카테고리",
+    "docset": "Docset",
+    "references": "코드 참조"
+  },
   "noData": {
     "title": "아직 데이터가 없습니다",
     "message": "아직 FileMaker 솔루션을 가져오지 않았습니다. 이 보기를 사용하려면 먼저 XML 내보내기를 가져오세요.",
@@ -134,8 +146,9 @@
     "run": "실행",
     "running": "실행 중…",
     "showFindings": "발견 항목 표시",
+    "showChecks": "검사 표시",
     "memberError": "오류",
-    "openMember": "대시보드/쿼리 열기",
+    "openMember": "대시보드 열기",
     "openFinding": "상세 보기에서 열기",
     "openMemberFindings": "모든 발견 항목을 상세 보기에서 열기",
     "truncated": "추가 발견 항목이 생략되었습니다 — 전체 목록은 멤버를 여세요.",

@@ -10,6 +10,7 @@
   "empty": "Inget att visa.",
   "noData": "Inga data tillgängliga.",
   "noEntries": "Inga poster.",
+  "general": "Allmänt",
   "unknown": "(okänd)",
   "all": "Alla",
   "filter": "Filter",
@@ -30,6 +31,7 @@
   "actions": {
     "openInFileMaker": "Öppna i FileMaker",
     "copyUuid": "Kopiera UUID",
+    "copyOriginalUuid": "Kopiera ursprungligt UUID — obs: detta UUID är tilldelat mer än en gång i källfilen",
     "expandAll": "Expandera alla",
     "collapseAll": "Fäll ihop alla",
     "collapseMultilineCalcs": "Fäll ihop flerradiga beräkningar",

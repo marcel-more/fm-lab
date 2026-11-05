@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ViewMode } from '../script/types';
+import { BulkToggleButton, BulkToggleGroup, CollapseAllIcon, CollapseLinesIcon, ExpandAllIcon } from './BulkToggle';
 
 export type FilterStyle = 'dim' | 'hide';
 
@@ -96,15 +97,17 @@ export const ScriptViewerHeader: React.FC<ScriptViewerHeaderProps> = ({
           </button>
         </div>
         <div className="fm-script-fold-buttons">
-          <button type="button" onClick={onExpandAll} title={t('common:actions.expandAll') as string}>
-            ⌄ {t('common:actions.expandAll')}
-          </button>
-          <button type="button" onClick={onCollapseAll} title={t('common:actions.collapseAll') as string}>
-            ⌃ {t('common:actions.collapseAll')}
-          </button>
-          <button type="button" onClick={onCollapseMultiline} title={t('common:actions.collapseMultilineCalcs') as string}>
-            ⌃ {t('common:actions.collapseMultilineCalcs')}
-          </button>
+          <BulkToggleGroup>
+            <BulkToggleButton icon={<ExpandAllIcon />} label={t('common:actions.expandAll') as string} onClick={onExpandAll} />
+            <BulkToggleButton icon={<CollapseAllIcon />} label={t('common:actions.collapseAll') as string} onClick={onCollapseAll} />
+          </BulkToggleGroup>
+          <BulkToggleGroup>
+            <BulkToggleButton
+              icon={<CollapseLinesIcon />}
+              label={t('common:actions.collapseMultilineCalcs') as string}
+              onClick={onCollapseMultiline}
+            />
+          </BulkToggleGroup>
         </div>
       </div>
     </div>

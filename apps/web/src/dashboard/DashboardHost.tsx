@@ -10,6 +10,7 @@ import type {
 import { DashboardRenderer } from './DashboardRenderer';
 import { registerStickyDashboardParams } from './actions';
 import { TitleBox } from '../components/TitleBox';
+import { FavoriteStar } from './FavoriteStar';
 import { NoDataYet } from '../components/NoDataYet';
 import './dashboard.css';
 
@@ -19,7 +20,7 @@ interface Props {
   /**
    * Render a framed TitleBox from the manifest (title + description) above the
    * grid — for object-entry dashboards (/dashboard/:id), where the manifest
-   * carries the authoritative title + rich description. Leitseiten/Query/Docset
+   * carries the authoritative title + rich description. Leitseiten/Docset
    * bundles render their own title and leave this off.
    */
   showManifestTitle?: boolean;
@@ -29,13 +30,6 @@ interface Props {
    * localized title and rubric path without a second request.
    */
   onEnvelopeLoaded?: (envelope: DashboardEnvelope) => void;
-  /**
-   * Called after the dataset payload has loaded. Needed where the page's own
-   * identity lives in the DATA rather than the manifest — `/query/:name`
-   * renders the generic bundle, so its real title and category only arrive
-   * with the `query_meta` dataset.
-   */
-  onDatasetsLoaded?: (datasets: DashboardDataResponse) => void;
 }
 
 /**
@@ -60,7 +54,7 @@ const IDLE_POLL_MS = 6000;
 /**
  * Lädt Manifest + Daten eines Dashboards und mountet den Renderer.
  */
-export function DashboardHost({ id, params, showManifestTitle, onEnvelopeLoaded, onDatasetsLoaded }: Props) {
+export function DashboardHost({ id, params, showManifestTitle, onEnvelopeLoaded }: Props) {
   const { t } = useTranslation();
   const lang = useApiLang();
   const [envelope, setEnvelope] = useState<DashboardEnvelope | null>(null);
@@ -82,8 +76,6 @@ export function DashboardHost({ id, params, showManifestTitle, onEnvelopeLoaded,
   // tears the view down (setEnvelope(null)) and would loop.
   const onEnvelopeLoadedRef = useRef(onEnvelopeLoaded);
   onEnvelopeLoadedRef.current = onEnvelopeLoaded;
-  const onDatasetsLoadedRef = useRef(onDatasetsLoaded);
-  onDatasetsLoadedRef.current = onDatasetsLoaded;
 
   useEffect(() => {
     const handler = () => setReloadTick(n => n + 1);
@@ -147,7 +139,6 @@ export function DashboardHost({ id, params, showManifestTitle, onEnvelopeLoaded,
         if (ac.signal.aborted) return;
         setDataError(null);
         setDatasets(data);
-        onDatasetsLoadedRef.current?.(data);
       } catch (err) {
         if (ac.signal.aborted || isAbortError(err)) return;
         setDataError(err instanceof Error ? err.message : String(err));
@@ -250,7 +241,12 @@ export function DashboardHost({ id, params, showManifestTitle, onEnvelopeLoaded,
   return (
     <div className={`dash-host dash-host--${envelope.manifest.id}`}>
       {showManifestTitle && envelope.manifest.title && (
-        <TitleBox title={envelope.manifest.title} subtitle={envelope.manifest.description} />
+        <TitleBox
+          title={envelope.manifest.title}
+          subtitle={envelope.manifest.description}
+          // Favorite star, right-aligned — content-area bundles only, system/module pages carry none.
+          actions={envelope.nav?.favoritable ? <FavoriteStar id={envelope.manifest.id} /> : undefined}
+        />
       )}
       <DashboardRenderer layout={envelope.layout} datasets={datasets} />
     </div>

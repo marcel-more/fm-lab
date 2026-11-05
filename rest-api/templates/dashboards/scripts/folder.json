@@ -1,0 +1,18 @@
+{
+  "title": "Scripts",
+  "icon": "script",
+  "description": "Analyses of scripts — complexity, error handling, layout context and network round trips.",
+  "order": 7,
+  "locales": {
+    "de": "Scripts",
+    "es": "Scripts",
+    "fr": "Scripts",
+    "it": "Script",
+    "ja": "スクリプト",
+    "ko": "스크립트",
+    "nl": "Scripts",
+    "pt": "Scripts",
+    "sv": "Skript",
+    "zh-Hans": "脚本"
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "locked": true,
+  "id": "secret_in_global_variable",
+  "version": "1.0.0",
+  "title": "Secret in global variable",
+  "description": "Security rule — global / superglobal variables whose name suggests a secret (password, token, API key). Globals persist for the whole session.\n\nBased on the PMD rule GlobalVariable — https://docs.pmd-code.org/latest/pmd_rules_ecmascript_bestpractices.html#globalvariable",
+  "author": "fm-lab rules",
+  "icon": "shield-off",
+  "category": "security",
+  "tags": [
+    "rule",
+    "pmd",
+    "security"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "warning",
+    "category": "security",
+    "rationale": "Secrets held in globals stay in memory session-wide and surface in Data Viewer / debugging.",
+    "remediation": "Keep secrets in local scope, fetch them just-in-time, and clear them after use.",
+    "meta": {
+      "name": "Secret in global variable",
+      "author": "fm-lab rules",
+      "source": "PMD",
+      "url": "https://docs.pmd-code.org/latest/pmd_rules_ecmascript_bestpractices.html#globalvariable",
+      "description": "Security rule — global / superglobal variables whose name suggests a secret (password, token, API key). Globals persist for the whole session.",
+      "created": "2026-07-01",
+      "references": [
+        {
+          "project": "PMD",
+          "rule": "GlobalVariable",
+          "url": "https://docs.pmd-code.org/latest/pmd_rules_ecmascript_bestpractices.html#globalvariable"
+        }
+      ]
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Variable"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {}
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Secret in global variable"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "variable_scope",
+      "type": "string",
+      "required": false,
+      "description": "Optional chip filter on scope."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": false
+  }
+}

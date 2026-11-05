@@ -1,0 +1,19 @@
+{
+  "manifest": {
+    "title": "XML-import",
+    "description": "Importeert XML-exports uit de map xml/ in de DuckDB-database."
+  },
+  "layout": {
+    "files_table.props.columns[1].label": "Bestand",
+    "files_table.props.columns[2].label": "Formaat",
+    "files_table.props.columns[3].label": "DDR",
+    "files_table.props.columns[4].label": "Datum",
+    "files_table.props.columns[5].label": "Grootte",
+    "files_table.props.columns[6].label": "Geïmporteerd",
+    "files_table.props.empty.message": "Geen bestanden in de XML-map.",
+    "last_run.props.title": "Laatste conversie",
+    "import_integrity.props.title": "Import-integriteit",
+    "graph_communities.props.title": "Graph-communities",
+    "graph_communities_desc.props.content": "Structuur- en naamgevingsdekking van de gedetecteerde modules. Bouw de partitie opnieuw op met de knop; (her)benoem nieuwe modules met de skill `/fm-graph-cluster`."
+  }
+}

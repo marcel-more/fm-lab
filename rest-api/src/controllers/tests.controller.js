@@ -51,7 +51,9 @@ function toListRow(test) {
       members: p.members ? [...p.members] : null,
     })),
     folder: test.folder || null,
+    area: test.area,
     tier: test.tier,
+    overrides: test.overrides === true,
     overridesSystem: test.overridesSystem === true,
     version: test.definition.version || null,
     validation: {

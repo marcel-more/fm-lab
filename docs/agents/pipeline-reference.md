@@ -50,6 +50,33 @@ point (no transaction bracket) — the abort detail recommends
 non-gating chain warnings in both modes. Test hook: `FM_P2_TEST_FAIL=1` forces the
 failure on the single-pass P2 path (use `FM_P2_JOBS=1` on multi-file corpora).
 
+**No-importable-files stop (batch and single file), two stages:**
+1. *Format preflight* — right after the lock, before the turbo init, the schema check
+   (auto-heal may delete the master) and any phase: the root element of every input
+   file is probed from its first 4 KB (UTF-16 decoded by BOM). When **no** file is an
+   `FMSaveAsXML` export, the run stops with stage `Preflight (format check)` — on a
+   FileMaker 18 inbox in well under a second, without touching anything.
+2. *Gate after P1* — directly after P1, before P2 and before the nothing-changed
+   short-circuit: a run in which **not a single file was imported or taken over
+   unchanged** (supported files that all failed, mixed with skips) stops with stage
+   `Phase 1 Extract` instead of running P2–P6 on an empty or stale master.
+
+The root check skips every file whose root is not `<FMSaveAsXML>`: the FileMaker 18 format
+`<FMDynamicTemplate version="2.0.0.0">` (skip reason `legacy_format`, with the exporting
+version from `Source`) or no recognizable root (`unknown_root`). The gate emits
+`aborted reason=no_importable_files` with `stage`, `total`, `skipped`, `failed`,
+`legacy` (count of `legacy_format` skips) and `source_versions` (comma list), writes
+**one** error-log section "Import aborted — no importable files" (file list, reason,
+remedy: re-export with FileMaker 19+), and touches neither the master, the read copy,
+the manifest nor the `catalogs_built` marker (a turbo run restores the value Phase S
+replaced). Exit **4** when every file was a root-check skip, otherwise **1**. A built
+solution with an extra FileMaker 18 file does not hit the gate (its other files count
+as unchanged); such runs end successfully and report the skips. Per file the skip
+reason travels in the `file` event (`status:"skipped"`, `reason`, `source_version`),
+in the JSON log (`files[].skip = {reason, source_version, saxml_version}`, log schema
+`fmlab.convert-log/2.3`) and in the run record `solutions/<id>/state/last_xml_run.json` (schema 2:
+`skipped_count`, `skipped_files[]`; skips no longer count as `error_count`).
+
 **Constraint:** P2 runs partitioned with read-only VIEWs over the master DB — no
 ALTER/UPDATE on source tables in P2 (breaks all slices); derived columns belong in P3.
 
@@ -91,13 +118,13 @@ convert-xml run (volatile, like the universal catalogs — never put it in P2). 
 - `step_metadata` — Step_ID → block/semantic markers: `is_control_flow`/`control_kind`/`loop_delta`/`if_delta`/`has_side_effects`/`is_find_mode`/`is_mutation`/`deprecated_in` — the single source of the control-flow deltas
 - `v_script_block_tree` — MATERIALIZED: per-step Loop/If nesting depth, **PARTITION BY `(File_Name, Script_ID)`** — *not* `Script_UUID`, which is non-unique in 2 merge-artifact cases; If-depth clamped via `GREATEST(0,…)`, raw `if_running_depth` kept for the unbalanced-if rule
 
-Consumed by the `static-code-analysis/` rule bundles in `rest-api/templates/dashboards-custom/`.
+Consumed by the `static-code-analysis/` rule bundles in `rest-api/templates/dashboards/`.
 
 ## Graph views (P5)
 
 Read-only helpers over the universal catalogs:
 
-- **`LogicalLinks`** — operational links, sub-objects hoisted to their container, containment scaffold + orphans removed, **local variables `$x` excluded**, and since converter 2.17.0 **trigger-anchored edges excluded** (`trigger_script` + the OnWindowTransaction candidates `reads_field·transaction_parameter_field`): trigger nodes were pure script satellites — the owner mirrors `triggers_script·<event>` carry the owner↔script affinity on all three owner levels; a trigger focus in the Graph Explorer is fed by the focus bridge (`graph_subgraph.sql` ≥ 1.5.0). Canonical definition mirrored in `rest-api/templates/sql/graph_logical_links.sql`.
+- **`LogicalLinks`** — operational links, sub-objects hoisted to their container, containment scaffold + orphans removed, **local variables `$x` excluded**, and since converter 2.17.0 **trigger-anchored edges excluded** (`trigger_script` + the OnWindowTransaction candidates `reads_field·transaction_parameter_field`): trigger nodes were pure script satellites — the owner mirrors `triggers_script·<event>` carry the owner↔script affinity on all three owner levels; a trigger focus in the Graph Explorer is fed by the focus bridge (`graph_subgraph.sql` ≥ 1.5.0). Canonical definition mirrored in `rest-api/templates/queries/system/graph/graph_logical_links.sql`.
 - **`ClusterEdgesBase`** (= `LogicalLinks` minus `BuiltinFunction`) — **materialized**: the data lives in the TABLE `ClusterEdgesBaseMat`, rebuilt on every P5 run, with `ClusterEdgesBase` as a thin view over it (avoids the multi-evaluation OOM of the pure view chain in the READ_ONLY API)
 - **`ClusterGodNodes`** — cross-cutting "god-nodes": neighbours span ≥8 files **and** ≤40 % in their own file (generic MBS-plugin utilities + global config/auth fields)
 - **`ClusterEdges`** (= `ClusterEdgesBase` minus `ClusterGodNodes`) — **single source of truth** for the community-detection edge export (`tools/graph-export/graph_export_logical.sql`) and the `fm-graph-cluster` skill's logical-degree/hub analysis

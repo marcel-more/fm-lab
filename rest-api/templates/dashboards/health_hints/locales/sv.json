@@ -1,0 +1,40 @@
+{
+  "manifest": {
+    "title": "Healthchecks",
+    "description": "Hela lösningens hälsa i en överblick: sammanfattar de beräknade resultaten för alla kontroll-dashboards per tillstånd, grupperade per rubrik; varje rad leder till sitt dashboard."
+  },
+  "layout": {
+    "results_kpi_strip.props.items[0].label": "Kontroller",
+    "results_kpi_strip.props.items[1].label": "Fel",
+    "results_kpi_strip.props.items[2].label": "Varningar",
+    "results_kpi_strip.props.items[3].label": "OK",
+    "results_kpi_strip.props.items[4].label": "Neutral",
+    "results_kpi_strip.props.items[5].label": "Väntar",
+    "results_kpi_strip.props.items[6].label": "Misslyckade",
+    "results_kpi_strip.props.items[7].label": "Träffar",
+    "results_kpi_strip.props.items[8].label": "Utförda",
+    "results_run.props.label": "Kör alla kontroller",
+    "rp_performance_card.props.title": "Prestanda",
+    "rp_performance_list.props.empty.message": "Inget att rapportera.",
+    "rp_error_prone_card.props.title": "Felbenäget",
+    "rp_error_prone_list.props.empty.message": "Inget att rapportera.",
+    "rp_security_card.props.title": "Säkerhet",
+    "rp_security_list.props.empty.message": "Inget att rapportera.",
+    "rp_unused_code_card.props.title": "Oanvänd kod",
+    "rp_unused_code_list.props.empty.message": "Inget att rapportera.",
+    "rp_code_style_card.props.title": "Kodstil",
+    "rp_code_style_list.props.empty.message": "Inget att rapportera.",
+    "rp_layout_quality_card.props.title": "Layoutkvalitet",
+    "rp_layout_quality_list.props.empty.message": "Inget att rapportera.",
+    "rp_documentation_card.props.title": "Dokumentation",
+    "rp_documentation_list.props.empty.message": "Inget att rapportera.",
+    "rp_best_practices_card.props.title": "Bästa praxis",
+    "rp_best_practices_list.props.empty.message": "Inget att rapportera.",
+    "rp_platform_card.props.title": "Plattformskompatibilitet",
+    "rp_platform_list.props.empty.message": "Inget att rapportera.",
+    "rp_metadata_integrity_card.props.title": "Metadataintegritet",
+    "rp_metadata_integrity_list.props.empty.message": "Inget att rapportera.",
+    "rp_developer_workflow_card.props.title": "Utvecklarflöde",
+    "rp_developer_workflow_list.props.empty.message": "Inget att rapportera."
+  }
+}

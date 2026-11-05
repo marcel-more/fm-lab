@@ -3,7 +3,11 @@
 The bundle loader fails **silently** on schema violations (Joi rejects →
 `console.warn` → bundle disappears from `/api/dashboards`). Never announce the
 dashboard as available without running this gate. Bundles, SQL templates and
-locale files are hot-reloaded by mtime — no server restart needed.
+locale files are hot-reloaded by mtime — no server restart needed; a new
+bundle or file appears within two seconds.
+
+Bundle form: V1–V6 below. Single-file form: §Single-file gate (F1–F5) at the
+end, then the matching closing message.
 
 ## V1 — Trigger the cache reload
 
@@ -61,14 +65,16 @@ auto-fix — show the log line and ask.
 ## V5 — Probe each dataset (DuckDB CLI)
 
 If the DuckDB binary is reachable (resolution per CLAUDE.md §2 /
-`docs/agents/tooling.md`; honour a session pin's literal bundle path):
+`docs/agents/tooling.md`; honour a session pin's literal bundle path).
+`<path>` is the bundle's location inside `dashboards-custom/` — `<id>`, or
+`<folder>/…/<id>` when it is grouped:
 
 **a) Default run** — unset variables are `NULL` in the CLI, matching the API's
 behaviour for absent params, so the plain query must already work:
 
 ```bash
 duckdb -readonly db/fm_catalog.duckdb -csv -c \
-  "$(cat rest-api/templates/dashboards-custom/<id>/data/<file>.sql)" | head -5
+  "$(cat rest-api/templates/dashboards-custom/<path>/data/<file>.sql)" | head -5
 ```
 
 **b) Param run — once per declared filter param.** The API replaces
@@ -77,7 +83,7 @@ duckdb -readonly db/fm_catalog.duckdb -csv -c \
 ```bash
 duckdb -readonly db/fm_catalog.duckdb -csv -c \
   "SET VARIABLE <param> = '<example value>';
-   $(cat rest-api/templates/dashboards-custom/<id>/data/<file>.sql)" | head -5
+   $(cat rest-api/templates/dashboards-custom/<path>/data/<file>.sql)" | head -5
 ```
 
 Use a value that exists (e.g. a `File_Name` from `FilesCatalog`, a subset value
@@ -136,7 +142,7 @@ Each conscious waiver gets a one-line justification in the closing message.
 ## Closing message template
 
 ```
-Dashboard bundle created: rest-api/templates/dashboards-custom/<id>/
+Dashboard bundle created: rest-api/templates/dashboards-custom/<path>/
   ├── manifest.json
   ├── layout.json
   ├── data/<dataset>.sql (…)
@@ -144,6 +150,7 @@ Dashboard bundle created: rest-api/templates/dashboards-custom/<id>/
 
 Dashboard ID:   <id>
 Title:          <title> (English default; 10 translations)
+Overview:       Dashboards / Custom / [<folder> / …] <title>
 Pattern:        <P# name(s)>
 Datasets:       <name> (preview: N rows), …
 Filter params:  <param>=<values>  → try /dashboard/<id>?<param>=<value>
@@ -157,3 +164,96 @@ Server-unavailable mode → replace `Verified:` with
 `SKIPPED (REST API not on :3003 — bash tools/start-servers.sh, then reload)`.
 Auto-heal applied → add one line, e.g.
 `Auto-heal: manifest.params[].type "integer" → "number" (re-verified OK)`.
+
+---
+
+## Single-file gate (F1–F5)
+
+`<path>` is the file's location inside `dashboards-custom/` — `<id>.sql`, or
+`<folder>/…/<id>.sql` when it is grouped.
+
+### F1 — Header self-check (before and after writing)
+
+- [ ] `@template_type: report`, `@title`, `@description` present; no
+      `@category`
+- [ ] every `getvariable('<p>')` of the SQL is named in `@params`
+      (`grep -o "getvariable('[a-z_]*')" <file> | sort -u`)
+- [ ] `@object_types` names the object type the click opens; `@click_args`
+      carries `uuid`, `type`, `file` (I1)
+- [ ] `@default_result` is valid one-line JSON (`aggregate`, `type`, `name`,
+      `meaning`) when the dashboard should show a findings value or serve as a
+      test member; then the SQL also returns `_message`
+- [ ] `@scope` lists object-like scopes only when the SQL carries the S-Block
+      (one `scope_uuids` per `file` filter)
+- [ ] paging keys (`@page_param`, `@search_param`, `@sort_param`,
+      `@page_size`) only together with the paging frame; `/*@sort*/` present
+- [ ] no `:word` sequence in the SQL body
+      (`grep -nE ':[A-Za-z0-9_]' <file> | grep -v '^[0-9]*:-- @'` — header
+      lines are parsed from the raw file and are exempt)
+
+### F2 — The dashboard loads
+
+```bash
+curl -s http://localhost:3003/api/dashboards/<id> | python3 -c "import json,sys; d=json.load(sys.stdin)['data']; m=d['manifest']; print(m['id'], m['title'], [x['source'] for x in m['datasets']], m.get('analysis',{}).get('defaultResult'), d['nav']['crumbs'])"
+```
+
+Expect the id, the title, the sources `builtin:query_meta` and
+`custom:<id>`, the `defaultResult` when declared, and the crumbs
+`Custom / [<folder> / …]`. A 404 means the file was discarded: read the
+reason from the log (`tail -100 logs/rest-api.log | grep -F "[dashboard:<id>]"`)
+— id collides with an internal template, invalid file name, or the derived
+manifest failed validation. A `ignoring invalid @default_result` /
+`ignoring unknown @scope value(s)` warning means the dashboard loads without
+that declaration: fix the header, re-run F2.
+
+If the REST API is **not** running on `:3003`: skip F2/F3, run F4 and use the
+server-unavailable closing line.
+
+### F3 — Data through the API
+
+```bash
+curl -s "http://localhost:3003/api/query?template=<id>&format=json" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('success'), len(d.get('data') or []), (d.get('error') or {}).get('message'))"
+curl -s "http://localhost:3003/api/dashboards/<id>/data" | python3 -c "import json,sys; d=json.load(sys.stdin)['data']['datasets']; [print(k, len(v.get('data',[])), v.get('error')) for k,v in d.items()]"
+```
+
+Repeat the second call once per filter param (`?<param>=<value>`, the chip
+param, `?q=<term>` for a paged file). Any error fails the gate.
+
+### F4 — Direct DuckDB run (always; the only check without a server)
+
+```bash
+duckdb -readonly -csv db/fm_catalog.duckdb -c ".read rest-api/templates/dashboards-custom/<path>" | head -5
+duckdb -readonly -csv db/fm_catalog.duckdb -cmd "SET VARIABLE file = '<File_Name>'" -c ".read rest-api/templates/dashboards-custom/<path>" | head -5
+```
+
+Unset variables are `NULL`, as in the API. Param names that are SQL keywords
+need quotes (`SET VARIABLE "limit" = 5`). Honour a session pin's literal
+bundle path.
+
+### F5 — Findings value
+
+With `@default_result`, the value in the overview equals the F3 row count
+(`row_count`) or the column of the first row (`first_row:<column>`); with the
+paging frame `row_count` counts at most one page. The overview runs it on
+"Run all" or when the user opens the dashboard.
+
+## Closing message — single-file form
+
+```
+Single-file dashboard created: rest-api/templates/dashboards-custom/<path>
+
+Dashboard ID:   <id>
+Title:          <title> (English)
+Overview:       Dashboards / Custom / [<folder> / …] <title>
+Columns:        <output columns>  · row click: <action> (<type>)
+Findings value: <name> = <value> (<meaning>) | none
+Filter params:  <param>=<values>  → try /dashboard/<id>?<param>=<value>
+Verified:       GET /api/dashboards/<id> → HTTP 200; /api/query?template=<id> → N rows; duckdb .read OK
+
+Live at /dashboard/<id> — browser reload (Ctrl+R) picks it up.
+```
+
+Then offer, in one line each: adding it as a member of an own test
+(`/create-custom-test`, only with `@default_result`), and growing it into a
+bundle later (KPI tiles, several panels, translations) without rewriting the
+SQL.

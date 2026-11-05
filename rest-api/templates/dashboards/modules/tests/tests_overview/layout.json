@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "type": "Grid",
+    "props": {
+      "columns": 12,
+      "gap": 16
+    },
+    "children": [
+      {
+        "type": "Card",
+        "id": "tests",
+        "props": {
+          "span": 12
+        },
+        "data": {
+          "dataset": "tests"
+        },
+        "children": [
+          {
+            "type": "TileGrid",
+            "props": {
+              "viewModes": [
+                "folders",
+                "list",
+                "favorites"
+              ],
+              "defaultView": "list",
+              "minTileWidth": 260,
+              "folderNav": true,
+              "folderParam": "folder",
+              "foldersDataset": "folders",
+              "listColumns": "test",
+              "favoriteKind": "test",
+              "resultKinds": [
+                "test"
+              ],
+              "viewStorageKey": "fmlab.tests.view",
+              "expandedStorageKey": "fmlab.tests.list.expanded",
+              "searchable": "auto",
+              "searchAutoThreshold": 3,
+              "tile": {
+                "title": "{{title}}",
+                "subtitle": "{{description}}",
+                "badge": "{{test_type}}",
+                "badgeLabels": "types:testTypes",
+                "onClick": {
+                  "action": "navigate",
+                  "args": {
+                    "path": "/tests/{{id}}"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -90,7 +90,7 @@ Restriction edges are emitted only for actual restrictions (`Access_Mode <> 'Rea
 
 - **XML schema:** [XML PrivilegeSetsCatalog](../../xml/catalogs/XML%20PrivilegeSetsCatalog.md) — `<PrivilegeSetsCatalog>` branch, one `<PrivilegeSet>` with its `<access>` tree
 - **DB schema:** [PrivilegeSetsCatalog](../catalog-tables/PrivilegeSetsCatalog.md) · satellites [PrivilegeSetRecordAccess](../catalog-tables/PrivilegeSetRecordAccess.md), [PrivilegeSetFieldAccess](../catalog-tables/PrivilegeSetFieldAccess.md), [PrivilegeSetObjectAccess](../catalog-tables/PrivilegeSetObjectAccess.md) · access calcs tokenized in [DDR_Calculations](../catalog-tables/DDR_Calculations.md)
-- **Detail view template:** `rest-api/templates/sql/object_details_privilegeset.sql`, served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md)
+- **Detail view template:** `rest-api/templates/queries/system/object-details/object_details_privilegeset.sql`, served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md)
 - **Frontend:** object list at `http://localhost:5173/?type=PrivilegeSet`
 
 **See also:** [Object Types](../object-catalog/Object%20Types.md) · [Account](Account.md) · [ExtendedPrivilege](ExtendedPrivilege.md) · [Field](Field.md) · [Link Roles and Subroles](../object-catalog/Link%20Roles%20and%20Subroles.md)

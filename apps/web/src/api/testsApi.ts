@@ -47,7 +47,11 @@ export interface TestListItem {
    */
   folder_crumbs?: Array<{ path: string; label: string }>;
   folder_order?: number;
-  tier: 'system' | 'custom';
+  /** Storage area: shipped (`builtin`), own tests (`custom`) or installed community tests. */
+  area: 'builtin' | 'custom' | 'community';
+  tier: 'system' | 'custom' | 'community';
+  /** Custom test replacing a builtin test of the same id (alias: `overridesSystem`). */
+  overrides: boolean;
   overridesSystem: boolean;
   version: string | null;
   validation: TestValidation;

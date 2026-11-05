@@ -1,6 +1,6 @@
 # SCA Documentation
 
-**Rubric:** [Static Code Analysis](../Wiki/Static%20Code%20Analysis.md) · 4 rules · `rest-api/templates/dashboards-custom/static-code-analysis/documentation/`
+**Rubric:** [Static Code Analysis](../Wiki/Static%20Code%20Analysis.md) · 4 rules · `rest-api/templates/dashboards/static-code-analysis/documentation/`
 
 Documentation rules answer one question: could someone else take this over? They find the non-trivial scripts without a single comment, the custom functions without a documented contract, and the calculated fields whose formula is left to speak for itself — plus a density metric that grades how well-commented the substantial scripts actually are.
 

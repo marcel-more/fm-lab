@@ -1,0 +1,76 @@
+{
+  "id": "unstored_calc_field",
+  "version": "1.0.0",
+  "title": "Unstored calculation field",
+  "description": "Performance rule — calculation fields whose result is not stored. Unstored calculations are recomputed on demand; placing many of them on a single layout (especially a list view) can noticeably slow rendering, because the calculation runs once per displayed record.",
+  "author": "fm-lab rules",
+  "icon": "calculator",
+  "category": "performance",
+  "tags": [
+    "rule",
+    "performance"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "warning",
+    "category": "performance",
+    "rationale": "An unstored calculation holds no value on disk and is evaluated every time it is displayed, found or sorted. On layouts that show many records at once, the field is recalculated for every visible row, which can turn into a visible rendering delay.",
+    "remediation": "Store the result where the inputs allow it (no unstored/global/related dependencies), or keep the field off high-volume list layouts. Where a stored value is impossible, limit how many unstored calculations share one list view.",
+    "meta": {
+      "name": "Unstored calculation field",
+      "author": "fm-lab rules",
+      "source": "fm-lab",
+      "url": null,
+      "description": "Calculation fields with 'Do not store calculation results' — recomputed on demand, costly in bulk on list layouts.",
+      "created": "2026-07-15",
+      "references": []
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Field"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {}
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Unstored calculation field"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

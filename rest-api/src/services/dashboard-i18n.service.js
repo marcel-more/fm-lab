@@ -251,7 +251,9 @@ function deepCloneJson(value) {
  * @returns {Promise<{ manifest: object, layout: object }>}
  */
 async function resolveBundleForLanguage(bundle, lang) {
-  if (!lang || lang === 'en') {
+  // Single-file dashboards carry no locale layer (their header is English);
+  // `bundle.dir` is the folder holding the file, not a bundle directory.
+  if (!lang || lang === 'en' || bundle.unit === 'file') {
     return { manifest: bundle.manifest, layout: bundle.layout };
   }
 

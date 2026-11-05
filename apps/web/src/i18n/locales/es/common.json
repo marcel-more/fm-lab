@@ -10,6 +10,7 @@
   "empty": "Nada que mostrar.",
   "noData": "No hay datos disponibles.",
   "noEntries": "Sin entradas.",
+  "general": "General",
   "unknown": "(desconocido)",
   "all": "Todo",
   "filter": "Filtro",
@@ -30,6 +31,7 @@
   "actions": {
     "openInFileMaker": "Abrir en FileMaker",
     "copyUuid": "Copiar UUID",
+    "copyOriginalUuid": "Copiar UUID original — atención: este UUID está asignado más de una vez en el archivo de origen",
     "expandAll": "Expandir todo",
     "collapseAll": "Contraer todo",
     "collapseMultilineCalcs": "Contraer cálculos multilínea",

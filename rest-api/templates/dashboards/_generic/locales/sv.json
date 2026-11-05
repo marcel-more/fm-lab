@@ -1,7 +1,0 @@
-{
-  "manifest": {
-    "title": "Resultat av anpassad fråga",
-    "description": "Generisk renderare för valfri sql-custom-mall."
-  },
-  "layout": {}
-}

@@ -1,6 +1,6 @@
 # SCA Security
 
-**Rubric:** [Static Code Analysis](../Wiki/Static%20Code%20Analysis.md) · 7 rules · `rest-api/templates/dashboards-custom/static-code-analysis/security/`
+**Rubric:** [Static Code Analysis](../Wiki/Static%20Code%20Analysis.md) · 7 rules · `rest-api/templates/dashboards/static-code-analysis/security/`
 
 Security rules look for secrets and access-control weaknesses that are visible in the solution's structure: credentials embedded in scripts, password fields stored or displayed in plain text, secrets parked in global variables, and the size of the full-access surface. They cover what a catalog can honestly see — configuration and code, not server hardening or network posture.
 

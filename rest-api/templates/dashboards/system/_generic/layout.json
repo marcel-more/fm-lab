@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "type": "Grid",
+    "props": { "columns": 12, "gap": 16 },
+    "children": [
+      {
+        "type": "Card",
+        "props": { "span": 12, "keepChildrenOnEmpty": true },
+        "data": { "dataset": "results" },
+        "children": [
+          {
+            "type": "AutoTable",
+            "props": {
+              "metaDataset": "query_meta",
+              "density": "comfortable",
+              "sortable": true,
+              "searchable": true,
+              "maxHeight": "70vh"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

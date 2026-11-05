@@ -1,0 +1,21 @@
+{
+  "id": "_generic",
+  "version": "1.0.0",
+  "title": "Custom query result",
+  "description": "Generic renderer for any query.",
+  "author": "fm-lab core",
+  "icon": "query",
+  "tags": ["internal", "generic"],
+  "entry": "layout.json",
+  "datasets": [
+    { "id": "query_meta", "source": "builtin:query_meta" },
+    { "id": "results",    "source": "custom:{{query}}" }
+  ],
+  "params": [
+    { "name": "query", "type": "string", "required": true,
+      "description": "Name of the query (without .sql)" },
+    { "name": "file",  "type": "string", "required": false,
+      "description": "Optional file filter — forwarded to the template." }
+  ],
+  "permissions": { "read_only": true, "allow_navigation": true }
+}

@@ -57,6 +57,9 @@
   /* Zeilen-Hintergrund für den Fokus-Knoten in Panel-Listen (transparent, dezent) */
   --color-focus-row-bg:     rgba(100, 108, 255, 0.14);
 
+  /* Favorites star (≥ 3:1 against surface and hover) */
+  --favorite-color:         #a86b00;
+
   /* Code/mono surfaces */
   --color-code-bg:          #f5f5f5;
   --color-code-fg:          #333333;
@@ -198,6 +201,9 @@
   --color-search-hit-bg:    rgba(255, 213, 79, 0.28);
   /* Zeilen-Hintergrund für den Fokus-Knoten in Panel-Listen (transparent, dezent) */
   --color-focus-row-bg:     rgba(138, 145, 255, 0.20);
+
+  /* Favorites star (≥ 3:1 against surface and hover) */
+  --favorite-color:         #f5c04a;
 
   /* Code/mono surfaces */
   --color-code-bg:          #0d0d0d;

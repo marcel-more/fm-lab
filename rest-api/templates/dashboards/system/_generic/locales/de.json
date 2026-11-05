@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "Custom-Query-Ergebnis",
+    "description": "Generischer Renderer für eine beliebige Abfrage."
+  },
+  "layout": {}
+}

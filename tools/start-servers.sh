@@ -1,10 +1,21 @@
 #!/usr/bin/env bash
 # start-servers.sh — Starts the REST API (port 3003) and/or the frontend (port 5173).
 #
-# Usage:  start-servers.sh [api|frontend|all]   (default: all)
+# Usage:  start-servers.sh [api|frontend|all] [--restart-running]   (default: all)
 #   api        start only the REST API
 #   frontend   ensure the API is up, then start the Vite dev server
 #   all        start API, then frontend  (full stack)
+#   --restart-running  restart a server that is already running instead of re-attaching
+#              to it (init.sh passes this right after its bootstrap: a process started
+#              before `npm install` / `build:shared` never sees the fresh build)
+#
+# A running server is re-attached only when it belongs to THIS checkout. One whose
+# working directory was deleted (e.g. the folder was removed and cloned again) or lies
+# in another checkout is restarted — it would keep serving the old code and stale
+# module resolutions (a missing packages/shared/dist stays "missing" in Vite).
+#
+# Env:  FMLAB_START_STATUS_FILE=<path>  write "api=<state>" / "frontend=<state>" lines
+#       (state: started | restarted | running) for the caller's summary (init.sh).
 #
 # Runtime scenarios (see project/todo/ticket_server_restart.md):
 #   • native host / VS Code dev container  → FMLAB_RUNTIME unset → this script manages
@@ -17,12 +28,18 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-TARGET="${1:-all}"
-case "$TARGET" in
-  api|frontend|all) ;;
-  web) TARGET="frontend" ;;
-  *) echo "Usage: $(basename "$0") [api|frontend|all]" >&2; exit 2 ;;
-esac
+PROJECT_ROOT_REAL="$(cd "$PROJECT_ROOT" && pwd -P)"
+
+TARGET="all"
+RESTART_RUNNING=false
+for arg in "$@"; do
+  case "$arg" in
+    api|frontend|all) TARGET="$arg" ;;
+    web) TARGET="frontend" ;;
+    --restart-running) RESTART_RUNNING=true ;;
+    *) echo "Usage: $(basename "$0") [api|frontend|all] [--restart-running]" >&2; exit 2 ;;
+  esac
+done
 
 # Colors (only for terminal output)
 if [ -t 1 ]; then
@@ -81,6 +98,62 @@ get_listen_pid() {
     ss -tlnpH 2>/dev/null | awk -v p="$port" '$4 ~ "[:.]"p"$"' \
       | grep -oE 'pid=[0-9]+' | head -1 | cut -d= -f2
   fi
+}
+
+# Working directory of a process as "<inode> <path>" (lsof, else /proc). Empty when it
+# cannot be determined (no lsof and no /proc, foreign user, PID in another container) —
+# the caller then trusts the listener (legacy behavior). The inode is what detects a
+# deleted-and-re-cloned folder: the path string is the same, the directory is not.
+process_cwd() {
+  local pid=$1 ino="" path=""
+  if command -v lsof &>/dev/null; then
+    local out
+    out=$(lsof -a -p "$pid" -d cwd -Fin 2>/dev/null || true)
+    ino=$(printf '%s\n' "$out" | sed -n 's/^i//p' | head -1)
+    path=$(printf '%s\n' "$out" | sed -n 's/^n//p' | head -1)
+  fi
+  if { [ -z "$ino" ] || [ -z "$path" ]; } && [ -e "/proc/$pid/cwd" ]; then
+    path=$(readlink "/proc/$pid/cwd" 2>/dev/null || true)
+    ino=$(ls -dLi "/proc/$pid/cwd" 2>/dev/null | awk '{print $1}')
+  fi
+  [ -n "$ino" ] && [ -n "$path" ] && printf '%s %s' "$ino" "$path"
+}
+
+# Does the server process belong to a different (or vanished) checkout? Returns 0 and
+# sets STALE_REASON when it does; 1 when it belongs to this checkout or is unknown.
+STALE_REASON=""
+server_is_stale() {
+  local pid=$1 info ino path now_ino
+  STALE_REASON=""
+  [ -n "$pid" ] || return 1
+  info=$(process_cwd "$pid")
+  [ -n "$info" ] || return 1
+  ino=${info%% *}
+  path=${info#* }
+  case "$path" in
+    *" (deleted)")
+      STALE_REASON="its working directory was deleted (${path% (deleted)})"
+      return 0 ;;
+  esac
+  if [ ! -d "$path" ]; then
+    STALE_REASON="its working directory no longer exists ($path)"
+    return 0
+  fi
+  now_ino=$(ls -di "$path" 2>/dev/null | awk '{print $1}')
+  if [ -n "$now_ino" ] && [ "$now_ino" != "$ino" ]; then
+    STALE_REASON="it runs in a deleted copy of $path (folder removed and re-created, e.g. a fresh clone)"
+    return 0
+  fi
+  case "$path" in
+    "$PROJECT_ROOT_REAL"|"$PROJECT_ROOT_REAL"/*) return 1 ;;
+  esac
+  STALE_REASON="it belongs to another checkout ($path)"
+  return 0
+}
+
+# Stop the server on a port via stop-servers.sh (output indented, it is a sub-step).
+restart_stop() {
+  bash "$SCRIPT_DIR/stop-servers.sh" "$1" 2>&1 | sed -n '/stopped\|SIGKILL/s/^/  /p' || true
 }
 
 # Wait until a port responds (max $2 seconds)
@@ -150,6 +223,24 @@ mkdir -p "$PROJECT_ROOT/logs"
 
 api_started=false
 frontend_started=false
+# running | started | restarted — for the status block and FMLAB_START_STATUS_FILE
+api_state="running"
+frontend_state="running"
+
+# Decide whether a verified own server on the port must be restarted, and stop it if so.
+# Returns 0 when it was stopped (the caller then starts a fresh one).
+restart_if_needed() {
+  local pid=$1 target=$2 label=$3
+  if server_is_stale "$pid"; then
+    warn "$label${pid:+ (PID $pid)} is running, but $STALE_REASON — restarting it"
+  elif [ "$RESTART_RUNNING" = true ]; then
+    info "$label${pid:+ (PID $pid)} is running — restarting it to pick up the fresh bootstrap"
+  else
+    return 1
+  fi
+  restart_stop "$target"
+  return 0
+}
 
 # ─── Start the REST API (idempotent) ─────────────────────────
 start_api() {
@@ -166,14 +257,22 @@ start_api() {
   # foreign process on 3003). Identity via /api/version (F-A6).
   if port_listening 3003; then
     API_PID=$(get_listen_pid 3003 || true)
-    if http_ok http://localhost:3003/api/version; then
-      info "REST API already running${API_PID:+ (PID $API_PID)}"
-    else
+    if ! http_ok http://localhost:3003/api/version; then
       error "Port 3003 is in use${API_PID:+ (PID $API_PID)}, but /api/version does not respond — foreign process?"
       error "Please free the port (tools/stop-servers.sh api) or stop the foreign service."
       exit 1
     fi
-  else
+    if restart_if_needed "$API_PID" api "REST API"; then
+      api_state="restarted"
+      if port_listening 3003; then
+        error "REST API on port 3003 could not be stopped — please run tools/stop-servers.sh api"
+        exit 1
+      fi
+    else
+      info "REST API already running${API_PID:+ (PID $API_PID)}"
+    fi
+  fi
+  if ! port_listening 3003; then
     # Start the server
     cd "$PROJECT_ROOT/rest-api"
     nohup "$NODE_BIN" src/index.js > "$PROJECT_ROOT/logs/rest-api.log" 2>&1 &
@@ -183,6 +282,7 @@ start_api() {
     if wait_for_port 3003 5; then
       info "REST API started (PID $API_PID)"
       api_started=true
+      [ "$api_state" = "restarted" ] || api_state="started"
     else
       error "REST API could not be started. Log:"
       tail -20 "$PROJECT_ROOT/logs/rest-api.log" 2>/dev/null || true
@@ -269,14 +369,22 @@ start_frontend() {
   # foreign service on 5173). Identity via /@vite/client (only Vite serves that, F-A6).
   if port_listening 5173; then
     FE_PID=$(get_listen_pid 5173 || true)
-    if http_ok http://localhost:5173/@vite/client; then
-      info "Frontend already running${FE_PID:+ (PID $FE_PID)}"
-    else
+    if ! http_ok http://localhost:5173/@vite/client; then
       error "Port 5173 is in use${FE_PID:+ (PID $FE_PID)}, but it is not a Vite dev server — foreign process?"
       error "Please free the port (tools/stop-servers.sh frontend) or stop the foreign service."
       exit 1
     fi
-  else
+    if restart_if_needed "$FE_PID" frontend "Frontend"; then
+      frontend_state="restarted"
+      if port_listening 5173; then
+        error "Frontend on port 5173 could not be stopped — please run tools/stop-servers.sh frontend"
+        exit 1
+      fi
+    else
+      info "Frontend already running${FE_PID:+ (PID $FE_PID)}"
+    fi
+  fi
+  if ! port_listening 5173; then
     # Start Vite
     cd "$PROJECT_ROOT/apps/web"
     nohup "$NPM_BIN" run dev > "$PROJECT_ROOT/logs/frontend.log" 2>&1 &
@@ -288,6 +396,7 @@ start_frontend() {
       FE_PID=$(get_listen_pid 5173 || true)
       info "Frontend started (PID $FE_PID)"
       frontend_started=true
+      [ "$frontend_state" = "restarted" ] || frontend_state="started"
     else
       error "Frontend could not be started. Log:"
       tail -20 "$PROJECT_ROOT/logs/frontend.log" 2>/dev/null || true
@@ -307,11 +416,24 @@ esac
 
 # ─── Summary ─────────────────────────────────────────────────
 header "Status"
+state_label() {
+  case "$1" in
+    started)   echo '(newly started)' ;;
+    restarted) echo '(restarted)' ;;
+    *)         echo '(already running, not restarted)' ;;
+  esac
+}
 if [ "$TARGET" = "api" ] || [ "$TARGET" = "all" ] || [ "$TARGET" = "frontend" ]; then
-  echo "  REST API:  http://localhost:3003  $([ "$api_started" = true ] && echo '(newly started)' || echo '(already running)')"
+  echo "  REST API:  http://localhost:3003  $(state_label "$api_state")"
 fi
 if [ "$TARGET" = "frontend" ] || [ "$TARGET" = "all" ]; then
-  echo "  Frontend:  http://localhost:5173  $([ "$frontend_started" = true ] && echo '(newly started)' || echo '(already running)')"
+  echo "  Frontend:  http://localhost:5173  $(state_label "$frontend_state")"
+fi
+if [ -n "${FMLAB_START_STATUS_FILE:-}" ]; then
+  {
+    echo "api=$api_state"
+    [ "$TARGET" = "api" ] || echo "frontend=$frontend_state"
+  } > "$FMLAB_START_STATUS_FILE" 2>/dev/null || true
 fi
 echo ""
 echo "  Stop:      tools/stop-servers.sh"

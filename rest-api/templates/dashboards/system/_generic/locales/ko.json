@@ -1,0 +1,7 @@
+{
+  "manifest": {
+    "title": "사용자 정의 쿼리 결과",
+    "description": "모든 쿼리용 범용 렌더러입니다."
+  },
+  "layout": {}
+}

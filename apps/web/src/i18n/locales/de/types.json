@@ -34,5 +34,14 @@
     "ScriptStepType": "Kategorie",
     "BuiltinFunction": "Kategorie",
     "PluginFunction": "Komponente"
+  },
+  "testTypes": {
+    "exploration": "Exploration",
+    "code-quality": "Code-Qualität",
+    "error-check": "Fehlerprüfung",
+    "security": "Sicherheit",
+    "inventory": "Inventar",
+    "performance": "Performance",
+    "platform": "Plattform"
   }
 }

@@ -102,6 +102,10 @@ ${C_BOLD}Commands:${C_RESET}
                 --check-url <url> tests the whitelist.
   down          Stop and remove the stack.
   logs          Follow the stack logs (opt-in; not shown during 'up').
+  update        Update fm-lab to the newest release. Local changes in the way
+                are saved to .fmlab/update-backup/ first (--dry-run: only show).
+  language      Language of the AI agent: 'language de' pins it, 'language auto'
+                follows your prompts, no argument shows the setting.
   help          Show this help.
 
 ${C_BOLD}Options for 'up':${C_RESET}
@@ -456,6 +460,58 @@ cmd_logs() {
     exec "${COMPOSE[@]}" -f "$BASE_COMPOSE" -f "$CLAUDE_COMPOSE" logs -f "$@"
 }
 
+# --- update: fetch, then run the update script of the NEW release ------------------
+# The target release knows its own migrations; the local tools/update.sh is only the
+# fallback when the release cannot be fetched or does not ship one.
+cmd_update() {
+    command -v git >/dev/null 2>&1 || die "git is not installed — it is needed to update fm-lab."
+    local upstream
+    upstream="$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo origin/main)"
+    info "Fetching the newest release …"
+    git fetch --quiet "${upstream%%/*}" || warn "Could not reach '${upstream%%/*}' — continuing with the release fetched earlier."
+    if git cat-file -e "$upstream:tools/update.sh" 2>/dev/null; then
+        exec bash -c "$(git show "$upstream:tools/update.sh")" update.sh --no-fetch "$@"
+    fi
+    exec bash "$REPO_ROOT/tools/update.sh" --no-fetch "$@"
+}
+
+# --- language: the AI agent's working language (.fmlab/user.local.json) ------------
+# Untracked on purpose: a setting in a shipped file (formerly CLAUDE.md) blocks every
+# `git pull` that changes that file.
+cmd_language() {
+    local f=".fmlab/user.local.json" code="${1:-}"
+    if [ -z "$code" ]; then
+        local current=""
+        [ -f "$f" ] && current="$(sed -n 's/.*"agent_language"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$f" | head -n 1)"
+        echo "Language of the AI agent: ${current:-auto} (auto = the language of your prompts)"
+        echo "Change: bash tools/fmlab.sh language <code>   e.g. de, en, fr — or auto"
+        return
+    fi
+    case "$code" in
+        auto|[a-z][a-z]|[a-z][a-z]-[A-Za-z]*) ;;
+        *) die "Not a language code: '$code' — use e.g. de, en, fr, zh-Hans or auto." ;;
+    esac
+    mkdir -p .fmlab
+    if [ ! -s "$f" ] || [ "$(tr -d ' \t\r\n' < "$f")" = "{}" ]; then
+        printf '{\n  "agent_language": "%s"\n}\n' "$code" > "$f"
+    elif command -v node >/dev/null 2>&1; then
+        node -e '
+            const fs = require("fs"); const [f, v] = process.argv.slice(1);
+            const d = JSON.parse(fs.readFileSync(f, "utf8")); d.agent_language = v;
+            fs.writeFileSync(f, JSON.stringify(d, null, 2) + "\n");' "$f" "$code" \
+            || die "$f is not valid JSON — fix or remove it, then run this again."
+    elif grep -q '"agent_language"' "$f"; then
+        local tmp; tmp="$(mktemp)"
+        sed -e "s/\(\"agent_language\"[[:space:]]*:[[:space:]]*\)\"[^\"]*\"/\1\"$code\"/" "$f" > "$tmp" && cat "$tmp" > "$f"
+        rm -f "$tmp"
+    else
+        local tmp; tmp="$(mktemp)"
+        awk -v v="$code" '!done && /\{/ { sub(/\{/, "{\n  \"agent_language\": \"" v "\","); done = 1 } { print }' "$f" > "$tmp" && cat "$tmp" > "$f"
+        rm -f "$tmp"
+    fi
+    success "Language of the AI agent: $code — takes effect in the next agent session."
+}
+
 # --- Dispatch ----------------------------------------------------------------------
 main() {
     local cmd="${1:-up}"
@@ -466,6 +522,8 @@ main() {
         open-bridge)    cmd_open_bridge "$@" ;;
         down|stop)      detect_compose; cmd_down ;;
         logs)           detect_compose; cmd_logs "$@" ;;
+        update)         cmd_update "$@" ;;
+        language)       cmd_language "$@" ;;
         help|-h|--help) usage ;;
         *)              warn "Unknown command: $cmd"; echo; usage; exit 2 ;;
     esac

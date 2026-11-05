@@ -1,9 +1,9 @@
 {
+  "modeTabsAriaLabel": "Modo de vista",
   "fileActions": {
     "search": "Búsqueda",
     "drilldown": "Desglose"
   },
-  "modeTabsAriaLabel": "Modo de vista",
   "breadcrumbs": {
     "search": "Buscar",
     "analyses": "Análisis",
@@ -17,7 +17,6 @@
     "graph": "Grafo",
     "relationships": "Relaciones",
     "dashboards": "Paneles",
-    "customQueries": "Consultas personalizadas",
     "docs": "Documentación",
     "xmlImport": "Importar XML",
     "cluster": "Clústeres",
@@ -25,17 +24,18 @@
     "fmSpec": "fm-spec",
     "tests": "Pruebas"
   },
+  "entryType": {
+    "dashboard": "Panel"
+  },
   "leitDescription": {
     "dashboards": "Resumen de todos los paneles disponibles.",
-    "customQueries": "Plantillas SQL reutilizables — haga clic en una tarjeta para abrir un análisis.",
     "docs": "Fuentes de documentación instaladas.",
     "xmlImport": "Importa todos los archivos del directorio xml/ a DuckDB.",
     "xmlImportContextNote": "Importación de una solución no activa — los datos de análisis mostrados solo cambian tras activarla.",
     "tests": "Pruebas de análisis seleccionadas: ejecute comprobaciones agrupadas sobre la solución, un archivo o un objeto."
   },
   "errors": {
-    "noDashboardId": "No se ha proporcionado el id del dashboard.",
-    "noQueryName": "No se ha proporcionado el nombre de la consulta."
+    "noDashboardId": "No se ha proporcionado el id del dashboard."
   },
   "home": {
     "title": "Inicio (restablecer filtros)",
@@ -122,6 +122,18 @@
     "folderDetailsTitle": "Mostrar detalles de la carpeta",
     "noName": "(sin nombre)"
   },
+  "docs": {
+    "langFallback": "Esta documentación no está disponible en el idioma seleccionado — se muestra: {{lang}}.",
+    "openOnline": "Abrir en línea ↗",
+    "openInFmSpec": "fm-spec →",
+    "openInBrowser": "Abrir en el navegador",
+    "edit": "Editar ↗",
+    "source": "Fuente",
+    "noContent": "No hay contenido disponible.",
+    "category": "Categoría",
+    "docset": "Docset",
+    "references": "Referencias de código"
+  },
   "noData": {
     "title": "Aún no hay datos",
     "message": "Todavía no se ha importado ninguna solución de FileMaker. Importa primero una exportación XML para usar esta vista.",
@@ -134,8 +146,9 @@
     "run": "Ejecutar",
     "running": "Ejecutando…",
     "showFindings": "Mostrar hallazgos",
+    "showChecks": "Mostrar comprobaciones",
     "memberError": "Error",
-    "openMember": "Abrir dashboard/consulta",
+    "openMember": "Abrir dashboard",
     "openFinding": "Abrir en la vista de detalle",
     "openMemberFindings": "Abrir todos los hallazgos en la vista de detalle",
     "truncated": "Más hallazgos truncados: abra el miembro para la lista completa.",

@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "type": "Grid",
+    "props": { "columns": 12, "gap": 16 },
+    "children": [
+      {
+        "type": "Card",
+        "props": {
+          "span": 12
+        },
+        "data": { "dataset": "directory_status" },
+        "children": [
+          {
+            "type": "XmlConvertControl",
+            "props": {}
+          },
+          {
+            "type": "Table",
+            "id": "files_table",
+            "props": {
+              "rowKey": "filename",
+              "density": "comfortable",
+              "liveHighlightField": "filename",
+              "liveStatusField": "emoji",
+              "alwaysShowCount": true,
+              "searchAutoThreshold": 4,
+              "summaryNewField": "status",
+              "summaryNewValue": "new",
+              "summarySizeField": "size",
+              "summaryFlags": [
+                { "field": "format", "value": "legacy", "tone": "error",
+                  "labelKey": "detail:autoTable.formatLegacy",
+                  "hintKey": "detail:autoTable.formatLegacyHint" },
+                { "field": "ddr_info", "value": false,
+                  "labelKey": "detail:autoTable.ddrMissing",
+                  "hintKey": "detail:autoTable.ddrMissingHint" }
+              ],
+              "columns": [
+                { "field": "emoji",       "label": "",          "align": "center" },
+                { "field": "filename",    "label": "File" },
+                { "field": "format_flag", "label": "Format",    "align": "center", "format": "badge",
+                  "badgeTone": { "fm18": "error" } },
+                { "field": "ddr_flag",    "label": "DDR",       "align": "center", "format": "badge",
+                  "badgeTone": { "missing": "warning" } },
+                { "field": "mtime",       "label": "Date",      "format": "date:relative" },
+                { "field": "size",        "label": "Size",      "format": "filesize", "align": "right" },
+                { "field": "imported_at", "label": "Imported",  "format": "date:relative" }
+              ],
+              "empty": {
+                "message": "No files in the XML directory."
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "last_run",
+        "props": {
+          "span": 12,
+          "title": "Last conversion"
+        },
+        "children": [
+          {
+            "type": "XmlConvertLog",
+            "props": {}
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "import_integrity",
+        "props": {
+          "span": 12,
+          "title": "Import integrity"
+        },
+        "data": { "dataset": "xml_import_integrity" },
+        "children": [
+          {
+            "type": "XmlImportIntegrity",
+            "props": {}
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "graph_communities",
+        "props": {
+          "span": 12,
+          "title": "Graph communities"
+        },
+        "data": { "dataset": "xml_semantic_names" },
+        "children": [
+          {
+            "type": "Markdown",
+            "id": "graph_communities_desc",
+            "props": {
+              "content": "Structure & naming coverage of the detected modules. Rebuild the partition with the button; (re-)name new modules with the `/fm-graph-cluster` skill."
+            }
+          },
+          {
+            "type": "SemanticNamesStatus",
+            "props": {}
+          }
+        ]
+      }
+    ]
+  }
+}

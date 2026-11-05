@@ -574,7 +574,9 @@ _emit_p1_file_event() {
     if [ "$rc" -eq 0 ]; then
         _emit_json file filename "$bn" index "int=$cur" total "int=$total" ok "bool=true"
     elif [ "$rc" -eq 4 ]; then
-        _emit_json file filename "$bn" index "int=$cur" total "int=$total" ok "bool=false" status "skipped"
+        parse_skip_reason "$(cat "$PARTDB_DIR/${idx}.out" 2>/dev/null)"
+        _emit_json file filename "$bn" index "int=$cur" total "int=$total" ok "bool=false" status "skipped" \
+            reason "$FILE_SKIP_REASON" source_version "${FILE_SOURCE_VERSION:-null=}"
     else
         classify_error "$rc" "$(cat "$PARTDB_DIR/${idx}.out" 2>/dev/null)"
         _emit_json file filename "$bn" index "int=$cur" total "int=$total" ok "bool=false" status "failed" category "$ERR_CATEGORY"
@@ -1258,9 +1260,10 @@ _turbo_split_one_file() {
     if [ "$ROOT_ELEMENT" = "FMDynamicTemplate" ]; then
         echo "  WARNING: Skipped — legacy SaXML v2.0.0.0 format (FMDynamicTemplate)" >>"$out"
         echo "  This format (FileMaker 18.x) is not supported. Minimum: SaXML v2.1.0.0 (FileMaker 19+)." >>"$out"
+        _skip_reason_line "$UTF8" "$ROOT_ELEMENT" >>"$out"
         $_UTF8_IS_SRC || rm -f "$UTF8"; return 4
     fi
-    [ -z "$ROOT_ELEMENT" ] && { echo "  WARNING: Skipped — could not detect XML root element (expected FMSaveAsXML)" >>"$out"; $_UTF8_IS_SRC || rm -f "$UTF8"; return 4; }
+    [ -z "$ROOT_ELEMENT" ] && { echo "  WARNING: Skipped — could not detect XML root element (expected FMSaveAsXML)" >>"$out"; _skip_reason_line "$UTF8" "" >>"$out"; $_UTF8_IS_SRC || rm -f "$UTF8"; return 4; }
     # SaXML profile of the file (log only; every chunk worker re-probes its chunk in run_p1_on).
     _saxml_header_probe "$UTF8"
     echo "  SaXML: version=${SAXML_VERSION_DETECTED:-?} profile=$SAXML_PROFILE_DETECTED" >>"$out"
@@ -2199,6 +2202,9 @@ run_turbo_pipeline() {
     # This run changes P1/catalogs (or the catalogs are not yet 'ok') →
     # invalidate the marker so an abort between Phase C and P6 does NOT wrongly
     # skip on the next run. Set back to 'ok' only after a successful P6.
+    # TURBO_PREV_CATALOGS_STATE keeps the previous value for the "no importable
+    # files" abort after P1, which writes nothing and restores it.
+    TURBO_PREV_CATALOGS_STATE=$(_catalogs_state)
     $TURBO_NO_CHANGES || _catalogs_state_set building
 
     # ---- Phase S (explosion guard): hard ceiling on the total planned chunk count ----

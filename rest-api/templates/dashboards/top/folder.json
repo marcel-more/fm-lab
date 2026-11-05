@@ -1,0 +1,18 @@
+{
+  "title": "Top",
+  "icon": "bar-chart",
+  "description": "Top-N rankings — the most used scripts, layouts, tables, custom functions, variables and plug-in functions.",
+  "order": 9,
+  "locales": {
+    "de": "Top",
+    "es": "Top",
+    "fr": "Top",
+    "it": "Top",
+    "ja": "トップ",
+    "ko": "상위",
+    "nl": "Top",
+    "pt": "Top",
+    "sv": "Topp",
+    "zh-Hans": "排行"
+  }
+}

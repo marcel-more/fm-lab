@@ -137,6 +137,52 @@
         "pasteDropped": "ignorée au collage",
         "pasteDroppedHint": "FileMaker ignore cette option au collage quelle que soit sa valeur — un générateur l'omet, la référence conserve l'espace réservé pour la lecture."
       },
+      "repeatGroups": "Groupes de répétition (listes)",
+      "rg": {
+        "group": "Groupe",
+        "container": "Conteneur",
+        "form": "Forme des éléments",
+        "fixedSlots": "{{n}} emplacements fixes",
+        "nestedIn": "imbriqué dans {{parent}}",
+        "countAttr": "attribut de comptage {{attr}}"
+      },
+      "knownBugHint": "Bug FileMaker connu — une classe d'avertissement, pas une règle de validité : l'étape est valide, le risque vient de la sérialisation propre à FileMaker.",
+      "saxmlGapHint": "Lacune de l'export SaXML — l'export ne contient jamais cet emplacement, un catalogue construit à partir de lui ne peut donc pas l'afficher ; seule une copie du presse-papiers le fait. Ce n'est pas un défaut du snippet.",
+      "constraintCoverageHint": "S'applique uniquement à la sérialisation de FileMaker {{coverage}}",
+      "variableTargetMarker": "Marqueur de cible variable",
+      "variableTargetMarkerHint": "Porte un marqueur <Text/> vide au niveau de l'étape exactement lorsque l'emplacement cible contient une variable au lieu d'une référence de champ.",
+      "consumerNote": "Note pour les consommateurs",
+      "skeletons": "Enveloppes squelettes",
+      "sk": {
+        "in": "dans {{parent}}",
+        "hull": "enveloppe — persiste avec le contenu par défaut même non configurée",
+        "hull_strip_children": "enveloppe — conserve ses attributs, les enfants non remplis sont supprimés",
+        "condition": "uniquement avec {{cond}}",
+        "help": "Éléments que FileMaker conserve dans le snippet même lorsque rien n'y est configuré ; affichés sous la forme de l'arbre qu'ils constituent, dans l'ordre du modèle. Un générateur les restaure après avoir élagué le contenu non rempli, un lecteur peut ignorer leur contenu par défaut."
+      },
+      "bindings": "Éléments liés à une option",
+      "bd": {
+        "requires": "n'existe qu'avec {{cond}}",
+        "excludes": "supprimé avec {{cond}}",
+        "requiresOption": "n'existe que lorsque {{option}} est définie",
+        "excludesOption": "supprimé lorsque {{option}} est définie",
+        "suppressEmpty": "l'élément vide n'est jamais émis, de façon déterministe (résidu de dialogue)",
+        "help": "Éléments dont la présence dépend d'une autre option. Plusieurs valeurs d'une option forment l'ensemble pour lequel l'élément existe (ou est supprimé) : l'élément est écrit pour chacune d'elles et élagué pour toute autre valeur."
+      },
+      "mirrors": "Valeurs miroirs",
+      "mr": {
+        "source_present": "copie de {{option}} — écrite par FileMaker dès que la source est définie",
+        "help": "Valeurs que FileMaker écrit une seconde fois à un autre endroit de l'étape et maintient synchronisées lors du collage. L'option source fait foi : un générateur la copie, un lecteur traite la copie comme une redondance."
+      },
+      "implications": "Implications de notation",
+      "imp": {
+        "option_present": "option présente",
+        "value_form": "forme de référence",
+        "keyword": "mot-clé",
+        "mode_switch": "sélecteur de mode",
+        "default": "mode par défaut (sans libellé de sélecteur)",
+        "help": "Options que la notation textuelle canonique laisse implicites : un mot-clé, une forme de référence ou un mode libellé implique la valeur d'une autre option lors de l'analyse de l'étape."
+      },
       "coverage": "Couverture de forme",
       "coverageHint": "Version de FileMaker dont les preuves appariées d'export et de presse-papiers vérifient cette forme. Une ligne marquée d'une version est une surcharge de cette couverture et remplace la ligne standard de même clé.",
       "coverageBase": "base",

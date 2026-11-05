@@ -1,0 +1,36 @@
+/* Shared "expand all / collapse all" segmented control (BulkToggle.tsx). */
+.bulk-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.bulk-toggle__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font: inherit;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  color: var(--color-text-primary);
+  background: var(--color-bg-surface);
+  border: none;
+  cursor: pointer;
+}
+.bulk-toggle__btn + .bulk-toggle__btn {
+  border-left: 1px solid var(--color-border);
+}
+.bulk-toggle__btn:hover:not(:disabled) {
+  background: var(--color-hover-bg);
+}
+.bulk-toggle__btn:disabled {
+  color: var(--color-text-muted);
+  opacity: 0.6;
+  cursor: default;
+}
+.bulk-toggle__btn:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}

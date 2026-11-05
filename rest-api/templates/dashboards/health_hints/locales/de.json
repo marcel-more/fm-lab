@@ -1,0 +1,40 @@
+{
+  "manifest": {
+    "title": "Healthchecks",
+    "description": "Gesundheit der gesamten Lösung auf einen Blick: fasst die berechneten Ergebnisse aller Prüf-Dashboards je Zustand zusammen, nach Rubrik gruppiert — jede Zeile führt in ihr Dashboard."
+  },
+  "layout": {
+    "results_kpi_strip.props.items[0].label": "Prüfungen",
+    "results_kpi_strip.props.items[1].label": "Fehler",
+    "results_kpi_strip.props.items[2].label": "Warnungen",
+    "results_kpi_strip.props.items[3].label": "OK",
+    "results_kpi_strip.props.items[4].label": "Neutral",
+    "results_kpi_strip.props.items[5].label": "Ausstehend",
+    "results_kpi_strip.props.items[6].label": "Fehlgeschlagen",
+    "results_kpi_strip.props.items[7].label": "Findings",
+    "results_kpi_strip.props.items[8].label": "Ausgeführt",
+    "results_run.props.label": "Alle Prüfungen ausführen",
+    "rp_performance_card.props.title": "Performance",
+    "rp_performance_list.props.empty.message": "Nichts zu berichten.",
+    "rp_error_prone_card.props.title": "Fehleranfällig",
+    "rp_error_prone_list.props.empty.message": "Nichts zu berichten.",
+    "rp_security_card.props.title": "Sicherheit",
+    "rp_security_list.props.empty.message": "Nichts zu berichten.",
+    "rp_unused_code_card.props.title": "Ungenutzter Code",
+    "rp_unused_code_list.props.empty.message": "Nichts zu berichten.",
+    "rp_code_style_card.props.title": "Code-Stil",
+    "rp_code_style_list.props.empty.message": "Nichts zu berichten.",
+    "rp_layout_quality_card.props.title": "Layout-Qualität",
+    "rp_layout_quality_list.props.empty.message": "Nichts zu berichten.",
+    "rp_documentation_card.props.title": "Dokumentation",
+    "rp_documentation_list.props.empty.message": "Nichts zu berichten.",
+    "rp_best_practices_card.props.title": "Best Practices",
+    "rp_best_practices_list.props.empty.message": "Nichts zu berichten.",
+    "rp_platform_card.props.title": "Plattform-Kompatibilität",
+    "rp_platform_list.props.empty.message": "Nichts zu berichten.",
+    "rp_metadata_integrity_card.props.title": "Metadaten-Integrität",
+    "rp_metadata_integrity_list.props.empty.message": "Nichts zu berichten.",
+    "rp_developer_workflow_card.props.title": "Entwickler-Workflow",
+    "rp_developer_workflow_list.props.empty.message": "Nichts zu berichten."
+  }
+}

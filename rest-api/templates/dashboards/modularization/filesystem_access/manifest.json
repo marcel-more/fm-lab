@@ -1,0 +1,82 @@
+{
+  "id": "filesystem_access",
+  "version": "1.0.0",
+  "title": "File system access",
+  "description": "Inventory of every file-system touchpoint of the solution, classified by operation and API group, with drilldown to the call site. Covers native FileMaker commands (Data File API, Import/Insert, Export/Save — Step_ID-gated, locale-independent) and MBS plugin functions (Files / Text / Container / Path / Folders / FileDialog, resolved via calls_pluginfunction links). Network access stays in the APIs dashboard. Extend the WHEN branches for project-specific MBS components.",
+  "author": "fm-lab",
+  "icon": "hard-drive",
+  "tags": [
+    "template",
+    "modularization",
+    "filesystem",
+    "mbs"
+  ],
+  "entry": "layout.json",
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "fs_groups",
+      "source": "bundle:data/fs_groups.sql",
+      "params": {
+        "limit": 60
+      }
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 400
+    },
+    {
+      "id": "fs_paths",
+      "source": "bundle:data/fs_paths.sql",
+      "pageSize": 200,
+      "pageParam": "paths_page",
+      "searchParam": "paths_q",
+      "sortParam": "paths_sort"
+    }
+  ],
+  "analysis": {
+    "objectTypes": [
+      "Script"
+    ]
+  },
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "operation",
+      "type": "string",
+      "required": false,
+      "description": "Restricts the detail list to an operation (read/write/delete/probe/import/export/launch/mount/dialog/path/manage). 'All' (or empty) lifts the filter."
+    },
+    {
+      "name": "api_group",
+      "type": "string",
+      "required": false,
+      "description": "Restricts the detail list to an API group (Data File API / Import/Insert / Export/Save / MBS Files / MBS Text / …). 'All' (or empty) lifts the filter."
+    },
+    {
+      "name": "ref_type",
+      "type": "string",
+      "required": false,
+      "description": "Restricts the detail list to a reference type ('Native Step', 'MBS Script', 'MBS CustomFunction', …). 'All' (or empty) lifts the filter."
+    },
+    {
+      "name": "limit",
+      "type": "number",
+      "required": false,
+      "description": "Maximum number of rows returned by the detail lists."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

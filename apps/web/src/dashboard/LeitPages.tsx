@@ -9,6 +9,8 @@ import { fetchDocsCatalog } from '../api/docsApi';
 import { useApiLang } from '../hooks/useApiLang';
 import { getSelectedSolution } from '../lib/solutionStore';
 import { DashboardHost } from './DashboardHost';
+import { CleanupNotice } from './CleanupNotice';
+import { FavoriteStar } from './FavoriteStar';
 import { SubNav } from '../components/SubNav';
 import { StatusBar } from '../components/StatusBar';
 import { SolutionSettingsControls } from '../components/SolutionSettingsControls';
@@ -34,6 +36,7 @@ function BundlePage({
   pageDescription,
   titleActions,
   statusTrailing,
+  notice,
 }: {
   id: string;
   ctx: BreadcrumbCtx;
@@ -50,6 +53,8 @@ function BundlePage({
   titleActions?: ReactNode;
   /** Optional controls pinned far-right of the back/status row. */
   statusTrailing?: ReactNode;
+  /** Optional hint rendered between the title box and the bundle. */
+  notice?: ReactNode;
 }) {
   const { t } = useTranslation(['nav']);
   return (
@@ -57,6 +62,7 @@ function BundlePage({
       <SubNav breadcrumbs={buildBreadcrumb(ctx, t)} />
       <StatusBar trailingActions={statusTrailing} />
       {pageTitle && <TitleBox title={pageTitle} subtitle={pageDescription} actions={titleActions} />}
+      {notice}
       <DashboardHost id={id} params={params} />
     </div>
   );
@@ -118,10 +124,10 @@ function useFolderCrumbs(bundleId: string, basePath: string) {
     let cancelled = false;
     (async () => {
       try {
-        const ds = await getDashboardDataset(bundleId, 'folders', undefined, lang);
+        const rows = await getDashboardDataset(bundleId, 'folders', undefined, lang);
         if (cancelled) return;
         const map = new Map<string, string>();
-        for (const row of ds.data) {
+        for (const row of rows) {
           map.set(String(row.path), String(row.label ?? row.path));
         }
         setFolderLabels(map);
@@ -155,30 +161,7 @@ export function DashboardsPage() {
       ctx={{ kind: 'dashboards', folderCrumbs }}
       pageTitle={t('nav:crumbs.dashboards') as string}
       pageDescription={t('nav:leitDescription.dashboards') as string}
-    />
-  );
-}
-
-/**
- * `/query` → `custom_queries` bundle. Breadcrumb `Home / Custom Queries / <Kategorie>`.
- *
- * Queries have no folder tree; their one grouping level is the `@category:`
- * header of the SQL template. `?category=` narrows the tile grid to that
- * category — the same param `builtin:list_custom_queries` already filters on —
- * and is what the category crumb of a single query links back to.
- */
-export function CustomQueriesPage() {
-  const { t } = useTranslation(['nav']);
-  const [searchParams] = useSearchParams();
-  const category = searchParams.get('category');
-
-  return (
-    <BundlePage
-      id="custom_queries"
-      ctx={{ kind: 'customQueries', category }}
-      params={category ? { category } : undefined}
-      pageTitle={t('nav:crumbs.customQueries') as string}
-      pageDescription={t('nav:leitDescription.customQueries') as string}
+      notice={<CleanupNotice kind="dashboards" />}
     />
   );
 }
@@ -200,6 +183,7 @@ export function TestsOverviewPage() {
       ctx={{ kind: 'tests', folderCrumbs }}
       pageTitle={t('nav:crumbs.tests') as string}
       pageDescription={t('nav:leitDescription.tests') as string}
+      notice={<CleanupNotice kind="tests" />}
     />
   );
 }
@@ -220,9 +204,12 @@ export function TestDetailPage() {
   // Tier rubric of the test — same light fetch as title/description, so the
   // crumb chain matches the dashboard detail: Home / Tests / <Rubrik> / <Test>.
   const [folderCrumbs, setFolderCrumbs] = useState<BreadcrumbItem[] | undefined>(undefined);
+  // The star only appears for a test that exists — an unknown id cannot be favorited.
+  const [found, setFound] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    setFound(false);
     setTitle(null);
     setDescription(null);
     setFolderCrumbs(undefined);
@@ -230,6 +217,7 @@ export function TestDetailPage() {
       try {
         const test = await getTest(testId);
         if (cancelled) return;
+        setFound(true);
         setTitle(test.title);
         setDescription(test.description);
         setFolderCrumbs((test.folder_crumbs ?? []).map(c => ({
@@ -250,6 +238,7 @@ export function TestDetailPage() {
       params={{ id: testId }}
       pageTitle={title ?? testId}
       pageDescription={description ?? undefined}
+      titleActions={found ? <FavoriteStar id={testId} kind="test" /> : undefined}
     />
   );
 }

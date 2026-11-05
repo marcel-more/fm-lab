@@ -238,7 +238,7 @@ export const GraphifyExportPanel: React.FC<GraphifyExportPanelProps> = ({ enable
 
       {serverStatus && serverStatus.files.length > 0 && (
         <details className="graphify-files">
-          <summary>
+          <summary className="disclosure-summary">
             {t('detail:settingsView.graphify.recentFiles', { count: serverStatus.files.length })}
           </summary>
           <ul className="graphify-files-list">

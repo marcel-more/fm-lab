@@ -1,0 +1,90 @@
+{
+  "locked": true,
+  "id": "table_many_fields",
+  "version": "1.0.0",
+  "title": "Table with many fields",
+  "description": "Code-style rule — base tables with more than 100 fields. A very wide table often mixes several concerns that belong in separate tables.\n\nBased on the PMD rule TooManyFields — https://docs.pmd-code.org/latest/pmd_rules_java_codestyle.html#toomanyfields Threshold adjustable via the header slider (default 100).",
+  "author": "fm-lab rules",
+  "icon": "table-2",
+  "category": "code_style",
+  "tags": [
+    "rule",
+    "pmd",
+    "code_style"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "info",
+    "category": "code_style",
+    "rationale": "Very wide tables are hard to understand and usually under-normalised.",
+    "remediation": "Split unrelated field groups into related child tables.",
+    "meta": {
+      "name": "Table with many fields",
+      "author": "fm-lab rules",
+      "source": "PMD",
+      "url": "https://docs.pmd-code.org/latest/pmd_rules_java_codestyle.html#toomanyfields",
+      "description": "Code-style rule — base tables with more than 100 fields. A very wide table often mixes several concerns that belong in separate tables. Threshold adjustable via the header slider (default 100).",
+      "created": "2026-07-01",
+      "references": [
+        {
+          "project": "PMD",
+          "rule": "TooManyFields",
+          "url": "https://docs.pmd-code.org/latest/pmd_rules_java_codestyle.html#toomanyfields"
+        }
+      ]
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "BaseTable"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {}
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Table with many fields"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "min_fields",
+      "type": "number",
+      "required": false,
+      "description": "Minimum fields per table (header slider; default 100)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

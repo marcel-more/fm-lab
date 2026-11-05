@@ -16,10 +16,9 @@ import { RelationshipGraphView } from './views/RelationshipGraphView';
 import { LayoutView } from './views/LayoutView';
 import { DashboardHost } from './dashboard/DashboardHost';
 import { DashboardView } from './dashboard/DashboardView';
-import { QueryView } from './dashboard/QueryView';
+import { QueryDetailRedirect, QueryOverviewRedirect } from './dashboard/QueryRedirect';
 import {
   DashboardsPage,
-  CustomQueriesPage,
   TestsOverviewPage,
   TestDetailPage,
   DocsOverviewPage,
@@ -29,6 +28,7 @@ import {
   FileDetailPage,
 } from './dashboard/LeitPages';
 import { DocsEntryView } from './docs/DocsEntryView';
+import { Toast } from './components/Toast';
 
 // Code-split the Graph Explorer (cytoscape + fcose layout) out of the main
 // bundle — it is only reached via the /graph route.
@@ -604,83 +604,88 @@ function SearchView() {
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<SearchView />} />
-      <Route path="/object/:uuid" element={<DetailView />} />
-      <Route path="/settings" element={<SettingsView />} />
-      <Route path="/relationship-graph/:fileName" element={<RelationshipGraphView />} />
-      <Route path="/relationship-graph" element={<RelationshipGraphView />} />
-      <Route
-        path="/graph"
-        element={
-          <Suspense fallback={<div className="graph-explorer-placeholder">…</div>}>
-            <GraphExplorerView />
-          </Suspense>
-        }
-      />
-      <Route
-        path="/atlas"
-        element={
-          <Suspense fallback={<div className="graph-explorer-placeholder">…</div>}>
-            <GraphAtlasView />
-          </Suspense>
-        }
-      />
-      <Route
-        path="/cluster"
-        element={
-          <Suspense fallback={<div className="graph-explorer-placeholder">…</div>}>
-            <ClusterView />
-          </Suspense>
-        }
-      />
-      <Route
-        path="/fm-spec"
-        element={
-          <Suspense fallback={<div className="graph-explorer-placeholder">…</div>}>
-            <FmSpecView />
-          </Suspense>
-        }
-      />
-      <Route
-        path="/fm-spec/step/:stepId"
-        element={
-          <Suspense fallback={<div className="graph-explorer-placeholder">…</div>}>
-            <FmSpecStepView />
-          </Suspense>
-        }
-      />
-      <Route
-        path="/fm-spec/function/:functionId"
-        element={
-          <Suspense fallback={<div className="graph-explorer-placeholder">…</div>}>
-            <FmSpecFunctionView />
-          </Suspense>
-        }
-      />
-      <Route
-        path="/fm-spec/trigger/:triggerId"
-        element={
-          <Suspense fallback={<div className="graph-explorer-placeholder">…</div>}>
-            <FmSpecTriggerView />
-          </Suspense>
-        }
-      />
-      <Route path="/layout/:uuid" element={<LayoutView />} />
-      <Route path="/file/:filename" element={<FileDetailPage />} />
-      {/* Leitseiten (bare routes) — vor den :param-Routen */}
-      <Route path="/dashboard" element={<DashboardsPage />} />
-      <Route path="/dashboard/:id" element={<DashboardView />} />
-      <Route path="/query" element={<CustomQueriesPage />} />
-      <Route path="/tests" element={<TestsOverviewPage />} />
-      <Route path="/tests/:id" element={<TestDetailPage />} />
-      <Route path="/query/:queryName" element={<QueryView />} />
-      <Route path="/xml-import" element={<XmlImportPage />} />
-      <Route path="/docs" element={<DocsOverviewPage />} />
-      <Route path="/docs/:set" element={<DocsSetPage />} />
-      <Route path="/docs/:set/:category" element={<DocsCategoryPage />} />
-      <Route path="/docs/:set/:category/:fn" element={<DocsEntryRoute />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<SearchView />} />
+        <Route path="/object/:uuid" element={<DetailView />} />
+        <Route path="/settings" element={<SettingsView />} />
+        <Route path="/relationship-graph/:fileName" element={<RelationshipGraphView />} />
+        <Route path="/relationship-graph" element={<RelationshipGraphView />} />
+        <Route
+          path="/graph"
+          element={
+            <Suspense fallback={<div className="graph-explorer-placeholder">…</div>}>
+              <GraphExplorerView />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/atlas"
+          element={
+            <Suspense fallback={<div className="graph-explorer-placeholder">…</div>}>
+              <GraphAtlasView />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/cluster"
+          element={
+            <Suspense fallback={<div className="graph-explorer-placeholder">…</div>}>
+              <ClusterView />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/fm-spec"
+          element={
+            <Suspense fallback={<div className="graph-explorer-placeholder">…</div>}>
+              <FmSpecView />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/fm-spec/step/:stepId"
+          element={
+            <Suspense fallback={<div className="graph-explorer-placeholder">…</div>}>
+              <FmSpecStepView />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/fm-spec/function/:functionId"
+          element={
+            <Suspense fallback={<div className="graph-explorer-placeholder">…</div>}>
+              <FmSpecFunctionView />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/fm-spec/trigger/:triggerId"
+          element={
+            <Suspense fallback={<div className="graph-explorer-placeholder">…</div>}>
+              <FmSpecTriggerView />
+            </Suspense>
+          }
+        />
+        <Route path="/layout/:uuid" element={<LayoutView />} />
+        <Route path="/file/:filename" element={<FileDetailPage />} />
+        {/* Leitseiten (bare routes) — vor den :param-Routen */}
+        <Route path="/dashboard" element={<DashboardsPage />} />
+        <Route path="/dashboard/:id" element={<DashboardView />} />
+        <Route path="/tests" element={<TestsOverviewPage />} />
+        <Route path="/tests/:id" element={<TestDetailPage />} />
+        {/* Retired query routes — queries are single-file dashboards now. */}
+        <Route path="/query" element={<QueryOverviewRedirect />} />
+        <Route path="/query/:queryName" element={<QueryDetailRedirect />} />
+        <Route path="/xml-import" element={<XmlImportPage />} />
+        <Route path="/docs" element={<DocsOverviewPage />} />
+        <Route path="/docs/:set" element={<DocsSetPage />} />
+        <Route path="/docs/:set/:category" element={<DocsCategoryPage />} />
+        <Route path="/docs/:set/:category/:fn" element={<DocsEntryRoute />} />
+      </Routes>
+      {/* App-wide toast (one message at a time, see lib/toastStore). */}
+      <Toast />
+    </>
   );
 }
 

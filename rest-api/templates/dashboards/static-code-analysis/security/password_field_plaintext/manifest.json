@@ -1,0 +1,77 @@
+{
+  "id": "password_field_plaintext",
+  "version": "1.0.0",
+  "title": "Password field stored as plain text",
+  "description": "Security rule — normal (stored) fields whose name suggests a password / PIN. Unless the file has Encryption at rest (EAR) enabled, FileMaker stores field values unencrypted. The \"Encryption at rest\" column shows each file's EAR status.",
+  "author": "fm-lab rules",
+  "icon": "key",
+  "category": "security",
+  "tags": [
+    "rule",
+    "pmd",
+    "security"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "warning",
+    "category": "security",
+    "rationale": "Without Encryption at rest, a stored password field is readable by anyone with file access or a backup.",
+    "remediation": "Store only a salted hash, delegate authentication to FileMaker accounts / an external IdP, and enable Encryption at rest.",
+    "meta": {
+      "name": "Password field stored as plain text",
+      "author": "fm-lab rules",
+      "source": "fm-lab",
+      "url": null,
+      "description": "Security rule — normal (stored) fields whose name suggests a password / PIN. Unless the file has Encryption at rest (EAR) enabled, FileMaker stores field values unencrypted. The \"Encryption at rest\" column shows each file's EAR status.",
+      "created": "2026-07-01",
+      "references": []
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Field"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {}
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Password field stored as plain text"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

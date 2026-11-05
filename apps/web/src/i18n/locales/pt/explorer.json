@@ -90,9 +90,17 @@
       "recency": "Colorir os nós pela idade da sua alteração individual mais recente (as classes do Atlas do grafo)"
     },
     "communityUnnamed": "Comunidade {{id}}",
-    "resizePanel": "Redimensionar o painel de filtros",
+    "detailsShort": "Detalhes",
+    "openDetails": "Abrir a vista de detalhe do objeto de foco",
+    "openTypeList": "Abrir a lista de objetos {{type}}",
+    "hideType": "Ocultar {{type}}",
+    "showType": "Mostrar {{type}}",
+    "depthOf": "(de {{max}})",
+    "extendDepth": "mais fundo",
+    "extendDepthHint": "Estender o controlo deslizante para além de 4 (até à profundidade máxima alcançável).",
     "depthLoad": "{{count}} alcançáveis",
     "depthClipped": "{{count}} alcançáveis, carga limitada a {{limit}}",
+    "resizePanel": "Redimensionar o painel de filtros",
     "partLoaded": "{{count}} carregados",
     "partConnected": "{{count}} conectados",
     "partIsland_one": "{{count}} ilha",
@@ -104,11 +112,6 @@
     "loadAllHint": "Carregar todos os tipos; desmarcar um chip apenas o oculta",
     "loadSelectedHint": "Carregar apenas os tipos selecionados (recarrega)"
   },
-  "unconnectedHidden_one": "{{count}} nó sem ligação ao foco",
-  "unconnectedHidden_other": "{{count}} nós sem ligação ao foco",
-  "unconnectedToggleShow": "mostrar",
-  "unconnectedToggleHide": "ocultar",
-  "unconnectedToggleHint": "Nós sem caminho até o foco resultam do filtro de tipo/profundidade — mostrar ou ocultar",
   "typeList": {
     "ariaLabel": "Lista de objetos: {{type}}",
     "sortBy": "Ordenar",
@@ -124,6 +127,11 @@
     "empty": "Nenhum objeto deste tipo no grafo.",
     "focus": "Objeto de foco"
   },
+  "unconnectedHidden_one": "{{count}} nó sem ligação ao foco",
+  "unconnectedHidden_other": "{{count}} nós sem ligação ao foco",
+  "unconnectedToggleShow": "mostrar",
+  "unconnectedToggleHide": "ocultar",
+  "unconnectedToggleHint": "Nós sem caminho até o foco resultam do filtro de tipo/profundidade — mostrar ou ocultar",
   "edge": {
     "represents": "representa",
     "buttonAction": "Ação de botão",

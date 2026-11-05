@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { DisclosureChevron } from './DisclosureChevron';
 
 export interface SettingsSchemaField {
   type: 'string' | 'select' | 'boolean' | 'number';
@@ -93,7 +94,7 @@ export const PluginCard: React.FC<PluginCardProps> = ({ plugin, expanded, onTogg
         }}
       >
         <div className="plugin-card-title">
-          <span className="plugin-card-chevron" aria-hidden="true">{expanded ? '▾' : '▸'}</span>
+          <DisclosureChevron open={expanded} className="plugin-card-chevron" />
           <h2>{plugin.name}</h2>
           <span className="plugin-card-version">v{plugin.version}</span>
         </div>

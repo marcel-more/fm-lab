@@ -47,6 +47,8 @@ curl "http://localhost:3003/api/references?uuid=<Object_UUID>"
 | Group | Endpoints | Documentation |
 |---|---|---|
 | System | `/version`, `/info`, `/version-manifest`, `/system/config` | [System API](endpoints/System%20API.md) |
+| Favorites | `/favorites/:kind`, `/favorites/:kind/:id` (`dashboard`, `test`) | [Favorites API](endpoints/Favorites%20API.md) |
+| Maintenance | `/maintenance/dashboards/cleanup`, `/maintenance/tests/cleanup` | [Maintenance API](endpoints/Maintenance%20API.md) |
 | Solutions & admin | `/solutions`, `/admin/*` | [Solutions API](endpoints/Solutions%20API.md) |
 | XML import | `/xml/*` (status, runs, convert, SSE progress stream) | [XML Import API](endpoints/XML%20Import%20API.md) |
 
@@ -54,7 +56,7 @@ curl "http://localhost:3003/api/references?uuid=<Object_UUID>"
 
 The following groups exist to support the FM-Lab web frontend and are **not** covered by this documentation. They may change without notice:
 
-- `/dashboards/*` — declarative dashboard bundles for the web UI
+- `/dashboards/*` — declarative dashboards (bundles and single-file dashboards) for the web UI
 - `/docs/*`, `/plugin-docs/*` — local documentation mirrors (Claris Help, MBS, DuckDB)
 - `/plugin-spec/*` — plug-in platform metadata derived from the installed MBS docs (see [plugin-spec](../schema/plugin-spec.md))
 - `/plugins/*`, `/fmide/*`, `/graphify/*` — plugin management and optional plugins (disabled by default)

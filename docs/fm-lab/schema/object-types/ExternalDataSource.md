@@ -47,7 +47,7 @@ None registered.
 
 - **XML schema:** [XML ExternalDataSourceCatalog](../../xml/catalogs/XML%20ExternalDataSourceCatalog.md) — `Structure/AddAction` branch, one `<ExternalDataSource>` per entry
 - **DB schema:** [ExternalDataSourceCatalog](../catalog-tables/ExternalDataSourceCatalog.md)
-- **Detail view template:** generic fallback `rest-api/templates/sql/object_details_generic.sql` (served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md))
+- **Detail view template:** generic fallback `rest-api/templates/queries/system/object-details/object_details_generic.sql` (served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md))
 - **Frontend:** object list at `http://localhost:5173/?type=ExternalDataSource`
 
 **See also:** [Object Types](../object-catalog/Object%20Types.md) · [TableOccurrence](TableOccurrence.md) · [ValueList](ValueList.md) · [Link Roles and Subroles](../object-catalog/Link%20Roles%20and%20Subroles.md)

@@ -15,6 +15,7 @@ import type { XmlConvertEventDetail, XmlConvertStatusDetail } from './XmlConvert
  *   import_progress  → importing ✴️ + {done,total}    („k von N")
  *   import_done      → imported  ✅  (alle Chunks der Datei fertig)
  *   file (ok=false)  → failed    ⚠️
+ *   file (status=skipped) → unsupported ⛔ (Root-Check: Format nicht unterstützt)
  *
  * Fallback für den klassischen (non-Turbo) Pfad ohne Chunking:
  *   file_start       → importing
@@ -41,6 +42,7 @@ export type XmlConvertFileState =
   | 'chunked'
   | 'importing'
   | 'imported'
+  | 'unsupported'
   | 'failed';
 
 export interface XmlConvertFileEntry {
@@ -145,11 +147,14 @@ export function useXmlConvertFileStates(enabled: boolean): XmlConvertFileStates 
           const fn = fileOf(evt);
           if (!fn) break;
           let state: XmlConvertFileState;
-          if (evt.ok === false) {
+          const st = typeof evt.status === 'string' ? evt.status : '';
+          if (st === 'skipped') {
+            // Root-Check-Skip (ok=false, z. B. FileMaker-18-Export): kein Fehler.
+            state = 'unsupported';
+          } else if (evt.ok === false) {
             state = 'failed';
           } else {
-            const st = typeof evt.status === 'string' ? evt.status : '';
-            state = st === 'skipped' || st === 'unchanged' ? 'skipped' : 'imported';
+            state = st === 'unchanged' ? 'skipped' : 'imported';
           }
           setFile(fn, { state });
           break;

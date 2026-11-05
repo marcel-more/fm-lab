@@ -12,10 +12,15 @@
     "ddrMissing": "Falta la información DDR",
     "ddrMissing_partial": "Falta la información DDR en {{count}} de {{total}} archivos",
     "ddrMissingHint": "exporte con la opción «Incluir detalles para las herramientas de análisis»",
+    "formatLegacy": "Los {{total}} archivos están en formato FileMaker 18 — no se importarán",
+    "formatLegacy_partial": "{{count}} de {{total}} archivos en formato FileMaker 18 — no se importarán",
+    "formatLegacyHint": "vuelva a exportarlos con FileMaker 19 o posterior mediante «Guardar una copia como XML»",
     "page": "Página {{current}} / {{total}}",
     "noMatches": "Sin coincidencias para «{{query}}».",
     "prev": "← Anterior",
     "next": "Siguiente →",
+    "pageSize": "Filas",
+    "pageSizeAll": "Todas",
     "rowAction": "Abrir destino"
   },
   "layoutPreview": {
@@ -173,6 +178,11 @@
     "notNavigable": "El destino no está en el conjunto de datos importado",
     "showInLayout": "Mostrar en el layout (Alt+clic)",
     "showInFile": "Mostrar en el archivo (Alt+clic)",
+    "dirFilterAria": "Filtrar por dirección",
+    "dirFilterLabel": "Dirección",
+    "dirIn": "Entrante",
+    "dirOut": "Saliente",
+    "dirBoth": "Ambas",
     "subroles": {
       "hide": {
         "short": "Hide",
@@ -311,7 +321,18 @@
     "storageIndexLanguage": "Idioma predeterminado",
     "summaryRestartGroup": "Reiniciar para cada grupo",
     "summaryRepMode": "Calcular repeticiones",
-    "calcEvaluatesWhenEmpty": "Calcula aunque los campos estén vacíos"
+    "calcEvaluatesWhenEmpty": "Calcula aunque los campos estén vacíos",
+    "validationMessageCalc": "Cálculo del mensaje",
+    "disabled": "desactivado",
+    "sectionExtended": "Opciones ampliadas (FileMaker 26)",
+    "annotation": "Anotación (DDL)",
+    "displayNames": "Nombres de visualización",
+    "displayNamesEnabled": "Nombres de visualización personalizados activados",
+    "displayNamesDisabled": "No personalizados",
+    "displayNameElements": "Elementos",
+    "displayNameKey": "Elemento",
+    "displayNameValue": "Etiqueta / fórmula",
+    "displayNamesFormula": "Fórmula de nombres de visualización"
   },
   "typeDetail": {
     "loading": "Cargando…",
@@ -390,6 +411,18 @@
     "settingsHeading": "Ajustes",
     "saveLabel": "Guardar ajustes",
     "savingLabel": "Guardando…",
+    "versions": {
+      "fmlab": "FM-Lab",
+      "api": "API",
+      "frontend": "Frontend",
+      "xmlConverter": "Conversor XML",
+      "xmlEngine": "Motor",
+      "dbSchema": "Esquema de BD",
+      "fmSpec": "fm-spec",
+      "duckdb": "DuckDB",
+      "duckdbCli": "DuckDB CLI",
+      "duckdbCliMissing": "no encontrada"
+    },
     "api": {
       "heading": "Conexión con la API REST",
       "label": "URL de la API REST",
@@ -413,11 +446,22 @@
       "empty": "Aún sin escaneo. Haz clic en «Reescanear».",
       "colVersion": "Versión"
     },
-    "versions": {
-      "fmSpec": "fm-spec",
-      "duckdb": "DuckDB",
-      "duckdbCli": "DuckDB CLI",
-      "duckdbCliMissing": "no encontrada"
+    "graphify": {
+      "enableFirst": "Activa el plugin de arriba para iniciar la exportación.",
+      "exportButton": "Exportar grafo",
+      "doneMessage": "Exportación finalizada. El archivo está en el directorio output/.",
+      "failed": "La exportación ha fallado.",
+      "lastExport": "Última exportación",
+      "colFile": "Archivo",
+      "colNodes": "Nodos",
+      "colEdges": "Aristas",
+      "colSize": "Tamaño",
+      "recentFiles": "Exportaciones anteriores ({{count}})",
+      "phase": {
+        "count": "Contando objetos…",
+        "export": "Exportando grafo…",
+        "assemble": "Escribiendo archivo JSON…"
+      }
     },
     "solutions": {
       "heading": "Soluciones",
@@ -484,6 +528,10 @@
     "source": "Origen:",
     "relationshipGraphLink": "↗ Grafo de relaciones",
     "copyUuidAria": "Copiar UUID al portapapeles",
+    "copyOriginalUuidAria": "Copiar UUID original al portapapeles (ambiguo en el archivo de origen)",
+    "copySyntheticUuidAria": "Copiar UUID sintético de FM-Lab al portapapeles",
+    "syntheticBadge": "FM-Lab",
+    "syntheticTooltip": "Identidad sustituta interna de FM-Lab: el UUID original de este objeto estaba duplicado en el archivo de origen y se ha corregido en la importación. Haz clic para copiar el UUID sintético (identidad de catálogo).",
     "change": {
       "modified": "Última modificación",
       "containerModified": "Última modificación del contenedor",

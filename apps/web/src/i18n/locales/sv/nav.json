@@ -1,9 +1,9 @@
 {
+  "modeTabsAriaLabel": "Visningsläge",
   "fileActions": {
     "search": "Sök",
     "drilldown": "Detaljvy"
   },
-  "modeTabsAriaLabel": "Visningsläge",
   "breadcrumbs": {
     "search": "Sök",
     "analyses": "Analyser",
@@ -17,7 +17,6 @@
     "graph": "Graf",
     "relationships": "Relationer",
     "dashboards": "Instrumentpaneler",
-    "customQueries": "Egna frågor",
     "docs": "Dokumentation",
     "xmlImport": "XML-import",
     "cluster": "Kluster",
@@ -25,17 +24,18 @@
     "fmSpec": "fm-spec",
     "tests": "Tester"
   },
+  "entryType": {
+    "dashboard": "Instrumentpanel"
+  },
   "leitDescription": {
     "dashboards": "Översikt över alla tillgängliga instrumentpaneler.",
-    "customQueries": "Återanvändbara SQL-mallar — klicka på en ruta för att öppna en analys.",
     "docs": "Installerade dokumentationskällor.",
     "xmlImport": "Importerar alla filer från katalogen xml/ till DuckDB.",
     "xmlImportContextNote": "Import av en icke-aktiv lösning — analysdata som visas ändras först efter aktivering.",
     "tests": "Utvalda analystester — kör paketerade kontroller på lösningen, en fil eller ett objekt."
   },
   "errors": {
-    "noDashboardId": "Inget dashboard-id angivet.",
-    "noQueryName": "Inget frågenamn angivet."
+    "noDashboardId": "Inget dashboard-id angivet."
   },
   "home": {
     "title": "Hem (återställ filter)",
@@ -122,6 +122,18 @@
     "folderDetailsTitle": "Visa mappdetaljer",
     "noName": "(inget namn)"
   },
+  "docs": {
+    "langFallback": "Den här dokumentationen finns inte på det valda språket — visas på: {{lang}}.",
+    "openOnline": "Öppna online ↗",
+    "openInFmSpec": "fm-spec →",
+    "openInBrowser": "Öppna i webbläsaren",
+    "edit": "Redigera ↗",
+    "source": "Källa",
+    "noContent": "Inget innehåll tillgängligt.",
+    "category": "Kategori",
+    "docset": "Docset",
+    "references": "Kodreferenser"
+  },
   "noData": {
     "title": "Inga data ännu",
     "message": "Ingen FileMaker-lösning har importerats ännu. Importera först en XML-export för att använda den här vyn.",
@@ -134,8 +146,9 @@
     "run": "Kör",
     "running": "Kör…",
     "showFindings": "Visa fynd",
+    "showChecks": "Visa kontroller",
     "memberError": "Fel",
-    "openMember": "Öppna dashboard/fråga",
+    "openMember": "Öppna dashboard",
     "openFinding": "Öppna i detaljvyn",
     "openMemberFindings": "Öppna alla fynd i detaljvyn",
     "truncated": "Fler fynd avkortade — öppna medlemmen för hela listan.",

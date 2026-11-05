@@ -5,6 +5,7 @@ const environment = require('../config/environment');
 const { createError } = require('../middleware/error-handler');
 const db = require('../config/database');
 const paging = require('./paging.service');
+const queryDiscovery = require('./query-discovery');
 
 /**
  * Template Service
@@ -207,7 +208,7 @@ async function loadTemplate(templateName, templateDir) {
   const templatePath = path.join(templateDir, `${templateName}.sql`);
 
   // mtime-Check für Cache-Invalidation — analog zu dashboard.service.loadBundle().
-  // Damit wirken Änderungen an sql/*.sql und sql-custom/*.sql ohne /api/admin/reload.
+  // Damit wirken Änderungen an Query-Dateien ohne /api/admin/reload.
   let mtime = 0;
   if (environment.templates.cacheEnabled) {
     try {
@@ -365,63 +366,6 @@ function validateTemplateOutput(rows, metadata) {
 }
 
 /**
- * Recursively walk a directory tree looking for `<templateName>.sql`.
- * Returns the directory containing the file, or null if not found.
- */
-async function findTemplateDirRecursive(rootDir, templateName) {
-  const filename = `${templateName}.sql`;
-  let entries;
-  try {
-    entries = await fs.readdir(rootDir, { withFileTypes: true });
-  } catch {
-    return null;
-  }
-  for (const entry of entries) {
-    const full = path.join(rootDir, entry.name);
-    if (entry.isDirectory()) {
-      const found = await findTemplateDirRecursive(full, templateName);
-      if (found) return found;
-    } else if (entry.name === filename) {
-      return rootDir;
-    }
-  }
-  return null;
-}
-
-/**
- * Sucht ein Template in den `queries/`-Subordnern aller Dashboard-Bundles.
- * Damit können System- und Custom-Bundles eigene Drilldown-Templates mitbringen,
- * die per `custom:<name>` (z.B. aus `_generic`) auflösbar sind — ohne dass die
- * Templates im globalen `sql-custom/` liegen müssen.
- *
- * Erwartete Layout: `<bundle-root>/<bundle-id>/queries/<templateName>.sql`
- * Pfad-Traversal-Schutz: `templateName` muss `[a-zA-Z0-9_-]+` matchen.
- */
-async function findInBundleQueries(bundleRoots, templateName) {
-  if (!/^[a-zA-Z0-9_-]+$/.test(templateName)) return null;
-  const filename = `${templateName}.sql`;
-  for (const root of bundleRoots) {
-    let bundles;
-    try {
-      bundles = await fs.readdir(root, { withFileTypes: true });
-    } catch {
-      continue;
-    }
-    for (const b of bundles) {
-      if (!b.isDirectory() || b.name.startsWith('.')) continue;
-      const queriesDir = path.join(root, b.name, 'queries');
-      try {
-        await fs.access(path.join(queriesDir, filename));
-        return queriesDir;
-      } catch {
-        // weiterprobieren
-      }
-    }
-  }
-  return null;
-}
-
-/**
  * Execute SQL template with parameters
  * @param {Object} ctx - Request context ({solution, requested})
  * @param {string} templateName - Template name (without .sql extension)
@@ -431,43 +375,12 @@ async function findInBundleQueries(bundleRoots, templateName) {
  */
 async function executeTemplate(ctx, templateName, params = {}, source = 'query') {
   try {
-    // Determine template directory based on source
-    const templateDir =
-      source === 'report'
-        ? environment.templates.dir // Standard templates for /report
-        : environment.templates.customDir; // Custom templates for /query
-
-    // Load template — bei 'query' wird in dieser Reihenfolge gesucht:
-    //   1. templates/sql-custom/               (standalone Custom-Queries)
-    //   2. templates/sql-custom-details/**/    (rekursiv — Detail-View-Templates für UI-Hooks)
-    //   3. templates/dashboards*/<bundle>/queries/  (Bundle-eigene Drilldown-Templates,
-    //                                                damit Dashboards self-contained sind)
-    // Damit erscheinen Detail- und Bundle-Templates nicht im "Custom Queries"-Listing,
-    // sind aber per `custom:<name>` aus _generic resolvbar.
-    let template;
-    try {
-      template = await loadTemplate(templateName, templateDir);
-    } catch (loadErr) {
-      if (loadErr.code !== 'TEMPLATE_NOT_FOUND' || source !== 'query') {
-        throw loadErr;
-      }
-      let foundDir = null;
-      if (environment.templates.detailsDir) {
-        foundDir = await findTemplateDirRecursive(
-          environment.templates.detailsDir,
-          templateName
-        );
-      }
-      if (!foundDir) {
-        const bundleRoots = [
-          environment.templates.dashboardsCustomDir,
-          environment.templates.dashboardsDir,
-        ].filter(Boolean);
-        foundDir = await findInBundleQueries(bundleRoots, templateName);
-      }
-      if (!foundDir) throw loadErr;
-      template = await loadTemplate(templateName, foundDir);
-    }
+    // Two separate resolution chains (resolveEntry): 'report' sees only the
+    // system templates, 'query' the file units of the dashboards, then the
+    // module templates and finally the queries shipped inside dashboard
+    // bundles. Module and bundle queries stay out of the listing but resolve
+    // via `custom:<name>`.
+    const template = await loadResolvedTemplate(templateName, source);
 
     // Server paging: resolve the page window before interpolation, the sort
     // marker after it (see paging.service). Templates without the paging tail
@@ -534,25 +447,68 @@ async function executeTemplate(ctx, templateName, params = {}, source = 'query')
 }
 
 /**
- * List all available templates in a directory
+ * Resolution chains of a template name:
+ *   'report' → the system templates (queries/system/);
+ *   'query'  → 1. a file unit of the dashboard discovery (incl. the custom
+ *                 override and the old location sql-custom/),
+ *              2. a module template (queries/modules/),
+ *              3. a query shipped inside a dashboard bundle — only when the
+ *                 name is no internal template at all.
+ * Returns { name, path, dir, area, folder, overrides, legacy, unit? } or null.
+ * Lazy require — dashboard.service loads this service.
+ */
+async function resolveEntry(templateName, source = 'query') {
+  if (!queryDiscovery.isValidQueryName(templateName)) return null;
+  if (source === 'report') return queryDiscovery.resolve(templateName, 'report');
+  const dashboardService = require('./dashboard.service');
+  const unit = await dashboardService.findFileUnit(templateName);
+  if (unit) return unit;
+  const area = await queryDiscovery.internalArea(templateName);
+  if (area === 'module') return queryDiscovery.resolve(templateName, 'query');
+  if (area) return null;
+  return queryDiscovery.resolveBundleQuery(templateName);
+}
+
+/**
+ * Resolves a template name (see resolveEntry) and loads it.
+ * Throws TEMPLATE_NOT_FOUND when the chain of `source` does not know it.
+ */
+async function loadResolvedTemplate(templateName, source = 'query') {
+  const entry = await resolveEntry(templateName, source);
+  if (!entry) {
+    throw createError(
+      'TEMPLATE_NOT_FOUND',
+      `Template '${templateName}' not found`,
+      { templateName, source }
+    );
+  }
+  return loadTemplate(templateName, entry.dir);
+}
+
+/**
+ * List the templates of a resolution chain: 'report' → the system templates,
+ * 'query' → the file units of the dashboard content areas builtin, custom and
+ * community (module templates and bundle queries are not listed). Each row
+ * carries its storage area, folder path (rubric), override and legacy flag.
  * @param {string} source - 'query' or 'report'
  * @returns {Promise<Array>} List of template names and metadata
  */
 async function listTemplates(source = 'query') {
   try {
-    const templateDir =
-      source === 'report' ? environment.templates.dir : environment.templates.customDir;
-
-    const files = await fs.readdir(templateDir);
-    const sqlFiles = files.filter(f => f.endsWith('.sql'));
+    let entries;
+    if (source === 'report') {
+      entries = await queryDiscovery.list({ areas: ['system'] });
+    } else {
+      const dashboardService = require('./dashboard.service');
+      entries = await dashboardService.listFileUnits();
+    }
 
     const templates = await Promise.all(
-      sqlFiles.map(async file => {
-        const templateName = path.basename(file, '.sql');
+      entries.map(async entry => {
         try {
-          const template = await loadTemplate(templateName, templateDir);
+          const template = await loadTemplate(entry.name, entry.dir);
           return {
-            name: templateName,
+            name: entry.name,
             title: template.metadata.title,
             description: template.metadata.description,
             template_type: template.metadata.template_type,
@@ -575,6 +531,11 @@ async function listTemplates(source = 'query') {
             output_types: template.metadata.output_types,
             scope: template.metadata.scope,
             default_result: template.metadata.default_result,
+            folder: entry.folder,
+            area: entry.area,
+            overrides: entry.overrides,
+            legacy: entry.legacy,
+            ...(entry.unit ? { unit: entry.unit } : {}),
           };
         } catch (error) {
           // Skip templates that fail to load
@@ -583,7 +544,7 @@ async function listTemplates(source = 'query') {
       })
     );
 
-    return templates.filter(t => t !== null);
+    return templates.filter(t => t !== null).sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
   } catch (error) {
     throw createError('TEMPLATE_ERROR', `Failed to list templates: ${error.message}`, {
       source,
@@ -593,46 +554,31 @@ async function listTemplates(source = 'query') {
 }
 
 /**
- * Lädt die Metadaten eines Templates über alle Such-Pfade (sql-custom →
- * sql-custom-details → bundle queries). Gibt null zurück, wenn nichts gefunden.
- *
- * Im Unterschied zu `listTemplates('query')` (das nur sql-custom enumeriert)
- * kann diese Funktion gezielt jedes auflösbare Template adressieren — wichtig
- * für `builtin:query_meta`, das Drilldown-Metadaten aus Bundle-eigenen Queries
- * lesen können muss.
+ * Metadaten eines Templates über dieselbe Auflösungskette wie executeTemplate
+ * — bei 'query' also auch Modul- und Bundle-Queries, die `listTemplates` nicht
+ * aufführt (wichtig für `builtin:query_meta`, das Drilldown-Metadaten aus
+ * Bundle-eigenen Queries lesen können muss). Zusätzlich Bereich, Ordner-Pfad,
+ * Override- und Legacy-Flag des Eintrags. Gibt null zurück, wenn nichts
+ * gefunden.
  */
 async function getTemplateMeta(templateName, source = 'query') {
-  const templateDir =
-    source === 'report'
-      ? environment.templates.dir
-      : environment.templates.customDir;
+  const entry = await resolveEntry(templateName, source);
+  if (!entry) return null;
   let template;
   try {
-    template = await loadTemplate(templateName, templateDir);
-  } catch (err) {
-    if (err.code !== 'TEMPLATE_NOT_FOUND' || source !== 'query') return null;
-    let foundDir = null;
-    if (environment.templates.detailsDir) {
-      foundDir = await findTemplateDirRecursive(
-        environment.templates.detailsDir,
-        templateName
-      );
-    }
-    if (!foundDir) {
-      const bundleRoots = [
-        environment.templates.dashboardsCustomDir,
-        environment.templates.dashboardsDir,
-      ].filter(Boolean);
-      foundDir = await findInBundleQueries(bundleRoots, templateName);
-    }
-    if (!foundDir) return null;
-    try {
-      template = await loadTemplate(templateName, foundDir);
-    } catch {
-      return null;
-    }
+    template = await loadTemplate(templateName, entry.dir);
+  } catch {
+    return null;
   }
-  return { name: templateName, ...template.metadata };
+  return {
+    name: templateName,
+    ...template.metadata,
+    folder: entry.folder,
+    area: entry.area,
+    overrides: entry.overrides,
+    legacy: entry.legacy,
+    ...(entry.unit ? { unit: entry.unit } : {}),
+  };
 }
 
 /**
@@ -642,32 +588,13 @@ async function getTemplateMeta(templateName, source = 'query') {
  * Gibt null zurück, wenn das Template nirgends auflösbar ist.
  */
 async function getTemplateSource(templateName, source = 'query') {
-  const templateDir =
-    source === 'report'
-      ? environment.templates.dir
-      : environment.templates.customDir;
+  const entry = await resolveEntry(templateName, source);
+  if (!entry) return null;
   let template;
   try {
-    template = await loadTemplate(templateName, templateDir);
-  } catch (err) {
-    if (err.code !== 'TEMPLATE_NOT_FOUND' || source !== 'query') return null;
-    let foundDir = null;
-    if (environment.templates.detailsDir) {
-      foundDir = await findTemplateDirRecursive(environment.templates.detailsDir, templateName);
-    }
-    if (!foundDir) {
-      const bundleRoots = [
-        environment.templates.dashboardsCustomDir,
-        environment.templates.dashboardsDir,
-      ].filter(Boolean);
-      foundDir = await findInBundleQueries(bundleRoots, templateName);
-    }
-    if (!foundDir) return null;
-    try {
-      template = await loadTemplate(templateName, foundDir);
-    } catch {
-      return null;
-    }
+    template = await loadTemplate(templateName, entry.dir);
+  } catch {
+    return null;
   }
   return { name: templateName, content: template.content, metadata: template.metadata };
 }
@@ -681,6 +608,8 @@ function clearCache() {
 
 module.exports = {
   executeTemplate,
+  resolveEntry,
+  loadTemplate,
   listTemplates,
   getTemplateMeta,
   getTemplateSource,

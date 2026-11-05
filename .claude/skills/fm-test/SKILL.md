@@ -1,8 +1,8 @@
 ---
 name: fm-test
 description: >-
-  Runs Analysis Tests (curated, declared collections of SCA rule dashboards and custom queries
-  with a compact result model) against the DuckDB catalog `db/fm_catalog.duckdb` — in solution,
+  Runs Analysis Tests (curated, declared collections of SCA rule dashboards and single-file
+  dashboards with a compact result model) against the DuckDB catalog `db/fm_catalog.duckdb` — in solution,
   file, object, object-list or cluster scope — and reports the default results plus
   severity-sorted findings. Also discovers matching tests without running them (`--find`). Prefers
   the REST API (`GET /api/tests/:id/run`), falls back to a direct duckdb path when no server runs.
@@ -11,13 +11,13 @@ description: >-
   die Error-Checks auf Script X aus", "teste dieses Script", "stimmt mit X etwas nicht", "welche
   Tests gibt es für Scripts". Also responds to equivalent requests in other languages.
 metadata:
-  version: "0.1.0"
+  version: "0.9.17"
 ---
 
 # Analysis Tests Runner
 
-Run one or more **Analysis Tests** — declared collections of dashboards /
-custom queries with a per-member default result — in a chosen scope and report
+Run one or more **Analysis Tests** — declared collections of dashboards
+(bundles and single-file dashboards) with a per-member default result — in a chosen scope and report
 findings. Tests deliver reproducible, curated checks; interpretation of the
 findings stays with you (offer `fm-analyze` for the "why").
 

@@ -90,9 +90,17 @@
       "recency": "Knopen kleuren naar de leeftijd van hun nieuwste afzonderlijke wijziging (de klassen van de Grafiek-atlas)"
     },
     "communityUnnamed": "Community {{id}}",
-    "resizePanel": "Breedte van het filterpaneel aanpassen",
+    "detailsShort": "Details",
+    "openDetails": "Detailweergave van het focusobject openen",
+    "openTypeList": "{{type}}-objectlijst openen",
+    "hideType": "{{type}} verbergen",
+    "showType": "{{type}} tonen",
+    "depthOf": "(van {{max}})",
+    "extendDepth": "dieper",
+    "extendDepthHint": "Schuifregelaar voorbij 4 uitbreiden (tot de bereikbare maximale diepte).",
     "depthLoad": "{{count}} bereikbaar",
     "depthClipped": "{{count}} bereikbaar, laden begrensd op {{limit}}",
+    "resizePanel": "Breedte van het filterpaneel aanpassen",
     "partLoaded": "{{count}} geladen",
     "partConnected": "{{count}} verbonden",
     "partIsland_one": "{{count}} eiland",
@@ -104,11 +112,6 @@
     "loadAllHint": "Alle typen laden; een chip uitschakelen verbergt deze alleen",
     "loadSelectedHint": "Alleen de geselecteerde typen laden (herlaadt)"
   },
-  "unconnectedHidden_one": "{{count}} knoop zonder verbinding met de focus",
-  "unconnectedHidden_other": "{{count}} knopen zonder verbinding met de focus",
-  "unconnectedToggleShow": "tonen",
-  "unconnectedToggleHide": "verbergen",
-  "unconnectedToggleHint": "Knopen zonder pad naar de focus ontstaan door het type-/dieptefilter — tonen of verbergen",
   "typeList": {
     "ariaLabel": "Objectlijst: {{type}}",
     "sortBy": "Sorteren",
@@ -124,6 +127,11 @@
     "empty": "Geen objecten van dit type in de graaf.",
     "focus": "Focusobject"
   },
+  "unconnectedHidden_one": "{{count}} knoop zonder verbinding met de focus",
+  "unconnectedHidden_other": "{{count}} knopen zonder verbinding met de focus",
+  "unconnectedToggleShow": "tonen",
+  "unconnectedToggleHide": "verbergen",
+  "unconnectedToggleHint": "Knopen zonder pad naar de focus ontstaan door het type-/dieptefilter — tonen of verbergen",
   "edge": {
     "represents": "representeert",
     "buttonAction": "Knopactie",

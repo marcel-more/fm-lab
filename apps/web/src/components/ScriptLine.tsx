@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ScriptLineToken, FoldRange, MarginRole } from '../script/types';
 import { stepNameClass, getStepRole } from '../script/stepRoles';
+import { DisclosureChevron } from './DisclosureChevron';
 import { ScriptLineContent } from './ScriptLineContent';
 import { isUuidHighlighted, useHighlightRefUuids, useScriptSearchQuery } from '../script/highlightContext';
 
@@ -76,7 +77,7 @@ export const ScriptLine: React.FC<ScriptLineProps> = React.memo(({
             aria-label={(folded ? t('detail:scriptLine.expand') : t('detail:scriptLine.collapse')) as string}
             title={(folded ? t('detail:scriptLine.expand') : t('detail:scriptLine.collapse')) as string}
           >
-            {folded ? '▸' : '▾'}
+            <DisclosureChevron open={!folded} />
           </button>
         ) : null}
       </span>

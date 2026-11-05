@@ -12,10 +12,15 @@
     "ddrMissing": "DDR info missing",
     "ddrMissing_partial": "DDR info missing in {{count}} of {{total}} files",
     "ddrMissingHint": "please export with “Include details for analysis tools”",
+    "formatLegacy": "All {{total}} files in FileMaker 18 format — will not be imported",
+    "formatLegacy_partial": "{{count}} of {{total}} files in FileMaker 18 format — will not be imported",
+    "formatLegacyHint": "re-export with FileMaker 19 or newer via “Save a Copy as XML”",
     "page": "Page {{current}} / {{total}}",
     "noMatches": "No matches for “{{query}}”.",
     "prev": "← Previous",
     "next": "Next →",
+    "pageSize": "Rows",
+    "pageSizeAll": "All",
     "rowAction": "Open target"
   },
   "layoutPreview": {

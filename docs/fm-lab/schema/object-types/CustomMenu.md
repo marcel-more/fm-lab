@@ -51,7 +51,7 @@ Full role definitions: [Link Roles and Subroles](../object-catalog/Link%20Roles%
 
 - **XML schema:** [XML CustomMenuCatalog](../../xml/catalogs/XML%20CustomMenuCatalog.md) — `Structure/AddAction` branch, items inline per menu
 - **DB schema:** [CustomMenuCatalog](../catalog-tables/CustomMenuCatalog.md) (raw definition) · [CustomMenuItemCatalog](../catalog-tables/CustomMenuItemCatalog.md) (parsed items)
-- **Detail view template:** `rest-api/templates/sql/object_details_custommenu.sql` (+ `object_details_custommenu_tokens.sql` for the calculation token view), served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md)
+- **Detail view template:** `rest-api/templates/queries/system/object-details/object_details_custommenu.sql` (+ `object_details_custommenu_tokens.sql` for the calculation token view), served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md)
 - **Frontend:** object list at `http://localhost:5173/?type=CustomMenu`
 
 **See also:** [Object Types](../object-catalog/Object%20Types.md) · [CustomMenuItem](CustomMenuItem.md) · [CustomMenuSet](CustomMenuSet.md) · [Layout](Layout.md) · [Link Roles and Subroles](../object-catalog/Link%20Roles%20and%20Subroles.md)

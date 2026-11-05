@@ -137,6 +137,52 @@
         "pasteDropped": "förkastas vid inklistring",
         "pasteDroppedHint": "FileMaker förkastar det här alternativet vid inklistring oavsett värde — en generator utelämnar det, referensen behåller platshållaren för läsning."
       },
+      "repeatGroups": "Upprepningsgrupper (listor)",
+      "rg": {
+        "group": "Grupp",
+        "container": "Container",
+        "form": "Elementform",
+        "fixedSlots": "{{n}} fasta platser",
+        "nestedIn": "nästlad i {{parent}}",
+        "countAttr": "antalsattribut {{attr}}"
+      },
+      "knownBugHint": "Känd FileMaker-bugg — en varningsklass, inte en giltighetsregel: steget är giltigt, risken ligger i FileMakers egen serialisering.",
+      "saxmlGapHint": "SaXML-exportlucka — exporten innehåller aldrig denna plats, så en katalog som byggs från den kan inte visa den; det kan bara en urklippskopia. Inget fel i snippeten.",
+      "constraintCoverageHint": "Gäller endast serialiseringen i FileMaker {{coverage}}",
+      "variableTargetMarker": "Markör för variabelmål",
+      "variableTargetMarkerHint": "Bär en tom <Text/>-markör på stegnivå exakt när målplatsen innehåller en variabel i stället för en fältreferens.",
+      "consumerNote": "Anteckning för konsumenter",
+      "skeletons": "Skelettskal",
+      "sk": {
+        "in": "i {{parent}}",
+        "hull": "skal — finns kvar med standardinnehåll även okonfigurerat",
+        "hull_strip_children": "skal — behåller sina attribut, ofyllda barn tas bort",
+        "condition": "endast med {{cond}}",
+        "help": "Element som FileMaker behåller i snippeten även när inget i dem är konfigurerat; visas som det träd de bildar, i mallordning. En generator återställer dem efter att ofyllt innehåll har rensats bort, en läsare får förkasta deras standardinnehåll."
+      },
+      "bindings": "Alternativbundna element",
+      "bd": {
+        "requires": "finns endast med {{cond}}",
+        "excludes": "utelämnas med {{cond}}",
+        "requiresOption": "finns endast medan {{option}} är satt",
+        "excludesOption": "utelämnas medan {{option}} är satt",
+        "suppressEmpty": "tomt element skrivs deterministiskt aldrig ut (dialogrest)",
+        "help": "Element vars förekomst beror på ett annat alternativ. Flera värden för ett alternativ bildar den mängd där elementet finns (eller utelämnas): elementet skrivs för vart och ett av dem och rensas bort för alla andra värden."
+      },
+      "mirrors": "Speglade värden",
+      "mr": {
+        "source_present": "kopia av {{option}} — skrivs av FileMaker så snart källan är satt",
+        "help": "Värden som FileMaker skriver en andra gång på ett annat ställe i steget och håller synkroniserade vid inklistring. Källalternativet är sanningen: en generator kopierar det, en läsare behandlar kopian som redundans."
+      },
+      "implications": "Notationsimplikationer",
+      "imp": {
+        "option_present": "alternativ angivet",
+        "value_form": "referensform",
+        "keyword": "nyckelord",
+        "mode_switch": "lägesväxel",
+        "default": "standardläge (utan växeletikett)",
+        "help": "Alternativ som den kanoniska textnotationen lämnar implicita: ett nyckelord, en referensform eller ett namngivet läge implicerar värdet för ett annat alternativ när steget parsas."
+      },
       "coverage": "Formtäckning",
       "coverageHint": "FileMaker-version vars parade export- och urklippsbelägg denna form är verifierad mot. En rad märkt med en version är en override av den täckningen och ersätter standardraden med samma nyckel.",
       "coverageBase": "bas",

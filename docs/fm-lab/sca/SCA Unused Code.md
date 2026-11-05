@@ -1,6 +1,6 @@
 # SCA Unused Code
 
-**Rubric:** [Static Code Analysis](../Wiki/Static%20Code%20Analysis.md) · 14 rules · `rest-api/templates/dashboards-custom/static-code-analysis/unused_code/`
+**Rubric:** [Static Code Analysis](../Wiki/Static%20Code%20Analysis.md) · 14 rules · `rest-api/templates/dashboards/static-code-analysis/unused_code/`
 
 Unused-code rules find the objects nothing points at: scripts never called, fields never read or displayed, layouts never navigated to, value lists attached to nothing. They are powered by the resolved reference graph in [ObjectLinks](../schema/object-catalog/ObjectLinks.md) — "unused" means *no incoming edge of a using kind exists anywhere in the imported catalog*, which is a far stronger statement than a text search could make.
 

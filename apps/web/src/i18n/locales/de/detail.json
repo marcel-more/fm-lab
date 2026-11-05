@@ -12,10 +12,15 @@
     "ddrMissing": "DDR-Info fehlt",
     "ddrMissing_partial": "DDR-Info fehlt bei {{count}} von {{total}} Dateien",
     "ddrMissingHint": "bitte Option „Details für Analysewerkzeuge einschließen“ verwenden",
+    "formatLegacy": "Alle {{total}} Dateien im FileMaker-18-Format — werden nicht importiert",
+    "formatLegacy_partial": "{{count}} von {{total}} Dateien im FileMaker-18-Format — werden nicht importiert",
+    "formatLegacyHint": "mit FileMaker 19 oder neuer über „Kopie als XML speichern“ neu exportieren",
     "page": "Seite {{current}} / {{total}}",
     "noMatches": "Keine Treffer für „{{query}}“.",
     "prev": "← Zurück",
     "next": "Weiter →",
+    "pageSize": "Einträge",
+    "pageSizeAll": "Alle",
     "rowAction": "Ziel öffnen"
   },
   "layoutPreview": {

@@ -137,6 +137,52 @@
         "pasteDropped": "verworpen bij plakken",
         "pasteDroppedHint": "FileMaker verwerpt deze optie bij het plakken ongeacht de waarde — een generator laat haar weg, de referentie behoudt de plaatshouder om te lezen."
       },
+      "repeatGroups": "Herhalingsgroepen (lijsten)",
+      "rg": {
+        "group": "Groep",
+        "container": "Container",
+        "form": "Itemvorm",
+        "fixedSlots": "{{n}} vaste slots",
+        "nestedIn": "genest in {{parent}}",
+        "countAttr": "telattribuut {{attr}}"
+      },
+      "knownBugHint": "Bekende FileMaker-bug — een waarschuwingsklasse, geen geldigheidsregel: de stap is geldig, het risico zit in FileMakers eigen serialisatie.",
+      "saxmlGapHint": "SaXML-exportlacune — de export bevat dit slot nooit, dus een daaruit opgebouwde catalogus kan het niet tonen; alleen een klembordkopie kan dat. Geen defect van het snippet.",
+      "constraintCoverageHint": "Geldt alleen voor de serialisatie van FileMaker {{coverage}}",
+      "variableTargetMarker": "Variabel-doelmarkering",
+      "variableTargetMarkerHint": "Bevat een lege <Text/>-markering op stapniveau precies wanneer het doelslot een variabele bevat in plaats van een veldreferentie.",
+      "consumerNote": "Opmerking voor consumenten",
+      "skeletons": "Skeletomhulsels",
+      "sk": {
+        "in": "in {{parent}}",
+        "hull": "omhulsel — blijft ook ongeconfigureerd met standaardinhoud bestaan",
+        "hull_strip_children": "omhulsel — behoudt zijn attributen, niet-gevulde kinderen vervallen",
+        "condition": "alleen bij {{cond}}",
+        "help": "Elementen die FileMaker in het snippet behoudt, ook als er niets in geconfigureerd is; getoond als de boom die ze vormen, in sjabloonvolgorde. Een generator herstelt ze na het snoeien van niet-gevulde inhoud, een lezer mag hun standaardinhoud negeren."
+      },
+      "bindings": "Optiegebonden elementen",
+      "bd": {
+        "requires": "bestaat alleen bij {{cond}}",
+        "excludes": "vervalt bij {{cond}}",
+        "requiresOption": "bestaat alleen zolang {{option}} is ingesteld",
+        "excludesOption": "vervalt zolang {{option}} is ingesteld",
+        "suppressEmpty": "leeg element wordt deterministisch nooit uitgevoerd (dialoogresidu)",
+        "help": "Elementen waarvan de aanwezigheid van een andere optie afhangt. Meerdere waarden van één optie vormen de verzameling waarbij het element bestaat (of vervalt): bij elk van die waarden wordt het geschreven, bij alle andere verwijderd."
+      },
+      "mirrors": "Gespiegelde waarden",
+      "mr": {
+        "source_present": "kopie van {{option}} — door FileMaker geschreven zodra de bron is ingesteld",
+        "help": "Waarden die FileMaker een tweede keer op een andere plek in de stap schrijft en bij het plakken synchroon houdt. De bronoptie is de waarheid: een generator kopieert haar, een lezer behandelt de kopie als redundantie."
+      },
+      "implications": "Notatie-implicaties",
+      "imp": {
+        "option_present": "optie aanwezig",
+        "value_form": "referentievorm",
+        "keyword": "sleutelwoord",
+        "mode_switch": "moduswissel",
+        "default": "standaardmodus (zonder wissellabel)",
+        "help": "Opties die de canonieke tekstnotatie impliciet laat: een sleutelwoord, een referentievorm of een benoemde modus impliceert bij het parsen van de stap de waarde van een andere optie."
+      },
       "coverage": "Vormdekking",
       "coverageHint": "FileMaker-versie waartegen deze vorm met gepaarde export- en klembordbewijzen is geverifieerd. Een rij met een versiemarkering is een override van die dekking en vervangt de standaardrij met dezelfde sleutel.",
       "coverageBase": "basis",

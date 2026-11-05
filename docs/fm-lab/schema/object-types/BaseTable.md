@@ -45,7 +45,7 @@ None registered.
 
 - **XML schema:** [XML BaseTableCatalog](../../xml/catalogs/XML%20BaseTableCatalog.md) — `Structure/AddAction` branch, one `<BaseTable>` per table
 - **DB schema:** [BaseTableCatalog](../catalog-tables/BaseTableCatalog.md) · field definitions in [FieldsForTables](../catalog-tables/FieldsForTables.md)
-- **Detail view template:** `rest-api/templates/sql/object_details_basetable.sql` (served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md))
+- **Detail view template:** `rest-api/templates/queries/system/object-details/object_details_basetable.sql` (served via the [/api/get-details endpoint](../../rest-api/endpoints/Objects%20API.md))
 - **Frontend:** object list at `http://localhost:5173/?type=BaseTable`
 
 **See also:** [Object Types](../object-catalog/Object%20Types.md) · [Field](Field.md) · [TableOccurrence](TableOccurrence.md) · [Relationship](Relationship.md)

@@ -1024,6 +1024,378 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/favorites/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Kind of favorite — dashboard (bundle or single-file unit) or Analysis Test */
+                kind: components["parameters"]["FavoriteKind"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Favorites of one kind (dashboards or tests) of the workspace
+         * @description Workspace-wide favorites from `.fmlab/favorites.json`, independent of the selected solution (the X-Solution header plays no role). `items` are the available favorites in the order they were added; `missing` lists stored ids that no longer resolve — a dashboard the discovery no longer knows or whose area can no longer be favorited, a test that no longer exists. Read-only — missing ids are never removed automatically.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Kind of favorite — dashboard (bundle or single-file unit) or Analysis Test */
+                    kind: components["parameters"]["FavoriteKind"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Favorites split into available items and missing ids */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            success?: boolean;
+                            data?: components["schemas"]["Favorites"];
+                        };
+                    };
+                };
+                /** @description Unknown kind (VALIDATION_ERROR) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/favorites/{kind}/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Kind of favorite — dashboard (bundle or single-file unit) or Analysis Test */
+                kind: components["parameters"]["FavoriteKind"];
+                /** @description Dashboard id (bundle or single-file unit) resp. test id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Add a dashboard or test to the favorites (idempotent)
+         * @description Dashboards can be favorited in the content areas (builtin, custom, community); tests in every area. Adding an existing favorite keeps its `added_at`.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Kind of favorite — dashboard (bundle or single-file unit) or Analysis Test */
+                    kind: components["parameters"]["FavoriteKind"];
+                    /** @description Dashboard id (bundle or single-file unit) resp. test id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Current favorites of the kind after the change */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            success?: boolean;
+                            data?: components["schemas"]["Favorites"];
+                        };
+                    };
+                };
+                /** @description Unknown kind or invalid id (VALIDATION_ERROR) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unknown dashboard or test (TEMPLATE_NOT_FOUND) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description System or module page that cannot be favorited (NOT_FAVORITABLE, dashboards only) */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Remove a dashboard or test from the favorites (idempotent)
+         * @description Succeeds without an entry as well. Only the id pattern is checked, so a favorite whose dashboard or test is gone stays removable.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Kind of favorite — dashboard (bundle or single-file unit) or Analysis Test */
+                    kind: components["parameters"]["FavoriteKind"];
+                    /** @description Dashboard id (bundle or single-file unit) resp. test id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Current favorites of the kind after the change */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            success?: boolean;
+                            data?: components["schemas"]["Favorites"];
+                        };
+                    };
+                };
+                /** @description Unknown kind or invalid id (VALIDATION_ERROR) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/maintenance/dashboards/cleanup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Check for dashboards and queries left over from an older layout
+         * @description Read-only. Compares `rest-api/templates/dashboards/`, `rest-api/templates/dashboards-custom/` and the old query locations `sql-custom/`, `sql/`, `sql-custom-details/` with the shipped inventories (`dashboards/inventory.json`, `queries/inventory.json`) and lists what a cleanup would move: old copies of shipped bundles and queries and emptied old folders to `dashboards-removed/<timestamp>/`, own bundles and own queries to `dashboards-custom/` (own queries from the old locations flat as `<name>.sql`). Independent of the selected solution. Without a usable dashboard inventory nothing is classified (`inventory: false`).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Planned moves (empty on a clean installation) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            success?: boolean;
+                            data?: components["schemas"]["TemplateCleanupPreview"];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Move the leftover dashboards and queries
+         * @description Classifies anew (the client list is never taken over), leaves the entries named in `exclude` in place, checks every source and target before the first move and writes `cleanup.json` into the run folder `dashboards-removed/<timestamp>/`. Nothing is deleted. Requires the `X-Admin-Token` header when `ADMIN_RELOAD_TOKEN` is set.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    "X-Admin-Token"?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /**
+                         * @description `from` values of the preview to leave in place
+                         * @example [
+                         *       "dashboards-custom/static-code-analysis/unused_code/unused_layout"
+                         *     ]
+                         */
+                        exclude?: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Report of the run */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            success?: boolean;
+                            data?: components["schemas"]["TemplateCleanupReport"];
+                        };
+                    };
+                };
+                /** @description `exclude` is not an array of strings (VALIDATION_ERROR) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Missing or wrong X-Admin-Token (UNAUTHORIZED) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Another dashboard cleanup run is active (CLEANUP_RUNNING) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/maintenance/tests/cleanup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Check for Analysis Tests left over from an older layout
+         * @description Read-only. Compares `rest-api/templates/tests/` with the shipped inventory (`tests/inventory.json`) and lists what a cleanup would move: shipped tests away from their path and folders without a test to `tests-removed/<timestamp>/`, own tests to `tests-custom/`. `tests-custom/` and `tests-community/` are never touched. Independent of the selected solution. Without a usable inventory nothing is classified (`inventory: false`).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Planned moves (empty on a clean installation) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            success?: boolean;
+                            data?: components["schemas"]["TemplateCleanupPreview"];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Move the leftover Analysis Tests
+         * @description Same procedure as the dashboard cleanup, with its own lock: classifies anew, leaves the entries named in `exclude` in place, checks every source and target first and writes `cleanup.json` into `tests-removed/<timestamp>/`. Nothing is deleted. Requires the `X-Admin-Token` header when `ADMIN_RELOAD_TOKEN` is set.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    "X-Admin-Token"?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /**
+                         * @description `from` values of the preview to leave in place
+                         * @example [
+                         *       "tests/script/my-test"
+                         *     ]
+                         */
+                        exclude?: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Report of the run */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            success?: boolean;
+                            data?: components["schemas"]["TemplateCleanupReport"];
+                        };
+                    };
+                };
+                /** @description `exclude` is not an array of strings (VALIDATION_ERROR) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Missing or wrong X-Admin-Token (UNAUTHORIZED) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Another test cleanup run is active (CLEANUP_RUNNING) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/reference/steps/{idOrSlug}/grammar": {
         parameters: {
             query?: never;
@@ -1422,6 +1794,88 @@ export interface components {
                 timestamp?: string;
             };
         };
+        Favorites: {
+            /** @description Available favorites in the order they were added */
+            items: {
+                /** @example unused_layout */
+                id: string;
+                /**
+                 * Format: date-time
+                 * @example 2026-11-01T10:12:00Z
+                 */
+                added_at?: string | null;
+            }[];
+            /** @description Stored ids that no longer resolve (dashboard: unknown to the discovery or no longer in a favoritable area; test: unknown) */
+            missing: string[];
+        };
+        TemplateCleanupItem: {
+            /**
+             * @description Dashboards — a1 old copy in dashboards/ · a2 old copy at a shipped path in dashboards-custom/ · a3 emptied old folder · b1 own bundle or folder of own bundles in dashboards/ · b2 other foreign folder in dashboards/ · b3 own bundle whose id or target already exists in dashboards-custom/ · f1 old copy of a shipped query at an old location · f2 own query at an old location · f3 own query whose id or target already exists in dashboards-custom/ · f4 other rest at an old location · f5 foreign .sql file in dashboards/. Tests — t1 shipped test away from its path · t2 own test or folder of own tests in tests/ · t3 own test whose id or target already exists in tests-custom/ · t4 folder without a test
+             * @enum {string}
+             */
+            case: "a1" | "a2" | "a3" | "b1" | "b2" | "b3" | "f1" | "f2" | "f3" | "f4" | "f5" | "t1" | "t2" | "t3" | "t4";
+            /** @example dashboards-custom/static-code-analysis/unused_code/unused_layout */
+            from: string;
+            /** @example dashboards-removed/2026-11-02T14-30-05Z/dashboards-custom/static-code-analysis/unused_code/unused_layout */
+            to: string;
+            /** @enum {string} */
+            target: "custom" | "removed";
+            /** @description Id when `from` is a bundle, a query file or a test; null for folders */
+            id?: string | null;
+            /** @description Ids moved with this entry */
+            ids?: string[];
+            /** @description a2, f1 — the copy differs from the shipped one (f1 ignores `-- @category:` lines) */
+            modified?: boolean;
+            /** @description b3, f3, t3 — own content that could not move to the user area */
+            conflict?: boolean;
+            /**
+             * @description f2 from `sql/`: a former report template, now reachable via /api/query
+             * @enum {string|null}
+             */
+            note?: "report_template" | null;
+            /**
+             * @description f1 — the shipped file the copy was compared with (relative to rest-api/templates/)
+             * @example dashboards/layouts/tooltip_inventory.sql
+             */
+            canonical?: string | null;
+        };
+        TemplateCleanupSummary: {
+            total?: number;
+            to_custom?: number;
+            to_removed?: number;
+            modified?: number;
+            conflicts?: number;
+        };
+        TemplateCleanupPreview: {
+            /** @description false when no usable inventory.json exists (nothing classified) */
+            inventory: boolean;
+            /**
+             * @description Run folder name a cleanup started now would use
+             * @example 2026-11-02T14-30-05Z
+             */
+            stamp: string;
+            items: components["schemas"]["TemplateCleanupItem"][];
+            summary: components["schemas"]["TemplateCleanupSummary"];
+            /** @description A run of this cleanup is active right now */
+            running?: boolean;
+        };
+        TemplateCleanupReport: {
+            inventory: boolean;
+            stamp: string;
+            moved: components["schemas"]["TemplateCleanupItem"][];
+            /** @description Entries not moved because of an error */
+            skipped: components["schemas"]["TemplateCleanupItem"][];
+            errors: {
+                from?: string;
+                message?: string;
+            }[];
+            summary: components["schemas"]["TemplateCleanupSummary"];
+            /**
+             * @description Run folder with cleanup.json, relative to rest-api/templates/
+             * @example dashboards-removed/2026-11-02T14-30-05Z
+             */
+            removed_dir?: string | null;
+        };
     };
     responses: {
         /** @description Object not found */
@@ -1490,6 +1944,8 @@ export interface components {
         };
     };
     parameters: {
+        /** @description Kind of favorite — dashboard (bundle or single-file unit) or Analysis Test */
+        FavoriteKind: "dashboard" | "test";
         /** @description Filter by filename */
         FileFilter: string;
         /**

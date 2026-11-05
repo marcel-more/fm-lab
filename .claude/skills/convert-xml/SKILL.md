@@ -7,7 +7,7 @@ description: >-
   "importiere die FileMaker-XML", "alle XML-Dateien importieren". Also responds to equivalent
   requests in other languages.
 metadata:
-  version: "0.9.0"
+  version: "0.9.17"
 ---
 
 # FileMaker XML to DuckDB Conversion Skill
@@ -173,7 +173,8 @@ bash ingestion/convert_fm_xml.sh "filename.xml"
 The script will output one of:
 
 - `SUCCESS: Database created successfully from filename.xml`
-- `WARNING: Skipped — legacy SaXML v2.0.0.0 format (FMDynamicTemplate)`
+- `WARNING: Skipped — legacy SaXML v2.0.0.0 format (FMDynamicTemplate)` (batch: `⊘ Skipped — FileMaker 18.0.3 export (SaXML 2.0.0.0); re-export with FileMaker 19+`)
+- `✗ IMPORT ABORTED — no importable files` (exit 4 — see below)
 - `ERROR: File not found: filename.xml`
 - `ERROR: UTF-8 conversion failed`
 - `ERROR: DuckDB conversion failed (exit code: X)`
@@ -202,7 +203,12 @@ Suggest checking file integrity.
 
 ### Unsupported XML Format (Skipped)
 
-Files using the legacy `FMDynamicTemplate` root element (SaXML v2.0.0.0, FileMaker 18.x) are automatically skipped with a warning. Only `FMSaveAsXML` (SaXML v2.1.0.0+, FileMaker 19+) is supported.
+Files using the legacy `FMDynamicTemplate` root element (SaXML v2.0.0.0, FileMaker 18.x) are automatically skipped with a warning. Only `FMSaveAsXML` (SaXML v2.1.0.0+, FileMaker 19+) is supported. The skip reason (`legacy_format` with the exporting FileMaker version, or `unknown_root`) appears per file in the console, the text/JSON log (`files[].skip`) and the web import page (status ⛔, badge **FM 18**).
+
+- **Some files skipped, others imported** → the run succeeds (exit 0); name the skipped files.
+- **No importable file at all** → the run stops with `✗ IMPORT ABORTED — no importable files` and a single error-log section "Import aborted — no importable files". When no file in the inbox is a FileMaker 19+ export, a format preflight stops it before anything runs (no schema check, no auto-heal) — exit **4**. When supported files exist but all of them fail in Phase 1, the gate after Phase 1 stops it — exit **1**. Nothing is written: the master DB, the read copy and the manifest stay unchanged.
+
+Tell the user, in their language: the files were exported from FileMaker 18 (or older); fm-lab reads exports from FileMaker 19 or newer. Open the `.fmp12` files in FileMaker Pro 19+ (no migration needed) and run *Save a Copy as XML* with *Include details for analysis tools*, then put the new XMLs into the inbox and import again.
 
 ### Schema drift (exit 6)
 

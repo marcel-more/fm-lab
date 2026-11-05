@@ -4,6 +4,27 @@ const path = require('path');
 // Load environment variables from .env file
 dotenv.config();
 
+const TEMPLATES_ROOT = path.resolve(__dirname, '../../templates');
+const queriesDir = process.env.QUERIES_DIR || path.join(TEMPLATES_ROOT, 'queries');
+
+/**
+ * Reads a deprecated template-directory variable. Returns its resolved path,
+ * or null when it is unset or still points to the former default location
+ * `templates/<formerDefault>` (older .env files carry that value; the
+ * directory no longer holds the shipped templates).
+ */
+function legacyDirAlias(name, formerDefault, replacement) {
+  const raw = process.env[name];
+  if (!raw) return null;
+  const resolved = path.resolve(raw);
+  if (formerDefault && resolved === path.join(TEMPLATES_ROOT, formerDefault)) {
+    console.warn(`[config] ${name} is deprecated and points to the former default location — ignored; remove it from .env`);
+    return null;
+  }
+  console.warn(`[config] ${name} is deprecated — use ${replacement} instead`);
+  return resolved;
+}
+
 /**
  * Environment configuration with defaults and validation
  */
@@ -78,24 +99,51 @@ const environment = {
 
   // Template Configuration
   templates: {
-    dir: process.env.TEMPLATE_DIR || path.resolve(__dirname, '../../templates/sql'),
-    customDir: process.env.TEMPLATE_CUSTOM_DIR || path.resolve(__dirname, '../../templates/sql-custom'),
-    // Detail-View-Templates (intern, von UI-Hooks/Controllern via /api/query geladen,
-    // erscheinen aber nicht im "Custom Queries"-Dashboard). Rekursiver Fallback-Lookup
-    // im Template-Service, wenn ein Template nicht in customDir gefunden wird.
-    detailsDir: process.env.TEMPLATE_DETAILS_DIR || path.resolve(__dirname, '../../templates/sql-custom-details'),
-    // Dashboard-Bundles: System-Bundles (home, _generic, Navigation) liegen in dashboardsDir,
-    // Custom-/Plugin-Bundles in dashboardsCustomDir. Custom-Bundles haben Vorrang bei
-    // ID-Kollisionen (Override-Pattern für lokale Erweiterungen).
+    // Interne SQL-Templates (Discovery: services/query-discovery.js), per Name
+    // adressiert, nie gelistet, nie überschreibbar:
+    //   queriesDir  system/ (Bereich system, nur /api/report),
+    //               modules/ (module, Frontend-Hooks über /api/query)
+    // Eigene Analysen sind Datei-Einheiten der Dashboards (dashboardsCustomDir).
+    queriesDir,
+    // Alter Ablageort eigener Queries: von der Dashboard-Discovery read-only als
+    // Datei-Einheiten gelesen (nur Namen außerhalb beider Inventare), bis die
+    // Aufräumroutine sie verschoben hat. Liegt neben queriesDir, damit ein
+    // Fixture-Baum über QUERIES_DIR allein vollständig ist.
+    queriesLegacyDir: legacyDirAlias('TEMPLATE_CUSTOM_DIR', 'sql-custom', 'DASHBOARDS_CUSTOM_DIR')
+      || path.join(path.dirname(queriesDir), 'sql-custom'),
+    // Altvariablen für die Basis der Bereiche system/module (null = queries/system
+    // bzw. queries/modules). Zeigen sie auf den früheren Standardort, gelten sie
+    // als nicht gesetzt.
+    queriesSystemOverrideDir: legacyDirAlias('TEMPLATE_DIR', 'sql', 'QUERIES_DIR'),
+    queriesModulesOverrideDir: legacyDirAlias('TEMPLATE_DETAILS_DIR', 'sql-custom-details', 'QUERIES_DIR'),
+    // Dashboards (Bundles und Datei-Einheiten) in drei Bereichsverzeichnissen:
+    //   dashboardsDir          ausgeliefert: system/ (Bereich system), modules/ (module),
+    //                          alles übrige = mitgelieferte Inhalte (builtin)
+    //   dashboardsCustomDir    eigene Dashboards des Nutzers (gitignored bis auf das Gerüst);
+    //                          dürfen nur builtin-Dashboards per ID-Kollision überschreiben
+    //   dashboardsCommunityDir reservierter Community-Bereich; überschreibt nie
     dashboardsDir: process.env.DASHBOARDS_DIR || path.resolve(__dirname, '../../templates/dashboards'),
     dashboardsCustomDir: process.env.DASHBOARDS_CUSTOM_DIR || path.resolve(__dirname, '../../templates/dashboards-custom'),
+    dashboardsCommunityDir: process.env.DASHBOARDS_COMMUNITY_DIR || path.resolve(__dirname, '../../templates/dashboards-community'),
+    // Ablage der Dashboard-Aufräumroutine (je Lauf ein Zeitstempel-Ordner mit
+    // Herkunftspfad + cleanup.json); gitignored, nie ausgeliefert, keine
+    // Discovery-Quelle.
+    dashboardsRemovedDir: process.env.DASHBOARDS_REMOVED_DIR || path.resolve(__dirname, '../../templates/dashboards-removed'),
     // Exportierte Library-Pakete (.zip) aus dem Ordner-Export.
     dashboardsPackagesDir: process.env.DASHBOARDS_PACKAGES_DIR || path.resolve(__dirname, '../../templates/dashboards-packages'),
-    // Analysis Tests: System-Tier (ausgeliefert, API-read-only) und Custom-Tier
-    // (Nutzer-Tests; Editor/Import schreiben NUR hierhin). Custom gewinnt bei
-    // ID-Kollision (Override-Pattern wie bei den Dashboards).
+    // Analysis Tests in drei Bereichsverzeichnissen (wie die Dashboards):
+    //   testsDir           ausgeliefert (builtin, API-read-only)
+    //   testsCustomDir     eigene Tests (Editor/Import schreiben NUR hierhin); dürfen
+    //                      builtin-Tests per ID-Kollision überschreiben
+    //   testsCommunityDir  Installationsziel für Community-Pakete; überschreibt nie
+    //   testsRemovedDir    Ablage der Tests-Aufräumroutine; keine Discovery-Quelle
     testsDir: process.env.TESTS_DIR || path.resolve(__dirname, '../../templates/tests'),
     testsCustomDir: process.env.TESTS_CUSTOM_DIR || path.resolve(__dirname, '../../templates/tests-custom'),
+    testsCommunityDir: process.env.TESTS_COMMUNITY_DIR || path.resolve(__dirname, '../../templates/tests-community'),
+    testsRemovedDir: process.env.TESTS_REMOVED_DIR || path.resolve(__dirname, '../../templates/tests-removed'),
+    // Aufräumphase beim Serverstart (services/startup-cleanup.js): Altkopien
+    // früherer Releases verlassen ihre getrackten Pfade, bevor die API ausliefert.
+    startupCleanup: process.env.STARTUP_CLEANUP_ENABLED !== 'false',
     cacheEnabled: process.env.TEMPLATE_CACHE_ENABLED !== 'false',
     cacheTTL: parseInt(process.env.TEMPLATE_CACHE_TTL) || 3600000, // 1 hour
   },
