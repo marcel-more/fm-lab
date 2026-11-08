@@ -15,11 +15,11 @@ Every edge in [ObjectLinks](ObjectLinks.md) is classified by three values: `Link
 
 ## Link_Role
 
-Roles are registered in [LinkRoleRegistry](LinkRoleRegistry.md) with their kind (`usage` / `containment` / `restriction`) and the `Counts_For_Where_Used` flag. 48 of the 49 usage roles count for where-used — the exception is `trigger_script`, whose counting truth is the owner mirror `triggers_script` (see the two rows below); the 9 containment and 2 restriction roles never count — a privilege set restricting a layout does not make that layout "used".
+Roles are registered in [LinkRoleRegistry](LinkRoleRegistry.md) with their kind (`usage` / `containment` / `restriction`) and the `Counts_For_Where_Used` flag. 51 of the 52 usage roles count for where-used — the exception is `trigger_script`, whose counting truth is the owner mirror `triggers_script` (see the two rows below); the 9 containment and 2 restriction roles never count — a privilege set restricting a layout does not make that layout "used".
 
 The *Source → Target* column lists the documented carrier types; a role can have several (e.g. `reads_field` is carried by scripts, calculated fields, custom functions, layout objects and privilege sets alike).
 
-### Usage roles (49)
+### Usage roles (52)
 
 | Role                   | Source → Target                                                               | Description                                                     |
 | ---------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------- |
@@ -34,6 +34,7 @@ The *Source → Target* column lists the documented carrier types; a role can ha
 | `data_source`          | TableOccurrence/ValueList → ExternalDataSource                                | Object sources its data from this external data source          |
 | `default_layout`       | File → Layout                                                                 | Start layout from the file options                              |
 | `displays_field`       | LayoutObject/Layout → Field                                                   | The field is displayed (field control, merge field in a text object or button label, table-view column) |
+| `displays_symbol`      | LayoutObject → BuiltinFunction                                                | A valid `{{…}}` symbol of a text object displays the value of `Get(<Symbol>)` |
 | `displays_variable`    | LayoutObject → Variable                                                       | A merge variable is displayed on the layout                     |
 | `exports_from_field`   | Script → Field                                                                | Export-class steps read the field                               |
 | `finds_in_field`       | Script → Field                                                                | Find-class steps constrain on the field                         |
@@ -43,6 +44,7 @@ The *Source → Target* column lists the documented carrier types; a role can ha
 | `installs_menuset`     | Script → CustomMenuSet                                                        | Install Menu Set step                                           |
 | `left_field`           | Relationship → Field                                                          | Join-predicate field of the left side (one pair per predicate)  |
 | `left_table`           | Relationship → TableOccurrence                                                | Left table occurrence of the relationship                       |
+| `lookup_context`       | Field → TableOccurrence                                                       | The occurrence a lookup starts from ("Starting with table") — the path from there to the lookup occurrence runs through the relationship graph (since schema 1.38.0) |
 | `lookup_relationship`  | Field → TableOccurrence                                                       | The lookup resolves through this relationship                   |
 | `lookup_source`        | Field → Field                                                                 | The lookup copies from this source field                        |
 | `navigates_to_field`   | Script/LayoutObject → Field                                                   | Go-to-Field-class steps target the field                        |
@@ -55,6 +57,7 @@ The *Source → Target* column lists the documented carrier types; a role can ha
 | `reads_field`          | Script/Field/CustomFunction/ LayoutObject/Layout/File/ ScriptTrigger/PrivilegeSet → Field | A step or calculation reads the field (Layout/File: layout-/file-level trigger parameter calcs; ScriptTrigger: the OnWindowTransaction parameter-field candidates) |
 | `reads_variable`       | Script/Field/CustomFunction/ LayoutObject/PrivilegeSet → Variable             | A step or calculation reads the variable                        |
 | `references_field`     | Script/LayoutObject → Field                                                   | Field reference whose direction is not differentiated (see below) |
+| `related_values_from`  | ValueList → TableOccurrence                                                   | "Include only related values starting from": the occurrence a field-based value list starts from (since schema 1.38.0) |
 | `right_field`          | Relationship → Field                                                          | Join-predicate field of the right side                          |
 | `right_table`          | Relationship → TableOccurrence                                                | Right table occurrence of the relationship                      |
 | `sets_field`           | Script/LayoutObject → Field                                                   | Set-Field-class steps write the field                           |

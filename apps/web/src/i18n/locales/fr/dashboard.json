@@ -376,5 +376,23 @@
     "startup_other": "Nettoyage après la mise à jour : {{count}} restes d’une version antérieure déplacés vers {{dir}}.",
     "startupForks_one": "Ta version modifiée est conservée sous Custom en tant que {{ids}}.",
     "startupForks_other": "Tes {{count}} versions modifiées sont conservées sous Custom en tant que {{ids}}."
+  },
+  "renderer": {
+    "primitiveError": "Impossible d’afficher cet élément : {{message}}"
+  },
+  "kpi": {
+    "toggleOffHint": "Cliquez à nouveau pour retirer ce filtre"
+  },
+  "scope": {
+    "label": "Portée",
+    "file": "Fichier : {{file}}",
+    "object": "Objet : {{name}}",
+    "objectTyped": "Objet : {{name}} ({{type}})",
+    "objects": "{{count}} objet",
+    "objects_one": "{{count}} objet",
+    "objects_other": "{{count}} objets",
+    "clear": "Afficher toute la solution",
+    "clearTitle": "Retirer la portée et afficher toute la solution",
+    "hint": "Les chiffres et les listes ne montrent que cette portée"
   }
 }

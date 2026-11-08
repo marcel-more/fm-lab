@@ -72,7 +72,9 @@ Search objects by name pattern — or by identity (UUID, numeric FileMaker ID).
 | `file` | string | — | Optional file filter |
 | `limit` | integer | `100` | |
 | `offset` | integer | `0` | Pagination |
-| `sort` | enum | — | `modified` — newest own change stamp first (see [Change stamps](#change-stamps)) |
+| `sort` | enum | — | `modified` — newest own change stamp first (see [Change stamps](#change-stamps)); `usage` — by the usage column (see [Usage](#usage)); `name` (case-insensitive), `type`, `file` |
+| `usage_dir` | enum | see [Usage](#usage) | `asc` (rarely used first) or `desc` — direction of `sort=usage` |
+| `usage_min` / `usage_max` | integer ≥ 0 | — | Only objects whose usage is at least / at most this number (inclusive) |
 | `modified_since` | date | — | `YYYY-MM-DD` — only objects whose own change stamp is on or after this day |
 
 Beyond object names, the search also matches **value-list values** (hits report the matched values in `Matched_Values`), **script-step contents** (hits are `ScriptStep` rows carrying `Step_Text`, `Script_Name` and `Step_Index` for breadcrumb display) and the **localized spellings of built-in functions**. Results are ordered by name.
@@ -131,7 +133,7 @@ In the web frontend the same terms work in the search field (`/?q=<UUID>`, `/?q=
 
 `sort=modified` orders the hits by the object's own change stamp, newest first ([ObjectChangeMeta](../../schema/catalog-tables/ObjectChangeMeta.md)); `modified_since=YYYY-MM-DD` keeps only hits stamped on or after that day. With either parameter every hit carries `Modified_At` (`YYYY-MM-DD HH:MM:SS`, the local time of the editing client without time zone, as text). Without them the order and the response are unchanged.
 
-Only the object's **own** stamp counts. Script steps, layout objects, layout parts, calculations, built-ins and the other types without a stamp of their own have `Modified_At = null`: they come last when sorting and drop out of the date filter. Identity hits stay in front of the other hits. Because sorting happens on the server, it holds across pages — the web frontend's other sort options (name, type, file) reorder only the hits loaded so far.
+Only the object's **own** stamp counts. Script steps, layout objects, layout parts, calculations, built-ins and the other types without a stamp of their own have `Modified_At = null`: they come last when sorting and drop out of the date filter. Identity hits stay in front of the other hits. Sorting happens on the server, so it holds across pages — the same goes for every other sort option.
 
 ```bash
 curl "http://localhost:3003/api/search?name=%25&type=layout&sort=modified&modified_since=2026-01-01"
@@ -139,9 +141,33 @@ curl "http://localhost:3003/api/search?name=%25&type=layout&sort=modified&modifi
 
 In the web frontend: search options *Sort: Last modified* and *Modified since* (URL `?sort=modified&since=2026-01-01`).
 
+### Usage
+
+On a catalog built with schema 1.40.0 or later every hit carries its **usage** from the analysis table `v_object_usage` — the same definition the [unused-code rules](../../sca/SCA%20Unused%20Code.md) use, so *usage 0* in the search and a finding of the test *Unused Code* mean the same thing. Usage counts only what is visible inside the imported solution; how it is counted and what it cannot see (calls from outside, dynamic references): [Usage and References](../../schema/Usage%20and%20References.md).
+
+| Field | Meaning |
+|---|---|
+| `Usage` | Number of using objects. An object on a layout counts as its layout, so a field placed 40 times on one layout counts once; script steps are already counted as their script. Built-ins, plug-in functions, plug-in components and step types carry their usage count instead |
+| `Usage_Refs` · `Usage_Users` · `Usage_Files` · `Usage_Roles` | References (the incoming rows of the references tab that count as usage, ×N summed), distinct source objects, source files, link roles |
+| `Usage_Class` | `used`, `unused`, `entry_point` (no usage, but in the Scripts or layout menu), `builtin` (built-in privilege set); table occurrences also `relationship_bridge`, `dead_branch`, `dead_island` |
+| `Usage_Entry_Point` · `Usage_Key_Field` · `Usage_Cross_File` · `Usage_Low_Confidence` | Script / layout in its menu · match field of a relationship · used from another file · file exported without DDR info (a 0 is unverified) |
+
+Script steps, layout objects, layout parts, calculations, relationships and the other types without a usage notion carry `Usage = null`: they come last when sorting by usage and drop out of `usage_min` / `usage_max`. `sort=usage` sorts descending by default and ascending (rarely used first) when `usage_max` is set; ties fall back to name and file.
+
+```bash
+# unused scripts of one file (entry points show 0 too, Usage_Class tells them apart)
+curl "http://localhost:3003/api/search?name=%25&type=script&file=Contacts&usage_max=0"
+# rarely used fields, rarest first
+curl "http://localhost:3003/api/search?name=%25&type=field&usage_max=1&sort=usage"
+```
+
+On an older catalog the hits carry no usage fields, the usage parameters are ignored and `/search/count` reports `usage_available: false`.
+
+In the web frontend: a *Usage (internal)* column as the last element of every row (fixed width, a highlighted 0 for unused objects, markers for menu entry points, match fields and use from another file, `?` for an unverified 0; a click opens the incoming references grouped by using object), the sort option *Usage (internal)* with a direction toggle and the filter *Usage ≤ / ≥ n* in the search options (URL `?sort=usage&udir=asc&umax=0`, `umin` for ≥). The references tab repeats the number in its header line.
+
 ## GET /api/search/count
 
-Count of the same search predicate, without paging: parameters `name` (required, including [identity terms](#identity-search)), `type`, `file`, `modified_since`; response `{ "count": 42 }`.
+Count of the same search predicate, without paging: parameters `name` (required, including [identity terms](#identity-search)), `type`, `file`, `modified_since`, `usage_min`, `usage_max`; response `[{ "count": 42, "usage_available": true }]` — `usage_available` is false on a catalog without the usage table.
 
 ---
 

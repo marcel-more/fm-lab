@@ -28,4 +28,13 @@ On demand (not default — they need a stated target platform): `platform-server
 `platform-webdirect`, `platform-ios`, `platform-cloud`, `platform-dataapi`, `platform-odata`,
 `platform-cwp`, `platform-os-binding`; also `layout-error-checks`, `layout-hygiene`,
 `script-todos`, `wan-script-patterns` when the solution is layout-heavy / WAN-hosted.
+
+**Plus, by default: `unused-code` as an estimate, not as a test run.** The members of this
+test (nine *Unused …* rules) run through `scripts/unused_code_estimate.mjs`, which reduces
+their findings to the share per object type, the most affected files and a sample of three
+objects per type from different files (feeds F 6.1 "unused code", §7 recommendations on
+cleanup). The full findings stay out of the report on purpose — point the reader to
+`/fm-test unused-code` (profiles `data-model` / `logic`, scopes file / object / cluster) for
+the complete list. Under `--no-tests` the estimate is skipped as well.
+
 Discovery of newer tests: `/fm-test --find "<keyword>"`.

@@ -696,6 +696,19 @@ a.detail-change-badge:hover {
   color: var(--color-text-muted);
 }
 
+/* Hint above the reference lists: a table occurrence whose usages are only
+   partly listed (catalog without the usage table, or cut by the limit). */
+.references-notice {
+  margin: 0.25rem 0 0.5rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--color-warning-border);
+  border-left: 3px solid var(--color-warning-fg);
+  border-radius: 6px;
+  background: var(--color-warning-bg, var(--color-bg-elevated));
+  color: var(--color-warning-fg);
+  font-size: 0.8rem;
+}
+
 /* Pill-Container im StatusBar-Message-Slot: RefOriginPill und VarSelectionPill
    können gleichzeitig sichtbar sein und fließen nebeneinander. */
 .status-pill-stack {
@@ -1139,4 +1152,106 @@ a.detail-change-badge:hover {
 .ambiguous-file-picker__item:hover {
   border-color: var(--color-accent);
   background: var(--color-selected-bg);
+}
+
+/* Usage line of the references tab: the number of the search's Usage column
+   (v_object_usage), so it can be checked against the incoming rows. */
+.references-usage-summary {
+  margin: 0.25rem 0 0.5rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.references-usage-count {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+/* The two numbers switch the view: "by object" (groups) / "all references". */
+.references-usage-toggle {
+  font: inherit;
+  padding: 0 0.15em;
+  border: none;
+  border-bottom: 1px dotted currentColor;
+  border-radius: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.references-usage-toggle.is-active {
+  color: var(--color-accent);
+  border-bottom-style: solid;
+}
+
+.references-usage-toggle:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+/* "By object" view: one head row per using object, its references nested. */
+.reference-group {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.reference-group:last-child {
+  border-bottom: none;
+}
+
+.reference-group-head {
+  border-bottom: none;
+}
+
+.reference-group-toggle {
+  /* rem, not em: the nested list's indent is computed from this width. */
+  flex: 0 0 var(--reference-group-toggle-w);
+  width: var(--reference-group-toggle-w);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Empty slot of a group without toggle (expansion would repeat the head). */
+.reference-group-toggle--none {
+  display: inline-block;
+  cursor: inherit;
+}
+
+/* Neutralise the global button:hover fill for both text-like toggles. */
+.reference-group-toggle:hover,
+.references-usage-toggle:hover {
+  background: none;
+  color: var(--color-accent);
+}
+
+/* Nested references start under the group's type pill: the guide line sits at
+   the pill's left edge (row padding + toggle + column gap of .reference-item),
+   the child rows' own padding then indents their pill slightly to the right. */
+.reference-group {
+  --reference-group-toggle-w: 1.4rem;
+}
+
+.reference-group > .reference-list {
+  margin-left: calc(0.75rem + var(--reference-group-toggle-w) + 0.75rem);
+  border-left: 1px solid var(--color-border);
+}
+
+.reference-group--no-usage .ref-name {
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+/* ⓘ → docs page "Usage and References" (how both numbers are counted). */
+.references-usage-docs {
+  margin-left: 0.4em;
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.references-usage-docs:hover,
+.references-usage-docs:focus-visible {
+  color: var(--color-accent);
 }

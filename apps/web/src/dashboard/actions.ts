@@ -88,10 +88,14 @@ export function resolveAction(
  * Zwei Quellen, vereinigt:
  * - Legacy-Basis-Set für Bestands-Bundles ohne Deklaration:
  *   `api_set` = Klassifikations-Set, `file` = App-Dateifilter, `comment` = Kommentar-Linse.
+ * - `scope_uuids`: the object scope an Analysis Test passes to its member
+ *   dashboards (object, object list, cluster). It frames the whole page like
+ *   `file` — a KPI tile or chip click must not drop it; only "show whole
+ *   solution" of the ScopeNotice clears it.
  * - Manifest-deklarierte Params mit `sticky: true`, die der DashboardHost beim
  *   Laden über `registerStickyDashboardParams` meldet.
  */
-const STICKY_DASHBOARD_PARAMS = ['api_set', 'file', 'comment'];
+const STICKY_DASHBOARD_PARAMS = ['api_set', 'file', 'comment', 'scope_uuids'];
 
 let manifestSticky: { dashboardId: string; params: string[] } | null = null;
 

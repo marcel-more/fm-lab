@@ -376,5 +376,23 @@
     "startup_other": "Nach dem Update aufgeräumt: {{count}} Altlasten einer früheren Version nach {{dir}} verschoben.",
     "startupForks_one": "Deine bearbeitete Fassung bleibt unter Custom als {{ids}} erhalten.",
     "startupForks_other": "Deine {{count}} bearbeiteten Fassungen bleiben unter Custom als {{ids}} erhalten."
+  },
+  "renderer": {
+    "primitiveError": "Dieses Element konnte nicht angezeigt werden: {{message}}"
+  },
+  "kpi": {
+    "toggleOffHint": "Erneut klicken, um diesen Filter aufzuheben"
+  },
+  "scope": {
+    "label": "Scope",
+    "file": "Datei: {{file}}",
+    "object": "Objekt: {{name}}",
+    "objectTyped": "Objekt: {{name}} ({{type}})",
+    "objects": "{{count}} Objekt",
+    "objects_one": "{{count}} Objekt",
+    "objects_other": "{{count}} Objekte",
+    "clear": "Ganze Lösung zeigen",
+    "clearTitle": "Scope entfernen und die ganze Lösung zeigen",
+    "hint": "Zahlen und Listen zeigen nur diesen Scope"
   }
 }

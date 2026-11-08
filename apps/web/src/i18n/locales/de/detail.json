@@ -58,7 +58,14 @@
       "logic": "Logik",
       "slots": "Slots",
       "moreTargets": "(+{{n}} weitere)"
-    }
+    },
+    "sectionLabel": "Layout-Sektion",
+    "sectionAll": "Alle",
+    "sectionOption": "{{label}} ({{count}})",
+    "sectionAria": "Objekte auf eine Layout-Sektion eingrenzen",
+    "sectionStats_one": "{{n}} von {{count}} Objekt · Zoom {{zoom}}%",
+    "sectionStats_other": "{{n}} von {{count}} Objekten · Zoom {{zoom}}%",
+    "sectionInventoryHint": "Inventare zeigen das ganze Layout, nicht nur die gewählte Sektion"
   },
   "relationshipGraphCanvas": {
     "searchPlaceholder": "Table Occurrence suchen…",
@@ -165,6 +172,8 @@
     "ariaLabel": "Objekt-Hierarchie",
     "usedBy": "Wird verwendet von ({{count}})",
     "usedByFiltered": "Wird verwendet von ({{count}} / {{total}})",
+    "usedByGrouped": "Wird verwendet von — nach Objekt ({{count}})",
+    "usedByGroupedFiltered": "Wird verwendet von — nach Objekt ({{count}} / {{total}})",
     "uses": "Verwendet ({{count}})",
     "usesFiltered": "Verwendet ({{count}} / {{total}})",
     "structurallyContainedBy": "Strukturell enthalten in ({{count}})",
@@ -173,6 +182,8 @@
     "structurallyContainsFiltered": "Strukturell enthält ({{count}} / {{total}})",
     "noReferences": "Keine Referenzen gefunden",
     "noFilterMatches": "Keine Treffer für die aktuellen Filter",
+    "toUsageUnavailable": "Dieser Katalog zeigt nur die direkten Verknüpfungen des Tabellenauftretens. Die vollständige Nutzung (Feldreferenzen in Formeln, Script-Schritten und auf Layouts) erscheint nach einem Neuimport.",
+    "toUsageTruncated": "Nutzung gekürzt: {{count}} von {{total}} Fundstellen über Feldreferenzen angezeigt.",
     "crossFileBadge": "Cross-File",
     "itemAriaLabel": "Navigiere zu {{type}}: {{name}}",
     "notNavigable": "Ziel nicht im importierten Datenbestand",
@@ -255,8 +266,57 @@
       "menu_action": {
         "short": "Menu",
         "long": "Menü-Aktion"
+      },
+      "calculation": {
+        "short": "Calc",
+        "long": "Feldreferenz in einer Formel"
+      },
+      "calculation_text": {
+        "short": "Calc text",
+        "long": "Feldreferenz im Formeltext (Datei ohne DDR-Info)"
+      },
+      "calc_context": {
+        "short": "Context",
+        "long": "Auswertungskontext einer Formel"
+      },
+      "layout_field": {
+        "short": "Field",
+        "long": "Feld auf dem Layout"
+      },
+      "layout_part": {
+        "short": "Break",
+        "long": "Gruppierungsfeld eines Layoutbereichs"
+      },
+      "script_step": {
+        "short": "Step",
+        "long": "Feldreferenz in einem Script-Schritt"
+      },
+      "security": {
+        "short": "Access",
+        "long": "Kontext des Datensatzzugriffs einer Berechtigung"
+      },
+      "table_view": {
+        "short": "Table view",
+        "long": "Spalte der Tabellenansicht"
+      },
+      "value_list": {
+        "short": "VL field",
+        "long": "Zweites Feld einer Werteliste"
       }
-    }
+    },
+    "usageSummary": "Intern genutzt von {{objects}} · {{refs}}",
+    "usageObjects_one": "{{count}} Objekt",
+    "usageObjects_other": "{{count}} Objekten",
+    "usageRefs_one": "{{count}} Referenz",
+    "usageRefs_other": "{{count}} Referenzen",
+    "usageSummaryHint": "Nutzung (intern): wie viele verschiedene Objekte der Lösung dieses Objekt verwenden — ein Layout zählt einmal, egal wie viele seiner Objekte es zeigen; ein Script einmal, egal in wie vielen Schritten. Referenzen: jede Fundstelle einzeln (×N in der Liste). Enthaltensein und Berechtigungs-Einschränkungen zählen nicht. Nicht erfasst: Nutzung von außen (Server-Zeitpläne, Data API, OData, URL-Aufrufe, Plug-ins …) und dynamische Verweise (Script per Name, GetField, Evaluate).",
+    "usageDocs": "Wie wird gezählt?",
+    "groupByObjectHint": "Nach nutzendem Objekt gruppieren (eingehend) — ein Layout zählt einmal, egal wie viele seiner Objekte es zeigen",
+    "groupAllRefsHint": "Alle Referenzen einzeln zeigen",
+    "groupExpand": "Referenzen zeigen",
+    "groupCollapse": "Referenzen ausblenden",
+    "noUsageGroup": "Keine Nutzung",
+    "noUsageGroupHint": "Verknüpfungen, die nicht als Nutzung zählen (z. B. Berechtigungs-Einschränkungen, Trigger-Knoten)"
   },
   "searchOptions": {
     "regionAria": "Sortier- und Gruppierungsoptionen",
@@ -272,7 +332,14 @@
     "groupFile": "Datei",
     "modifiedSinceLabel": "Geändert seit",
     "modifiedSinceHint": "Nur Objekte, deren eigener Änderungsstempel an oder nach diesem Tag liegt — Script-Schritte, Layout-Objekte und Formeln haben keinen eigenen Stempel",
-    "modifiedSinceClear": "Zurücksetzen"
+    "modifiedSinceClear": "Zurücksetzen",
+    "sortUsage": "Nutzung (intern)",
+    "usageLabel": "Nutzung (intern)",
+    "usageOpAria": "Vergleich",
+    "usageHint": "Zahl der nutzenden Objekte (ein Objekt auf einem Layout zählt als sein Layout). ≤ 0 zeigt ungenutzte Objekte; Script-Schritte, Layout-Objekte, Formeln und Beziehungen haben keine Nutzung und fallen heraus Nutzung von außen (Server-Zeitpläne, Data API, OData, URL-Aufrufe, Plug-ins …) ist nicht erfasst.",
+    "usageUnavailable": "Braucht einen Katalog ab Schema 1.40.0 — die Lösung neu importieren",
+    "usageDirAsc": "Selten genutzte zuerst",
+    "usageDirDesc": "Meist genutzte zuerst"
   },
   "fieldViewer": {
     "ariaLabel": "Feld-Details",
@@ -372,7 +439,17 @@
     "healedUuidMatch": "Treffer über UUID (Dublette)",
     "healedUuidTitle": "FileMaker führt dieses Objekt unter der gesuchten UUID; weil sie im Export mehrfach vorkam, steht es im Katalog unter einer Ersatz-UUID.",
     "idMatch": "Treffer über ID {{id}}",
-    "modifiedTooltip": "Zuletzt geändert {{age}} — lokale Zeit des ändernden Clients, ohne Zeitzone"
+    "modifiedTooltip": "Zuletzt geändert {{age}} — lokale Zeit des ändernden Clients, ohne Zeitzone",
+    "usageTooltip": "Intern genutzt von: {{owners}} · Referenzen: {{refs}} · Rollen: {{roles}} · Dateien: {{files}}",
+    "usageCellAria": "Nutzung {{count}} — eingehende Referenzen öffnen",
+    "usageEntryPoint": "Im Scripts- oder Layout-Menü — auch ohne Referenz erreichbar",
+    "usageBuiltin": "Eingebaute Berechtigung — nicht löschbar",
+    "usageBridge": "Beziehungsbrücke — nötig auf dem Pfad zwischen genutzten Tabellenauftreten",
+    "usageDead": "Toter Ast des Beziehungsgraphen — dahinter wird nichts genutzt",
+    "usageKeyField": "Abgleichsfeld einer Beziehung",
+    "usageCrossFile": "Aus einer anderen Datei genutzt",
+    "usageUnverified": "Ungeprüft — die Datei wurde ohne DDR-Info exportiert, Formelreferenzen fehlen",
+    "usageExternal": "Nutzung von außen (Server-Zeitpläne, Data API, OData, URL-Aufrufe, AppleScript, Plug-ins …) ist nicht erfasst"
   },
   "scriptSearchFilter": {
     "searchAria": "Refs durchsuchen",
@@ -805,7 +882,15 @@
     "optFieldFrames": "Feldrahmen bei aktivem Datensatz",
     "optFrameCurrentOnly": "Felder nur im aktuellen Datensatz umreißen",
     "optShowCurrentInList": "Datensatzanzeige in Listenansicht",
-    "optQuickFind": "Schnellsuche"
+    "optQuickFind": "Schnellsuche",
+    "partsHeading": "Layout-Sektionen",
+    "partsObjects_one": "{{count}} Objekt",
+    "partsObjects_other": "{{count}} Objekte",
+    "partsHeight": "{{size}} pt",
+    "partsSortedBy": "sortiert nach",
+    "partsFilterTitle": "In der Grafik nur diese Sektion zeigen",
+    "partsFilterActiveTitle": "Sektionsfilter aufheben",
+    "partsFieldUnresolved": "Feld nicht im Katalog (Datei nicht importiert?)"
   },
   "pluginSpec": {
     "tooltip": "Plattform-Unterstützung laut {{plugin}}-Dokumentation",
@@ -1006,5 +1091,223 @@
     "usedSuffix": "{{used}} verwendet",
     "functionsHeading": "Funktionen",
     "colFunction": "Funktion"
+  },
+  "tableOccurrence": {
+    "ariaLabel": "Tabellenauftreten-Details",
+    "definitionHeading": "Definition",
+    "baseTable": "Basistabelle",
+    "baseTableUnresolved": "— nicht auflösbar —",
+    "inFile": "in Datei „{{file}}“",
+    "dataSource": "Datenquelle",
+    "dsResolved": "Datei „{{file}}“ im Katalog",
+    "dsUnresolved": "Zieldatei nicht importiert",
+    "diagram": "Beziehungsdiagramm",
+    "viewLabel": "Ansicht: {{view}}",
+    "view": {
+      "Full": "alle Felder",
+      "Related": "nur Beziehungsfelder",
+      "Collapse": "nur Name"
+    },
+    "usageHeading": "Nutzung",
+    "class": {
+      "used": "genutzt",
+      "relationship_bridge": "Beziehungsbrücke",
+      "dead_branch": "toter Ast",
+      "dead_island": "tote Insel",
+      "unused": "nicht genutzt"
+    },
+    "reason": {
+      "path": "Liegt auf dem Beziehungspfad zwischen genutzten TOs (z. B. Verbindungs-TO einer n:m-Beziehung) — wird gebraucht.",
+      "cascade_delete": "An einer Beziehung mit Kaskadenlöschung beteiligt — wird gebraucht."
+    },
+    "deadBranch_one": "Teil eines toten Asts ({{count}} TO) unter Anker",
+    "deadBranch_other": "Teil eines toten Asts ({{count}} TOs) unter Anker",
+    "deadIsland_one": "TO-Gruppe ohne genutzte TO ({{count}} TO).",
+    "deadIsland_other": "TO-Gruppe ohne genutzte TO ({{count}} TOs).",
+    "unused": "Keine statisch sichtbare Nutzung.",
+    "unusedNoRel": "Keine statisch sichtbare Nutzung, keine Beziehung.",
+    "reviewHint": "Prüfkandidat, keine Löschempfehlung — dynamische Referenzen (GetField, Evaluate, ExecuteSQL) bleiben unsichtbar.",
+    "toTests": "Details im Tests-Tab",
+    "lowConfidence": "Datei ohne DDR-Info: Formelnutzung per Textsuche ermittelt, Klasse unbestätigt.",
+    "group": {
+      "context": "Kontext",
+      "display": "Anzeige",
+      "logic": "Logik",
+      "data": "Daten",
+      "graph": "Graph",
+      "other": "Sonstige"
+    },
+    "category": {
+      "layout_context": "Layouts",
+      "calc_context": "Formelkontext",
+      "security": "Zugriffsrechte",
+      "layout_field": "Layout-Felder",
+      "portal": "Portale",
+      "layout_part": "Layoutbereiche",
+      "table_view": "Tabellenansicht",
+      "script_step": "Script-Schritte",
+      "calculation": "Formeln",
+      "calculation_text": "Formeltext",
+      "navigation": "Navigation",
+      "lookup": "Referenzwerte",
+      "lookup_context": "Referenzwert-Kontext",
+      "value_list": "Wertelisten",
+      "value_list_related": "Wertelisten (Bezug)",
+      "relationship": "Beziehungen",
+      "relationship_cascade": "Kaskadenlöschung"
+    },
+    "chipTitle": "{{users}} Objekte · {{refs}} Fundstellen — in den Referenzen zeigen",
+    "allUsages": "alle Fundstellen → Referenzen",
+    "relationshipsHeading": "Beziehungen",
+    "noRelationships": "— keine Beziehung —",
+    "searchPlaceholder": "Partner-TO oder Feld filtern…",
+    "colSelf": "Diese TO",
+    "colOperator": "Operator",
+    "colPartnerField": "Partner-Feld",
+    "colPartner": "Partner-TO",
+    "colOptions": "Optionen",
+    "colOptionsTitle": "Optionen: diese TO | Partner-TO",
+    "colRelationship": "Beziehung",
+    "and": "UND",
+    "optCreate": "Erstellen von Datensätzen über diese Beziehung erlaubt",
+    "optDeleteSelf": "Kaskadenlöschung: Datensätze dieser TO werden gelöscht, wenn der Bezugsdatensatz gelöscht wird",
+    "optDeletePartner": "Kaskadenlöschung: Datensätze der Partner-TO werden gelöscht, wenn ein Datensatz dieser TO gelöscht wird",
+    "optSort": "Sortiert",
+    "legend": "Optionen „diese TO | Partner-TO“: ＋ Erstellen erlaubt · 🗑 Kaskadenlöschung · ⇅ sortiert",
+    "siblingsHeading": "Weitere Auftreten von „{{bt}}“",
+    "siblingsNone": "— keine weiteren —",
+    "toBaseTable": "zur Basistabelle",
+    "chipTitleInPage": "{{users}} Objekte — in den Beziehungen unten zeigen",
+    "optionFilterAria": "Nach Optionen filtern",
+    "option": {
+      "cascade": "Kaskadenlöschung",
+      "create": "Erstellen erlaubt",
+      "sorted": "sortiert"
+    },
+    "siblingsSearch": "TO oder Datei filtern…",
+    "siblingsScopeAria": "Bereich",
+    "scope": {
+      "all": "alle",
+      "file": "diese Datei",
+      "other": "lösungsweit"
+    },
+    "scopeTitle": {
+      "all": "Alle Auftreten in der Lösung",
+      "file": "Auftreten in dieser Datei",
+      "other": "Auftreten in den anderen Dateien der Lösung"
+    },
+    "colTo": "Tabellenauftreten",
+    "dataSourceCurrent": "aktuelle Datei",
+    "dataSourceCurrentTitle": "Die Basistabelle wird ohne Datenquelle direkt aus dieser Datei verwendet",
+    "dsSelf": "verweist auf diese Datei selbst",
+    "dsSelfSibling": "Datenquelle verweist auf die eigene Datei",
+    "inThisFile": "in dieser Datei",
+    "viaDataSource": "Datenquelle „{{ds}}“",
+    "colDefinedIn": "definiert in",
+    "colDefinedInTitle": "Datei, in deren Beziehungsdiagramm die TO liegt (leer = diese Datei)",
+    "colSourceTitle": "Wie die TO die Basistabelle erreicht: aktuelle Datei oder über eine Datenquelle",
+    "countFiltered": "{{shown}} von {{total}}",
+    "defJumpTitle": "Zum Abschnitt weiter unten",
+    "defLayoutsTitle": "Layouts, die auf dieser TO basieren — in den Referenzen zeigen",
+    "siblingsJump": "Weitere Auftreten",
+    "ctxHeading": "TO-Gruppe",
+    "ctxGroup": "Gruppe",
+    "ctxSingle": "nur diese TO — keine Beziehung",
+    "ctxTos_one": "{{count}} TO",
+    "ctxTos_other": "{{count}} TOs",
+    "ctxLayouts_one": "{{count}} Layout",
+    "ctxLayouts_other": "{{count}} Layouts",
+    "ctxAnchors": "Anker",
+    "ctxAnchorsNone": "kein Layout basiert auf einer TO dieser Gruppe",
+    "ctxLayoutsTitle_one": "{{count}} Layout",
+    "ctxLayoutsTitle_other": "{{count}} Layouts",
+    "ctxSelfAnchor_one": "ist selbst Layout-Kontext ({{count}} Layout)",
+    "ctxSelfAnchor_other": "ist selbst Layout-Kontext ({{count}} Layouts)",
+    "ctxSteps_one": "{{count}} Schritt",
+    "ctxSteps_other": "{{count}} Schritte",
+    "ctxHint": "Anker = TO, auf der Layouts basieren. „Nächster“ ist der Anker, von dem aus diese TO über die wenigsten Beziehungen erreicht wird.",
+    "ctxAnchorsLess": "Liste schließen",
+    "ctxMoreEachSingle": "+{{count}} weitere mit je 1 Layout",
+    "ctxMoreEach": "+{{count}} weitere mit je {{each}} Layouts",
+    "ctxMoreTotal": "+{{count}} weitere mit zusammen {{total}} Layouts",
+    "ctxAnchor": "Anker",
+    "ctxColLayouts": "Layouts",
+    "ctxColDistance": "Abstand",
+    "ctxColDistanceTitle": "Beziehungsschritte bis zu dieser TO",
+    "ctxContext": "Layout-Kontext",
+    "ctxNearest": "nächster:",
+    "ctxShowPath": "Pfad zeigen",
+    "ctxHidePath": "Pfad ausblenden"
+  },
+  "layoutParts": {
+    "kind": {
+      "12": "Obere Navigation",
+      "0": "Kopf 1. Seite",
+      "1": "Kopfbereich",
+      "2": "Vorangestelltes Gesamtergebnis",
+      "3": "Zwischenergebnis, wenn sortiert nach",
+      "4": "Datenbereich",
+      "6": "Nachgestelltes Gesamtergebnis",
+      "7": "Fußbereich",
+      "8": "Fuß 1. Seite",
+      "13": "Untere Navigation"
+    },
+    "position": {
+      "leading": "vorangestellt",
+      "trailing": "nachgestellt"
+    },
+    "subSummaryLabel": "{{kind}} ‹{{field}}› ({{position}})",
+    "subSummaryLabelNoField": "{{kind}} ({{position}})",
+    "option": {
+      "o1": "Seitenumbruch vor jedem Auftreten",
+      "o2": "Seitenumbruch nach je {{n}} Auftreten",
+      "o3": "Seitennummerierung nach jedem Auftreten neu beginnen",
+      "o4": "Seitenumbruch im Bereich",
+      "o5": "Rest des Bereichs vor neuer Seite unterdrücken",
+      "o6": "Abwechselnden Zeilenstatus verwenden",
+      "o7": "Aktiven Zeilenstatus verwenden"
+    }
+  },
+  "layoutPartDetail": {
+    "ariaLabel": "Details der Layout-Sektion",
+    "groupGeneral": "Allgemein",
+    "groupSort": "Sortierung",
+    "groupContext": "Kontext",
+    "groupOptions": "Bereichsdefinition",
+    "groupTechnical": "Technisch",
+    "kind": "Sektionstyp",
+    "exportedType": "Exportierter Typ",
+    "exportedTypeTitle": "So steht der Typ im XML-Export (lokalisiert bzw. von FileMaker falsch beschriftet)",
+    "partName": "Interner Name",
+    "position": "Position",
+    "positionValue": "{{pos}}. von {{total}}",
+    "previous": "Vorherige Sektion",
+    "next": "Nächste Sektion",
+    "height": "Höhe",
+    "top": "Oberkante",
+    "bottom": "Unterkante",
+    "unitPt": "{{value}} pt",
+    "objects": "Objekte",
+    "objectsValue": "{{total}} ({{root}} direkt im Bereich)",
+    "sortedBy": "Sortiert nach",
+    "sortToDiffers": "über ein anderes Tabellenauftreten als das Layout ({{to}})",
+    "fieldUnresolved": "Feld nicht im Katalog (Datei nicht importiert?)",
+    "layout": "Layout",
+    "contextTable": "Tabellenauftreten",
+    "baseTable": "Basistabelle",
+    "file": "Datei",
+    "optionsRaw": "Optionen (roh)",
+    "optionsUndecoded": "Bits ohne Dialog-Option: {{bits}}",
+    "optionOn": "an",
+    "optionOff": "aus",
+    "sourceLocal": "am Bereich gesetzt",
+    "sourceStyle": "Bereichsstil {{name}}",
+    "sourceTheme": "Design {{name}}",
+    "sourceDefault": "nicht gesetzt (aus)",
+    "sourceClassic": "Klassisches Design (aus)",
+    "bodyOnly": "nur beim Datenbereich",
+    "showInLayout": "Im Layout zeigen",
+    "showInLayoutTitle": "Layout mit dieser Sektion als Filter öffnen",
+    "objectsShowInReferences": "Objekte in den Referenzen anzeigen"
   }
 }

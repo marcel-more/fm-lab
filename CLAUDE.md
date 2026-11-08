@@ -1,4 +1,4 @@
-<!-- @CLAUDE_MD_VERSION 0.9.17 -->
+<!-- @CLAUDE_MD_VERSION 0.9.18 -->
 # FM-Lab — FileMaker Solution Analysis & Code Generation
 
 ## 1. Role & focus
@@ -54,9 +54,10 @@ The DuckDB tables mirror the XML object catalogs. Most-used tables:
 | `DDR_Calculations` | Formula chunks for dependency analysis (needs DDR-Info) |
 | `AccountsCatalog` / `PrivilegeSetsCatalog` / `PrivilegeSet*Access` | Security model |
 | `ObjectChangeMeta` / `ChangeBulkEvents` / `CatalogChangeMeta` | Last change per object (typed `Modified_At`, `Modified_By`, `Modified_Account`, `Modifications`, `Author_Key`, `Author_Kind`; local client time, no time zone) / mass events (migrations, pastes, tool runs — per file or across files) / change stamps of the catalogs themselves — only the **last** save survives and mass actions dominate real solutions (individual changes: `Bulk_Event_ID IS NULL`); steps, layout objects, calculations inherit their container's stamp (pitfalls → `schema-reference.md`, queries → `query-cookbook.md`) |
+| `v_object_usage` | Usage per object (Field, Script, Layout, CF, ValueList, BaseTable, data source, privilege set, TO, relationship): using containers / sources / edges, `Usage_Class` (`used`/`unused`/`entry_point`/`builtin`, TO classes), `Low_Confidence` — the definition behind the `unused_*` rules; use it for any "unused / rarely used" question |
 | `LinkRoleRegistry` | Link-role classification & where-used flag (columns: `Link_Kind` = usage/containment/restriction, `Counts_For_Where_Used`) — the prose meaning of each role lives in `schema-reference.md`, not as a column |
 
-Full reference — all tables, column details (AutoEnter/Lookup, LayoutObjects, privilege access, variables, DDR-Info) and all 61 link roles: → `docs/agents/schema-reference.md`
+Full reference — all tables, column details (AutoEnter/Lookup, LayoutObjects, privilege access, variables, DDR-Info) and all 63 link roles: → `docs/agents/schema-reference.md`
 
 ## 5. Analytic workflows
 
@@ -82,6 +83,8 @@ private helper script**:
 | find callers / walk a call chain | `analysis-patterns.md` `call-chain-resolution` |
 | judge branch scope, dead code, reachability | `analysis-patterns.md` `control-flow-reachability` |
 | where-used for any object | `query-cookbook.md` § Where-used & dependencies |
+| "unused" / "rarely used" / usage ranking for any object type | `query-cookbook.md` § Usage counts for any object type — `v_object_usage` |
+| where-used / "unused" for a table occurrence | `query-cookbook.md` § Where-used for Table Occurrences — `TO::Field` links only the field, `ObjectLinks` alone undercounts |
 | reach for a helper script | stop — query directly; report a shortfall (below) |
 
 `docs/agents/*` and this file are **maintainer-owned reference material** that

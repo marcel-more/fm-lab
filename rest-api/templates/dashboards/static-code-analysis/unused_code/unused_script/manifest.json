@@ -1,8 +1,8 @@
 {
   "id": "unused_script",
-  "version": "1.0.0",
+  "version": "1.2.1",
   "title": "Unused Script",
-  "description": "Unused-code rule — scripts never called by another script and never started by a trigger. Review: manual / custom-menu starts can appear here.\n\nBased on the PMD rule UnusedPrivateMethod — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod",
+  "description": "Unused-code rule — scripts never called by another script, a button or a custom menu and never started by a trigger. Scripts in the Scripts menu are entry points: they are listed separately and are not findings. Findings in files exported without DDR info are marked unverified.\n\nBased on the PMD rule UnusedPrivateMethod — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod",
   "author": "fm-lab rules",
   "icon": "trash-2",
   "category": "unused_code",
@@ -16,13 +16,13 @@
     "severity": "info",
     "category": "unused_code",
     "rationale": "Dead scripts inflate the solution, slow analysis and hide intent.",
-    "remediation": "Confirm the script is not started manually / from a custom menu / externally, then delete it.",
+    "remediation": "Confirm the script is not started manually / from a custom menu / externally, then delete it. In a file exported without DDR info formula references are missing, so its findings are marked unverified — export it again with DDR info before deleting.",
     "meta": {
       "name": "Unused Script",
       "author": "fm-lab rules",
       "source": "PMD",
       "url": "https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod",
-      "description": "Unused-code rule — scripts never called by another script and never started by a trigger. Review: manual / custom-menu starts can appear here.",
+      "description": "Unused-code rule — scripts never called by another script, a button or a custom menu and never started by a trigger. Scripts in the Scripts menu are entry points: they are listed separately and are not findings. Findings in files exported without DDR info are marked unverified.",
       "created": "2026-07-01",
       "references": [
         {
@@ -44,10 +44,16 @@
     "scope": {
       "supported": [
         "solution",
-        "file"
+        "file",
+        "object",
+        "object-list",
+        "cluster"
       ],
       "anchor": "nav_uuid",
-      "mode": {}
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
     },
     "defaultResult": {
       "dataset": "summary",
@@ -66,6 +72,14 @@
       "id": "findings",
       "source": "bundle:data/findings.sql",
       "pageSize": 500
+    },
+    {
+      "id": "entry_points",
+      "source": "bundle:data/entry_points.sql",
+      "pageSize": 500,
+      "pageParam": "entry_page",
+      "searchParam": "entry_q",
+      "sortParam": "entry_sort"
     }
   ],
   "params": [
@@ -74,6 +88,13 @@
       "type": "string",
       "required": false,
       "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "ddr",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "List filter by DDR info (KPI tile): 'without' = only findings in files exported without DDR info; empty = all. The Findings tile resets it."
     }
   ],
   "permissions": {

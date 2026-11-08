@@ -126,6 +126,11 @@ export interface LayoutObjectContext {
   layoutName: string | null;
   objectId?: number | null;
   partType?: string | null;
+  /** Assigned layout part (catalog schema 1.39.0; null on older catalogs). */
+  partSeq?: number | null;
+  partKind?: number | null;
+  /** Catalog UUID of that part (`part_…`) — link target of the part row. */
+  partUuid?: string | null;
   nestingLevel?: number | null;
   /** Original-Textblock des Objekts (Layout-Wahrheit inkl. Merge-Anker). */
   textContent?: string | null;

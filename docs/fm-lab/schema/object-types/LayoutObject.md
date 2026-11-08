@@ -25,7 +25,7 @@ The `<LayoutObject>` element has a small common surface plus a **type-specific p
 | `<Options>` (child element, packed value) | — | Object-level option bitmask — **not extracted** |
 | `<LocalCSS>` (`@name`, `@displayName`, CSS text) | — | Local style overrides — **not extracted** (in `Object_XML`) |
 | `<ExtendedAttributes>` | — | **not extracted** (in `Object_XML`) |
-| part assignment | `Part_Type` | The [part](LayoutPart.md) the object sits in |
+| part assignment | `Part_Seq`, `Part_Kind`, `Part_Type` | The [part](LayoutPart.md) the object sits in — derived at import from the top edge (root objects) or the parent (nested objects) |
 | nesting | `Parent_Object_ID`, `Nesting_Level`, `Z_Order` | Derived container hierarchy and stacking order, see [Object hierarchy](#object-hierarchy) |
 
 ### Type-specific payload
@@ -48,7 +48,7 @@ The `<LayoutObject>` element has a small common surface plus a **type-specific p
 
 Every layout object links to its [Layout](Layout.md) via `parent_layout`. Container objects — tab panels, slide panels, groups, popovers, portals — carry their children inside panel elements; the import flattens this into `parent_object` links between layout objects plus the `Parent_Object_ID` / `Nesting_Level` columns (depth 5 occurs in practice). Object-level [script triggers](ScriptTrigger.md) hang on the object via `trigger_owner` (subrole = event type, e.g. `OnObjectSave`).
 
-In the web frontend, objects are hoisted into the layout wireframe (with nesting and part assignment); the object's own detail view adds the resolved references, calculation texts and — for buttons with an embedded step — the tokenized step.
+In the web frontend, objects are hoisted into the layout wireframe (with nesting and part assignment); the object's own detail view adds the resolved references, calculation texts and — for buttons with an embedded step — the tokenized step. Its *Layout part* row links to the part, and the references tab lists the part under *Contained in* (role `parent_part`, read from `Part_Seq` — no edge of its own).
 
 ## References
 

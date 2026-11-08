@@ -8,17 +8,30 @@ unkeyed AS MATERIALIZED (
         oc.File_Name  AS file_name,
         oc.Object_UUID AS nav_uuid,
         oc.Object_Name AS object_name,
-        'Unused Layout'    AS message,
+        -- Display code of the status column: in a file without DDR info the finding is
+        -- unverified (the file carries no formula references at all), so it never reads
+        -- as a plain verdict.
+        CASE WHEN oc.Low_Confidence THEN 'unused_unverified' ELSE 'unused' END AS reason_status,
+        'Unused Layout' || CASE WHEN oc.Low_Confidence
+                    THEN ' - unverified, the file was exported without DDR info'
+                    ELSE '' END AS message,
+        oc.Low_Confidence AS low_confidence,
            oc.File_Name AS _ord_1,
            oc.Object_Name AS _ord_2
-    FROM ObjectCatalog oc
+    -- Source: v_object_usage (analysis table, schema 1.40.0) — the one definition of
+    -- usage shared with the search and the usage dashboard: usage link roles from
+    -- LinkRoleRegistry plus per-type exceptions, menu entry points, built-in privilege
+    -- sets, DDR flag. Usage_Class 'unused' = no usage, not an entry point.
+    FROM v_object_usage oc
     WHERE oc.Object_Type = 'Layout'
-      AND NOT EXISTS (
-            SELECT 1 FROM ObjectLinks ol
-            WHERE ol.Target_UUID = oc.Object_UUID AND ol.Target_File IS NOT DISTINCT FROM oc.File_Name
-              AND ol.Link_Role IN ('navigates_to_layout', 'default_layout')
-          )
+      AND oc.Usage_Class = 'unused'
       AND (getvariable('file') IS NULL OR oc.File_Name = getvariable('file'))
+      AND (getvariable('scope_uuids') IS NULL
+           OR oc.Object_UUID IN (SELECT unnest(string_split(getvariable('scope_uuids'), ','))))
+      -- View filter of the list (KPI tile, sticky): ddr = 'without' keeps the findings
+      -- of files exported without DDR info. Not part of the summary — its counts stay totals.
+      AND (NULLIF(CAST(getvariable('ddr') AS VARCHAR), '') IS DISTINCT FROM 'without'
+           OR oc.Low_Confidence)
 ),
 -- row_key numbers the rows in the default order; the whole row breaks the
 -- remaining ties, so every request assigns the same key.

@@ -7,11 +7,16 @@ unkeyed AS MATERIALIZED (
         'Privilege set is assigned to no account' AS message,
            oc.File_Name AS _ord_1,
            oc.Object_Name AS _ord_2
-    FROM ObjectCatalog oc
+    -- Source: v_object_usage (analysis table, schema 1.40.0) — the one definition of
+    -- usage shared with the search and the usage dashboard: usage link roles from
+    -- LinkRoleRegistry plus per-type exceptions, menu entry points, built-in privilege
+    -- sets, DDR flag. Usage_Class 'unused' = no usage, not an entry point.
+    FROM v_object_usage oc
     WHERE oc.Object_Type = 'PrivilegeSet'
-      AND oc.Object_Name NOT IN ('[Full Access]', '[Data Entry Only]', '[Read-Only Access]')
-      AND NOT EXISTS (SELECT 1 FROM ObjectLinks ol WHERE ol.Target_UUID = oc.Object_UUID AND ol.Link_Role = 'privilege_set')
+      AND oc.Usage_Class = 'unused'
       AND (getvariable('file') IS NULL OR oc.File_Name = getvariable('file'))
+      AND (getvariable('scope_uuids') IS NULL
+           OR oc.Object_UUID IN (SELECT unnest(string_split(getvariable('scope_uuids'), ','))))
 ),
 -- row_key numbers the rows in the default order; the whole row breaks the
 -- remaining ties, so every request assigns the same key.

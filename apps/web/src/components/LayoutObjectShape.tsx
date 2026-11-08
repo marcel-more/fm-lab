@@ -2,7 +2,8 @@ import { memo } from 'react';
 import type { LayoutObject } from '../hooks/useLayoutData';
 import { useLayoutObjectPalette, type LayoutObjectPalette } from './layoutObjectTheme';
 
-export type LayoutObjectDisplayMode = 'normal' | 'highlight' | 'dim';
+/** `outOfScope` = outside the selected layout part (grey, half transparent, takes precedence). */
+export type LayoutObjectDisplayMode = 'normal' | 'highlight' | 'dim' | 'outOfScope';
 export type LabelMode = 'type' | 'name';
 
 type Props = {
@@ -63,7 +64,8 @@ export const LayoutObjectShape = memo(function LayoutObjectShape({
   const width = Math.max(object.abs_right - object.abs_left, 1);
   const height = Math.max(object.abs_bottom - object.abs_top, 1);
 
-  const dimmed = displayMode === 'dim';
+  const outOfScope = displayMode === 'outOfScope';
+  const dimmed = displayMode === 'dim' || outOfScope;
 
   const fill = dimmed ? palette.dimmedFill : palette.fillFor(object.object_type);
   const stroke = dimmed ? palette.dimmedStroke : palette.strokeFor(object.object_type);
@@ -75,8 +77,9 @@ export const LayoutObjectShape = memo(function LayoutObjectShape({
 
   return (
     <g
-      className="layout-object"
+      className={outOfScope ? 'layout-object layout-object--out-of-scope' : 'layout-object'}
       style={{ cursor: 'pointer' }}
+      opacity={outOfScope ? 0.5 : undefined}
       onMouseEnter={e => onMouseEnter(object.object_uuid, e.clientX, e.clientY)}
       onMouseMove={e => onMouseMove(e.clientX, e.clientY)}
       onMouseLeave={onMouseLeave}

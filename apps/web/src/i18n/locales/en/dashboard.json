@@ -376,5 +376,23 @@
     "startup_other": "Cleaned up after the update: {{count}} leftovers of an earlier version moved to {{dir}}.",
     "startupForks_one": "Your edited version stays under Custom as {{ids}}.",
     "startupForks_other": "Your {{count}} edited versions stay under Custom as {{ids}}."
+  },
+  "renderer": {
+    "primitiveError": "This element could not be displayed: {{message}}"
+  },
+  "kpi": {
+    "toggleOffHint": "Click again to remove this filter"
+  },
+  "scope": {
+    "label": "Scope",
+    "file": "File: {{file}}",
+    "object": "Object: {{name}}",
+    "objectTyped": "Object: {{name}} ({{type}})",
+    "objects": "{{count}} object",
+    "objects_one": "{{count}} object",
+    "objects_other": "{{count}} objects",
+    "clear": "Show whole solution",
+    "clearTitle": "Remove the scope and show the whole solution",
+    "hint": "Counts and lists show only this scope"
   }
 }

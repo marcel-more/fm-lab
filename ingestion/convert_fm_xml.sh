@@ -212,6 +212,32 @@ export DUCKDB_AGENT_MODE=0
 # on the next --changed-only run, a full re-conversion is triggered. Bump it as soon
 # as the CONVERSION RESULT can change (new columns, changed
 # extraction/normalization) — independent of the header or @SCHEMA_VERSION.
+#   2.45.0 — object usage (@SCHEMA_VERSION 1.40.0, master rebuild): the
+#           analysis phase builds v_object_usage (usage counts, markers and usage
+#           class per Field, Script, Layout, CustomFunction, ValueList, BaseTable,
+#           ExternalDataSource, PrivilegeSet, TableOccurrence, Relationship) — the
+#           shared usage definition of the unused_* rules. No catalog table changes.
+#   2.44.0 — layout parts (@SCHEMA_VERSION 1.39.0, master rebuild): P1
+#           LayoutParts reads Part_Name (/Part/@name), Part_Break_Every
+#           (Definition/@restartEachGroup), the part's LocalCSS (style name,
+#           type, raw CDATA) and the locally set row-state properties
+#           (Part_Alt_Row_Local / Part_Active_Row_Local, body parts only).
+#           P3: new table ThemePartStyles (row-state defaults of the theme rules
+#           body:normal and part.<name>:normal). P4: every LayoutObject gets
+#           Part_Seq/Part_Kind (root objects by their top edge in the part band
+#           [absolute, absolute + size), children via the parent chain) and
+#           LayoutObjects.Part_Type follows the canonical type of that part;
+#           Break_Field_UUID is healed via TO + field id when it is not a
+#           catalog UUID (more breaks_on_field links). P6: WARN for
+#           LayoutObjects without an assigned part.
+#   2.43.0 — start TOs of value lists and lookups (@SCHEMA_VERSION 1.38.0,
+#           master rebuild): P1 OptionsForValueLists reads Field/ShowRelated
+#           (ShowRelated + ShowRelated_TO_*, "only related values starting from
+#           TO X", both profiles); FieldsForTables reads AutoEnter/Looked_up/
+#           Context (Lookup_Context_TO_*, "starting with table"). The heal cascade
+#           rewrites both TO UUIDs via their ID companions. P4: new link roles
+#           related_values_from (ValueList → TO, block 13d) and lookup_context
+#           (Field → TO, block 23e, active lookups only).
 #   2.42.0 — active-segment formula text (no DDL, @SCHEMA_VERSION unchanged):
 #           P4 CalculationsCatalog reads the button bar's own
 #           /LayoutObject/ButtonBar/Select/Calculation/Text (kind 18, P4-local
@@ -618,7 +644,7 @@ export DUCKDB_AGENT_MODE=0
 #           duplicates (same UUID, distinct object ids) separately from FileMaker's
 #           double serialization; the catmerge a2 dup report is persisted into the
 #           new MergeAbsorptions table (best-effort, s. convert_turbo.sh).
-CONVERTER_VERSION="2.42.0"
+CONVERTER_VERSION="2.45.0"
 PROJECT_ROOT="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || (cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd))"
 # Engine root: the ingestion/ directory this script lives in. ALL engine-internal
 # assets (sql/, engine/, lib/, fixtures/, version_check.json, gen_streamify_sql.sh)
@@ -3847,6 +3873,19 @@ postprocess_db() {
         add_finding regression warn "$sentinel_n implausible Validation_MaxChars value(s) > 1e9: ${sentinel_sample:-?}" "Unrecognized sentinel or new serialization — check the NULLIF normalization in convert_xml_01_extract.sql"
     fi
 
+    # Reference-list shape (guard): aggregated ID/name lists must be [] when
+    # empty — never NULL, never a NULL element — and IDs/names equally long.
+    # A bare list() over a LEFT JOIN LATERAL yields [NULL] for an object
+    # without references.
+    CHECKS_RUN=$((CHECKS_RUN + 1))
+    local reflist_bad
+    reflist_bad=$(pp_num "SELECT COALESCE(SUM(violation_n),0) FROM v_check_reference_lists")
+    if [ "$reflist_bad" -gt 0 ]; then
+        local reflist_detail
+        reflist_detail=$(pp_query "SELECT string_agg(rule || '=' || violation_n, ', ') FROM v_check_reference_lists WHERE violation_n > 0")
+        add_finding regression warn "Malformed reference list(s): ${reflist_detail:-?}" "Check the list() aggregation in convert_xml_01_extract.sql (FILTER (WHERE … IS NOT NULL) + COALESCE(…, []))"
+    fi
+
     # Orphan link SOURCES + NULL-target stock (guard). Sources are same-file
     # by construction → an orphan source is an integrity problem even on a partial
     # corpus (unlike orphan targets above).
@@ -4258,6 +4297,18 @@ postprocess_db() {
         local unkp_detail
         unkp_detail=$(pp_query "SELECT string_agg(Part_Type || ' ×' || n, ', ' ORDER BY n DESC) FROM v_check_unknown_part_types")
         add_finding consistency warn "$unk_parts unknown LayoutPart type(s): ${unkp_detail:-?}" "Locale name? Add the DE→EN mapping in convert_xml_04_catalog.sql (missed sub-summary names cost breaks_on_field links). Genuine new part type? Extend the canon set in v_check_unknown_part_types"
+    fi
+
+    # LayoutObjects without an assigned part (schema 1.39.0). Expected 0: P4 maps
+    # root objects by their top edge into a part band and children via the parent
+    # chain. > 0 ⇒ a root object outside every band or a broken parent chain.
+    CHECKS_RUN=$((CHECKS_RUN + 1))
+    local lo_nopart
+    lo_nopart=$(pp_num "SELECT COALESCE(SUM(n), 0) FROM v_check_layoutobjects_without_part")
+    if [ "$lo_nopart" -gt 0 ]; then
+        local lo_nopart_detail
+        lo_nopart_detail=$(pp_query "SELECT string_agg(File_Name || ' L' || Layout_ID || ' ×' || n, ', ' ORDER BY n DESC) FROM (SELECT * FROM v_check_layoutobjects_without_part LIMIT 5)")
+        add_finding consistency warn "$lo_nopart LayoutObject(s) without an assigned part: ${lo_nopart_detail:-?}" "Root object above the first / below the last part, or a broken Parent_Object_ID chain — check the part assignment block in convert_xml_04_catalog.sql"
     fi
 
     # Calculation object type (schema 1.22.0): unresolved anchors, UUID collisions,

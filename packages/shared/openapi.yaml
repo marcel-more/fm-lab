@@ -144,12 +144,26 @@ paths:
           in: query
           schema:
             type: string
-            enum: [modified]
+            enum: [modified, usage, name, type, file]
           description: |
-            `modified` — order by the object's own change stamp, newest first;
-            objects without a stamp of their own (script steps, layout objects,
-            built-ins, …) come last. Results then carry `Modified_At`. Without
-            `sort` the result order is unchanged.
+            Server-side order across all pages; ties fall back to name and file.
+            - `modified` — the object's own change stamp, newest first; objects
+              without a stamp of their own (script steps, layout objects,
+              built-ins, …) come last. Results then carry `Modified_At`.
+            - `usage` — the `Usage` column, direction `usage_dir`; types without a
+              usage notion come last.
+            - `name` (case-insensitive), `type`, `file`.
+            Without `sort` the result order is unchanged.
+        - name: usage_dir
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+          description: |
+            Direction of `sort=usage`: `asc` = rarely used first. Default `asc`
+            when `usage_max` is set, `desc` otherwise.
+        - $ref: '#/components/parameters/UsageMin'
+        - $ref: '#/components/parameters/UsageMax'
         - $ref: '#/components/parameters/ModifiedSince'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Offset'
@@ -182,12 +196,17 @@ paths:
             $ref: '#/components/schemas/ObjectType'
         - $ref: '#/components/parameters/FileFilter'
         - $ref: '#/components/parameters/ModifiedSince'
+        - $ref: '#/components/parameters/UsageMin'
+        - $ref: '#/components/parameters/UsageMax'
         - $ref: '#/components/parameters/Format'
         - $ref: '#/components/parameters/Debug'
         - $ref: '#/components/parameters/Meta'
       responses:
         '200':
-          description: Search result count
+          description: |
+            Search result count. The row also carries `usage_available` — false
+            on a catalog built before schema 1.40.0 (no `v_object_usage`): the
+            search then has no usage column and ignores the usage parameters.
           content:
             application/json:
               schema:
@@ -223,6 +242,18 @@ paths:
   /references:
     get:
       summary: Get object references
+      description: |
+        With `meta=true` the response meta carries `usage` = `{owners, users,
+        refs, class}` — the object's usage as the search column shows it
+        (`v_object_usage`, catalogs with schema 1.40.0+; absent for types
+        without a usage notion). The incoming rows then carry
+        `Counts_As_Usage` (boolean): the counting rows add up (Σ `Call_Count`)
+        to `usage.refs`, and their using objects (a layout object or layout part
+        counts as its layout) to `usage.owners`.
+
+        Incoming rows never contain the aggregate edge Layout → Field
+        (`displays_field` without subrole): it duplicates the layout-object
+        edges and is listed on the layout side (outgoing) only.
       tags: [References]
       parameters:
         - name: uuid
@@ -1084,6 +1115,28 @@ components:
         (`YYYY-MM-DD`, local time of the editing client). Objects without a stamp
         of their own drop out. Results then carry `Modified_At`.
 
+    UsageMin:
+      name: usage_min
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+      description: |
+        Keep only objects with `Usage` >= n (inclusive). Types without a usage
+        notion (script steps, layout objects, calculations, relationships, …)
+        drop out.
+
+    UsageMax:
+      name: usage_max
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+      description: |
+        Keep only objects with `Usage` <= n (inclusive) — `0` lists the unused
+        objects, menu entry points and built-in privilege sets (see
+        `Usage_Class`). Types without a usage notion drop out.
+
     CloneFile:
       name: file
       in: query
@@ -1269,6 +1322,57 @@ components:
             the editing client, no time zone). Only present when `/search` runs
             with `sort=modified` or `modified_since`; null for objects without a
             stamp of their own.
+        Usage:
+          type: integer
+          nullable: true
+          description: |
+            Search only, catalogs with schema 1.40.0+: number of using containers
+            (`v_object_usage.Usage_Owners` — a layout object counts as its layout);
+            built-ins, plug-in functions/components and step types carry their
+            usage count. Null for types without a usage notion.
+        Usage_Refs:
+          type: integer
+          nullable: true
+          description: Search only — number of usage references (incoming rows of the references tab, ×N summed; `meta.usage.refs`).
+        Usage_Users:
+          type: integer
+          nullable: true
+          description: Search only — number of distinct using objects.
+        Usage_Roles:
+          type: array
+          nullable: true
+          items:
+            type: string
+          description: Search only — the link roles behind the usage.
+        Usage_Files:
+          type: integer
+          nullable: true
+          description: Search only — number of files the usage comes from.
+        Usage_Class:
+          type: string
+          nullable: true
+          description: |
+            Search only — `used`, `unused`, `entry_point` (no usage, but in the
+            Scripts / layout menu), `builtin` (built-in privilege set); table
+            occurrences also `relationship_bridge`, `dead_branch`, `dead_island`.
+        Usage_Entry_Point:
+          type: boolean
+          nullable: true
+          description: Search only — script in the Scripts menu / layout in the layout menu.
+        Usage_Key_Field:
+          type: boolean
+          nullable: true
+          description: Search only — field is a match field of a relationship.
+        Usage_Cross_File:
+          type: boolean
+          nullable: true
+          description: Search only — used from at least one other file.
+        Usage_Low_Confidence:
+          type: boolean
+          nullable: true
+          description: |
+            Search only — file exported without DDR info: formula references are
+            missing, a usage of 0 is unverified.
         Matched_Values:
           type: string
           nullable: true
@@ -1402,6 +1506,9 @@ components:
                   properties:
                     count:
                       type: integer
+                    usage_available:
+                      type: boolean
+                      description: Search count only — false on a catalog without `v_object_usage`
                 - type: array
                   items:
                     type: object
@@ -1412,6 +1519,9 @@ components:
                         type: string
                       count:
                         type: integer
+                      usage_available:
+                        type: boolean
+                        description: Search count only — false on a catalog without `v_object_usage`
 
     ReferencesResponse:
       allOf:

@@ -1,15 +1,24 @@
 {
   "manifest": {
     "title": "Elenco valori inutilizzato",
-    "description": "Regola di codice inutilizzato: elenchi valori non collegati ad alcun campo/oggetto di Layout, ordinamento o wrapper esterno."
+    "description": "Regola di codice inutilizzato: elenchi valori non collegati ad alcun campo/oggetto di Layout, ordinamento o wrapper esterno. I risultati dei file esportati senza info DDR sono indicati come non verificati."
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Risultati",
-    "summary_kpi.props.items[1].label": "File interessati",
+    "summary_kpi.props.items[1].label": "Senza info DDR",
+    "summary_kpi.props.items[2].label": "File interessati",
     "findings_card.props.title": "Elenco valori inutilizzato",
     "findings_table.props.searchPlaceholder": "Cerca file o nome…",
     "findings_table.props.empty.message": "Nessun risultato trovato.",
     "findings_table.props.columns[0].label": "File",
-    "findings_table.props.columns[1].label": "Nome"
+    "findings_table.props.columns[1].label": "Nome",
+    "findings_table.props.columns[2].label": "Stato",
+    "findings_table.props.columns[3].label": "Senza info DDR",
+    "findings_table.props.columns[2].valueLabels.unused": "Inutilizzato",
+    "findings_table.props.columns[2].valueLabels.unused_unverified": "Inutilizzato (non verificato)",
+    "findings_table.props.columns[3].valueLabels.true": "Sì",
+    "findings_table.props.columns[3].valueLabels.false": "No",
+    "notes_card.props.title": "Significato dello stato",
+    "notes_md.props.content": "**Non verificato.** Il file è stato esportato senza info DDR. Non contiene quindi alcun riferimento dalle formule: un utilizzo in un calcolo resta invisibile. Un risultato del genere è indicato come *Inutilizzato (non verificato)*; il riquadro *Senza info DDR* li elenca. Esporta di nuovo il file con le info DDR prima di eliminare qualcosa.\n\n**Limiti.** Conta solo l’uso all’interno della soluzione importata. Non visibili: **chiamate dall’esterno** — pianificazioni del server, Data API, OData, URL `fmp://`, AppleScript/ActiveX, plug-in, file non importati; **riferimenti dinamici interni** — *Esegui script* per nome, `GetField`, `Evaluate`, nomi nelle stringhe SQL. Un risultato è un candidato da verificare, non una raccomandazione di eliminazione. [Come viene contato l’uso](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

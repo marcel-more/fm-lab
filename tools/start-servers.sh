@@ -436,7 +436,7 @@ if [ -n "${FMLAB_START_STATUS_FILE:-}" ]; then
   } > "$FMLAB_START_STATUS_FILE" 2>/dev/null || true
 fi
 echo ""
-echo "  Stop:      tools/stop-servers.sh"
+echo "  Stop:      bash tools/fmlab.sh down   (or tools/stop-servers.sh)"
 echo "  API log:   logs/rest-api.log"
 [ "$TARGET" != "api" ] && echo "  FE log:    logs/frontend.log"
 exit 0

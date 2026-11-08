@@ -1040,3 +1040,82 @@ mark.search-hit {
   color: var(--color-accent);
   background-color: var(--color-hover-bg);
 }
+
+/* Usage column of the search (v_object_usage): last element of the row, fixed
+   width and right-aligned so the digits line up below each other; the space
+   stays reserved for types without a usage notion. Markers: menu entry point,
+   relationship match field, used from another file. */
+.object-usage-col {
+  flex: 0 0 6.5em;
+  display: inline-flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.3em;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+}
+.object-usage-col--value {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0.1rem 0.25rem;
+}
+.object-usage-col--value:hover {
+  color: var(--color-accent);
+  background: var(--color-hover-bg);
+}
+.object-usage-col--value:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+.object-usage-col.is-unused .object-usage-num {
+  color: var(--color-warning-fg);
+  font-weight: 600;
+}
+.object-usage-markers {
+  display: inline-flex;
+  gap: 0.15em;
+  color: var(--color-text-muted);
+}
+.object-usage-num {
+  min-width: 3ch;
+  text-align: right;
+}
+
+/* Usage filter (≤ / ≥ n) and direction toggle of the usage sort. */
+.search-options-usage {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.search-options-usage select,
+.search-options-usage input[type="number"] {
+  font-size: 0.85rem;
+  padding: 0.1rem 0.3rem;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+.search-options-usage input[type="number"] {
+  width: 5em;
+}
+.search-options-usage.is-disabled,
+.search-options-radio.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.search-options-dir {
+  font-size: 0.85rem;
+  padding: 0 0.45rem;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.search-options-dir:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}

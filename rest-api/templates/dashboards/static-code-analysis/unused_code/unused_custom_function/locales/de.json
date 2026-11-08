@@ -1,15 +1,24 @@
 {
   "manifest": {
     "title": "Ungenutzte Custom Function",
-    "description": "Unused-Code-Regel — Custom Functions, die aus keiner Berechnung, keinem Script und keiner anderen Funktion aufgerufen werden.\n\nAngelehnt an die PMD-Regel UnusedPrivateMethod — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod"
+    "description": "Unused-Code-Regel — Custom Functions, die aus keiner Berechnung, keinem Script und keiner anderen Funktion aufgerufen werden. Treffer in Dateien ohne DDR-Info gelten als ungeprüft.\n\nAngelehnt an die PMD-Regel UnusedPrivateMethod — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Treffer",
-    "summary_kpi.props.items[1].label": "Betroffene Dateien",
+    "summary_kpi.props.items[1].label": "Ohne DDR-Info",
+    "summary_kpi.props.items[2].label": "Betroffene Dateien",
     "findings_card.props.title": "Ungenutzte Custom Function",
     "findings_table.props.searchPlaceholder": "Datei oder Name suchen…",
     "findings_table.props.empty.message": "Keine Treffer gefunden.",
     "findings_table.props.columns[0].label": "Datei",
-    "findings_table.props.columns[1].label": "Name"
+    "findings_table.props.columns[1].label": "Name",
+    "findings_table.props.columns[2].label": "Status",
+    "findings_table.props.columns[3].label": "Ohne DDR-Info",
+    "findings_table.props.columns[2].valueLabels.unused": "Ungenutzt",
+    "findings_table.props.columns[2].valueLabels.unused_unverified": "Ungenutzt (ungeprüft)",
+    "findings_table.props.columns[3].valueLabels.true": "Ja",
+    "findings_table.props.columns[3].valueLabels.false": "Nein",
+    "notes_card.props.title": "Was der Status bedeutet",
+    "notes_md.props.content": "**Ungeprüft.** Die Datei wurde ohne DDR-Info exportiert. Sie enthält dann überhaupt keine Referenzen aus Formeln — eine Nutzung in einer Berechnung bleibt unsichtbar. Ein solcher Treffer heißt *Ungenutzt (ungeprüft)*; die Kachel *Ohne DDR-Info* listet sie. Die Datei vor dem Löschen erneut mit DDR-Info exportieren.\n\n**Grenzen.** Gezählt wird nur die Nutzung innerhalb der importierten Lösung. Nicht sichtbar: **Aufrufe von außen** — Server-Zeitpläne, Data API, OData, `fmp://`-URLs, AppleScript/ActiveX, Plug-ins, nicht importierte Dateien; **dynamische Verweise innerhalb** — *Script ausführen* per Name, `GetField`, `Evaluate`, Namen in SQL-Strings. Ein Treffer ist ein Prüfkandidat, keine Löschempfehlung. [Wie Nutzung gezählt wird](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

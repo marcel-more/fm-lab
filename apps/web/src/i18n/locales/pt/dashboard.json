@@ -376,5 +376,23 @@
     "startup_other": "Limpeza após a atualização: {{count}} restos de uma versão anterior movidos para {{dir}}.",
     "startupForks_one": "A tua versão editada fica em Custom como {{ids}}.",
     "startupForks_other": "As tuas {{count}} versões editadas ficam em Custom como {{ids}}."
+  },
+  "renderer": {
+    "primitiveError": "Não foi possível exibir este elemento: {{message}}"
+  },
+  "kpi": {
+    "toggleOffHint": "Clique novamente para remover este filtro"
+  },
+  "scope": {
+    "label": "Escopo",
+    "file": "Arquivo: {{file}}",
+    "object": "Objeto: {{name}}",
+    "objectTyped": "Objeto: {{name}} ({{type}})",
+    "objects": "{{count}} objeto",
+    "objects_one": "{{count}} objeto",
+    "objects_other": "{{count}} objetos",
+    "clear": "Mostrar a solução inteira",
+    "clearTitle": "Remover o escopo e mostrar a solução inteira",
+    "hint": "Números e listas mostram apenas este escopo"
   }
 }

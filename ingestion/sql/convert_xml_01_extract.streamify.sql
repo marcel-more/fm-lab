@@ -38,8 +38,41 @@
 --   keinen Hash-Drift mehr, und eine Engine-Änderung meldet ihn unter beiden.
 --   gen_streamify_sql.sh übernimmt die Zeile unverändert.
 
--- @SCHEMA_VERSION 1.37.0
--- @SCHEMA_VERSION_DATE 2026-10-28
+-- @SCHEMA_VERSION 1.40.0
+-- @SCHEMA_VERSION_DATE 2026-11-08
+-- @SCHEMA_CHANGELOG 1.40.0: Objekt-Nutzung (Konverter 2.45.0): neue Analysis View
+--   v_object_usage — eine Zeile je Field, Script, Layout, CustomFunction, ValueList,
+--   BaseTable, ExternalDataSource, PrivilegeSet, TableOccurrence und Relationship mit
+--   Nutzungszahlen (Usage_Owners = nutzende Container, Usage_Users, Usage_Refs,
+--   Usage_Roles, Usage_Files, Cross_File), Markern (Entry_Point = Scripts-/Layout-Menü,
+--   Key_Field, Low_Confidence) und Usage_Class (used / unused / entry_point / builtin;
+--   TO-Klassen aus v_table_occurrence_class, Beziehungen abgeleitet). Die eine
+--   Nutzungsdefinition der unused_*-Regeln, des Dashboards und der Suche. Keine
+--   Änderung an Katalogtabellen; neue View → MINOR-Bump (Master-Rebuild baut sie in
+--   bestehenden Lösungen).
+-- @SCHEMA_CHANGELOG 1.39.0: Layout-Bereiche (Konverter 2.44.0): LayoutParts erhält
+--   Part_Name (/Part/@name), Part_Break_Every (Definition/@restartEachGroup = n zu
+--   „Seitenumbruch nach je n Auftreten"), Part_LocalCSS_Name/_Type + Part_LocalCSS
+--   (Definition/LocalCSS: Bereichsstil, roh) sowie Part_Alt_Row_Local /
+--   Part_Active_Row_Local (lokal gesetzter Zeilenstatus, nur Datenbereich).
+--   LayoutObjects erhält Part_Seq/Part_Kind (P1 NULL, P4 leitet sie aus Position
+--   und Eltern-Kette ab); LayoutObjects.Part_Type folgt jetzt dem zugeordneten,
+--   kanonischen Bereichstyp (vorher roh: lokalisiert, kind-5-Mislabel). P3: neue
+--   Tabelle ThemePartStyles (Zeilenstatus-Vorgaben body / part.<name> je Theme).
+--   P4: Break_Field_UUID der Umbruchfelder wird über TO + Feld-ID auf die
+--   kanonische Feld-UUID geheilt (mehr breaks_on_field-Kanten). P6:
+--   v_check_layoutobjects_without_part. Neue Spalten und Tabelle → MINOR-Bump
+--   (Master-Rebuild).
+-- @SCHEMA_CHANGELOG 1.38.0: Start-TOs von Wertelisten und Lookups (Konverter 2.43.0):
+--   OptionsForValueLists erhält ShowRelated + ShowRelated_TO_ID/_Name/_UUID
+--   (Field/ShowRelated — „nur verknüpfte Werte ab TO X", beide Profile),
+--   FieldsForTables erhält Lookup_Context_TO_ID/_Name/_UUID (AutoEnter/Looked_up/
+--   Context — „beginnend mit Tabelle"). P4: neue Link-Rollen related_values_from
+--   (ValueList → TableOccurrence) und lookup_context (Field → TableOccurrence), beide
+--   usage. Die UUID-Heilungskaskade zieht beide TO-UUIDs über ihren ID-Begleiter nach.
+--   Analysis Views: v_table_occurrence_usage / v_table_occurrence_class (TO-Nutzung,
+--   Pfadanalyse im Beziehungsgraphen). Neue Spalten, Rollen und Views → MINOR-Bump
+--   (Master-Rebuild).
 -- @SCHEMA_CHANGELOG 1.37.0: Heilungsbewusste Owner-Auflösung der Berechnungs-Instanzen
 --   (Konverter 2.41.0): CalculationsCatalog ordnet DDR-Anker einer UUID-Heilungsgruppe
 --   (Zensus DuplicateAbsorptionDetails, LayoutObjects/StepsForScripts) dem Mitglied zu,
@@ -2154,6 +2187,12 @@ CREATE TABLE IF NOT EXISTS FieldsForTables (
     Lookup_Enabled BOOLEAN,              -- <AutoEnter><Looked_up @enable>
     Validation_Calc_Enabled BOOLEAN,     -- <Validation><Calculated @enable>
     Validation_Message_Calc_Enabled BOOLEAN, -- <Validation><MessageCalc @enable>
+    -- Start-TO des Lookups (Schema 1.38.0): <AutoEnter><Looked_up><Context>
+    -- <TableOccurrenceReference> = „beginnend mit Tabelle". FileMaker läuft von dieser TO
+    -- über den Beziehungsgraphen zur Lookup_TO → P4-Link lookup_context.
+    Lookup_Context_TO_ID BIGINT,
+    Lookup_Context_TO_Name VARCHAR,
+    Lookup_Context_TO_UUID VARCHAR,
     -- Änderungs-Metadaten (Attribute am <UUID>-Element des Felds), roh — Semantik wie
     -- ExternalDataSourceCatalog. Der Stempel des tabellenweisen <FieldCatalog> steht in
     -- CatalogChangeMeta (Catalog = 'FieldCatalog').
@@ -2244,6 +2283,13 @@ field_records AS (
                                 "id" BIGINT,
                                 "name" VARCHAR,
                                 "UUID" VARCHAR,
+                                "TableOccurrenceReference" STRUCT(
+                                    "id" BIGINT,
+                                    "name" VARCHAR,
+                                    "UUID" VARCHAR
+                                )
+                            ),
+                            "Context" STRUCT(
                                 "TableOccurrenceReference" STRUCT(
                                     "id" BIGINT,
                                     "name" VARCHAR,
@@ -2370,6 +2416,10 @@ SELECT
     f.AutoEnter.Looked_up.enable AS Lookup_Enabled,
     f.Validation.Calculated.enable AS Validation_Calc_Enabled,
     f.Validation.MessageCalc.enable AS Validation_Message_Calc_Enabled,
+    -- Start-TO des Lookups (Schema 1.38.0)
+    f.AutoEnter.Looked_up.Context.TableOccurrenceReference.id AS Lookup_Context_TO_ID,
+    xml_unescape(f.AutoEnter.Looked_up.Context.TableOccurrenceReference.name) AS Lookup_Context_TO_Name,
+    f.AutoEnter.Looked_up.Context.TableOccurrenceReference.UUID AS Lookup_Context_TO_UUID,
     f.UUID.timestamp AS Modified_At,
     xml_unescape(f.UUID.userName) AS Modified_By,
     NULLIF(xml_unescape(f.UUID.accountName), '') AS Modified_Account,
@@ -2441,6 +2491,9 @@ ON CONFLICT (Field_UUID, File_Name) DO UPDATE SET
     Lookup_Enabled = EXCLUDED.Lookup_Enabled,
     Validation_Calc_Enabled = EXCLUDED.Validation_Calc_Enabled,
     Validation_Message_Calc_Enabled = EXCLUDED.Validation_Message_Calc_Enabled,
+    Lookup_Context_TO_ID = EXCLUDED.Lookup_Context_TO_ID,
+    Lookup_Context_TO_Name = EXCLUDED.Lookup_Context_TO_Name,
+    Lookup_Context_TO_UUID = EXCLUDED.Lookup_Context_TO_UUID,
     Modified_At = EXCLUDED.Modified_At,
     Modified_By = EXCLUDED.Modified_By,
     Modified_Account = EXCLUDED.Modified_Account,
@@ -2802,6 +2855,14 @@ CREATE TABLE IF NOT EXISTS OptionsForValueLists (
     External_DS_UUID VARCHAR,
     External_VL_ID BIGINT,
     External_VL_Name VARCHAR,
+    -- „Nur verknüpfte Werte ab TO X" (Field/ShowRelated, Schema 1.38.0): @value = Option
+    -- aktiv; die TableOccurrenceReference ist die Start-TO, von der FileMaker über den
+    -- Beziehungsgraphen zur Quell-TO läuft → P4-Link related_values_from. Bei „alle Werte"
+    -- steht <ShowRelated value="False"/> ohne TO.
+    ShowRelated BOOLEAN,
+    ShowRelated_TO_ID BIGINT,
+    ShowRelated_TO_Name VARCHAR,
+    ShowRelated_TO_UUID VARCHAR,
     File_Name VARCHAR,
     PRIMARY KEY (VL_UUID, File_Name)
 );
@@ -2848,6 +2909,10 @@ ovl_records AS (
                         id BIGINT, name VARCHAR, UUID VARCHAR,
                         "TableOccurrenceReference" STRUCT(id BIGINT, name VARCHAR, UUID VARCHAR)
                     )
+                ),
+                "ShowRelated" STRUCT(
+                    "value" BOOLEAN,
+                    "TableOccurrenceReference" STRUCT(id BIGINT, name VARCHAR, UUID VARCHAR)
                 )
             )',
             'CustomValues': 'STRUCT("Text" STRUCT("#text" VARCHAR)[])',
@@ -2905,6 +2970,10 @@ SELECT
     External.DataSourceReference.UUID AS External_DS_UUID,
     External.ValueListReference.id AS External_VL_ID,
     xml_unescape(External.ValueListReference.name) AS External_VL_Name,
+    Field.ShowRelated.value AS ShowRelated,
+    Field.ShowRelated.TableOccurrenceReference.id AS ShowRelated_TO_ID,
+    xml_unescape(Field.ShowRelated.TableOccurrenceReference.name) AS ShowRelated_TO_Name,
+    Field.ShowRelated.TableOccurrenceReference.UUID AS ShowRelated_TO_UUID,
     fn.File_Name as File_Name
 FROM ovl_healed
 CROSS JOIN filename_normalized fn
@@ -2931,7 +3000,11 @@ ON CONFLICT (VL_UUID, File_Name) DO UPDATE SET
     External_DS_Name = EXCLUDED.External_DS_Name,
     External_DS_UUID = EXCLUDED.External_DS_UUID,
     External_VL_ID = EXCLUDED.External_VL_ID,
-    External_VL_Name = EXCLUDED.External_VL_Name;
+    External_VL_Name = EXCLUDED.External_VL_Name,
+    ShowRelated = EXCLUDED.ShowRelated,
+    ShowRelated_TO_ID = EXCLUDED.ShowRelated_TO_ID,
+    ShowRelated_TO_Name = EXCLUDED.ShowRelated_TO_Name,
+    ShowRelated_TO_UUID = EXCLUDED.ShowRelated_TO_UUID;
 
 -- Zensus (Dup-Absorption): geparste Quell-Records mit denselben Filtern wie der
 -- Katalog-INSERT (ValueListReference.id + Source-Wächter, s. o.); minimaler Re-Read.
@@ -2992,6 +3065,10 @@ ovl23_records AS (
                         id BIGINT, name VARCHAR, UUID VARCHAR,
                         "TableOccurrenceReference" STRUCT(id BIGINT, name VARCHAR, UUID VARCHAR)
                     )
+                ),
+                "ShowRelated" STRUCT(
+                    "value" BOOLEAN,
+                    "TableOccurrenceReference" STRUCT(id BIGINT, name VARCHAR, UUID VARCHAR)
                 )
             )',
             'CustomValues': 'STRUCT("Text" STRUCT("#text" VARCHAR)[])',
@@ -3037,6 +3114,10 @@ SELECT
     External.DataSourceReference.UUID AS External_DS_UUID,
     External.ValueListReference.id AS External_VL_ID,
     xml_unescape(External.ValueListReference.name) AS External_VL_Name,
+    Field.ShowRelated.value AS ShowRelated,
+    Field.ShowRelated.TableOccurrenceReference.id AS ShowRelated_TO_ID,
+    xml_unescape(Field.ShowRelated.TableOccurrenceReference.name) AS ShowRelated_TO_Name,
+    Field.ShowRelated.TableOccurrenceReference.UUID AS ShowRelated_TO_UUID,
     fn.File_Name as File_Name
 FROM ovl23_healed
 CROSS JOIN filename_normalized fn
@@ -3063,7 +3144,11 @@ ON CONFLICT (VL_UUID, File_Name) DO UPDATE SET
     External_DS_Name = EXCLUDED.External_DS_Name,
     External_DS_UUID = EXCLUDED.External_DS_UUID,
     External_VL_ID = EXCLUDED.External_VL_ID,
-    External_VL_Name = EXCLUDED.External_VL_Name;
+    External_VL_Name = EXCLUDED.External_VL_Name,
+    ShowRelated = EXCLUDED.ShowRelated,
+    ShowRelated_TO_ID = EXCLUDED.ShowRelated_TO_ID,
+    ShowRelated_TO_Name = EXCLUDED.ShowRelated_TO_Name,
+    ShowRelated_TO_UUID = EXCLUDED.ShowRelated_TO_UUID;
 
 -- Zensus (Dup-Absorption) des saxml23-Feeds: dieselben Filter wie der INSERT.
 INSERT INTO DuplicateAbsorptions
@@ -4330,6 +4415,14 @@ CREATE TABLE IF NOT EXISTS LayoutParts (
     Break_Field_UUID VARCHAR,
     Break_TO_Name VARCHAR,
     Break_TO_UUID VARCHAR,
+    -- Bereichs-Definition (Schema 1.39.0):
+    Part_Name VARCHAR,              -- /Part/@name (FileMaker-generiert, nur Zwischenergebnisse)
+    Part_Break_Every BIGINT,        -- Definition/@restartEachGroup = n zu „Seitenumbruch nach je n Auftreten" (nur wenn gesetzt)
+    Part_LocalCSS_Name VARCHAR,     -- Definition/LocalCSS/@name = benannter Bereichsstil (NULL = kein Stil)
+    Part_LocalCSS_Type VARCHAR,     -- Definition/LocalCSS/@type (FileMaker 26; FileMaker 22 schreibt kein @type)
+    Part_LocalCSS VARCHAR,          -- Definition/LocalCSS roh (CDATA)
+    Part_Alt_Row_Local BOOLEAN,     -- lokal gesetztes -fm-body-alt-background (nur Datenbereich, sonst NULL)
+    Part_Active_Row_Local BOOLEAN,  -- lokal gesetztes -fm-use-body-current-row-style (nur Datenbereich, sonst NULL)
     File_Name VARCHAR,
     PRIMARY KEY (Layout_ID, Part_Seq, File_Name)
 );
@@ -4392,7 +4485,12 @@ parts_extracted AS (
         xml_unescape(xml_extract_text(part_xml, '/Part/Definition/FieldReference/@name')[1]) as Break_Field_Name,
         xml_extract_text(part_xml, '/Part/Definition/FieldReference/@UUID')[1] as Break_Field_UUID,
         xml_unescape(xml_extract_text(part_xml, '/Part/Definition/FieldReference/TableOccurrenceReference/@name')[1]) as Break_TO_Name,
-        xml_extract_text(part_xml, '/Part/Definition/FieldReference/TableOccurrenceReference/@UUID')[1] as Break_TO_UUID
+        xml_extract_text(part_xml, '/Part/Definition/FieldReference/TableOccurrenceReference/@UUID')[1] as Break_TO_UUID,
+        NULLIF(xml_unescape(xml_extract_text(part_xml, '/Part/@name')[1]), '') as Part_Name,
+        TRY_CAST(xml_extract_text(part_xml, '/Part/Definition/@restartEachGroup')[1] AS BIGINT) as Part_Break_Every,
+        NULLIF(xml_unescape(xml_extract_text(part_xml, '/Part/Definition/LocalCSS/@name')[1]), '') as Part_LocalCSS_Name,
+        NULLIF(xml_extract_text(part_xml, '/Part/Definition/LocalCSS/@type')[1], '') as Part_LocalCSS_Type,
+        NULLIF(ws_restore(xml_extract_text(part_xml, '/Part/Definition/LocalCSS')[1]), '') as Part_LocalCSS
     FROM layout_parts
 )
 INSERT INTO LayoutParts
@@ -4415,6 +4513,21 @@ SELECT
     CASE WHEN Break_Field_ID != 0 THEN Break_Field_UUID END as Break_Field_UUID,
     CASE WHEN Break_Field_ID != 0 THEN Break_TO_Name END as Break_TO_Name,
     CASE WHEN Break_Field_ID != 0 THEN Break_TO_UUID END as Break_TO_UUID,
+    Part_Name,
+    Part_Break_Every,
+    Part_LocalCSS_Name,
+    Part_LocalCSS_Type,
+    Part_LocalCSS,
+    -- Zeilenstatus (Dialog-Optionen „Abwechselnder" / „Aktiver Zeilenstatus") steht
+    -- nicht im Options-Bitfeld, sondern als CSS-Eigenschaft der :normal-Regel. Hier nur
+    -- der LOKAL gesetzte Wert; der effektive Wert folgt der Kaskade lokal → Bereichsstil
+    -- (ThemePartStyles) → Theme-Regel body → aus. Nur am Datenbereich (kind 4) sinnvoll.
+    CASE WHEN Part_Kind = 4 THEN TRY_CAST(NULLIF(regexp_extract(Part_LocalCSS,
+        ':normal \.self\s*\{[^}]*-fm-body-alt-background\s*:\s*(true|false)', 1), '') AS BOOLEAN)
+    END as Part_Alt_Row_Local,
+    CASE WHEN Part_Kind = 4 THEN TRY_CAST(NULLIF(regexp_extract(Part_LocalCSS,
+        ':normal \.self\s*\{[^}]*-fm-use-body-current-row-style\s*:\s*(true|false)', 1), '') AS BOOLEAN)
+    END as Part_Active_Row_Local,
     fn.File_Name as File_Name
 FROM parts_extracted
 CROSS JOIN filename_normalized fn
@@ -4432,7 +4545,14 @@ ON CONFLICT (Layout_ID, Part_Seq, File_Name) DO UPDATE SET
     Break_Field_Name = EXCLUDED.Break_Field_Name,
     Break_Field_UUID = EXCLUDED.Break_Field_UUID,
     Break_TO_Name = EXCLUDED.Break_TO_Name,
-    Break_TO_UUID = EXCLUDED.Break_TO_UUID;
+    Break_TO_UUID = EXCLUDED.Break_TO_UUID,
+    Part_Name = EXCLUDED.Part_Name,
+    Part_Break_Every = EXCLUDED.Part_Break_Every,
+    Part_LocalCSS_Name = EXCLUDED.Part_LocalCSS_Name,
+    Part_LocalCSS_Type = EXCLUDED.Part_LocalCSS_Type,
+    Part_LocalCSS = EXCLUDED.Part_LocalCSS,
+    Part_Alt_Row_Local = EXCLUDED.Part_Alt_Row_Local,
+    Part_Active_Row_Local = EXCLUDED.Part_Active_Row_Local;
 
 
 -- ========================================
@@ -4475,6 +4595,10 @@ CREATE TABLE IF NOT EXISTS LayoutObjects (
     Text_Content VARCHAR,
     Object_XML VARCHAR,
     File_Name VARCHAR,
+    -- Zugeordneter Layout-Bereich (Schema 1.39.0): P1 schreibt NULL, P4 leitet
+    -- beide Werte aus Position (Root-Objekte) bzw. Eltern-Kette (Kinder) ab.
+    Part_Seq BIGINT,
+    Part_Kind BIGINT,
     PRIMARY KEY (Object_UUID, File_Name)
 );
 
@@ -4682,7 +4806,9 @@ SELECT
     ws_restore(Entry_Calculation_Text) as Entry_Calculation_Text,
     ws_restore(Text_Content) as Text_Content,
     ws_restore(object_xml::VARCHAR) as Object_XML,
-    fn.File_Name as File_Name
+    fn.File_Name as File_Name,
+    NULL::BIGINT as Part_Seq,    -- P4 (Objekt → Bereich)
+    NULL::BIGINT as Part_Kind    -- P4 (Objekt → Bereich)
 -- DETERMINISTISCHES DEDUP (Chunk-Invarianz) — identisch zur DOM-Basis:
 -- mit den direkten Kind-Achsen bleibt nur die bekannte Doppel-Serialisierung
 -- (Part-Root + GroupedButton-ObjectList, 12 Korpus-Fälle); pro Identität
@@ -4729,7 +4855,9 @@ ON CONFLICT (Object_UUID, File_Name) DO UPDATE SET
     Entry_Find = EXCLUDED.Entry_Find,
     Entry_Calculation_Text = EXCLUDED.Entry_Calculation_Text,
     Text_Content = EXCLUDED.Text_Content,
-    Object_XML = EXCLUDED.Object_XML;
+    Object_XML = EXCLUDED.Object_XML,
+    Part_Seq = EXCLUDED.Part_Seq,
+    Part_Kind = EXCLUDED.Part_Kind;
 
 -- Zensus (Dup-Absorption): Emissionsmenge des LayoutObjects-INSERTs — SAX-Fassung,
 -- quellgleich zur TEMP-Stage im DOM-Block der Basis (dort begründet, inkl.
@@ -6243,9 +6371,15 @@ SELECT
     ws_restore(xml_extract_text(priv_xml, '/ExtendedPrivilege/Description/text()')[1]) as EP_Description,
     xml_extract_text(priv_xml, '/ExtendedPrivilege/UUID/text()')[1] as EP_UUID,
 
-    -- Array of PrivilegeSet IDs und Namen
-    list(xml_extract_text(ps_xml, '/PrivilegeSetReference/@id')[1]::BIGINT) as PrivilegeSet_IDs,
-    list(xml_extract_text(ps_xml, '/PrivilegeSetReference/@name')[1]) as PrivilegeSet_Names,
+    -- Array of PrivilegeSet IDs und Namen. Eine EP ohne <PrivilegeSetReference> liefert
+    -- über den LEFT JOIN LATERAL eine Zeile mit ps_xml = NULL: ohne FILTER würde list()
+    -- daraus [NULL] machen. FILTER auf 0 Zeilen ergibt NULL → COALESCE auf [] (Vertrag:
+    -- [] = keinem Berechtigungsset erteilt). Gleiches Prädikat in beiden Aggregaten →
+    -- IDs und Namen bleiben positionsgleich.
+    COALESCE(list(xml_extract_text(ps_xml, '/PrivilegeSetReference/@id')[1]::BIGINT)
+        FILTER (WHERE ps_xml IS NOT NULL), []::BIGINT[]) as PrivilegeSet_IDs,
+    COALESCE(list(xml_extract_text(ps_xml, '/PrivilegeSetReference/@name')[1])
+        FILTER (WHERE ps_xml IS NOT NULL), []::VARCHAR[]) as PrivilegeSet_Names,
 
     xml_extract_text(priv_xml, '/ExtendedPrivilege/UUID/@timestamp')[1] as Modified_At,
     xml_unescape(xml_extract_text(priv_xml, '/ExtendedPrivilege/UUID/@userName')[1]) as Modified_By,
@@ -6512,10 +6646,11 @@ SELECT
     xml_unescape(xml_extract_text(ms_xml, '/CustomMenuSet/@name')[1]) as MenuSet_Name,
     ws_restore(xml_extract_text(ms_xml, '/CustomMenuSet/@comment')[1]) as Comment,
     xml_extract_text(ms_xml, '/CustomMenuSet/UUID/text()')[1] as MenuSet_UUID,
-    list(xml_extract_text(ref_xml, '/CustomMenuReference/@id')[1]::BIGINT)
-        FILTER (WHERE ref_xml IS NOT NULL) as Member_Menu_IDs,
-    list(xml_extract_text(ref_xml, '/CustomMenuReference/@name')[1])
-        FILTER (WHERE ref_xml IS NOT NULL) as Member_Menu_Names,
+    -- FILTER auf 0 Zeilen ergibt NULL → COALESCE auf [] (leeres Menüset = []).
+    COALESCE(list(xml_extract_text(ref_xml, '/CustomMenuReference/@id')[1]::BIGINT)
+        FILTER (WHERE ref_xml IS NOT NULL), []::BIGINT[]) as Member_Menu_IDs,
+    COALESCE(list(xml_extract_text(ref_xml, '/CustomMenuReference/@name')[1])
+        FILTER (WHERE ref_xml IS NOT NULL), []::VARCHAR[]) as Member_Menu_Names,
     xml_extract_text(ms_xml, '/CustomMenuSet/UUID/@timestamp')[1] as Modified_At,
     xml_unescape(xml_extract_text(ms_xml, '/CustomMenuSet/UUID/@userName')[1]) as Modified_By,
     NULLIF(xml_unescape(xml_extract_text(ms_xml, '/CustomMenuSet/UUID/@accountName')[1]), '') as Modified_Account,

@@ -1,0 +1,407 @@
+/* TableOccurrence detail — profile of a table occurrence (definition, usage,
+   relationships seen from this TO, other occurrences of the base table). */
+
+.fm-to {
+  padding: 0.5rem 0.25rem;
+}
+
+/* ── Top row: definition | usage ── */
+.fm-to-top {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+  margin: 0.25rem 0 1.5rem;
+}
+.fm-to-card {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-surface);
+  padding: 0.75rem 1rem;
+  min-width: 0;
+}
+.fm-to-card-head,
+.fm-to-section-head {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin: 0 0 0.6rem;
+}
+.fm-to-count { color: var(--color-text-muted); font-weight: 400; }
+
+/* Disclosure toggle of a list section heading (Beziehungen / Weitere Auftreten)
+ * — same look as the layout properties toggle, sized by the heading. */
+.fm-to-section-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.fm-to-section-toggle:hover:not(:disabled) { color: var(--color-text-primary); }
+.fm-to-section-toggle:disabled { cursor: default; }
+.fm-to-section-toggle:disabled .disclosure-chevron { opacity: 0.5; }
+
+/* ── Definition (key/value) ── */
+.fm-to-dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1rem;
+  margin: 0;
+  font-size: 0.88rem;
+}
+.fm-to-dl dt { color: var(--color-text-muted); font-weight: 600; }
+.fm-to-dl dd { margin: 0; color: var(--color-text-primary); min-width: 0; overflow-wrap: anywhere; }
+
+.fm-to-link {
+  color: var(--color-accent-soft-fg);
+  text-decoration: none;
+  font-weight: 500;
+}
+.fm-to-link:hover { text-decoration: underline; }
+/* In-page count link (definition card) — a button that looks like .fm-to-link. */
+.fm-to-link-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+.fm-to-num-link { font-variant-numeric: tabular-nums; }
+.fm-to-link:focus-visible {
+  outline: 2px solid var(--color-accent-ring);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+.fm-to-muted { color: var(--color-text-muted); }
+.fm-to-ok { color: var(--color-success-fg); font-size: 0.82rem; }
+.fm-to-warn { color: var(--color-warning-fg); font-size: 0.82rem; }
+
+.fm-to-badge {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+.fm-to-badge--accent {
+  background: var(--color-accent-soft-bg);
+  color: var(--color-accent-soft-fg);
+}
+.fm-to-path {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+.fm-to-ds-state { margin-top: 0.15rem; }
+
+.fm-to-diagram {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1rem;
+}
+.fm-to-swatch-wrap { display: inline-flex; align-items: center; gap: 0.35rem; }
+.fm-to-swatch {
+  display: inline-block;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 3px;
+  border: 1px solid var(--color-border-strong);
+}
+.fm-to-swatch-wrap code { font-size: 0.78rem; color: var(--color-text-secondary); }
+
+/* ── Usage ── */
+.fm-to-notice {
+  font-size: 0.85rem;
+  color: var(--color-info-fg);
+  background: var(--color-info-bg);
+  border: 1px solid var(--color-info-border);
+  border-radius: 6px;
+  padding: 0.5rem 0.7rem;
+}
+.fm-to-class {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.6rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.88rem;
+}
+/* Neutral badge on purpose — finding colours belong to the tests tab. */
+.fm-to-class-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+.fm-to-class-badge::before {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+.fm-to-class-badge--used::before { background: var(--color-text-secondary); }
+.fm-to-class-badge--open::before { border: 1.5px solid var(--color-text-secondary); box-sizing: border-box; }
+.fm-to-class-detail { color: var(--color-text-secondary); }
+.fm-to-hint {
+  margin: 0.25rem 0 0.5rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+.fm-to-hint--warn { color: var(--color-warning-fg); }
+
+.fm-to-usage-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+.fm-to-usage-row,
+.fm-to-sib-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-size: 0.88rem;
+}
+.fm-to-sib-row + .fm-to-sib-row { margin-top: 0.4rem; }
+.fm-to-usage-label {
+  flex: 0 0 auto;
+  min-width: 5.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+}
+.fm-to-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  min-width: 0;
+}
+.fm-to-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.8rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  background: var(--color-bg-elevated);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.fm-to-chip:hover { border-color: var(--color-accent); color: var(--color-text-primary); }
+.fm-to-chip:focus-visible { outline: 2px solid var(--color-accent-ring); outline-offset: 1px; }
+.fm-to-chip-count { font-variant-numeric: tabular-nums; opacity: 0.75; }
+.fm-to-usage-foot {
+  margin-top: 0.6rem;
+  font-size: 0.8rem;
+  text-align: right;
+}
+
+/* ── Relationships ── */
+.fm-to-section { margin: 1.5rem 0; }
+.fm-to-search {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 0 0.6rem;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.9rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 6px;
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+}
+.fm-to-search:focus-visible {
+  outline: 2px solid var(--color-accent-ring);
+  outline-offset: -1px;
+  border-color: var(--color-accent);
+}
+/* No overflow container on wide screens: it would break the sticky header
+   (sticky sticks to the nearest scroll container). Narrow screens scroll the
+   table horizontally instead and give up the sticky header. */
+.fm-to-table-wrap { overflow: visible; }
+.fm-to-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.88rem;
+}
+.fm-to-table th,
+.fm-to-table td {
+  text-align: left;
+  padding: 0.3rem 0.6rem;
+  vertical-align: top;
+}
+.fm-to-table thead th {
+  color: var(--color-text-muted);
+  font-weight: 600;
+  white-space: nowrap;
+  /* Tables are never cut — the header stays visible while the page scrolls. */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-bg-app);
+  box-shadow: inset 0 -1px 0 var(--color-border-strong);
+}
+.fm-to-th-sort { cursor: pointer; user-select: none; }
+.fm-to-th-sort:hover { color: var(--color-text-secondary); }
+.fm-to-th-sort:focus-visible { outline: 2px solid var(--color-accent-ring); outline-offset: -2px; }
+.fm-to-table thead th[aria-sort="ascending"],
+.fm-to-table thead th[aria-sort="descending"] { color: var(--color-text-primary); }
+
+/* One tbody per relationship — the separator runs between relationships. */
+.fm-to-rel { border-bottom: 1px solid var(--color-border); }
+.fm-to-rel:hover { background: var(--color-hover-bg); }
+.fm-to-rel--cascade { background: var(--color-warning-bg); }
+.fm-to-rel--cascade:hover { background: var(--color-warning-bg); }
+
+.fm-to-pred-self { white-space: nowrap; }
+.fm-to-and {
+  display: inline-block;
+  min-width: 2.2rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.fm-to-op {
+  text-align: center !important;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  width: 1.5rem;
+}
+.fm-to-pred-partner { white-space: nowrap; }
+.fm-to-partner-sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.5rem;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+.fm-to-opts { white-space: nowrap; }
+.fm-to-opts-side { display: inline-flex; gap: 0.2rem; min-width: 1rem; }
+.fm-to-opts-sep { margin: 0 0.35rem; color: var(--color-text-muted); }
+.fm-to-opt { cursor: help; }
+.fm-to-opt--warn { color: var(--color-warning-fg); }
+.fm-to-relid { white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.fm-to-noresults { font-style: italic; padding: 0.5rem 0; }
+.fm-to-legend {
+  margin: 0.4rem 0 0;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+/* ── Siblings ── */
+.fm-to-sib { white-space: nowrap; }
+.fm-to-sib + .fm-to-sib::before { content: '·'; margin-right: 0.35rem; color: var(--color-text-muted); }
+
+@media (max-width: 900px) {
+  .fm-to-table-wrap { overflow-x: auto; }
+  .fm-to-table thead th { position: static; }
+}
+
+@media (max-width: 640px) {
+  .fm-to-top { grid-template-columns: 1fr; }
+  .fm-to-usage-row,
+  .fm-to-sib-row { flex-direction: column; gap: 0.2rem; }
+}
+
+/* ── Toolbar above a table: search + filter chips ── */
+.fm-to-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin: 0 0 0.6rem;
+}
+.fm-to-toolbar .fm-to-search { margin: 0; flex: 0 1 420px; }
+button.fm-to-chip {
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.fm-to-chip--active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #fff;
+}
+.fm-to-chip--active:hover { color: #fff; }
+.fm-to-chip:disabled { opacity: 0.45; cursor: default; }
+.fm-to-chip:disabled:hover { border-color: var(--color-border-strong); color: var(--color-text-secondary); }
+
+.fm-to-head-link {
+  margin-left: 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+/* Sibling table rows: simple separators (one row per occurrence). */
+.fm-to-sib-table tbody tr { border-bottom: 1px solid var(--color-border); }
+.fm-to-sib-table tbody tr:hover { background: var(--color-hover-bg); }
+
+/* Filtered count "(12 of 132)" — stands out so a filtered table never reads as complete. */
+.fm-to-count--filtered {
+  color: var(--color-accent-soft-fg);
+  font-weight: 600;
+}
+
+/* ── TO group & context path ── */
+.fm-to-context { margin: 0 0 1.5rem; }
+.fm-to-anchors { display: inline-flex; flex-wrap: wrap; gap: 0.2rem 0.9rem; }
+.fm-to-anchor { white-space: nowrap; }
+.fm-to-hop-link {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+.fm-to-hop-link:hover { color: var(--color-accent-soft-fg); text-decoration: underline; }
+.fm-to-hop-link:focus-visible { outline: 2px solid var(--color-accent-ring); outline-offset: 1px; border-radius: 2px; }
+.fm-to-context .fm-to-hint { margin: 0.6rem 0 0; }
+
+/* Anchor summary: "+n more" toggles the full anchor list. */
+.fm-to-anchor-more {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--color-accent-soft-fg);
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.fm-to-anchor-more:hover { text-decoration-style: solid; }
+.fm-to-anchor-more:focus-visible { outline: 2px solid var(--color-accent-ring); outline-offset: 2px; border-radius: 2px; }
+.fm-to-anchor-table { width: auto; min-width: 320px; margin-top: 0.5rem; font-size: 0.85rem; }
+.fm-to-anchor-table thead th { position: static; }
+.fm-to-anchor-table tbody tr { border-bottom: 1px solid var(--color-border); }
+.fm-to-num { text-align: right !important; font-variant-numeric: tabular-nums; }
+
+/* Nearest layout context + vertical path (one TO per line, join fields between). */
+.fm-to-vpaths { display: flex; flex-wrap: wrap; gap: 0.5rem 2rem; margin-top: 0.4rem; }
+.fm-to-vpath { list-style: none; margin: 0; padding: 0; }
+.fm-to-vpath-hop {
+  margin: 0.1rem 0 0.1rem 0.6rem;
+  padding-left: 0.6rem;
+  border-left: 1px solid var(--color-border-strong);
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+.fm-to-vpath-to strong { color: var(--color-text-primary); }

@@ -55,6 +55,8 @@ For a `LayoutObject` the payload carries, besides the button-embedded step lines
 
 Detail templates whose output is a prose block automatically render as plain text for any non-JSON format.
 
+**TableOccurrence:** rows carry a `section` discriminator (`meta`, `predicate`, `sibling`, `usage_class`, `usage`, `group`, `anchor`, `path_step`). The usage rows come from a second template and are appended only when the catalog has the usage analysis tables (schema 1.38.0 or later); `meta.to_usage.available` reports which case applies. The relationship-graph context (`group`, `anchor`, `path_step`) comes from a third template and is always present. Details: [TableOccurrence](../../schema/object-types/TableOccurrence.md#detail-view).
+
 **Layout special case:** the detail template for `Layout` objects generates a complete **SVG wireframe** of the layout (parts as bands, objects as color-coded rectangles with labels and tooltips, nested objects resolved to absolute coordinates). `format=content` returns the ready-to-use SVG document; the default `format=json` delivers the same markup line-wise as rows with a `content` column. Interactive clients that need hover/navigation on individual layout objects should use the structured layout data templates via [/query](Query%20and%20Report%20API.md) instead — see [SVG and visual output](../REST%20API%20Output%20Formats.md#a-note-on-svg-and-visual-output).
 
 ### Localized built-in names

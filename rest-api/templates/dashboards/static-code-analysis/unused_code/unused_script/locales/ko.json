@@ -1,15 +1,30 @@
 {
   "manifest": {
     "title": "사용되지 않는 스크립트",
-    "description": "미사용 코드 규칙 — 다른 어떤 스크립트에서도 호출되지 않고 어떤 트리거로도 시작되지 않는 스크립트. 확인: 수동 또는 사용자 지정 메뉴 시작이 여기에 나타날 수 있습니다.\n\nPMD 규칙 UnusedPrivateMethod — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod"
+    "description": "미사용 코드 규칙 — 다른 스크립트, 버튼, 사용자 지정 메뉴 어디에서도 호출되지 않고 어떤 트리거로도 시작되지 않는 스크립트. 스크립트 메뉴에 있는 스크립트는 진입점이며 별도로 나열되고 결과가 아닙니다. DDR 정보 없이 내보낸 파일의 결과는 미검증으로 표시됩니다.\n\nPMD 규칙 UnusedPrivateMethod — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "발견 수",
-    "summary_kpi.props.items[1].label": "영향받는 파일",
+    "summary_kpi.props.items[1].label": "DDR 정보 없음",
+    "summary_kpi.props.items[2].label": "스크립트 메뉴에 있음",
+    "summary_kpi.props.items[3].label": "영향받는 파일",
     "findings_card.props.title": "사용되지 않는 스크립트",
     "findings_table.props.searchPlaceholder": "파일 또는 스크립트 검색…",
     "findings_table.props.empty.message": "사용되지 않는 스크립트를 찾을 수 없습니다.",
     "findings_table.props.columns[0].label": "파일",
-    "findings_table.props.columns[1].label": "스크립트"
+    "findings_table.props.columns[1].label": "스크립트",
+    "findings_table.props.columns[2].label": "상태",
+    "findings_table.props.columns[3].label": "DDR 정보 없음",
+    "findings_table.props.columns[2].valueLabels.unused": "미사용",
+    "findings_table.props.columns[2].valueLabels.unused_unverified": "미사용 (미검증)",
+    "findings_table.props.columns[3].valueLabels.true": "예",
+    "findings_table.props.columns[3].valueLabels.false": "아니요",
+    "entry_points_card.props.title": "진입점: 스크립트 메뉴에 있음, 호출 없음",
+    "entry_points_table.props.searchPlaceholder": "파일 또는 스크립트 검색…",
+    "entry_points_table.props.empty.message": "진입점을 찾을 수 없습니다.",
+    "entry_points_table.props.columns[0].label": "파일",
+    "entry_points_table.props.columns[1].label": "스크립트",
+    "notes_card.props.title": "상태의 의미",
+    "notes_md.props.content": "**미검증.** 파일이 DDR 정보 없이 내보내졌습니다. 이 경우 계산식에서 오는 참조가 전혀 없으므로 계산식에서의 사용이 보이지 않습니다. 이런 결과는 *미사용 (미검증)*으로 표시되며 *DDR 정보 없음* 타일에서 목록을 볼 수 있습니다. 삭제하기 전에 DDR 정보를 포함해 파일을 다시 내보내십시오.\n\n**진입점.** 스크립트 메뉴에 있는 스크립트는 아무것도 호출하지 않아도 사용자가 시작할 수 있습니다. 결과가 아니며 *진입점* 목록에 표시됩니다. 시작할 의도가 없다면 메뉴에서 제거하십시오. 그러면 결과가 됩니다.\n\n**한계.** 가져온 솔루션 내부의 사용만 셉니다. 보이지 않는 것: **외부에서의 호출** — 서버 일정, Data API, OData, `fmp://` URL, AppleScript/ActiveX, 플러그인, 가져오지 않은 파일; **내부의 동적 참조** — 이름으로 *스크립트 실행*, `GetField`, `Evaluate`, SQL 문자열 안의 이름. 결과는 검토 후보이며 삭제 권장이 아닙니다. [사용을 세는 방법](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

@@ -1,6 +1,6 @@
 {
   "id": "hotspots",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "title": "Hotspots & stale objects",
   "description": "Where maintenance pays off: objects changed often and used widely (hotspots), and objects nobody references any more, by how long they have been left untouched (stale objects).",
   "author": "fm-lab core",

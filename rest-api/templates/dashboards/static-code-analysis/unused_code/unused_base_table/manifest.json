@@ -1,6 +1,6 @@
 {
   "id": "unused_base_table",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "title": "Unused Base Table",
   "description": "Unused-code rule — base tables with no table occurrence. Without an occurrence the table is unreachable in the relationship graph.",
   "author": "fm-lab rules",
@@ -38,10 +38,16 @@
     "scope": {
       "supported": [
         "solution",
-        "file"
+        "file",
+        "object",
+        "object-list",
+        "cluster"
       ],
       "anchor": "nav_uuid",
-      "mode": {}
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
     },
     "defaultResult": {
       "dataset": "summary",

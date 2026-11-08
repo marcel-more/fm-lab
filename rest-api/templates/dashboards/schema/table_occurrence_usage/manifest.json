@@ -1,0 +1,117 @@
+{
+  "id": "table_occurrence_usage",
+  "version": "1.0.1",
+  "title": "Table Occurrence Usage",
+  "description": "How often every table occurrence is used and by what — layouts, portals, formulas, script steps, layout fields, value lists, lookups, security, relationships. Sorted by usage; unused, rarely and heavily used occurrences as filters; dead branches of the relationship graph told apart from intermediate occurrences that a path between two used ones runs through (e.g. the join TO of an n:m relationship). A row shows every usage with the using object.",
+  "author": "fm-lab",
+  "icon": "table",
+  "tags": [
+    "schema",
+    "table-occurrence",
+    "relationship-graph",
+    "cleanup"
+  ],
+  "entry": "layout.json",
+  "analysis": {
+    "objectTypes": [
+      "TableOccurrence"
+    ]
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "usage",
+      "source": "bundle:data/usage.sql",
+      "pageSize": 100,
+      "pageParam": "page",
+      "searchParam": "q",
+      "sortParam": "sort"
+    },
+    {
+      "id": "selected",
+      "source": "bundle:data/selected.sql"
+    },
+    {
+      "id": "details",
+      "source": "bundle:data/details.sql",
+      "pageSize": 100,
+      "pageParam": "details_page",
+      "searchParam": "details_q",
+      "sortParam": "details_sort"
+    },
+    {
+      "id": "dead_group",
+      "source": "bundle:data/dead_group.sql"
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Optional file filter — derived from the app-level filter."
+    },
+    {
+      "name": "rare_max",
+      "type": "number",
+      "required": false,
+      "sticky": true,
+      "description": "Threshold for 'rarely used': a used table occurrence with at most this many usages (default 3)."
+    },
+    {
+      "name": "class",
+      "type": "string",
+      "required": false,
+      "description": "Usage class filter of the list (KPI tile): used, rare, heavy, bridge, dead_branch, dead_island, unused; empty = all. Sticky, so it combines with ddr; the 'All table occurrences' tile resets both.",
+      "sticky": true
+    },
+    {
+      "name": "ddr",
+      "type": "string",
+      "required": false,
+      "description": "List filter by DDR info (KPI tile): 'without' = only table occurrences of files exported without DDR info; empty = all. Sticky, so it combines with class; the 'All table occurrences' tile resets both.",
+      "sticky": true
+    },
+    {
+      "name": "q",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Search term of the table occurrence list. Sticky: it survives KPI tile clicks and row clicks (the 'All table occurrences' tile resets only class and ddr); cleared in the search field."
+    },
+    {
+      "name": "sort",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Sort column of the table occurrence list (server sort). Sticky, like q."
+    },
+    {
+      "name": "dir",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Sort direction of the table occurrence list (asc/desc). Sticky, like q."
+    },
+    {
+      "name": "to_uuid",
+      "type": "string",
+      "required": false,
+      "description": "Selected table occurrence (UUID) for the detail cards."
+    },
+    {
+      "name": "to_file",
+      "type": "string",
+      "required": false,
+      "description": "File of the selected table occurrence."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

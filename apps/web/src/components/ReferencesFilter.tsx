@@ -16,7 +16,7 @@ type Props = {
   onToggleRole: (roleKey: string) => void;
   onClearRoles: () => void;
   /** Kurzlabel-Resolver für Slot-Klassen (eine Label-Quelle mit der Liste). */
-  subroleShort: (cls: string) => string;
+  subroleShort: (cls: string, role?: string) => string;
   query: string;
   onQueryChange: (value: string) => void;
   matchCount: number;
@@ -69,7 +69,8 @@ export function ReferencesFilter({
   const roleChipLabel = (roleKey: string): string => {
     const tildeAt = roleKey.indexOf('~');
     if (tildeAt < 0) return roleKey;
-    return `${roleKey.slice(0, tildeAt)} · ${subroleShort(roleKey.slice(tildeAt + 1))}`;
+    const role = roleKey.slice(0, tildeAt);
+    return `${role} · ${subroleShort(roleKey.slice(tildeAt + 1), role)}`;
   };
 
   const hasAnyActive = activeTypes.size > 0;

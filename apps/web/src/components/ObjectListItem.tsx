@@ -57,6 +57,74 @@ function highlightMatch(text: string, term?: string): React.ReactNode {
   );
 }
 
+// Usage classes that are findings of the test unused-code — a 0 there is
+// highlighted; entry points, built-in privilege sets and relationship bridges
+// show 0 without the warning.
+const FINDING_CLASSES = new Set(['unused', 'dead_branch', 'dead_island']);
+
+/**
+ * Usage column of the search (schema 1.40.0, v_object_usage): number of using
+ * containers, fixed width as the last element of the row so the digits line up.
+ * Rendered only when the search delivered the column (`Usage` present); types
+ * without a usage notion keep the space empty. Click → incoming references.
+ */
+const UsageCell: React.FC<{ object: FMObject }> = ({ object }) => {
+  const { t } = useTranslation(['detail']);
+  const navigate = useNavigate();
+  const value = object.Usage;
+  if (value === null || value === undefined) {
+    return <span className="object-usage-col" aria-hidden="true" />;
+  }
+  const cls = object.Usage_Class ?? '';
+  const pseudo = object.Usage_Users === null || object.Usage_Users === undefined;
+  const unverified = value === 0 && object.Usage_Low_Confidence === true;
+  const notes: string[] = [];
+  if (pseudo) {
+    notes.push(t('detail:objectListItem.usageBadge', { count: value }) as string);
+  } else {
+    notes.push(t('detail:objectListItem.usageTooltip', {
+      owners: value,
+      refs: object.Usage_Refs ?? 0,
+      roles: object.Usage_Roles?.length ?? 0,
+      files: object.Usage_Files ?? 0,
+    }) as string);
+  }
+  if (cls === 'entry_point' || (object.Usage_Entry_Point && value > 0)) notes.push(t('detail:objectListItem.usageEntryPoint') as string);
+  if (cls === 'builtin') notes.push(t('detail:objectListItem.usageBuiltin') as string);
+  if (cls === 'relationship_bridge') notes.push(t('detail:objectListItem.usageBridge') as string);
+  if (cls === 'dead_branch' || cls === 'dead_island') notes.push(t('detail:objectListItem.usageDead') as string);
+  if (object.Usage_Key_Field) notes.push(t('detail:objectListItem.usageKeyField') as string);
+  if (object.Usage_Cross_File) notes.push(t('detail:objectListItem.usageCrossFile') as string);
+  if (unverified) notes.push(t('detail:objectListItem.usageUnverified') as string);
+  // Closing line: the number is internal only — calls from outside are invisible.
+  if (!pseudo) notes.push(t('detail:objectListItem.usageExternal') as string);
+  const open = () => navigate(buildObjectPath(object.Object_UUID, null, object.File_Name ?? null, { tab: 'references', rdir: 'in', rgroup: 'owner' }));
+  return (
+    <span
+      className={`object-usage-col object-usage-col--value${value === 0 && FINDING_CLASSES.has(cls) ? ' is-unused' : ''}`}
+      role="button"
+      tabIndex={0}
+      title={notes.join('\n')}
+      aria-label={t('detail:objectListItem.usageCellAria', { count: value }) as string}
+      onClick={(e) => { e.stopPropagation(); open(); }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          e.stopPropagation();
+          open();
+        }
+      }}
+    >
+      <span className="object-usage-markers" aria-hidden="true">
+        {object.Usage_Entry_Point && <span className="object-usage-marker">≡</span>}
+        {object.Usage_Key_Field && <span className="object-usage-marker">⚷</span>}
+        {object.Usage_Cross_File && <span className="object-usage-marker">⇄</span>}
+      </span>
+      <span className="object-usage-num">{value}{unverified ? '?' : ''}</span>
+    </span>
+  );
+};
+
 /**
  * Object List Item Component
  * Renders a single FileMaker object in the virtual list.
@@ -250,6 +318,9 @@ export const ObjectListItem: React.FC<ObjectListItemProps> = ({ object, style, o
               {t('detail:objectListItem.graphButton')}
             </Link>
           )}
+          {/* Usage column — last element, fixed width (digits line up whatever
+              the width of the type pill). Only when the search delivered it. */}
+          {Object.prototype.hasOwnProperty.call(object, 'Usage') && <UsageCell object={object} />}
         </div>
         {isScriptStep ? (
           <div className="object-details object-step-breadcrumb">

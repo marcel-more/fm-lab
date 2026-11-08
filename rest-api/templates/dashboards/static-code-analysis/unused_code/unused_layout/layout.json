@@ -26,6 +26,35 @@
                 {
                   "label": "Findings",
                   "field": "finding_count",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "unused_layout",
+                      "params": {
+                        "ddr": ""
+                      }
+                    }
+                  }
+                },
+                {
+                  "label": "Without DDR info",
+                  "field": "low_confidence_count",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "unused_layout",
+                      "params": {
+                        "ddr": "without"
+                      }
+                    }
+                  },
+                  "toggle": true
+                },
+                {
+                  "label": "In the layout menu",
+                  "field": "entry_point_count",
                   "format": "number"
                 },
                 {
@@ -71,6 +100,23 @@
                 {
                   "field": "object_name",
                   "label": "Name"
+                },
+                {
+                  "field": "reason_status",
+                  "label": "Status",
+                  "nowrap": true,
+                  "valueLabels": {
+                    "unused": "Unused",
+                    "unused_unverified": "Unused (unverified)"
+                  }
+                },
+                {
+                  "field": "low_confidence",
+                  "label": "Without DDR info",
+                  "valueLabels": {
+                    "true": "Yes",
+                    "false": "No"
+                  }
                 }
               ],
               "onRowClick": {
@@ -83,6 +129,72 @@
               "empty": {
                 "message": "No unused layout found."
               }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "entry_points_card",
+        "props": {
+          "span": 12,
+          "title": "Entry points: in the layout menu, no navigation",
+          "keepChildrenOnEmpty": true
+        },
+        "data": {
+          "dataset": "entry_points"
+        },
+        "children": [
+          {
+            "type": "Table",
+            "id": "entry_points_table",
+            "props": {
+              "rowKey": "row_key",
+              "density": "comfortable",
+              "sortable": true,
+              "searchable": true,
+              "pageParam": "entry_page",
+              "searchParam": "entry_q",
+              "sortParam": "entry_sort",
+              "clientMode": true,
+              "searchPlaceholder": "Search file or name…",
+              "columns": [
+                {
+                  "field": "file_name",
+                  "label": "File"
+                },
+                {
+                  "field": "object_name",
+                  "label": "Name"
+                }
+              ],
+              "onRowClick": {
+                "action": "openObject",
+                "args": {
+                  "uuid": "{{nav_uuid}}",
+                  "type": "Layout"
+                }
+              },
+              "empty": {
+                "message": "No entry point found."
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "notes_card",
+        "props": {
+          "span": 12,
+          "title": "What the status means"
+        },
+        "children": [
+          {
+            "type": "Markdown",
+            "id": "notes_md",
+            "props": {
+              "content": "**Unverified.** The file was exported without DDR info. It then carries no references from formulas at all — a use in a calculation stays invisible. Such a finding reads *Unused (unverified)*; the tile *Without DDR info* lists them. Export the file again with DDR info before deleting anything.\n\n**Entry points.** A layout in the layout menu can be opened by the user even when nothing navigates to it. It is not a finding; the list *Entry points* shows it. If it is not meant to be opened, remove it from the layout menu — then it becomes a finding.\n\n**Limits.** Only usage inside the imported solution counts. Not visible: **calls from outside** — server schedules, Data API, OData, `fmp://` URLs, AppleScript/ActiveX, plug-ins, files that were not imported; **dynamic references inside** — *Perform Script* by name, `GetField`, `Evaluate`, names inside SQL strings. A finding is a review candidate, not a delete recommendation. [How usage is counted](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
             }
           }
         ]

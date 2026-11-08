@@ -1,15 +1,30 @@
 {
   "manifest": {
     "title": "Ongebruikte Layout",
-    "description": "Ongebruikte-code-regel — Layouts waar geen script naartoe navigeert. Controleer: Layouts die alleen op naam of handmatig worden geopend kunnen hier verschijnen."
+    "description": "Ongebruikte-code-regel — Layouts waar geen script, geen knop en geen bestandsoptie naartoe navigeert. Layouts in het menu Layouts zijn startpunten: ze staan in een aparte lijst en zijn geen resultaten. Controleer: Layouts die alleen op naam worden geopend kunnen hier verschijnen. Resultaten in bestanden die zonder DDR-info zijn geëxporteerd, worden als niet geverifieerd gemarkeerd."
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Bevindingen",
-    "summary_kpi.props.items[1].label": "Betrokken bestanden",
+    "summary_kpi.props.items[1].label": "Zonder DDR-info",
+    "summary_kpi.props.items[2].label": "In menu Layouts",
+    "summary_kpi.props.items[3].label": "Betrokken bestanden",
     "findings_card.props.title": "Ongebruikte Layout",
     "findings_table.props.searchPlaceholder": "Bestand of naam zoeken…",
     "findings_table.props.empty.message": "Geen resultaten gevonden.",
     "findings_table.props.columns[0].label": "Bestand",
-    "findings_table.props.columns[1].label": "Naam"
+    "findings_table.props.columns[1].label": "Naam",
+    "findings_table.props.columns[2].label": "Status",
+    "findings_table.props.columns[3].label": "Zonder DDR-info",
+    "findings_table.props.columns[2].valueLabels.unused": "Ongebruikt",
+    "findings_table.props.columns[2].valueLabels.unused_unverified": "Ongebruikt (niet geverifieerd)",
+    "findings_table.props.columns[3].valueLabels.true": "Ja",
+    "findings_table.props.columns[3].valueLabels.false": "Nee",
+    "entry_points_card.props.title": "Startpunten: in menu Layouts, geen navigatie",
+    "entry_points_table.props.searchPlaceholder": "Bestand of naam zoeken…",
+    "entry_points_table.props.empty.message": "Geen startpunten gevonden.",
+    "entry_points_table.props.columns[0].label": "Bestand",
+    "entry_points_table.props.columns[1].label": "Naam",
+    "notes_card.props.title": "Wat de status betekent",
+    "notes_md.props.content": "**Niet geverifieerd.** Het bestand is zonder DDR-info geëxporteerd. Het bevat dan helemaal geen verwijzingen uit formules — een gebruik in een berekening blijft onzichtbaar. Zo’n resultaat heet *Ongebruikt (niet geverifieerd)*; de tegel *Zonder DDR-info* toont ze. Exporteer het bestand opnieuw met DDR-info voordat u iets verwijdert.\n\n**Startpunten.** Een Layout in het menu Layouts kan de gebruiker openen, ook als niets ernaartoe navigeert. Het is geen resultaat; de lijst *Startpunten* toont het. Is het niet bedoeld om te openen, haal het dan uit het menu Layouts — dan wordt het een resultaat.\n\n**Grenzen.** Alleen gebruik binnen de geïmporteerde oplossing telt. Niet zichtbaar: **aanroepen van buitenaf** — serverschema’s, Data API, OData, `fmp://`-URL’s, AppleScript/ActiveX, plug-ins, niet-geïmporteerde bestanden; **dynamische verwijzingen binnenin** — *Voer script uit* op naam, `GetField`, `Evaluate`, namen in SQL-strings. Een resultaat is een kandidaat om te controleren, geen advies om te verwijderen. [Hoe gebruik wordt geteld](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

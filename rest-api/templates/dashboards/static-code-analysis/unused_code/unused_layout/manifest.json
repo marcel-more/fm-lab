@@ -1,8 +1,8 @@
 {
   "id": "unused_layout",
-  "version": "1.0.0",
+  "version": "1.2.1",
   "title": "Unused Layout",
-  "description": "Unused-code rule — layouts no script ever navigates to. Review: layouts opened only by name or manually can appear here.",
+  "description": "Unused-code rule — layouts no script, button or file option navigates to. Layouts in the layout menu are entry points: they are listed separately and are not findings. Review: layouts opened only by name can appear here. Findings in files exported without DDR info are marked unverified.",
   "author": "fm-lab rules",
   "icon": "layout",
   "category": "unused_code",
@@ -16,13 +16,13 @@
     "severity": "info",
     "category": "unused_code",
     "rationale": "Unreferenced layouts still load themes and objects and slow the solution.",
-    "remediation": "Confirm the layout is not opened by name / manually, then delete it.",
+    "remediation": "Confirm the layout is not opened by name / manually, then delete it. In a file exported without DDR info formula references are missing, so its findings are marked unverified — export it again with DDR info before deleting.",
     "meta": {
       "name": "Unused Layout",
       "author": "fm-lab rules",
       "source": "fm-lab",
       "url": null,
-      "description": "Unused-code rule — layouts no script ever navigates to. Review: layouts opened only by name or manually can appear here.",
+      "description": "Unused-code rule — layouts no script, button or file option navigates to. Layouts in the layout menu are entry points: they are listed separately and are not findings. Review: layouts opened only by name can appear here. Findings in files exported without DDR info are marked unverified.",
       "created": "2026-07-01",
       "references": []
     }
@@ -38,10 +38,16 @@
     "scope": {
       "supported": [
         "solution",
-        "file"
+        "file",
+        "object",
+        "object-list",
+        "cluster"
       ],
       "anchor": "nav_uuid",
-      "mode": {}
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
     },
     "defaultResult": {
       "dataset": "summary",
@@ -60,6 +66,14 @@
       "id": "findings",
       "source": "bundle:data/findings.sql",
       "pageSize": 500
+    },
+    {
+      "id": "entry_points",
+      "source": "bundle:data/entry_points.sql",
+      "pageSize": 500,
+      "pageParam": "entry_page",
+      "searchParam": "entry_q",
+      "sortParam": "entry_sort"
     }
   ],
   "params": [
@@ -68,6 +82,13 @@
       "type": "string",
       "required": false,
       "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "ddr",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "List filter by DDR info (KPI tile): 'without' = only findings in files exported without DDR info; empty = all. The Findings tile resets it."
     }
   ],
   "permissions": {

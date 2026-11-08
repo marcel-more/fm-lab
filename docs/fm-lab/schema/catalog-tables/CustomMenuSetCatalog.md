@@ -23,6 +23,7 @@ The custom menu sets of each file with their member menus as ID and name arrays.
 
 ## Notes
 
+- `Member_Menu_IDs` / `Member_Menu_Names` list the custom menus of the set, in the same order. A set without member menus has an empty list `[]`.
 - `Modified_At` / `Modified_By` / `Modified_Account` / `Modifications` are the raw change metadata of the object's `<UUID>` element: timestamp as text (local time of the editing client, no time zone), user name, account (empty → `NULL`) and change counter. [ObjectChangeMeta](ObjectChangeMeta.md) collects them across all object types with a typed timestamp.
 
 **See also:** [CustomMenuCatalog](CustomMenuCatalog.md) · [Layouts](Layouts.md)

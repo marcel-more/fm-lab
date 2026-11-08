@@ -1,6 +1,6 @@
 {
   "name": "@fm-lab/api",
-  "version": "0.9.17",
+  "version": "0.9.18",
   "description": "FM-Lab REST API",
   "main": "src/index.js",
   "scripts": {

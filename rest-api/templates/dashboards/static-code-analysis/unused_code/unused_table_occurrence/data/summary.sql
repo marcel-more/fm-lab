@@ -1,25 +1,23 @@
 -- Hand-maintained COUNT wrapper embedding the findings core of rule (unused_table_occurrence).
 -- The core is a textual copy — keep filters (file filter + S-Block) in sync with data/findings.sql.
+-- The view filters of the list (reason, ddr) stay out on purpose: the counts are
+-- totals (KPI tiles, defaultResult of the Analysis Tests).
 SELECT
     COUNT(*)                     AS finding_count,
     'info'          AS severity,
-    COUNT(DISTINCT file_name)   AS affected_files
+    COUNT(DISTINCT file_name)   AS affected_files,
+    COUNT(*) FILTER (WHERE reason = 'unused')                      AS unused_count,
+    COUNT(*) FILTER (WHERE reason = 'dead_branch')                 AS dead_branch_count,
+    COUNT(*) FILTER (WHERE reason = 'dead_island')                 AS dead_island_count,
+    COUNT(*) FILTER (WHERE low_confidence)                         AS low_confidence_count
 FROM (
 SELECT
-    'unused-table-occurrence'   AS rule_id,
-    'info' AS severity,
-    oc.File_Name  AS file_name,
-    oc.Object_UUID AS nav_uuid,
-    oc.Object_Name AS object_name,
-    'Unused Table Occurrence'    AS message,
-    row_number() OVER (ORDER BY oc.File_Name, oc.Object_Name) AS row_key
-FROM ObjectCatalog oc
-WHERE oc.Object_Type = 'TableOccurrence'
-  AND NOT EXISTS (
-        SELECT 1 FROM ObjectLinks ol
-        WHERE ol.Target_UUID = oc.Object_UUID AND ol.Target_File IS NOT DISTINCT FROM oc.File_Name
-          AND ol.Link_Role IN ('context_table', 'portal_context', 'navigates_to_to', 'left_table', 'right_table', 'lookup_relationship')
-      )
-  AND (getvariable('file') IS NULL OR oc.File_Name = getvariable('file'))
-ORDER BY oc.File_Name, oc.Object_Name
+    c.File_Name  AS file_name,
+    c.Usage_Class AS reason,
+    c.Low_Confidence AS low_confidence
+FROM v_table_occurrence_class c
+WHERE c.Usage_Class IN ('unused', 'dead_branch', 'dead_island')
+  AND (getvariable('file') IS NULL OR c.File_Name = getvariable('file'))
+  AND (getvariable('scope_uuids') IS NULL
+       OR c.TO_UUID IN (SELECT unnest(string_split(getvariable('scope_uuids'), ','))))
 ) _summary;

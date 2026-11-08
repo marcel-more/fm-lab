@@ -344,6 +344,31 @@ columns (P1) → links `ValueList → ValueList (source_valuelist)` and
 `ValueList → ExternalDataSource (data_source)` (P4); unresolvable targets are reported by
 `v_check_external_vl_unresolved` (P6).
 
+## Related values only (`<ShowRelated>`)
+
+A field-based value list ("Use values from field") can be limited to related values. The
+start TO of that option sits next to the primary/secondary field:
+
+```xml
+<Field>
+    <PrimaryField show="True" sort="True">
+        <FieldReference id="7" name="Name" UUID="7784D0E7-…">
+            <TableOccurrenceReference id="1065094" name="Related" UUID="BEB39FA8-…"/>  <!-- source TO -->
+        </FieldReference>
+    </PrimaryField>
+    <ShowRelated value="True">
+        <TableOccurrenceReference id="1065093" name="Coverage" UUID="2719A440-…"/>    <!-- start TO -->
+    </ShowRelated>
+</Field>
+```
+
+"All values" is exported as `<ShowRelated value="False"/>` without a TO. FileMaker reads the
+values along the relationship path from the start TO to the source TO. Same structure in both
+profiles (`saxml22`: top-level `<OptionsForValueLists>`, `saxml23`: embedded in
+`ValueListCatalog/ValueList`). Converter: `OptionsForValueLists.ShowRelated` +
+`ShowRelated_TO_*` (P1, schema 1.38.0) → link `ValueList → TableOccurrence (related_values_from)`
+(P4). Evidence: value list `RelatedNames` in the coverage fixtures.
+
 ## CustomFunction calculations — format differs by SaXML version
 
 The location of a custom function's calculation body changed between SaXML versions:
@@ -416,6 +441,12 @@ Each `<Field>` element in `FieldsForTables` may contain an `<AutoEnter>` child:
     </Looked_up>
 </AutoEnter>
 ```
+
+`FieldReference/TableOccurrenceReference` is the TO of the source field ("lookup from related
+table") → `FieldsForTables.Lookup_TO_*`, link `lookup_relationship`. `Context/TableOccurrenceReference`
+is the **start TO** ("starting with table") — FileMaker resolves the lookup along the
+relationship path from this TO to the source TO → `FieldsForTables.Lookup_Context_TO_*`, link
+`lookup_context` (schema 1.38.0). Same structure in both profiles.
 
 ### AutoEnter Calculated structure
 

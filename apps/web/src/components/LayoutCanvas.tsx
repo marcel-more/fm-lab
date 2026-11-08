@@ -8,6 +8,7 @@ import { LayoutObjectTooltip } from './LayoutObjectTooltip';
 import { LayoutTypeFilter } from './LayoutTypeFilter';
 import { buildObjectPath } from '../lib/navigation';
 import { resolveCrossNavTarget } from '../lib/layoutObjectNav';
+import { assignObjectParts, partBandLabel, partLabel, type PartTranslate } from '../lib/layoutParts';
 
 type Props = {
   data: LayoutData;
@@ -70,13 +71,18 @@ function computeViewport(objects: LayoutObject[], parts: LayoutData['parts']) {
   return { minX, minY, maxX, maxY };
 }
 
-const PART_FILL: Record<string, string> = {
-  Header: '#f0f4ff',
-  Footer: '#fff8f0',
+// Band fill by part kind (1 Header, 7 Footer) — keyed by kind, the canonical
+// type string is not stable on older catalogs (localized / kind-5 mislabel).
+const PART_FILL: Record<number, string> = {
+  1: '#f0f4ff',
+  7: '#fff8f0',
 };
+const PART_FILL_DEFAULT = '#f8f9fa';
+const PART_SELECTED_STROKE = '#3884ff';
 
 export const LayoutCanvas = forwardRef<LayoutCanvasHandle, Props>(({ data, externalMatchUuids, onClearRef, onLiveMatchCount }, externalRef) => {
   const { t } = useTranslation(['common', 'detail']);
+  const tr: PartTranslate = useCallback((k, o) => t(k, o) as string, [t]);
   const navigate = useNavigate();
   // Aktuelle Detail-View-UUID — wird als Origin für Cross-Nav-Klicks mitgegeben.
   // Auf der Vollbild-Layout-View (/layout/:uuid) ist es das Layout selbst;
@@ -90,7 +96,22 @@ export const LayoutCanvas = forwardRef<LayoutCanvasHandle, Props>(({ data, exter
   const [filterDetailsMode, setFilterDetailsMode] = useState(false);
   const [hoverState, setHoverState] = useState<{ uuid: string; x: number; y: number } | null>(null);
 
-  const search = useLayoutSearch(data.objects, externalMatchUuids ?? null, onClearRef);
+  // object → part (catalog Part_Seq, fallback rule for older catalogs).
+  const partOf = useMemo(
+    () => assignObjectParts(data.objects, data.parts),
+    [data.objects, data.parts],
+  );
+  const partCounts = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const seq of partOf.values()) if (seq != null) m.set(seq, (m.get(seq) ?? 0) + 1);
+    return m;
+  }, [partOf]);
+
+  const search = useLayoutSearch(data.objects, externalMatchUuids ?? null, onClearRef, partOf);
+  const section = search.section;
+  // A section number that does not exist in this layout (stale URL) is ignored.
+  const sectionValid = section != null && data.parts.some(p => p.part_seq === section);
+  const activeSection = sectionValid ? section : null;
 
   // Ref-getriebener Match-Report für die RefOriginPill: back_references liefert
   // für LayoutObject-Refs keine Container-Matches (matchCount 0), der Canvas
@@ -249,7 +270,8 @@ export const LayoutCanvas = forwardRef<LayoutCanvasHandle, Props>(({ data, exter
       searchStateRef.current.clear();
     },
     hasFilters: () => searchStateRef.current.activeTypes.size > 0
-      || searchStateRef.current.activeCalc.size > 0,
+      || searchStateRef.current.activeCalc.size > 0
+      || searchStateRef.current.section != null,
     clearFilters: () => searchStateRef.current.clearTypes(),
   }), []);
 
@@ -327,18 +349,46 @@ export const LayoutCanvas = forwardRef<LayoutCanvasHandle, Props>(({ data, exter
             >{t('detail:layoutCanvas.labelType')}</button>
           </div>
 
+          {data.parts.length > 1 && (
+            <label className="layout-section-select">
+              <span className="layout-section-select-label">{t('detail:layoutCanvas.sectionLabel')}</span>
+              <select
+                value={activeSection ?? ''}
+                onChange={e => search.setSection(e.target.value === '' ? null : Number(e.target.value))}
+                aria-label={t('detail:layoutCanvas.sectionAria') as string}
+              >
+                <option value="">{t('detail:layoutCanvas.sectionAll')}</option>
+                {data.parts.map((p, idx) => (
+                  <option key={p.part_seq ?? `idx-${idx}`} value={p.part_seq ?? ''} disabled={p.part_seq == null}>
+                    {t('detail:layoutCanvas.sectionOption', {
+                      label: partLabel(tr, p),
+                      count: p.part_seq != null ? (partCounts.get(p.part_seq) ?? 0) : 0,
+                    })}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
           <button onClick={fitToViewport} type="button" title={t('common:actions.fitToViewport') as string}>{t('common:actions.fit')}</button>
           <button onClick={reset100} type="button" title={t('common:actions.originalSize') as string}>100%</button>
           <span className="layout-stats">
-            {t('detail:layoutCanvas.stats', {
-              count: data.objects.length,
-              zoom: (transform.scale * 100).toFixed(0),
-            })}
+            {activeSection != null
+              ? t('detail:layoutCanvas.sectionStats', {
+                  n: search.scopedObjects.length,
+                  count: data.objects.length,
+                  zoom: (transform.scale * 100).toFixed(0),
+                })
+              : t('detail:layoutCanvas.stats', {
+                  count: data.objects.length,
+                  zoom: (transform.scale * 100).toFixed(0),
+                })}
           </span>
         </div>
 
         <LayoutTypeFilter
-          objects={data.objects}
+          objects={search.scopedObjects}
+          inventoryScopeHint={activeSection != null ? t('detail:layoutCanvas.sectionInventoryHint') as string : undefined}
           activeTypes={search.activeTypes}
           onToggle={search.toggleType}
           onSetTypes={search.setTypes}
@@ -364,38 +414,46 @@ export const LayoutCanvas = forwardRef<LayoutCanvasHandle, Props>(({ data, exter
         <svg width="100%" height="100%" style={{ display: 'block', userSelect: 'none' }}>
           <g transform={`translate(${transform.tx},${transform.ty}) scale(${transform.scale})`}>
             {/* Layout-Parts als Hintergrund-Streifen */}
-            {data.parts.map(p => (
-              <g key={p.part_kind}>
-                <rect
-                  x={viewport.minX - 5}
-                  y={p.part_absolute}
-                  width={viewport.maxX - viewport.minX + 10}
-                  height={p.part_size}
-                  fill={PART_FILL[p.part_type] ?? '#f8f9fa'}
-                  fillOpacity={0.4}
-                  stroke="#cccccc"
-                  strokeWidth={0.5}
-                  strokeDasharray="4,2"
-                />
-                <text
-                  x={viewport.minX - 2}
-                  y={p.part_absolute + 12}
-                  fontSize={11}
-                  fontWeight="bold"
-                  fill="#999"
-                  fontFamily='-apple-system, "Segoe UI", Arial, sans-serif'
-                  pointerEvents="none"
-                >
-                  {p.part_type}
-                </text>
-              </g>
-            ))}
+            {data.parts.map((p, idx) => {
+              // Several sub-summaries of one kind exist → key by Part_Seq, not kind.
+              const selected = activeSection != null && p.part_seq === activeSection;
+              const outside = activeSection != null && !selected;
+              return (
+                <g key={p.part_seq ?? `idx-${idx}`} opacity={outside ? 0.5 : 1}>
+                  <rect
+                    x={viewport.minX - 5}
+                    y={p.part_absolute}
+                    width={viewport.maxX - viewport.minX + 10}
+                    height={p.part_size}
+                    fill={outside ? '#e0e0e0' : (PART_FILL[p.part_kind] ?? PART_FILL_DEFAULT)}
+                    fillOpacity={0.4}
+                    stroke={selected ? PART_SELECTED_STROKE : '#cccccc'}
+                    strokeWidth={selected ? 1.5 : 0.5}
+                    strokeDasharray={selected ? undefined : '4,2'}
+                  />
+                  <text
+                    x={viewport.minX - 2}
+                    y={p.part_absolute + 12}
+                    fontSize={11}
+                    fontWeight="bold"
+                    fill={selected ? PART_SELECTED_STROKE : '#999'}
+                    fontFamily='-apple-system, "Segoe UI", Arial, sans-serif'
+                    pointerEvents="none"
+                  >
+                    {partBandLabel(tr, p)}
+                  </text>
+                </g>
+              );
+            })}
 
             {/* Layout-Objekte */}
             {data.objects.map(o => {
-              const isMatch = filterActive && search.matchUuids.has(o.object_uuid);
-              const isDimmed = filterActive && !search.matchUuids.has(o.object_uuid);
-              const displayMode = isMatch ? 'highlight' : (isDimmed ? 'dim' : 'normal');
+              // Outside the selected section = always grey (context, still clickable),
+              // independent of matches; inside, search/filter dimming applies as before.
+              const outOfScope = activeSection != null && partOf.get(o.object_uuid) !== activeSection;
+              const isMatch = !outOfScope && filterActive && search.matchUuids.has(o.object_uuid);
+              const isDimmed = !outOfScope && filterActive && !search.matchUuids.has(o.object_uuid);
+              const displayMode = outOfScope ? 'outOfScope' : (isMatch ? 'highlight' : (isDimmed ? 'dim' : 'normal'));
               return (
                 <LayoutObjectShape
                   key={o.object_uuid}

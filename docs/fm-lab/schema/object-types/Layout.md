@@ -63,7 +63,7 @@ The layout is the hub of the tightest hierarchy in the catalog:
 - **Triggers** — layout-level [script triggers](ScriptTrigger.md) hang on the layout via `trigger_owner` (subrole = event type, e.g. `OnRecordLoad`); the layout additionally carries the counting `triggers_script · <event>` mirror to each trigger's script.
 - **Folder tree** — layouts (and layout folders, which nest) link to their [Folder](Folder.md) via `parent_folder`.
 
-In the web frontend, parts and objects are hoisted into the layout detail view: the wireframe renders the parts as bands and the objects at their real coordinates, so [LayoutPart](LayoutPart.md) and [LayoutObject](LayoutObject.md) have no standalone detail page of their own ambition — the layout view is their home.
+In the web frontend, parts and objects are hoisted into the layout detail view: the wireframe renders the parts as bands and the objects at their real coordinates. The properties panel lists the parts top to bottom, and the **Layout part** menu above the wireframe narrows search, type chips and counters to one part, greying out the rest (`?part=<Part_Seq>`). Parts and objects also have detail views of their own ([LayoutPart](LayoutPart.md#detail-view)).
 
 ## References
 

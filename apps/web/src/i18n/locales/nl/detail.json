@@ -58,7 +58,14 @@
       "logic": "Logica",
       "slots": "Slots",
       "moreTargets": "(+{{n}} meer)"
-    }
+    },
+    "sectionLabel": "Layout-sectie",
+    "sectionAll": "Alle",
+    "sectionOption": "{{label}} ({{count}})",
+    "sectionAria": "Objecten beperken tot één layout-sectie",
+    "sectionStats_one": "{{n}} van {{count}} object · Zoom {{zoom}}%",
+    "sectionStats_other": "{{n}} van {{count}} objecten · Zoom {{zoom}}%",
+    "sectionInventoryHint": "Inventarissen tonen de hele layout, niet alleen de gekozen sectie"
   },
   "relationshipGraphCanvas": {
     "searchPlaceholder": "Zoek table occurrence…",
@@ -165,6 +172,8 @@
     "ariaLabel": "Objecthiërarchie",
     "usedBy": "Gebruikt door ({{count}})",
     "usedByFiltered": "Gebruikt door ({{count}} / {{total}})",
+    "usedByGrouped": "Gebruikt door — per object ({{count}})",
+    "usedByGroupedFiltered": "Gebruikt door — per object ({{count}} / {{total}})",
     "uses": "Gebruikt ({{count}})",
     "usesFiltered": "Gebruikt ({{count}} / {{total}})",
     "structurallyContainedBy": "Structureel bevat door ({{count}})",
@@ -173,6 +182,8 @@
     "structurallyContainsFiltered": "Bevat structureel ({{count}} / {{total}})",
     "noReferences": "Geen referenties gevonden",
     "noFilterMatches": "Geen matches voor de huidige filters",
+    "toUsageUnavailable": "Deze catalogus toont alleen de directe koppelingen van de tabelinstantie. Het volledige gebruik (veldverwijzingen in formules, scriptstappen en op lay-outs) verschijnt na een nieuwe import.",
+    "toUsageTruncated": "Gebruik ingekort: {{count}} van {{total}} gebruiksplaatsen via veldverwijzingen getoond.",
     "crossFileBadge": "Tussen bestanden",
     "itemAriaLabel": "Navigeer naar {{type}}: {{name}}",
     "notNavigable": "Doel niet in de geïmporteerde dataset",
@@ -255,8 +266,57 @@
       "menu_action": {
         "short": "Menu",
         "long": "Menuactie"
+      },
+      "calculation": {
+        "short": "Calc",
+        "long": "Veldverwijzing in een formule"
+      },
+      "calculation_text": {
+        "short": "Calc text",
+        "long": "Veldverwijzing in de formuletekst (bestand zonder DDR-info)"
+      },
+      "calc_context": {
+        "short": "Context",
+        "long": "Evaluatiecontext van een formule"
+      },
+      "layout_field": {
+        "short": "Field",
+        "long": "Veld op de lay-out"
+      },
+      "layout_part": {
+        "short": "Break",
+        "long": "Onderbrekingsveld van een lay-outonderdeel"
+      },
+      "script_step": {
+        "short": "Step",
+        "long": "Veldverwijzing in een scriptstap"
+      },
+      "security": {
+        "short": "Access",
+        "long": "Recordtoegangscontext van een privilegeset"
+      },
+      "table_view": {
+        "short": "Table view",
+        "long": "Kolom van de tabelweergave"
+      },
+      "value_list": {
+        "short": "VL field",
+        "long": "Tweede veld van een waardelijst"
       }
-    }
+    },
+    "usageSummary": "Intern gebruikt door {{objects}} · {{refs}}",
+    "usageObjects_one": "{{count}} object",
+    "usageObjects_other": "{{count}} objecten",
+    "usageRefs_one": "{{count}} verwijzing",
+    "usageRefs_other": "{{count}} verwijzingen",
+    "usageSummaryHint": "Gebruik (intern): hoeveel verschillende objecten van de oplossing dit object gebruiken — een lay-out telt één keer, hoeveel van zijn objecten het ook tonen; een script één keer, in hoeveel stappen ook. Verwijzingen: elke vindplaats apart (×N in de lijst). Bevatten en beperkingen van privileges tellen niet. Niet meegeteld: gebruik van buitenaf (serverschema’s, Data API, OData, URL-aanroepen, plug-ins …) en dynamische verwijzingen (script op naam, GetField, Evaluate).",
+    "usageDocs": "Hoe wordt dit geteld?",
+    "groupByObjectHint": "Groeperen per gebruikend object (inkomend) — een lay-out telt één keer, hoeveel van zijn objecten het ook tonen",
+    "groupAllRefsHint": "Elke verwijzing tonen",
+    "groupExpand": "Verwijzingen tonen",
+    "groupCollapse": "Verwijzingen verbergen",
+    "noUsageGroup": "Geen gebruik",
+    "noUsageGroupHint": "Koppelingen die niet als gebruik tellen (bijv. beperkingen van privileges, triggerknooppunten)"
   },
   "searchOptions": {
     "regionAria": "Sorteer- en groepeeropties",
@@ -272,7 +332,14 @@
     "groupFile": "Bestand",
     "modifiedSinceLabel": "Gewijzigd sinds",
     "modifiedSinceHint": "Alleen objecten waarvan de eigen wijzigingsstempel op of na deze dag ligt — scriptstappen, lay-outobjecten en berekeningen hebben geen eigen stempel",
-    "modifiedSinceClear": "Herstellen"
+    "modifiedSinceClear": "Herstellen",
+    "sortUsage": "Gebruik (intern)",
+    "usageLabel": "Gebruik (intern)",
+    "usageOpAria": "Vergelijking",
+    "usageHint": "Aantal objecten dat het gebruikt (een object op een lay-out telt als die lay-out). ≤ 0 toont ongebruikte objecten; scriptstappen, lay-outobjecten, formules en relaties hebben geen gebruik en vallen weg Gebruik van buitenaf (serverschema’s, Data API, OData, URL-aanroepen, plug-ins …) wordt niet meegeteld.",
+    "usageUnavailable": "Vereist een catalogus vanaf schema 1.40.0 — importeer de oplossing opnieuw",
+    "usageDirAsc": "Weinig gebruikt eerst",
+    "usageDirDesc": "Meest gebruikt eerst"
   },
   "fieldViewer": {
     "ariaLabel": "Velddetails",
@@ -372,7 +439,17 @@
     "healedUuidMatch": "Gevonden via UUID (duplicaat)",
     "healedUuidTitle": "FileMaker kent dit object onder de gezochte UUID; omdat die UUID meerdere keren in de export voorkwam, staat het in de catalogus onder een vervangende UUID.",
     "idMatch": "Gevonden via ID {{id}}",
-    "modifiedTooltip": "Gewijzigd {{age}} — lokale tijd van de bewerkende client, zonder tijdzone"
+    "modifiedTooltip": "Gewijzigd {{age}} — lokale tijd van de bewerkende client, zonder tijdzone",
+    "usageTooltip": "Intern gebruikt door: {{owners}} · Verwijzingen: {{refs}} · Rollen: {{roles}} · Bestanden: {{files}}",
+    "usageCellAria": "Gebruik {{count}} — inkomende verwijzingen openen",
+    "usageEntryPoint": "In het Scripts- of lay-outmenu — ook zonder verwijzing bereikbaar",
+    "usageBuiltin": "Ingebouwde privilegeset — kan niet worden verwijderd",
+    "usageBridge": "Relatiebrug — nodig op het pad tussen gebruikte tabelinstanties",
+    "usageDead": "Dode tak van de relatiegrafiek — daarachter wordt niets gebruikt",
+    "usageKeyField": "Koppelveld van een relatie",
+    "usageCrossFile": "Gebruikt vanuit een ander bestand",
+    "usageUnverified": "Niet gecontroleerd — het bestand is zonder DDR-info geëxporteerd, formuleverwijzingen ontbreken",
+    "usageExternal": "Gebruik van buitenaf (serverschema’s, Data API, OData, URL-aanroepen, AppleScript, plug-ins …) wordt niet meegeteld"
   },
   "scriptSearchFilter": {
     "searchAria": "Zoek referenties",
@@ -805,7 +882,15 @@
     "optFieldFrames": "Veldkaders bij actief record",
     "optFrameCurrentOnly": "Velden alleen in huidige record omkaderen",
     "optShowCurrentInList": "Record-indicator in lijstweergave",
-    "optQuickFind": "Snelzoeken"
+    "optQuickFind": "Snelzoeken",
+    "partsHeading": "Layout-secties",
+    "partsObjects_one": "{{count}} object",
+    "partsObjects_other": "{{count}} objecten",
+    "partsHeight": "{{size}} pt",
+    "partsSortedBy": "gesorteerd op",
+    "partsFilterTitle": "Alleen deze sectie in de afbeelding tonen",
+    "partsFilterActiveTitle": "Sectiefilter opheffen",
+    "partsFieldUnresolved": "Veld niet in de catalogus (bestand niet geïmporteerd?)"
   },
   "pluginSpec": {
     "tooltip": "Platformondersteuning volgens de {{plugin}}-documentatie",
@@ -1006,5 +1091,223 @@
     "usedSuffix": "{{used}} gebruikt",
     "functionsHeading": "Functies",
     "colFunction": "Functie"
+  },
+  "tableOccurrence": {
+    "ariaLabel": "Details van de tabelinstantie",
+    "definitionHeading": "Definitie",
+    "baseTable": "Basistabel",
+    "baseTableUnresolved": "— niet op te lossen —",
+    "inFile": "in bestand ‘{{file}}’",
+    "dataSource": "Gegevensbron",
+    "dsResolved": "Bestand ‘{{file}}’ in de catalogus",
+    "dsUnresolved": "Doelbestand niet geïmporteerd",
+    "diagram": "Relatiediagram",
+    "viewLabel": "Weergave: {{view}}",
+    "view": {
+      "Full": "alle velden",
+      "Related": "alleen relatievelden",
+      "Collapse": "alleen naam"
+    },
+    "usageHeading": "Gebruik",
+    "class": {
+      "used": "gebruikt",
+      "relationship_bridge": "relatiebrug",
+      "dead_branch": "dode tak",
+      "dead_island": "dood eiland",
+      "unused": "niet gebruikt"
+    },
+    "reason": {
+      "path": "Ligt op het relatiepad tussen gebruikte TO’s (bijv. de koppel-TO van een n:m-relatie) — nodig.",
+      "cascade_delete": "Deel van een relatie met trapsgewijs verwijderen — nodig."
+    },
+    "deadBranch_one": "Deel van een dode tak ({{count}} TO) onder anker",
+    "deadBranch_other": "Deel van een dode tak ({{count}} TO’s) onder anker",
+    "deadIsland_one": "TO-groep zonder gebruikte TO ({{count}} TO).",
+    "deadIsland_other": "TO-groep zonder gebruikte TO ({{count}} TO’s).",
+    "unused": "Geen statisch zichtbaar gebruik.",
+    "unusedNoRel": "Geen statisch zichtbaar gebruik, geen relatie.",
+    "reviewHint": "Kandidaat voor controle, geen advies om te verwijderen — dynamische verwijzingen (GetField, Evaluate, ExecuteSQL) blijven onzichtbaar.",
+    "toTests": "Details op het tabblad Tests",
+    "lowConfidence": "Bestand zonder DDR-info: formulegebruik via tekstzoeken gevonden, klasse onbevestigd.",
+    "group": {
+      "context": "Context",
+      "display": "Weergave",
+      "logic": "Logica",
+      "data": "Gegevens",
+      "graph": "Graaf",
+      "other": "Overig"
+    },
+    "category": {
+      "layout_context": "Lay-outs",
+      "calc_context": "Berekeningscontext",
+      "security": "Privileges",
+      "layout_field": "Lay-outvelden",
+      "portal": "Portalen",
+      "layout_part": "Lay-outonderdelen",
+      "table_view": "Tabelweergave",
+      "script_step": "Scriptstappen",
+      "calculation": "Formules",
+      "calculation_text": "Formuletekst",
+      "navigation": "Navigatie",
+      "lookup": "Opzoekingen",
+      "lookup_context": "Opzoekcontext",
+      "value_list": "Waardelijsten",
+      "value_list_related": "Waardelijsten (gerelateerd)",
+      "relationship": "Relaties",
+      "relationship_cascade": "Trapsgewijs verwijderen"
+    },
+    "chipTitle": "{{users}} objecten · {{refs}} vindplaatsen — tonen in Referenties",
+    "allUsages": "alle vindplaatsen → Referenties",
+    "relationshipsHeading": "Relaties",
+    "noRelationships": "— geen relatie —",
+    "searchPlaceholder": "Partner-TO of veld filteren…",
+    "colSelf": "Deze TO",
+    "colOperator": "Operator",
+    "colPartnerField": "Partnerveld",
+    "colPartner": "Partner-TO",
+    "colOptions": "Opties",
+    "colOptionsTitle": "Opties: deze TO | partner-TO",
+    "colRelationship": "Relatie",
+    "and": "EN",
+    "optCreate": "Records aanmaken via deze relatie toestaan",
+    "optDeleteSelf": "Trapsgewijs verwijderen: records van deze TO worden verwijderd wanneer het gerelateerde record wordt verwijderd",
+    "optDeletePartner": "Trapsgewijs verwijderen: records van de partner-TO worden verwijderd wanneer een record van deze TO wordt verwijderd",
+    "optSort": "Gesorteerd",
+    "legend": "Opties ‘deze TO | partner-TO’: ＋ aanmaken toegestaan · 🗑 trapsgewijs verwijderen · ⇅ gesorteerd",
+    "siblingsHeading": "Andere instanties van ‘{{bt}}’",
+    "siblingsNone": "— geen —",
+    "toBaseTable": "naar de basistabel",
+    "chipTitleInPage": "{{users}} objecten — tonen in de relaties hieronder",
+    "optionFilterAria": "Filteren op optie",
+    "option": {
+      "cascade": "Trapsgewijs verwijderen",
+      "create": "Aanmaken toegestaan",
+      "sorted": "gesorteerd"
+    },
+    "siblingsSearch": "TO of bestand filteren…",
+    "siblingsScopeAria": "Bereik",
+    "scope": {
+      "all": "alle",
+      "file": "dit bestand",
+      "other": "hele oplossing"
+    },
+    "scopeTitle": {
+      "all": "Alle instanties in de oplossing",
+      "file": "Instanties in dit bestand",
+      "other": "Instanties in de andere bestanden van de oplossing"
+    },
+    "colTo": "Tabelinstantie",
+    "dataSourceCurrent": "huidig bestand",
+    "dataSourceCurrentTitle": "De basistabel wordt rechtstreeks uit dit bestand gebruikt, zonder gegevensbron",
+    "dsSelf": "verwijst naar dit bestand zelf",
+    "dsSelfSibling": "Gegevensbron verwijst naar het eigen bestand",
+    "inThisFile": "in dit bestand",
+    "viaDataSource": "gegevensbron ‘{{ds}}’",
+    "colDefinedIn": "gedefinieerd in",
+    "colDefinedInTitle": "Bestand in wiens relatiediagram de TO staat (leeg = dit bestand)",
+    "colSourceTitle": "Hoe de TO de basistabel bereikt: huidig bestand of via een gegevensbron",
+    "countFiltered": "{{shown}} van {{total}}",
+    "defJumpTitle": "Naar de sectie verderop",
+    "defLayoutsTitle": "Lay-outs gebaseerd op deze TO — tonen in Verwijzingen",
+    "siblingsJump": "Andere instanties",
+    "ctxHeading": "TO-groep",
+    "ctxGroup": "Groep",
+    "ctxSingle": "alleen deze TO — geen relatie",
+    "ctxTos_one": "{{count}} TO",
+    "ctxTos_other": "{{count}} TO’s",
+    "ctxLayouts_one": "{{count}} lay-out",
+    "ctxLayouts_other": "{{count}} lay-outs",
+    "ctxAnchors": "Ankers",
+    "ctxAnchorsNone": "geen lay-out is gebaseerd op een TO van deze groep",
+    "ctxLayoutsTitle_one": "{{count}} lay-out",
+    "ctxLayoutsTitle_other": "{{count}} lay-outs",
+    "ctxSelfAnchor_one": "is zelf lay-outcontext ({{count}} lay-out)",
+    "ctxSelfAnchor_other": "is zelf lay-outcontext ({{count}} lay-outs)",
+    "ctxSteps_one": "{{count}} stap",
+    "ctxSteps_other": "{{count}} stappen",
+    "ctxHint": "Anker = TO waarop lay-outs zijn gebaseerd. ‘Dichtstbij’ is het anker van waaruit deze TO via de minste relaties wordt bereikt.",
+    "ctxAnchorsLess": "lijst sluiten",
+    "ctxMoreEachSingle": "+{{count}} meer met elk 1 lay-out",
+    "ctxMoreEach": "+{{count}} meer met elk {{each}} lay-outs",
+    "ctxMoreTotal": "+{{count}} meer met samen {{total}} lay-outs",
+    "ctxAnchor": "Anker",
+    "ctxColLayouts": "Lay-outs",
+    "ctxColDistance": "Afstand",
+    "ctxColDistanceTitle": "Relatiestappen tot deze TO",
+    "ctxContext": "Lay-outcontext",
+    "ctxNearest": "dichtstbij:",
+    "ctxShowPath": "pad tonen",
+    "ctxHidePath": "pad verbergen"
+  },
+  "layoutParts": {
+    "kind": {
+      "12": "Navigatie bovenaan",
+      "0": "Titelkopgedeelte",
+      "1": "Kopgedeelte",
+      "2": "Generaal resumégedeelte voor",
+      "3": "Subresumé indien gesorteerd op",
+      "4": "Hoofdgedeelte",
+      "6": "Generaal resumégedeelte na",
+      "7": "Voetgedeelte",
+      "8": "Titelvoetgedeelte",
+      "13": "Navigatie onderaan"
+    },
+    "position": {
+      "leading": "voor",
+      "trailing": "na"
+    },
+    "subSummaryLabel": "{{kind}} ‹{{field}}› ({{position}})",
+    "subSummaryLabelNoField": "{{kind}} ({{position}})",
+    "option": {
+      "o1": "Pagina-einde vóór elk gedeelte",
+      "o2": "Pagina-einde na elk(e) {{n}} gedeelte(n)",
+      "o3": "Nieuwe paginanummering na elk gedeelte",
+      "o4": "Gedeelte afbreken bij pagina-einde",
+      "o5": "Rest van gedeelte negeren bij pagina-einde",
+      "o6": "Status van alternatieve rij gebruiken",
+      "o7": "Status van actieve rij gebruiken"
+    }
+  },
+  "layoutPartDetail": {
+    "ariaLabel": "Details van de layout-sectie",
+    "groupGeneral": "Algemeen",
+    "groupSort": "Sortering",
+    "groupContext": "Context",
+    "groupOptions": "Gedeeltedefinitie",
+    "groupTechnical": "Technisch",
+    "kind": "Sectietype",
+    "exportedType": "Geëxporteerd type",
+    "exportedTypeTitle": "Het type zoals het in de XML-export staat (gelokaliseerd of door FileMaker verkeerd benoemd)",
+    "partName": "Interne naam",
+    "position": "Positie",
+    "positionValue": "{{pos}} van {{total}}",
+    "previous": "Vorige sectie",
+    "next": "Volgende sectie",
+    "height": "Hoogte",
+    "top": "Bovenrand",
+    "bottom": "Onderrand",
+    "unitPt": "{{value}} pt",
+    "objects": "Objecten",
+    "objectsValue": "{{total}} ({{root}} direct in het gedeelte)",
+    "sortedBy": "Gesorteerd op",
+    "sortToDiffers": "via een andere tabelinstantie dan de layout ({{to}})",
+    "fieldUnresolved": "Veld niet in de catalogus (bestand niet geïmporteerd?)",
+    "layout": "Layout",
+    "contextTable": "Tabelinstantie",
+    "baseTable": "Basistabel",
+    "file": "Bestand",
+    "optionsRaw": "Opties (ruw)",
+    "optionsUndecoded": "Bits zonder dialoogoptie: {{bits}}",
+    "optionOn": "aan",
+    "optionOff": "uit",
+    "sourceLocal": "op het gedeelte ingesteld",
+    "sourceStyle": "gedeeltestijl {{name}}",
+    "sourceTheme": "thema {{name}}",
+    "sourceDefault": "niet ingesteld (uit)",
+    "sourceClassic": "klassiek thema (uit)",
+    "bodyOnly": "alleen bij het hoofdgedeelte",
+    "showInLayout": "Tonen in layout",
+    "showInLayoutTitle": "Layout openen met deze sectie als filter",
+    "objectsShowInReferences": "Objecten tonen in de verwijzingen"
   }
 }

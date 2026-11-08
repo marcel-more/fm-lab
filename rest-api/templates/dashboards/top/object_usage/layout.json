@@ -1,0 +1,645 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "type": "Grid",
+    "props": {
+      "columns": 12,
+      "gap": 16
+    },
+    "children": [
+      {
+        "type": "Card",
+        "id": "summary",
+        "props": {
+          "span": 12,
+          "variant": "hero"
+        },
+        "data": {
+          "dataset": "summary"
+        },
+        "children": [
+          {
+            "type": "KPIStrip",
+            "id": "summary_kpistrip",
+            "props": {
+              "items": [
+                {
+                  "label": "All objects",
+                  "field": "total",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "object_usage",
+                      "params": {
+                        "class": "",
+                        "ddr": ""
+                      }
+                    }
+                  }
+                },
+                {
+                  "label": "Used",
+                  "field": "used",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "object_usage",
+                      "params": {
+                        "class": "used"
+                      }
+                    }
+                  },
+                  "toggle": true
+                },
+                {
+                  "label": "Rarely used",
+                  "field": "rare",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "object_usage",
+                      "params": {
+                        "class": "rare"
+                      }
+                    }
+                  },
+                  "toggle": true
+                },
+                {
+                  "label": "Heavily used",
+                  "field": "heavy",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "object_usage",
+                      "params": {
+                        "class": "heavy"
+                      }
+                    }
+                  },
+                  "toggle": true
+                },
+                {
+                  "label": "Entry points (menu)",
+                  "field": "entry_point",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "object_usage",
+                      "params": {
+                        "class": "entry_point"
+                      }
+                    }
+                  },
+                  "toggle": true
+                },
+                {
+                  "label": "Unused",
+                  "field": "unused",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "object_usage",
+                      "params": {
+                        "class": "unused"
+                      }
+                    }
+                  },
+                  "toggle": true
+                },
+                {
+                  "label": "Without DDR info",
+                  "field": "low_confidence",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "object_usage",
+                      "params": {
+                        "ddr": "without"
+                      }
+                    }
+                  },
+                  "toggle": true
+                }
+              ]
+            }
+          },
+          {
+            "type": "Row",
+            "props": {
+              "gap": 16,
+              "align": "center"
+            },
+            "children": [
+              {
+                "type": "Select",
+                "id": "type_select",
+                "data": {
+                  "dataset": "type_options"
+                },
+                "props": {
+                  "param": "type",
+                  "label": "Object type",
+                  "emptyOptionLabel": "All object types",
+                  "resetParams": [
+                    "page"
+                  ],
+                  "multiple": true
+                }
+              },
+              {
+                "type": "Slider",
+                "id": "rare_slider",
+                "props": {
+                  "param": "rare_max",
+                  "label": "Rarely used",
+                  "min": 1,
+                  "max": 20,
+                  "step": 1,
+                  "default": 2,
+                  "valueSuffix": " using objects",
+                  "comparator": "≤"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "no_data_card",
+        "props": {
+          "span": 12,
+          "title": "No usage data"
+        },
+        "visibleWhen": {
+          "dataset": "summary",
+          "field": "total",
+          "equals": 0
+        },
+        "children": [
+          {
+            "type": "Markdown",
+            "id": "no_data_md",
+            "props": {
+              "content": "The catalog holds no objects with a usage count. Either the selection is empty, or the solution was imported before catalog schema 1.40.0 — import it again to build the usage table."
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "usage_card",
+        "props": {
+          "span": 12,
+          "title": "Objects by usage",
+          "keepChildrenOnEmpty": true
+        },
+        "data": {
+          "dataset": "usage"
+        },
+        "children": [
+          {
+            "type": "Table",
+            "id": "usage_table",
+            "props": {
+              "rowKey": "row_key",
+              "density": "compact",
+              "sortable": true,
+              "searchable": "auto",
+              "searchAutoThreshold": 3,
+              "pageParam": "page",
+              "searchParam": "q",
+              "sortParam": "sort",
+              "clientMode": true,
+              "keepViewOnRowClick": true,
+              "searchPlaceholder": "Search file, type, name, class or role…",
+              "columns": [
+                {
+                  "field": "file_name",
+                  "label": "File"
+                },
+                {
+                  "field": "object_type",
+                  "label": "Type",
+                  "format": "badge",
+                  "nowrap": true
+                },
+                {
+                  "field": "object_name",
+                  "label": "Object",
+                  "breakAt": "separators"
+                },
+                {
+                  "field": "usage_class",
+                  "label": "Class",
+                  "format": "badge",
+                  "valueLabels": {
+                    "used": "used",
+                    "rare": "rarely used",
+                    "heavy": "heavily used",
+                    "bridge": "bridge",
+                    "entry_point": "entry point",
+                    "builtin": "built-in",
+                    "unused": "unused",
+                    "dead_branch": "dead branch",
+                    "dead_island": "dead island",
+                    "unused_unverified": "unused (unverified)",
+                    "dead_branch_unverified": "dead branch (unverified)",
+                    "dead_island_unverified": "dead island (unverified)"
+                  },
+                  "nowrap": true
+                },
+                {
+                  "field": "usage",
+                  "label": "Usage (internal)",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "refs",
+                  "label": "References",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "files",
+                  "label": "Files",
+                  "align": "right",
+                  "format": "count"
+                },
+                {
+                  "field": "in_menu",
+                  "label": "In menu",
+                  "valueLabels": {
+                    "true": "Yes"
+                  }
+                },
+                {
+                  "field": "key_field",
+                  "label": "Key field",
+                  "valueLabels": {
+                    "true": "Yes"
+                  }
+                },
+                {
+                  "field": "cross_file",
+                  "label": "From other files",
+                  "valueLabels": {
+                    "true": "Yes"
+                  }
+                },
+                {
+                  "field": "low_confidence",
+                  "label": "Without DDR info",
+                  "valueLabels": {
+                    "true": "Yes"
+                  }
+                }
+              ],
+              "onRowClick": {
+                "action": "openDashboard",
+                "args": {
+                  "id": "object_usage",
+                  "params": {
+                    "obj_uuid": "{{nav_uuid}}",
+                    "obj_file": "{{file_name}}",
+                    "class": "{{_class_param}}"
+                  }
+                }
+              },
+              "empty": {
+                "message": "No object in this selection."
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "selected_card",
+        "props": {
+          "span": 12,
+          "title": "Selected object"
+        },
+        "data": {
+          "dataset": "selected"
+        },
+        "visibleWhen": {
+          "dataset": "selected",
+          "field": "nav_uuid",
+          "truthy": true
+        },
+        "children": [
+          {
+            "type": "Table",
+            "id": "selected_table",
+            "props": {
+              "rowKey": "nav_uuid",
+              "density": "comfortable",
+              "columns": [
+                {
+                  "field": "object_name",
+                  "label": "Object"
+                },
+                {
+                  "field": "object_type",
+                  "label": "Type",
+                  "format": "badge"
+                },
+                {
+                  "field": "file_name",
+                  "label": "File"
+                },
+                {
+                  "field": "usage_class",
+                  "label": "Class",
+                  "format": "badge",
+                  "valueLabels": {
+                    "used": "used",
+                    "rare": "rarely used",
+                    "heavy": "heavily used",
+                    "bridge": "bridge",
+                    "entry_point": "entry point",
+                    "builtin": "built-in",
+                    "unused": "unused",
+                    "dead_branch": "dead branch",
+                    "dead_island": "dead island",
+                    "unused_unverified": "unused (unverified)",
+                    "dead_branch_unverified": "dead branch (unverified)",
+                    "dead_island_unverified": "dead island (unverified)"
+                  },
+                  "nowrap": true
+                },
+                {
+                  "field": "usage",
+                  "label": "Usage (internal)",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "refs",
+                  "label": "References",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "files",
+                  "label": "Files",
+                  "align": "right",
+                  "format": "count"
+                },
+                {
+                  "field": "roles",
+                  "label": "Roles"
+                },
+                {
+                  "field": "in_menu",
+                  "label": "In menu",
+                  "valueLabels": {
+                    "true": "Yes"
+                  }
+                },
+                {
+                  "field": "key_field",
+                  "label": "Key field",
+                  "valueLabels": {
+                    "true": "Yes"
+                  }
+                },
+                {
+                  "field": "cross_file",
+                  "label": "From other files",
+                  "valueLabels": {
+                    "true": "Yes"
+                  }
+                }
+              ],
+              "onRowClick": {
+                "action": "openObject",
+                "args": {
+                  "uuid": "{{nav_uuid}}",
+                  "type": "{{object_type}}",
+                  "file": "{{file_name}}",
+                  "tab": "references",
+                  "rdir": "in",
+                  "rgroup": "owner"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "ddr_warning_card",
+        "props": {
+          "span": 12,
+          "title": "Without DDR info — usage unverified"
+        },
+        "visibleWhen": {
+          "dataset": "selected",
+          "field": "low_confidence",
+          "truthy": true
+        },
+        "children": [
+          {
+            "type": "Markdown",
+            "id": "ddr_warning_md",
+            "props": {
+              "content": "The file of this object was exported without DDR info. It carries no references from formulas — a use in a calculation stays invisible. An *unused* or *dead* class is therefore marked *unverified*. Export the file again with DDR info before deleting anything."
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "to_path_card",
+        "props": {
+          "span": 12,
+          "title": "Relationship path"
+        },
+        "data": {
+          "dataset": "selected"
+        },
+        "visibleWhen": {
+          "dataset": "selected",
+          "field": "is_to",
+          "truthy": true
+        },
+        "children": [
+          {
+            "type": "Markdown",
+            "id": "to_path_md",
+            "props": {
+              "content": "Relationship sides are not counted as usage. Whether this table occurrence is needed as a bridge between used ones, or hangs on a dead branch, is decided by the path analysis — click the row to open it in *Table Occurrence Usage*."
+            }
+          },
+          {
+            "type": "Table",
+            "id": "to_path_table",
+            "props": {
+              "rowKey": "nav_uuid",
+              "density": "compact",
+              "columns": [
+                {
+                  "field": "object_name",
+                  "label": "Table occurrence"
+                },
+                {
+                  "field": "usage_class",
+                  "label": "Class",
+                  "format": "badge",
+                  "valueLabels": {
+                    "used": "used",
+                    "rare": "rarely used",
+                    "heavy": "heavily used",
+                    "bridge": "bridge",
+                    "entry_point": "entry point",
+                    "builtin": "built-in",
+                    "unused": "unused",
+                    "dead_branch": "dead branch",
+                    "dead_island": "dead island",
+                    "unused_unverified": "unused (unverified)",
+                    "dead_branch_unverified": "dead branch (unverified)",
+                    "dead_island_unverified": "dead island (unverified)"
+                  },
+                  "nowrap": true
+                }
+              ],
+              "onRowClick": {
+                "action": "openDashboard",
+                "args": {
+                  "id": "table_occurrence_usage",
+                  "params": {
+                    "to_uuid": "{{nav_uuid}}",
+                    "to_file": "{{file_name}}"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "details_card",
+        "props": {
+          "span": 12,
+          "title": "Who uses the selected object",
+          "keepChildrenOnEmpty": true
+        },
+        "data": {
+          "dataset": "details"
+        },
+        "visibleWhen": {
+          "dataset": "selected",
+          "field": "nav_uuid",
+          "truthy": true
+        },
+        "children": [
+          {
+            "type": "Table",
+            "id": "details_table",
+            "props": {
+              "rowKey": "row_key",
+              "density": "compact",
+              "sortable": true,
+              "searchable": "auto",
+              "searchAutoThreshold": 3,
+              "pageParam": "details_page",
+              "searchParam": "details_q",
+              "sortParam": "details_sort",
+              "clientMode": true,
+              "searchPlaceholder": "Search type, object, file or role…",
+              "columns": [
+                {
+                  "field": "owner_type",
+                  "label": "Type",
+                  "format": "badge",
+                  "nowrap": true
+                },
+                {
+                  "field": "owner_name",
+                  "label": "Using object",
+                  "breakAt": "separators"
+                },
+                {
+                  "field": "owner_file",
+                  "label": "File",
+                  "nowrap": true
+                },
+                {
+                  "field": "roles",
+                  "label": "Roles",
+                  "breakAt": "separators"
+                },
+                {
+                  "field": "refs",
+                  "label": "References",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "usage_class",
+                  "label": "Class",
+                  "format": "badge",
+                  "valueLabels": {
+                    "used": "used",
+                    "rare": "rarely used",
+                    "heavy": "heavily used",
+                    "bridge": "bridge",
+                    "entry_point": "entry point",
+                    "builtin": "built-in",
+                    "unused": "unused",
+                    "dead_branch": "dead branch",
+                    "dead_island": "dead island",
+                    "unused_unverified": "unused (unverified)",
+                    "dead_branch_unverified": "dead branch (unverified)",
+                    "dead_island_unverified": "dead island (unverified)"
+                  },
+                  "nowrap": true
+                }
+              ],
+              "onRowClick": {
+                "action": "openObject",
+                "args": {
+                  "uuid": "{{nav_uuid}}",
+                  "type": "{{owner_type}}",
+                  "file": "{{owner_file}}"
+                }
+              },
+              "empty": {
+                "message": "No usage inside the solution."
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "notes_card",
+        "props": {
+          "span": 12,
+          "title": "How usage is counted"
+        },
+        "children": [
+          {
+            "type": "Markdown",
+            "id": "notes_md",
+            "props": {
+              "content": "**Two numbers.** *Usage (internal)* counts the **using objects** — the scripts, layouts, fields, value lists … that use the object; a layout object or layout part counts as its layout. *References* counts every single place (a layout with the field three times = 1 using object, 3 references). The list *Who uses the selected object* has one row per using object, so its row count equals the usage. The search column *Usage (internal)* and the references tab show the same numbers.\n\n**What counts.** An incoming link whose role counts as usage (where-used flag of the link-role registry). Base tables count only their table occurrences, not their own fields. Table occurrences count every `Table::Field` reference, layout and portal contexts and script steps — relationship sides do not count, the path analysis decides (*bridge*, *dead branch*, *dead island*). Relationships have no usage of their own: a relationship is dead when one of its table occurrences is.\n\n**Classes.**\n- *used*: at least one usage. *rarely used* (at most the slider value) and *heavily used* (top 5 % of its type) are views of it.\n- *entry point*: no usage, but the script or layout is in the menu — the user can start it.\n- *built-in*: one of the three built-in privilege sets.\n- *unused*, *dead branch*, *dead island*: the findings of the Analysis Test *Unused Code*; the tile *Unused* adds the dead relationships.\n- *(unverified)*: in a file without DDR info — a usage from a formula may be invisible.\n\n**Limits.** Only usage inside the imported solution counts. Not visible: **calls from outside** — server schedules, Data API, OData, ODBC/JDBC, `fmp://` URLs, AppleScript/ActiveX, plug-ins, files that were not imported; **dynamic references inside** — *Perform Script* by name, `GetField`, `Evaluate`, names inside SQL strings. An unused object is a review candidate, not a delete recommendation. [How usage is counted](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

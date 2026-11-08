@@ -1,0 +1,134 @@
+{
+  "id": "object_usage",
+  "version": "1.0.0",
+  "title": "Object Usage",
+  "description": "How often every object is used inside the solution — fields, scripts, layouts, custom functions, value lists, base tables, table occurrences, relationships, external data sources and privilege sets. One list across all types, sorted by usage (unused and rarely used first), with a type filter; unused, rarely and heavily used objects and menu entry points as filters. A row shows who uses the object. The same numbers as the search column \"Usage (internal)\" and the Analysis Test Unused Code.",
+  "author": "fm-lab",
+  "icon": "bar-chart",
+  "tags": [
+    "top",
+    "usage",
+    "unused",
+    "cleanup",
+    "refactoring"
+  ],
+  "entry": "layout.json",
+  "analysis": {
+    "objectTypes": [
+      "Field",
+      "Script",
+      "Layout",
+      "CustomFunction",
+      "ValueList",
+      "BaseTable",
+      "TableOccurrence",
+      "Relationship",
+      "ExternalDataSource",
+      "PrivilegeSet"
+    ]
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "type_options",
+      "source": "bundle:data/type_options.sql"
+    },
+    {
+      "id": "usage",
+      "source": "bundle:data/usage.sql",
+      "pageSize": 100,
+      "pageParam": "page",
+      "searchParam": "q",
+      "sortParam": "sort"
+    },
+    {
+      "id": "selected",
+      "source": "bundle:data/selected.sql"
+    },
+    {
+      "id": "details",
+      "source": "bundle:data/details.sql",
+      "pageSize": 100,
+      "pageParam": "details_page",
+      "searchParam": "details_q",
+      "sortParam": "details_sort"
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Optional file filter — derived from the app-level filter."
+    },
+    {
+      "name": "type",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Object types, comma-separated (Select, multiple); empty = all types."
+    },
+    {
+      "name": "rare_max",
+      "type": "number",
+      "required": false,
+      "sticky": true,
+      "description": "Threshold for 'rarely used': a used object with at most this many using objects (default 2)."
+    },
+    {
+      "name": "class",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Usage class filter of the list (KPI tile): used, rare, heavy, entry_point, unused; empty = all. Sticky, so it combines with ddr and type; the 'All objects' tile resets class and ddr."
+    },
+    {
+      "name": "ddr",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "List filter by DDR info (KPI tile): 'without' = only objects of files exported without DDR info; empty = all."
+    },
+    {
+      "name": "q",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Search term of the object list. Sticky: it survives KPI tile clicks and row clicks; cleared in the search field."
+    },
+    {
+      "name": "sort",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Sort column of the object list (server sort). Sticky, like q."
+    },
+    {
+      "name": "dir",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Sort direction of the object list (asc/desc). Sticky, like q."
+    },
+    {
+      "name": "obj_uuid",
+      "type": "string",
+      "required": false,
+      "description": "Selected object (UUID) for the detail cards."
+    },
+    {
+      "name": "obj_file",
+      "type": "string",
+      "required": false,
+      "description": "File of the selected object."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

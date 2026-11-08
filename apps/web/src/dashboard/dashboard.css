@@ -78,6 +78,50 @@
   border-radius: 4px;
   font-size: 0.85rem;
 }
+/* Render error of one dashboard element (PrimitiveErrorBoundary). */
+.dash-scope-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 0 0 12px;
+  padding: 6px 12px;
+  background: var(--color-info-bg);
+  color: var(--color-info-fg);
+  border: 1px solid var(--color-info-border);
+  border-left: 3px solid var(--color-info-fg);
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+.dash-scope-notice__label {
+  font-weight: 600;
+}
+.dash-scope-notice__parts {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dash-scope-notice__clear {
+  padding: 2px 10px;
+  border: 1px solid var(--color-info-border);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.dash-scope-notice__clear:hover {
+  background: var(--color-bg-elevated, transparent);
+}
+.dash-primitive-error {
+  grid-column: 1 / -1;
+  padding: 8px 12px;
+  background: var(--color-error-bg);
+  color: var(--color-error-fg);
+  border: 1px solid var(--color-error-border);
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
 .dash-card__empty {
   padding: 8px 0;
   color: var(--color-text-muted);
@@ -328,6 +372,10 @@
 .dash-table .dash-table__td--center { text-align: center; }
 .dash-table__th--nowrap,
 .dash-table__td--nowrap { white-space: nowrap; }
+/* `breakAt` (see _breakAt.ts): break opportunities inside long identifiers —
+   taken only when the table would not fit otherwise. 'separators' places
+   <wbr> after `_`/`-` in the markup and needs no rule of its own. */
+.dash-table__td--break-anywhere { overflow-wrap: anywhere; }
 .dash-table--compact td,
 .dash-table--compact th { padding: 3px 6px; }
 /* 'copy'-format cell — subtle clipboard button; the tooltip (title attr)

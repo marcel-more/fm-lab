@@ -8,6 +8,9 @@ Two scope notes: this history covers the **solution catalog** (`db/fm_catalog.du
 
 | Schema version | fm-lab version | Date |
 |---|---|---|
+| [1.40.0](#1400) | 0.9.18 | 2026-11-08 |
+| [1.39.0](#1390) | 0.9.18 | 2026-11-07 |
+| [1.38.0](#1380) | 0.9.18 | 2026-11-05 |
 | [1.37.0](#1370) | 0.9.15 | 2026-10-28 |
 | [1.36.0](#1360) | 0.9.15 | 2026-10-23 |
 | [1.35.0](#1350) | 0.9.15 | 2026-10-23 |
@@ -53,6 +56,88 @@ Two scope notes: this history covers the **solution catalog** (`db/fm_catalog.du
 | [1.0.0](#100) | — | 2026-05-13 |
 
 ## Changes by version
+
+### 1.40.0
+
+Object usage (converter 2.45.0). The new analysis table `v_object_usage` holds
+one row per field, script, layout, custom function, value list, base table,
+external data source, privilege set, table occurrence and relationship: how
+many layouts, scripts and other objects use it (`Usage_Owners` — an object on a
+layout counts as its layout), how many sources and links (`Usage_Users`,
+`Usage_Refs`), which link roles and how many files, plus the markers
+`Entry_Point` (script or layout in its menu), `Key_Field` (match field of a
+relationship) and `Low_Confidence` (file exported without DDR info). Its
+`Usage_Class` reads `used`, `unused`, `entry_point` or `builtin` (the built-in
+privilege sets); table occurrences keep the classes of
+`v_table_occurrence_class`, and a relationship is dead when one of its
+occurrences is.
+
+It is the one definition of usage: the unused-code rules read it instead of
+their own role lists (findings unchanged), and the usage dashboard and the
+search build on it. Usage counts every link role [LinkRoleRegistry](object-catalog/LinkRoleRegistry.md) marks for
+where-used, except for base tables, which count only their table occurrences.
+No catalog table changes.
+
+What this means for existing installations:
+
+- The first import after the update is a full rebuild (schema version change)
+  and takes correspondingly longer; clustering is rebuilt with it. For a
+  single-file import, run a batch import first.
+- Until then the unused-code rules report no findings: they need the new table.
+
+### 1.39.0
+
+Layout parts (converter 2.44.0). [LayoutParts](catalog-tables/LayoutParts.md) gains `Part_Name` (the name
+FileMaker generates for sub-summaries), `Part_Break_Every` (n of *page break after
+every n occurrences*) and the part's local CSS: `Part_LocalCSS_Name` (part style),
+`Part_LocalCSS_Type`, `Part_LocalCSS` raw, and `Part_Alt_Row_Local` /
+`Part_Active_Row_Local`, the row-state options set on a body part. The new table
+[ThemePartStyles](catalog-tables/ThemePartStyles.md) holds the row-state defaults of every theme (body rule and
+named part styles), read once from the theme CSS.
+
+[LayoutObjects](catalog-tables/LayoutObjects.md) gains `Part_Seq` / `Part_Kind`: the part of every object,
+derived from the top edge of root objects and the parent chain of nested ones.
+`LayoutObjects.Part_Type` now follows that part and is canonical English like
+`LayoutParts.Part_Type`; before, it was the raw export type — localized, and
+FileMaker 22 labels every trailing sub-summary *Trailing Grand Summary*. The P6
+check `v_check_layoutobjects_without_part` counts objects without a part.
+
+Break fields of sub-summaries whose UUID is in no catalog (seen in existing files
+that reference the field through another table occurrence) are resolved through
+`Break_TO_UUID` and `Break_Field_ID` — the `breaks_on_field` link now exists for
+them as well, so such fields no longer appear unused.
+
+### 1.38.0
+
+Start occurrences of value lists and lookups, and the usage of table occurrences
+(converter 2.43.0). Two options name a second table occurrence that was not read
+before: a field-based value list with "Include only related values starting
+from" and a lookup with "Starting with table". [OptionsForValueLists](catalog-tables/OptionsForValueLists.md) gains
+`ShowRelated` and `ShowRelated_TO_ID`/`_Name`/`_UUID`, [FieldsForTables](catalog-tables/FieldsForTables.md) gains
+`Lookup_Context_TO_ID`/`_Name`/`_UUID`, and the two new usage roles
+`related_values_from` (ValueList → TableOccurrence) and `lookup_context`
+(Field → TableOccurrence) link them in [ObjectLinks](object-catalog/ObjectLinks.md) — the registry grows from
+61 to 63 roles. [UUID healing](UUID%20Healing%20and%20Duplicate%20Census.md) carries both
+occurrence UUIDs along.
+
+Two new analysis tables collect the full usage of every occurrence: a
+`Table::Field` reference links only the field, so the links alone miss most uses.
+`v_table_occurrence_usage` holds every usage — links, field references in
+formulas, script steps and on layouts, break fields, table-view columns,
+record-access formulas and evaluation contexts — and `v_table_occurrence_class`
+one usage class per occurrence from the count and the relationship graph
+(see [TableOccurrence](object-types/TableOccurrence.md#usage-through-fields)). They feed the
+dashboard *Table Occurrence Usage*, the rule *Unused Table Occurrence* and the
+references tab of an occurrence.
+
+What this means for existing installations:
+
+- The first import after the update is a full rebuild (schema version change)
+  and takes correspondingly longer; clustering is rebuilt with it. For a
+  single-file import, run a batch import first.
+- Until then the references tab of an occurrence shows only its links, with a
+  note that the full usage appears after a re-import; the dashboard and the rule
+  need the new tables.
 
 ### 1.37.0
 

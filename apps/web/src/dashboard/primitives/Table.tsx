@@ -1,10 +1,14 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { PrimitiveProps } from '../types';
 import { formatTableCell, formatKpiValue } from './_format';
 import { translateCellValue } from './_cellTranslate';
 import { badgeToneClass, type BadgeTone } from './_badgeTone';
+import { rowLabelText, valueLabelFor, type ValueLabels } from './_valueLabels';
+import { isBreakAt, separatorSegments, type BreakAt } from './_breakAt';
+import { useBreakFit } from './_useBreakFit';
+import { dashboardIdFromPath, withListView } from './_rowClickView';
 import { useRowSearch } from './_useRowSearch';
 import { Pager } from './_Pager';
 import { parseFacets } from './_chipFacets';
@@ -49,9 +53,17 @@ interface ColumnSpec {
   // Semantic colour per badge value, overriding the value-derived class
   // (see _badgeTone.ts). Only meaningful with `format: 'badge'`.
   badgeTone?: BadgeTone;
+  // Caption per cell value (code → text, see _valueLabels.ts). The cell keeps
+  // its code for sort, server search, click tokens and badge tone; a value
+  // without an entry shows as it is. Locale-overridable per key.
+  valueLabels?: ValueLabels;
   // Keep the cell on one line (timestamps, names) — the remaining columns
   // absorb the width and wrap instead.
   nowrap?: boolean;
+  // Line-break opportunities inside long identifiers without spaces (see
+  // _breakAt.ts): 'separators' after `_`/`-`, 'anywhere' between any two
+  // characters. Used only when the table would not fit otherwise.
+  breakAt?: BreakAt;
   // Server sort: the output column the SQL sorts by (default: `field`);
   // `sortable: false` keeps a column header unclickable.
   sortKey?: string;
@@ -102,6 +114,13 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
   const lang = i18n.language;
   const props = node.props ?? {};
   const columns = (props.columns as ColumnSpec[]) ?? [];
+  // Client search also matches the captions of `valueLabels` columns.
+  const labelSearchText = useMemo(
+    () => (columns.some(c => c.valueLabels)
+      ? (row: Record<string, unknown>) => rowLabelText(row, columns)
+      : undefined),
+    [columns],
+  );
   const rowKey = (props.rowKey as string) ?? undefined;
   const density = (props.density as string) ?? 'comfortable';
   const onRowClick = props.onRowClick as ActionSpec | undefined;
@@ -388,6 +407,7 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
     clientFilter: !(serverSide && searchParam),
     // Every URL change is a request: the term goes out after a short pause.
     debounceMs: serverSide ? SEARCH_DEBOUNCE_MS : undefined,
+    extraText: labelSearchText,
   });
   // A URL-bound term the SQL filters on can leave zero rows; the search field
   // must stay so the term can be corrected.
@@ -459,6 +479,14 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
   const clientPageCount = pageCountOf(clientTotal, navSize);
   const pageSlice = pageWindow(clientPage, clientTotal, navSize);
   const visibleRows = clientPaging ? sortedRows.slice(pageSlice.start, pageSlice.end) : sortedRows;
+  // `breakAt` columns get their break opportunities only while the table
+  // would not fit without them.
+  // Stable parts only: `visibleRows` is a fresh slice on every render.
+  const breakFitKey = useMemo(
+    () => [sortedRows, pageSlice.start, columns, lang],
+    [sortedRows, pageSlice.start, columns, lang],
+  );
+  const breaksOn = useBreakFit(tableRef, columns.some(c => isBreakAt(c.breakAt) && !c.nowrap), breakFitKey);
   const minPageSize = smallestPageSize(pageSizeOptions);
   // Up to the smallest option a page-size choice changes nothing.
   const pageSizeSelectVisible = clientPaging && minPageSize != null && rows.length > minPageSize;
@@ -575,9 +603,36 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
   const clickable = !!onRowClick || selectable;
   const hasQuery = search.query.trim() !== '';
 
+  // `keepViewOnRowClick`: a row click into the same dashboard (selection)
+  // carries this table's search, sort and page along (see _rowClickView.ts).
+  const keepViewOnRowClick = props.keepViewOnRowClick === true;
+  const listView = (): Record<string, string | null> => {
+    const view: Record<string, string | null> = {};
+    // The typed term, also when its debounced URL write is still pending.
+    if (searchParam) view[searchParam] = search.query.trim();
+    if (sortParam && dirParam) {
+      if (localMode) {
+        const column = sortField ? columns.find(c => c.field === sortField) : undefined;
+        if (column && column.sortable !== false) {
+          view[sortParam] = column.sortKey ?? column.field;
+          view[dirParam] = sortDir;
+        }
+      } else {
+        view[sortParam] = urlSort;
+        view[dirParam] = urlDir;
+      }
+    }
+    if (pageParam && !localMode) view[pageParam] = searchParams.get(pageParam);
+    return view;
+  };
+
   const handleRowClick = (row: Record<string, unknown>) => {
     if (selectable) toggle(selectionKey as string, String(row[selectField as string] ?? ''));
-    if (onRowClick) dispatchAction(onRowClick, row, { navigate });
+    if (!onRowClick) return;
+    const spec = keepViewOnRowClick
+      ? withListView(onRowClick, listView(), dashboardIdFromPath(window.location.pathname))
+      : onRowClick;
+    dispatchAction(spec, row, { navigate });
   };
 
   /** Selected source row, or a target row belonging to the selected value. */
@@ -859,7 +914,7 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
                     return (
                       <td
                         key={c.field}
-                        className={cellClass(c)}
+                        className={cellClass(c, breaksOn)}
                       >
                         {ci === 0 && fillOverlay}
                         {copyValue !== '' && (
@@ -897,8 +952,9 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
                     );
                   }
                   const isBadge = c.format === 'badge';
+                  const mappedLabel = valueLabelFor(rawValue, c.valueLabels);
                   const value = isBadge ? translateCellValue(rawValue, t) : rawValue;
-                  const formatted = formatTableCell(value, c.format, lang);
+                  const formatted = mappedLabel ?? formatTableCell(value, c.format, lang);
                   // Chunk-Zähler „k von N" hinter dem Dateinamen, solange diese
                   // Datei importiert wird (Phase D). Nur in der Highlight-Spalte.
                   const chunkCounter =
@@ -913,7 +969,7 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
                   return (
                     <td
                       key={c.field}
-                      className={cellClass(c)}
+                      className={cellClass(c, breaksOn)}
                     >
                       {ci === 0 && fillOverlay}
                       {isBadge ? (
@@ -931,7 +987,7 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
                         )
                       ) : (
                         <>
-                          {formatted}
+                          {breaksOn && c.breakAt === 'separators' ? withBreaks(formatted) : formatted}
                           {chunkCounter && (
                             <span className="dash-table__chunk-counter">{chunkCounter}</span>
                           )}
@@ -956,9 +1012,21 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
   );
 }
 
-function cellClass(c: ColumnSpec): string | undefined {
-  return [c.align ? `dash-table__td--${c.align}` : '', c.nowrap ? 'dash-table__td--nowrap' : '']
-    .filter(Boolean).join(' ') || undefined;
+function cellClass(c: ColumnSpec, breaksOn = false): string | undefined {
+  return [
+    c.align ? `dash-table__td--${c.align}` : '',
+    c.nowrap ? 'dash-table__td--nowrap' : '',
+    breaksOn && !c.nowrap && isBreakAt(c.breakAt) ? `dash-table__td--break-${c.breakAt}` : '',
+  ].filter(Boolean).join(' ') || undefined;
+}
+
+/** The cell text with a `<wbr>` after every separator run (`breakAt: 'separators'`). */
+function withBreaks(text: string) {
+  const parts = separatorSegments(text);
+  if (parts.length < 2) return text;
+  return parts.map((part, i) => (
+    <Fragment key={i}>{i > 0 && <wbr />}{part}</Fragment>
+  ));
 }
 
 /** Non-negative integer from a convention column (number or numeric string), else null. */

@@ -24,4 +24,4 @@ The layout themes of each file, including the raw CSS rule set (`Theme_XML`). La
 
 - `Modified_At` / `Modified_By` / `Modified_Account` / `Modifications` are the raw change metadata of the object's `<UUID>` element: timestamp as text (local time of the editing client, no time zone), user name, account (empty → `NULL`) and change counter. [ObjectChangeMeta](ObjectChangeMeta.md) collects them across all object types with a typed timestamp.
 
-**See also:** [Layouts](Layouts.md)
+**See also:** [Layouts](Layouts.md) · [ThemePartStyles](ThemePartStyles.md)

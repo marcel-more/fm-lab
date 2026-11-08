@@ -1,6 +1,6 @@
 {
   "id": "unused_external_data_source",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "title": "Unused External Data Source",
   "description": "Unused-code rule — external data sources not referenced by any table occurrence.",
   "author": "fm-lab rules",
@@ -38,10 +38,16 @@
     "scope": {
       "supported": [
         "solution",
-        "file"
+        "file",
+        "object",
+        "object-list",
+        "cluster"
       ],
       "anchor": "nav_uuid",
-      "mode": {}
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
     },
     "defaultResult": {
       "dataset": "summary",

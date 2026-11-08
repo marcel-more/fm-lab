@@ -167,6 +167,11 @@
       "area": "system"
     },
     {
+      "name": "object_details_layoutpart",
+      "path": "system/object-details/object_details_layoutpart.sql",
+      "area": "system"
+    },
+    {
       "name": "object_details_plugincomponent",
       "path": "system/object-details/object_details_plugincomponent.sql",
       "area": "system"
@@ -204,6 +209,21 @@
     {
       "name": "object_details_scriptsteptype",
       "path": "system/object-details/object_details_scriptsteptype.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_tableoccurrence",
+      "path": "system/object-details/object_details_tableoccurrence.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_tableoccurrence_graph",
+      "path": "system/object-details/object_details_tableoccurrence_graph.sql",
+      "area": "system"
+    },
+    {
+      "name": "object_details_tableoccurrence_usage",
+      "path": "system/object-details/object_details_tableoccurrence_usage.sql",
       "area": "system"
     },
     {

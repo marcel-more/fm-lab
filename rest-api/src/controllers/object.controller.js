@@ -250,10 +250,12 @@ async function count(req, res, next) {
 async function search(req, res, next) {
   try {
     const ctx = req.solutionContext;
-    const { name, type, file, limit, offset, format = 'json', meta, debug, lang, sort, modified_since } = req.query;
+    const { name, type, file, limit, offset, format = 'json', meta, debug, lang, sort, modified_since,
+      usage_dir, usage_min, usage_max } = req.query;
 
     const result = await objectService.searchObjects(ctx, {
       name, type, file, limit, offset, sort, modifiedSince: modified_since,
+      usageDir: usage_dir, usageMin: usage_min, usageMax: usage_max,
     });
 
     // Lokalisierte Namen in der Trefferliste (s. /api/get). Ergänzt den
@@ -285,9 +287,11 @@ async function search(req, res, next) {
 async function searchCount(req, res, next) {
   try {
     const ctx = req.solutionContext;
-    const { name, type, file, format = 'json', meta, debug, modified_since } = req.query;
+    const { name, type, file, format = 'json', meta, debug, modified_since, usage_min, usage_max } = req.query;
 
-    const result = await objectService.countSearchResults(ctx, { name, type, file, modifiedSince: modified_since });
+    const result = await objectService.countSearchResults(ctx, {
+      name, type, file, modifiedSince: modified_since, usageMin: usage_min, usageMax: usage_max,
+    });
 
     const formattedData = formatters.format(result.data, format);
 
@@ -886,14 +890,23 @@ async function respondWithTokens(req, res, { uuid, file, meta, debug, enrich }) 
                 l.L_UUID AS Layout_UUID, l.L_Name AS Layout_Name,
                 l.L_TO_Name AS Layout_TO_Name,
                 po.Object_UUID AS Parent_UUID, po.Object_Type AS Parent_Type,
-                po.Object_Name AS Parent_Name
-         FROM LayoutObjects lo
+                po.Object_Name AS Parent_Name,
+                lo.Part_Seq, lo.Part_Kind,
+                CASE WHEN lo.Part_Seq IS NOT NULL THEN
+                  'part_' || lo.Layout_ID::VARCHAR || '_' || lo.Part_Kind::VARCHAR || '_'
+                    || lo.Part_Seq::VARCHAR || '_' || lo.File_Name END AS Part_UUID
+         -- Part_Seq/Part_Kind (schema 1.39.0) via UNION ALL BY NAME: NULL on older
+         -- catalogs instead of a binder error that would drop the whole context.
+         FROM (
+           SELECT * FROM LayoutObjects WHERE Object_UUID = ? AND File_Name = ?
+           UNION ALL BY NAME
+           SELECT NULL::BIGINT AS Part_Seq, NULL::BIGINT AS Part_Kind WHERE false
+         ) lo
          JOIN Layouts l ON lo.Layout_ID = l.L_ID AND lo.File_Name = l.File_Name
          LEFT JOIN LayoutObjects po
            ON po.Object_ID = lo.Parent_Object_ID
           AND po.Layout_ID = lo.Layout_ID
           AND po.File_Name = lo.File_Name
-         WHERE lo.Object_UUID = ? AND lo.File_Name = ?
          LIMIT 1`,
         [uuid, resolvedFile]
       );
@@ -906,6 +919,10 @@ async function respondWithTokens(req, res, { uuid, file, meta, debug, enrich }) 
             layoutName: row.Layout_Name ?? null,
             objectId: row.Object_ID != null ? Number(row.Object_ID) : null,
             partType: row.Part_Type ?? null,
+            // Assigned layout part (schema 1.39.0) — link target of the „Part" row.
+            partSeq: row.Part_Seq != null ? Number(row.Part_Seq) : null,
+            partKind: row.Part_Kind != null ? Number(row.Part_Kind) : null,
+            partUuid: row.Part_UUID ?? null,
             nestingLevel: row.Nesting_Level != null ? Number(row.Nesting_Level) : null,
             // Original-Textblock des Objekts (Layout-Wahrheit inkl. aller
             // Merge-Anker und Fließtext) — Sektion „Textinhalt" im Frontend.

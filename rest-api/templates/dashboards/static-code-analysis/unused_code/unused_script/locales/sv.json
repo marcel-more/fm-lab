@@ -1,15 +1,30 @@
 {
   "manifest": {
     "title": "Oanvänt skript",
-    "description": "Oanvänd-kod-regel — skript som inte anropas av något annat skript och inte startas av någon utlösare. Kontrollera: manuella starter eller starter från anpassad meny kan visas här.\n\nBaserad på PMD-regeln UnusedPrivateMethod — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod"
+    "description": "Oanvänd-kod-regel — skript som inte anropas av något annat skript, någon knapp eller någon anpassad meny och inte startas av någon utlösare. Skript i menyn Skript är startpunkter: de listas separat och är inga träffar. Träffar i filer som exporterats utan DDR-info markeras som overifierade.\n\nBaserad på PMD-regeln UnusedPrivateMethod — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Träffar",
-    "summary_kpi.props.items[1].label": "Berörda filer",
+    "summary_kpi.props.items[1].label": "Utan DDR-info",
+    "summary_kpi.props.items[2].label": "I menyn Skript",
+    "summary_kpi.props.items[3].label": "Berörda filer",
     "findings_card.props.title": "Oanvänt skript",
     "findings_table.props.searchPlaceholder": "Sök fil eller skript…",
     "findings_table.props.empty.message": "Inga oanvända skript hittades.",
     "findings_table.props.columns[0].label": "Fil",
-    "findings_table.props.columns[1].label": "Skript"
+    "findings_table.props.columns[1].label": "Skript",
+    "findings_table.props.columns[2].label": "Status",
+    "findings_table.props.columns[3].label": "Utan DDR-info",
+    "findings_table.props.columns[2].valueLabels.unused": "Oanvänd",
+    "findings_table.props.columns[2].valueLabels.unused_unverified": "Oanvänd (overifierad)",
+    "findings_table.props.columns[3].valueLabels.true": "Ja",
+    "findings_table.props.columns[3].valueLabels.false": "Nej",
+    "entry_points_card.props.title": "Startpunkter: i menyn Skript, anropas inte",
+    "entry_points_table.props.searchPlaceholder": "Sök fil eller skript…",
+    "entry_points_table.props.empty.message": "Inga startpunkter hittades.",
+    "entry_points_table.props.columns[0].label": "Fil",
+    "entry_points_table.props.columns[1].label": "Skript",
+    "notes_card.props.title": "Vad statusen betyder",
+    "notes_md.props.content": "**Overifierad.** Filen exporterades utan DDR-info. Den innehåller då inga referenser från formler alls — en användning i en beräkning förblir osynlig. En sådan träff heter *Oanvänd (overifierad)*; rutan *Utan DDR-info* listar dem. Exportera filen igen med DDR-info innan du tar bort något.\n\n**Startpunkter.** Ett skript i menyn Skript kan användaren starta även om inget anropar det. Det är ingen träff; listan *Startpunkter* visar det. Om det inte ska startas, ta bort det från menyn — då blir det en träff.\n\n**Begränsningar.** Endast användning inom den importerade lösningen räknas. Syns inte: **anrop utifrån** — serverscheman, Data API, OData, `fmp://`-URL:er, AppleScript/ActiveX, plugin-program, filer som inte importerats; **dynamiska referenser inifrån** — *Utför skript* via namn, `GetField`, `Evaluate`, namn i SQL-strängar. Ett resultat är en kandidat för granskning, ingen rekommendation att radera. [Hur användning räknas](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

@@ -1,15 +1,24 @@
 {
   "manifest": {
     "title": "未使用の値一覧",
-    "description": "未使用コードルール — どのフィールド/Layout オブジェクト、並べ替え、外部ラッパーにも結び付いていない値一覧。"
+    "description": "未使用コードルール — どのフィールド/Layout オブジェクト、並べ替え、外部ラッパーにも結び付いていない値一覧。 DDR 情報なしでエクスポートされたファイルの検出結果は未検証として表示されます。"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "検出数",
-    "summary_kpi.props.items[1].label": "対象ファイル数",
+    "summary_kpi.props.items[1].label": "DDR 情報なし",
+    "summary_kpi.props.items[2].label": "対象ファイル数",
     "findings_card.props.title": "未使用の値一覧",
     "findings_table.props.searchPlaceholder": "ファイルまたは名前を検索…",
     "findings_table.props.empty.message": "該当する項目は見つかりませんでした。",
     "findings_table.props.columns[0].label": "ファイル",
-    "findings_table.props.columns[1].label": "名前"
+    "findings_table.props.columns[1].label": "名前",
+    "findings_table.props.columns[2].label": "状態",
+    "findings_table.props.columns[3].label": "DDR 情報なし",
+    "findings_table.props.columns[2].valueLabels.unused": "未使用",
+    "findings_table.props.columns[2].valueLabels.unused_unverified": "未使用 (未検証)",
+    "findings_table.props.columns[3].valueLabels.true": "はい",
+    "findings_table.props.columns[3].valueLabels.false": "いいえ",
+    "notes_card.props.title": "状態の意味",
+    "notes_md.props.content": "**未検証。** このファイルは DDR 情報なしでエクスポートされています。その場合、計算式からの参照は一切含まれないため、計算式での使用は見えません。こうした検出結果は *未使用 (未検証)* と表示され、タイル *DDR 情報なし* で一覧できます。削除する前に DDR 情報付きで再エクスポートしてください。\n\n**制限。** 数えるのはインポートしたソリューション内部での使用だけです。見えないもの: **外部からの呼び出し** — サーバースケジュール、Data API、OData、`fmp://` URL、AppleScript/ActiveX、プラグイン、インポートしていないファイル。**内部の動的参照** — 名前による *スクリプト実行*、`GetField`、`Evaluate`、SQL 文字列内の名前。結果は確認の候補であり、削除の推奨ではありません。[使用数の数え方](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

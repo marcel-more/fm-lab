@@ -32,6 +32,50 @@ function matchesCalc(o: LayoutObject, activeCalc: Set<string>): boolean {
   return false;
 }
 
+/** URL param of the section (layout part) filter — value = Part_Seq. */
+export const SECTION_PARAM = 'part';
+
+/** Parses the section param; null = all parts. */
+export function parseSectionParam(raw: string | null | undefined): number | null {
+  if (!raw) return null;
+  const n = Number(raw);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+/**
+ * Removes the reference-mode params (`ref`, findings context) from a param set —
+ * a user interaction ends the reference mode in the SAME URL update.
+ */
+export function clearRefParams(next: URLSearchParams): void {
+  next.delete('ref');
+  next.delete('ref_src');
+  next.delete('ref_msgid');
+  next.delete('marks');
+  for (const k of Array.from(next.keys())) {
+    if (k.startsWith('ref_arg_')) next.delete(k);
+  }
+}
+
+/**
+ * Section filter outside the canvas (part list of the properties panel): reads
+ * the same URL param and sets it atomically together with ending the
+ * reference mode, exactly like a filter change inside the canvas.
+ */
+export function useSectionParam(): [number | null, (seq: number | null) => void] {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const section = parseSectionParam(searchParams.get(SECTION_PARAM));
+  const setSection = useCallback((seq: number | null) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (seq == null) next.delete(SECTION_PARAM);
+      else next.set(SECTION_PARAM, String(seq));
+      clearRefParams(next);
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
+  return [section, setSection];
+}
+
 export type LayoutSearchAPI = {
   query: string;
   setQuery: (q: string) => void;
@@ -43,6 +87,12 @@ export type LayoutSearchAPI = {
 
   activeCalc: Set<string>;
   toggleCalc: (key: string) => void;
+
+  /** Selected section (Part_Seq) or null = all parts. */
+  section: number | null;
+  setSection: (seq: number | null) => void;
+  /** Objects of the selected section (all objects without a section). */
+  scopedObjects: LayoutObject[];
 
   matchUuids: Set<string>;
   matches: LayoutObject[];
@@ -91,9 +141,11 @@ function buildSearchText(o: LayoutObject): string {
  * `searchParams`, und der zweite Aufruf würde den Stand des ersten überschreiben.
  */
 export function useLayoutSearch(
-  objects: LayoutObject[],
+  allObjects: LayoutObject[],
   externalMatchUuids?: Set<string> | null,
   onUserInteraction?: () => void,
+  /** object_uuid → Part_Seq (catalog value or fallback rule); scopes the section filter. */
+  partOf?: Map<string, number | null> | null,
 ): LayoutSearchAPI {
   // Such- und Filter-State liegt in der URL — Stack erhält den State beim
   // Zurück-Navigieren. selectedUuid bleibt transient (Cursor pro TAB-Schritt
@@ -104,7 +156,16 @@ export function useLayoutSearch(
   const [query, setQueryState] = useUrlState<string>('q', '');
   const [activeTypes] = useUrlState<Set<string>>('types', EMPTY_TYPES, stringSetCodec);
   const [activeCalc] = useUrlState<Set<string>>('calc', EMPTY_TYPES, stringSetCodec);
-  const [, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const section = parseSectionParam(searchParams.get(SECTION_PARAM));
+
+  // Section scope comes BEFORE every other dimension: search, type/calc chips,
+  // match counts and the TAB cursor all work inside the selected part. The
+  // section itself is no match filter (in-scope objects keep their normal look).
+  const objects = useMemo(() => {
+    if (section == null || !partOf) return allObjects;
+    return allObjects.filter(o => partOf.get(o.object_uuid) === section);
+  }, [allObjects, partOf, section]);
   const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
 
   // Bei Layout-Wechsel: nur Selektion zurücksetzen — Suche/Filter bleiben durch
@@ -193,25 +254,24 @@ export function useLayoutSearch(
    */
   const runUserUpdate = useCallback(
     (updater: (p: URLSearchParams) => void) => {
+      // Audit hook FIRST: consumers (DetailView.dismissRefOrigin) call their own
+      // setSearchParams. React Router hands every functional update the params of
+      // the current render, so a later call would overwrite this update (the
+      // first chip click/section choice in reference mode was lost). Called
+      // before, its navigation is superseded by ours — which clears the
+      // reference params itself.
+      if (refActiveRef.current) interactionRef.current?.();
       setSearchParams(prev => {
         const next = new URLSearchParams(prev);
         updater(next);
         if (refActiveRef.current && next.has('ref')) {
-          next.delete('ref');
           // Findings-Kontext-Params gehören zum Referenz-Modus und enden mit ihm
           // — sonst bliebe die Quelle-Zeile der RefOriginPill nach der User-
           // Interaktion als Waise stehen.
-          next.delete('ref_src');
-          next.delete('ref_msgid');
-          for (const k of Array.from(next.keys())) {
-            if (k.startsWith('ref_arg_')) next.delete(k);
-          }
+          clearRefParams(next);
         }
         return next;
       }, { replace: true });
-      // Audit-Hook für Konsumenten, die wissen wollen, dass die Interaktion
-      // den Referenz-Modus beendet hat (z.B. für Analytics oder Logging).
-      if (refActiveRef.current) interactionRef.current?.();
     },
     [setSearchParams],
   );
@@ -275,6 +335,16 @@ export function useLayoutSearch(
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runUserUpdate]);
 
+  // Section choice is an explicit user interaction → ends the reference mode
+  // (same as search and chips).
+  const setSection = useCallback((seq: number | null) => {
+    runUserUpdate(p => {
+      if (seq == null) p.delete(SECTION_PARAM);
+      else p.set(SECTION_PARAM, String(seq));
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runUserUpdate]);
+
   const clearTypes = useCallback(() => {
     // clearTypes wird vom ESC-Stack und vom "Filter zurücksetzen"-Link genutzt
     // — beides ist eine programmatische Zurücknahme, nicht die Anlage eines
@@ -286,6 +356,8 @@ export function useLayoutSearch(
       const next = new URLSearchParams(prev);
       next.delete('types');
       next.delete('calc');
+      // The section belongs to the filter stage (ESC, "reset filters").
+      next.delete(SECTION_PARAM);
       return next;
     }, { replace: true });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -324,6 +396,9 @@ export function useLayoutSearch(
     clearTypes,
     activeCalc,
     toggleCalc,
+    section,
+    setSection,
+    scopedObjects: objects,
     matchUuids,
     matches,
     selectedUuid,

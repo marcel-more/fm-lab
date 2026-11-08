@@ -1,15 +1,34 @@
 {
   "manifest": {
     "title": "Oanvänd tabellförekomst",
-    "description": "Oanvänd-kod-regel — tabellförekomster som varken används som Layout-kontext, portalkälla, GTRR-mål eller relationssida."
+    "description": "Regel för oanvänd kod: tabellförekomster som kan tas bort, används ingenstans eller bara som sida i en relation utan använd förekomst bortom dem (död gren eller ö i relationsdiagrammet). Räknar varje användning, även referenser Tabell::Fält i formler, skriptsteg och Layout-fält; mellanliggande förekomster på vägen mellan två använda förekomster (t.ex. kopplingstabellen i en n:m-relation) behålls."
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Träffar",
-    "summary_kpi.props.items[1].label": "Berörda filer",
+    "summary_kpi.props.items[1].label": "Används ingenstans",
+    "summary_kpi.props.items[2].label": "Död gren",
+    "summary_kpi.props.items[3].label": "Död ö",
+    "summary_kpi.props.items[4].label": "Utan DDR-info",
+    "summary_kpi.props.items[5].label": "Berörda filer",
     "findings_card.props.title": "Oanvänd tabellförekomst",
-    "findings_table.props.searchPlaceholder": "Sök fil eller namn…",
+    "findings_table.props.searchPlaceholder": "Sök fil, namn eller orsak…",
     "findings_table.props.empty.message": "Inga träffar hittades.",
     "findings_table.props.columns[0].label": "Fil",
-    "findings_table.props.columns[1].label": "Namn"
+    "findings_table.props.columns[1].label": "Namn",
+    "findings_table.props.columns[2].label": "Bastabell",
+    "findings_table.props.columns[3].label": "Orsak",
+    "findings_table.props.columns[4].label": "Kopplad till",
+    "findings_table.props.columns[5].label": "Storlek på död grupp",
+    "findings_table.props.columns[6].label": "Utan DDR-info",
+    "findings_table.props.columns[3].valueLabels.unused": "Används ingenstans",
+    "findings_table.props.columns[3].valueLabels.dead_branch": "Död gren",
+    "findings_table.props.columns[3].valueLabels.dead_island": "Död ö",
+    "findings_table.props.columns[3].valueLabels.unused_unverified": "Används ingenstans (overifierad)",
+    "findings_table.props.columns[3].valueLabels.dead_branch_unverified": "Död gren (overifierad)",
+    "findings_table.props.columns[3].valueLabels.dead_island_unverified": "Död ö (overifierad)",
+    "findings_table.props.columns[6].valueLabels.true": "Ja",
+    "findings_table.props.columns[6].valueLabels.false": "Nej",
+    "notes_card.props.title": "Vad orsakerna betyder",
+    "notes_md.props.content": "**Används ingenstans.** Ingen layout, portal, formel, skriptsteg, layoutfält, värdelista, uppslagning eller behörighetsuppsättning refererar till tabellförekomsten, och den har ingen relation. Den kan tas bort för sig.\n\n**Död gren.** Tabellförekomsten används bara som sida i relationer, och inget bortom den används. *Kopplad till* anger den använda tabellförekomst som grenen hänger på; *Storlek på död grupp* räknar grenens tabellförekomster — de kan tas bort tillsammans.\n\n**Död ö.** Ingen tabellförekomst i dess relationsgrupp används. Hela gruppen kan tas bort; *Storlek på död grupp* räknar den.\n\n**Aldrig en träff.** En tabellförekomst på vägen mellan två använda — typiskt mellantabellförekomsten i en n:m-relation — behövs även om inget refererar direkt till den. Detsamma gäller båda sidor av en relation som tar bort relaterade poster.\n\n**Utan DDR-info.** Filen exporterades utan DDR-info. Referenser `Tabell::Fält` i formler känns då bara igen i formeltexten, och utvärderingskontexter saknas — en användning kan förbli osynlig. En sådan träff heter *overifierad* (t.ex. *Död gren (overifierad)*); rutan *Utan DDR-info* listar dem. Exportera filen igen med DDR-info innan du tar bort något.\n\n**Begränsningar.** Endast användning inom den importerade lösningen räknas. Syns inte: **åtkomst utifrån** — OData, ODBC/JDBC, Data API, filer som inte importerats; **dynamiska referenser inifrån** — `GetField`, `Evaluate`, namn i SQL-strängar. Ett resultat är en kandidat för granskning, ingen rekommendation att radera. [Hur användning räknas](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

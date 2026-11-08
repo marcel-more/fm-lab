@@ -1,15 +1,34 @@
 {
   "manifest": {
     "title": "Ungenutzte Tabellenauftreten",
-    "description": "Unused-Code-Regel — Tabellenauftreten, die weder als Layout-Kontext, Portal-Quelle, GTRR-Ziel noch als Beziehungsseite dienen."
+    "description": "Unused-Code-Regel — Tabellenauftreten, die sich entfernen lassen: nirgends genutzt oder nur als Beziehungsseite, ohne genutzte TO dahinter (toter Ast oder tote Insel im Beziehungsgraphen). Zählt jede Nutzung, auch Referenzen Tabelle::Feld in Formeln, Script-Schritten und Layout-Feldern; Zwischenglieder auf dem Pfad zwischen zwei genutzten TOs (etwa die Zwischen-TO einer n:m-Beziehung) bleiben erhalten."
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Treffer",
-    "summary_kpi.props.items[1].label": "Betroffene Dateien",
+    "summary_kpi.props.items[1].label": "Nirgends genutzt",
+    "summary_kpi.props.items[2].label": "Toter Ast",
+    "summary_kpi.props.items[3].label": "Tote Insel",
+    "summary_kpi.props.items[4].label": "Ohne DDR-Info",
+    "summary_kpi.props.items[5].label": "Betroffene Dateien",
     "findings_card.props.title": "Ungenutzte Tabellenauftreten",
-    "findings_table.props.searchPlaceholder": "Datei oder Name suchen…",
+    "findings_table.props.searchPlaceholder": "Datei, Name oder Grund suchen…",
     "findings_table.props.empty.message": "Keine Treffer gefunden.",
     "findings_table.props.columns[0].label": "Datei",
-    "findings_table.props.columns[1].label": "Name"
+    "findings_table.props.columns[1].label": "Name",
+    "findings_table.props.columns[2].label": "Basistabelle",
+    "findings_table.props.columns[3].label": "Grund",
+    "findings_table.props.columns[4].label": "Hängt an",
+    "findings_table.props.columns[5].label": "Größe der toten Gruppe",
+    "findings_table.props.columns[6].label": "Ohne DDR-Info",
+    "findings_table.props.columns[3].valueLabels.unused": "Nirgends genutzt",
+    "findings_table.props.columns[3].valueLabels.dead_branch": "Toter Ast",
+    "findings_table.props.columns[3].valueLabels.dead_island": "Tote Insel",
+    "findings_table.props.columns[3].valueLabels.unused_unverified": "Nirgends genutzt (ungeprüft)",
+    "findings_table.props.columns[3].valueLabels.dead_branch_unverified": "Toter Ast (ungeprüft)",
+    "findings_table.props.columns[3].valueLabels.dead_island_unverified": "Tote Insel (ungeprüft)",
+    "findings_table.props.columns[6].valueLabels.true": "Ja",
+    "findings_table.props.columns[6].valueLabels.false": "Nein",
+    "notes_card.props.title": "Was die Gründe bedeuten",
+    "notes_md.props.content": "**Nirgends genutzt.** Kein Layout, Portal, keine Formel, kein Script-Schritt, kein Layout-Feld, keine Werteliste, kein Lookup und keine Berechtigung verweist auf das Tabellenauftreten, und es hat keine Beziehung. Es lässt sich für sich allein löschen.\n\n**Toter Ast.** Das Tabellenauftreten wird nur als Seite von Beziehungen genutzt, und dahinter wird nichts genutzt. *Hängt an* nennt das genutzte Tabellenauftreten, an dem der Ast hängt; *Größe der toten Gruppe* zählt die Tabellenauftreten des Asts — sie lassen sich gemeinsam löschen.\n\n**Tote Insel.** Kein Tabellenauftreten ihrer Beziehungsgruppe wird genutzt. Die ganze Gruppe lässt sich löschen; *Größe der toten Gruppe* zählt sie.\n\n**Nie ein Treffer.** Ein Tabellenauftreten auf dem Pfad zwischen zwei genutzten — typisch die Zwischen-TO einer n:m-Beziehung — wird gebraucht, auch wenn nichts direkt darauf verweist. Dasselbe gilt für beide Seiten einer Beziehung, die verknüpfte Datensätze löscht.\n\n**Ohne DDR-Info.** Die Datei wurde ohne DDR-Info exportiert. Referenzen `Tabelle::Feld` in Formeln werden dann nur im Formeltext erkannt, Auswertungskontexte fehlen — eine Nutzung kann unsichtbar bleiben. Ein solcher Treffer heißt *ungeprüft* (z. B. *Toter Ast (ungeprüft)*); die Kachel *Ohne DDR-Info* listet sie. Die Datei vor dem Löschen erneut mit DDR-Info exportieren.\n\n**Grenzen.** Gezählt wird nur die Nutzung innerhalb der importierten Lösung. Nicht sichtbar: **Zugriffe von außen** — OData, ODBC/JDBC, Data API, nicht importierte Dateien; **dynamische Verweise innerhalb** — `GetField`, `Evaluate`, Namen in SQL-Strings. Ein Treffer ist ein Prüfkandidat, keine Löschempfehlung. [Wie Nutzung gezählt wird](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

@@ -58,7 +58,14 @@
       "logic": "Logik",
       "slots": "Slots",
       "moreTargets": "(+{{n}} till)"
-    }
+    },
+    "sectionLabel": "Layoutsektion",
+    "sectionAll": "Alla",
+    "sectionOption": "{{label}} ({{count}})",
+    "sectionAria": "Begränsa objekten till en layoutsektion",
+    "sectionStats_one": "{{n}} av {{count}} objekt · Zoom {{zoom}} %",
+    "sectionStats_other": "{{n}} av {{count}} objekt · Zoom {{zoom}} %",
+    "sectionInventoryHint": "Inventarierna omfattar hela layouten, inte bara den valda sektionen"
   },
   "relationshipGraphCanvas": {
     "searchPlaceholder": "Sök tabellförekomst…",
@@ -165,6 +172,8 @@
     "ariaLabel": "Objekthierarki",
     "usedBy": "Används av ({{count}})",
     "usedByFiltered": "Används av ({{count}} / {{total}})",
+    "usedByGrouped": "Används av — per objekt ({{count}})",
+    "usedByGroupedFiltered": "Används av — per objekt ({{count}} / {{total}})",
     "uses": "Använder ({{count}})",
     "usesFiltered": "Använder ({{count}} / {{total}})",
     "structurallyContainedBy": "Strukturellt innesluten av ({{count}})",
@@ -173,6 +182,8 @@
     "structurallyContainsFiltered": "Innehåller strukturellt ({{count}} / {{total}})",
     "noReferences": "Inga referenser hittades",
     "noFilterMatches": "Inga träffar för aktuella filter",
+    "toUsageUnavailable": "Den här katalogen visar bara tabellförekomstens direkta länkar. Den fullständiga användningen (fältreferenser i formler, scriptsteg och på layouter) visas efter en ny import.",
+    "toUsageTruncated": "Användning förkortad: {{count}} av {{total}} användningar via fältreferenser visas.",
     "crossFileBadge": "Mellan filer",
     "itemAriaLabel": "Navigera till {{type}}: {{name}}",
     "notNavigable": "Målet finns inte i den importerade datamängden",
@@ -255,8 +266,57 @@
       "menu_action": {
         "short": "Menu",
         "long": "Menyåtgärd"
+      },
+      "calculation": {
+        "short": "Calc",
+        "long": "Fältreferens i en formel"
+      },
+      "calculation_text": {
+        "short": "Calc text",
+        "long": "Fältreferens i formeltexten (fil utan DDR-info)"
+      },
+      "calc_context": {
+        "short": "Context",
+        "long": "Utvärderingskontext för en formel"
+      },
+      "layout_field": {
+        "short": "Field",
+        "long": "Fält på layouten"
+      },
+      "layout_part": {
+        "short": "Break",
+        "long": "Brytfält för en layoutdel"
+      },
+      "script_step": {
+        "short": "Step",
+        "long": "Fältreferens i ett scriptsteg"
+      },
+      "security": {
+        "short": "Access",
+        "long": "Kontext för poståtkomst i en behörighetsuppsättning"
+      },
+      "table_view": {
+        "short": "Table view",
+        "long": "Kolumn i tabellvyn"
+      },
+      "value_list": {
+        "short": "VL field",
+        "long": "Andra fältet i en värdelista"
       }
-    }
+    },
+    "usageSummary": "Används internt av {{objects}} · {{refs}}",
+    "usageObjects_one": "{{count}} objekt",
+    "usageObjects_other": "{{count}} objekt",
+    "usageRefs_one": "{{count}} referens",
+    "usageRefs_other": "{{count}} referenser",
+    "usageSummaryHint": "Användning (intern): hur många olika objekt i lösningen som använder detta objekt — en layout räknas en gång, hur många av dess objekt som än visar det; ett skript en gång, i hur många steg som helst. Referenser: varje förekomst för sig (×N i listan). Tillhörighet och behörighetsbegränsningar räknas inte. Ingår inte: användning utifrån (serverscheman, Data API, OData, URL-anrop, plugin-program …) och dynamiska referenser (skript via namn, GetField, Evaluate).",
+    "usageDocs": "Hur räknas detta?",
+    "groupByObjectHint": "Gruppera per användande objekt (inkommande) — en layout räknas en gång, hur många av dess objekt som än visar det",
+    "groupAllRefsHint": "Visa varje referens",
+    "groupExpand": "Visa referenser",
+    "groupCollapse": "Dölj referenser",
+    "noUsageGroup": "Ingen användning",
+    "noUsageGroupHint": "Länkar som inte räknas som användning (t.ex. behörighetsbegränsningar, triggernoder)"
   },
   "searchOptions": {
     "regionAria": "Sorterings- och grupperingsalternativ",
@@ -272,7 +332,14 @@
     "groupFile": "Fil",
     "modifiedSinceLabel": "Ändrad sedan",
     "modifiedSinceHint": "Endast objekt vars egen ändringsstämpel är denna dag eller senare — skriptsteg, layoutobjekt och beräkningar har ingen egen stämpel",
-    "modifiedSinceClear": "Återställ"
+    "modifiedSinceClear": "Återställ",
+    "sortUsage": "Användning (intern)",
+    "usageLabel": "Användning (intern)",
+    "usageOpAria": "Jämförelse",
+    "usageHint": "Antal objekt som använder det (ett objekt på en layout räknas som sin layout). ≤ 0 visar oanvända objekt; skriptsteg, layoutobjekt, formler och relationer har ingen användning och faller bort Användning utifrån (serverscheman, Data API, OData, URL-anrop, plugin-program …) ingår inte.",
+    "usageUnavailable": "Kräver en katalog från schema 1.40.0 — importera lösningen igen",
+    "usageDirAsc": "Minst använda först",
+    "usageDirDesc": "Mest använda först"
   },
   "fieldViewer": {
     "ariaLabel": "Fältdetaljer",
@@ -372,7 +439,17 @@
     "healedUuidMatch": "Träff via UUID (dubblett)",
     "healedUuidTitle": "FileMaker för detta objekt under det sökta UUID:t; eftersom UUID:t förekom flera gånger i exporten ligger det i katalogen under ett ersättnings-UUID.",
     "idMatch": "Träff via ID {{id}}",
-    "modifiedTooltip": "Ändrad {{age}} — lokal tid hos den redigerande klienten, utan tidszon"
+    "modifiedTooltip": "Ändrad {{age}} — lokal tid hos den redigerande klienten, utan tidszon",
+    "usageTooltip": "Används internt av: {{owners}} · Referenser: {{refs}} · Roller: {{roles}} · Filer: {{files}}",
+    "usageCellAria": "Användning {{count}} — öppna inkommande referenser",
+    "usageEntryPoint": "I Skript- eller layoutmenyn — nåbar även utan referens",
+    "usageBuiltin": "Inbyggd behörighetsuppsättning — kan inte tas bort",
+    "usageBridge": "Relationsbrygga — behövs på vägen mellan använda tabellförekomster",
+    "usageDead": "Död gren i relationsdiagrammet — inget bortom den används",
+    "usageKeyField": "Matchningsfält i en relation",
+    "usageCrossFile": "Används från en annan fil",
+    "usageUnverified": "Ej kontrollerad — filen exporterades utan DDR-info, formelreferenser saknas",
+    "usageExternal": "Användning utifrån (serverscheman, Data API, OData, URL-anrop, AppleScript, plugin-program …) ingår inte"
   },
   "scriptSearchFilter": {
     "searchAria": "Sök referenser",
@@ -805,7 +882,15 @@
     "optFieldFrames": "Fältramar vid aktiv post",
     "optFrameCurrentOnly": "Rama in fält endast i aktuell post",
     "optShowCurrentInList": "Postindikator i listvy",
-    "optQuickFind": "Snabbsökning"
+    "optQuickFind": "Snabbsökning",
+    "partsHeading": "Layoutsektioner",
+    "partsObjects_one": "{{count}} objekt",
+    "partsObjects_other": "{{count}} objekt",
+    "partsHeight": "{{size}} pt",
+    "partsSortedBy": "sorterad efter",
+    "partsFilterTitle": "Visa endast denna sektion i grafiken",
+    "partsFilterActiveTitle": "Ta bort sektionsfiltret",
+    "partsFieldUnresolved": "Fältet finns inte i katalogen (filen inte importerad?)"
   },
   "pluginSpec": {
     "tooltip": "Plattformsstöd enligt {{plugin}}-dokumentationen",
@@ -1006,5 +1091,223 @@
     "usedSuffix": "{{used}} används",
     "functionsHeading": "Funktioner",
     "colFunction": "Funktion"
+  },
+  "tableOccurrence": {
+    "ariaLabel": "Detaljer för tabellförekomst",
+    "definitionHeading": "Definition",
+    "baseTable": "Bastabell",
+    "baseTableUnresolved": "— kan inte lösas upp —",
+    "inFile": "i filen ”{{file}}”",
+    "dataSource": "Datakälla",
+    "dsResolved": "Filen ”{{file}}” finns i katalogen",
+    "dsUnresolved": "Målfilen är inte importerad",
+    "diagram": "Relationsdiagram",
+    "viewLabel": "Visning: {{view}}",
+    "view": {
+      "Full": "alla fält",
+      "Related": "endast relationsfält",
+      "Collapse": "endast namn"
+    },
+    "usageHeading": "Användning",
+    "class": {
+      "used": "används",
+      "relationship_bridge": "relationsbrygga",
+      "dead_branch": "död gren",
+      "dead_island": "död ö",
+      "unused": "används inte"
+    },
+    "reason": {
+      "path": "Ligger på relationsvägen mellan använda TO:er (t.ex. kopplings-TO:n i en n:m-relation) — behövs.",
+      "cascade_delete": "Ingår i en relation med kaskadradering — behövs."
+    },
+    "deadBranch_one": "Del av en död gren ({{count}} TO) under ankaret",
+    "deadBranch_other": "Del av en död gren ({{count}} TO:er) under ankaret",
+    "deadIsland_one": "TO-grupp utan använd TO ({{count}} TO).",
+    "deadIsland_other": "TO-grupp utan använd TO ({{count}} TO:er).",
+    "unused": "Ingen statiskt synlig användning.",
+    "unusedNoRel": "Ingen statiskt synlig användning, ingen relation.",
+    "reviewHint": "Granskningskandidat, ingen rekommendation att radera — dynamiska referenser (GetField, Evaluate, ExecuteSQL) förblir osynliga.",
+    "toTests": "Detaljer på fliken Tester",
+    "lowConfidence": "Fil utan DDR-info: formelanvändning hittad via textsökning, klassen är obekräftad.",
+    "group": {
+      "context": "Kontext",
+      "display": "Visning",
+      "logic": "Logik",
+      "data": "Data",
+      "graph": "Graf",
+      "other": "Övrigt"
+    },
+    "category": {
+      "layout_context": "Layouter",
+      "calc_context": "Beräkningskontext",
+      "security": "Behörigheter",
+      "layout_field": "Layoutfält",
+      "portal": "Portaler",
+      "layout_part": "Layoutdelar",
+      "table_view": "Tabellvisning",
+      "script_step": "Scriptsteg",
+      "calculation": "Formler",
+      "calculation_text": "Formeltext",
+      "navigation": "Navigering",
+      "lookup": "Uppslag",
+      "lookup_context": "Uppslagskontext",
+      "value_list": "Värdelistor",
+      "value_list_related": "Värdelistor (relaterade)",
+      "relationship": "Relationer",
+      "relationship_cascade": "Kaskadradering"
+    },
+    "chipTitle": "{{users}} objekt · {{refs}} förekomster — visa i Referenser",
+    "allUsages": "alla förekomster → Referenser",
+    "relationshipsHeading": "Relationer",
+    "noRelationships": "— ingen relation —",
+    "searchPlaceholder": "Filtrera partner-TO eller fält…",
+    "colSelf": "Denna TO",
+    "colOperator": "Operator",
+    "colPartnerField": "Partnerfält",
+    "colPartner": "Partner-TO",
+    "colOptions": "Alternativ",
+    "colOptionsTitle": "Alternativ: denna TO | partner-TO",
+    "colRelationship": "Relation",
+    "and": "OCH",
+    "optCreate": "Tillåt att poster skapas via denna relation",
+    "optDeleteSelf": "Kaskadradering: poster i denna TO raderas när den relaterade posten raderas",
+    "optDeletePartner": "Kaskadradering: poster i partner-TO:n raderas när en post i denna TO raderas",
+    "optSort": "Sorterad",
+    "legend": "Alternativ ”denna TO | partner-TO”: ＋ skapande tillåtet · 🗑 kaskadradering · ⇅ sorterad",
+    "siblingsHeading": "Andra förekomster av ”{{bt}}”",
+    "siblingsNone": "— inga —",
+    "toBaseTable": "till bastabellen",
+    "chipTitleInPage": "{{users}} objekt — visa i relationerna nedan",
+    "optionFilterAria": "Filtrera efter alternativ",
+    "option": {
+      "cascade": "Kaskadradering",
+      "create": "Skapande tillåtet",
+      "sorted": "sorterad"
+    },
+    "siblingsSearch": "Filtrera TO eller fil…",
+    "siblingsScopeAria": "Omfång",
+    "scope": {
+      "all": "alla",
+      "file": "denna fil",
+      "other": "hela lösningen"
+    },
+    "scopeTitle": {
+      "all": "Alla förekomster i lösningen",
+      "file": "Förekomster i denna fil",
+      "other": "Förekomster i lösningens övriga filer"
+    },
+    "colTo": "Tabellförekomst",
+    "dataSourceCurrent": "aktuell fil",
+    "dataSourceCurrentTitle": "Bastabellen används direkt från denna fil, utan datakälla",
+    "dsSelf": "pekar tillbaka på just denna fil",
+    "dsSelfSibling": "Datakällan pekar på den egna filen",
+    "inThisFile": "i denna fil",
+    "viaDataSource": "datakälla ”{{ds}}”",
+    "colDefinedIn": "definierad i",
+    "colDefinedInTitle": "Fil vars relationsdiagram innehåller TO:n (tom = denna fil)",
+    "colSourceTitle": "Hur TO:n når bastabellen: aktuell fil eller via en datakälla",
+    "countFiltered": "{{shown}} av {{total}}",
+    "defJumpTitle": "Gå till avsnittet längre ned",
+    "defLayoutsTitle": "Layouter baserade på denna TO — visa i Referenser",
+    "siblingsJump": "Andra förekomster",
+    "ctxHeading": "TO-grupp",
+    "ctxGroup": "Grupp",
+    "ctxSingle": "endast denna TO — ingen relation",
+    "ctxTos_one": "{{count}} TO",
+    "ctxTos_other": "{{count}} TO:er",
+    "ctxLayouts_one": "{{count}} layout",
+    "ctxLayouts_other": "{{count}} layouter",
+    "ctxAnchors": "Ankare",
+    "ctxAnchorsNone": "ingen layout baseras på en TO i denna grupp",
+    "ctxLayoutsTitle_one": "{{count}} layout",
+    "ctxLayoutsTitle_other": "{{count}} layouter",
+    "ctxSelfAnchor_one": "är själv layoutkontext ({{count}} layout)",
+    "ctxSelfAnchor_other": "är själv layoutkontext ({{count}} layouter)",
+    "ctxSteps_one": "{{count}} steg",
+    "ctxSteps_other": "{{count}} steg",
+    "ctxHint": "Ankare = TO som layouter baseras på. ”Närmast” är det ankare från vilket denna TO nås via minst antal relationer.",
+    "ctxAnchorsLess": "stäng listan",
+    "ctxMoreEachSingle": "+{{count}} till med 1 layout vardera",
+    "ctxMoreEach": "+{{count}} till med {{each}} layouter vardera",
+    "ctxMoreTotal": "+{{count}} till med totalt {{total}} layouter",
+    "ctxAnchor": "Ankare",
+    "ctxColLayouts": "Layouter",
+    "ctxColDistance": "Avstånd",
+    "ctxColDistanceTitle": "Relationssteg fram till denna TO",
+    "ctxContext": "Layoutkontext",
+    "ctxNearest": "närmast:",
+    "ctxShowPath": "visa väg",
+    "ctxHidePath": "dölj väg"
+  },
+  "layoutParts": {
+    "kind": {
+      "12": "Övre navigering",
+      "0": "Titelhuvud",
+      "1": "Sidhuvud",
+      "2": "Inledande totalsumma",
+      "3": "Delsumma vid sortering efter",
+      "4": "Huvuddel",
+      "6": "Avslutande totalsumma",
+      "7": "Sidfot",
+      "8": "Titelfot",
+      "13": "Nedre navigering"
+    },
+    "position": {
+      "leading": "inledande",
+      "trailing": "avslutande"
+    },
+    "subSummaryLabel": "{{kind}} ‹{{field}}› ({{position}})",
+    "subSummaryLabelNoField": "{{kind}} ({{position}})",
+    "option": {
+      "o1": "Börja del på ny sida",
+      "o2": "Ny sida efter att delen skrivits ut {{n}} gång(er)",
+      "o3": "Börja om sidnumrering efter varje förekomst",
+      "o4": "Dela upp en del på flera sidor",
+      "o5": "Radera det som inte får plats på sidan",
+      "o6": "Använd alternativt radläge",
+      "o7": "Använd aktivt radläge"
+    }
+  },
+  "layoutPartDetail": {
+    "ariaLabel": "Detaljer om layoutsektionen",
+    "groupGeneral": "Allmänt",
+    "groupSort": "Sortering",
+    "groupContext": "Sammanhang",
+    "groupOptions": "Deldefinition",
+    "groupTechnical": "Tekniskt",
+    "kind": "Sektionstyp",
+    "exportedType": "Exporterad typ",
+    "exportedTypeTitle": "Typen så som den står i XML-exporten (lokaliserad eller felaktigt märkt av FileMaker)",
+    "partName": "Internt namn",
+    "position": "Position",
+    "positionValue": "{{pos}} av {{total}}",
+    "previous": "Föregående sektion",
+    "next": "Nästa sektion",
+    "height": "Höjd",
+    "top": "Överkant",
+    "bottom": "Underkant",
+    "unitPt": "{{value}} pt",
+    "objects": "Objekt",
+    "objectsValue": "{{total}} ({{root}} direkt i delen)",
+    "sortedBy": "Sorterad efter",
+    "sortToDiffers": "via en annan tabellförekomst än layoutens ({{to}})",
+    "fieldUnresolved": "Fältet finns inte i katalogen (filen inte importerad?)",
+    "layout": "Layout",
+    "contextTable": "Tabellförekomst",
+    "baseTable": "Bastabell",
+    "file": "Fil",
+    "optionsRaw": "Alternativ (rå)",
+    "optionsUndecoded": "Bitar utan dialogalternativ: {{bits}}",
+    "optionOn": "på",
+    "optionOff": "av",
+    "sourceLocal": "inställt på delen",
+    "sourceStyle": "delstil {{name}}",
+    "sourceTheme": "tema {{name}}",
+    "sourceDefault": "inte inställt (av)",
+    "sourceClassic": "klassiskt tema (av)",
+    "bodyOnly": "endast för huvuddelen",
+    "showInLayout": "Visa i layout",
+    "showInLayoutTitle": "Öppna layouten med denna sektion som filter",
+    "objectsShowInReferences": "Visa objekten i referenserna"
   }
 }

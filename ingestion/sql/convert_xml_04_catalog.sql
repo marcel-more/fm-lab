@@ -574,6 +574,87 @@ SET Part_Type = 'Trailing Sub-summary'
 WHERE Part_Kind = 5
   AND Part_Type IS DISTINCT FROM 'Trailing Sub-summary';
 
+-- Umbruchfeld der Sub-Summary-Parts (breaks_on_field): Part/Definition/FieldReference
+-- kann eine Feld-UUID tragen, die in keinem Katalog steht — dieselbe kontext-synthetische
+-- Klasse wie bei Layout-Feldanzeigen (oben), Relationship-Prädikaten und Wertelisten (unten).
+-- Beobachtet in Bestandsdateien, konsistent pro Feld × Datei (alle Umbrüche auf dasselbe
+-- Feld tragen dieselbe Fremd-UUID); frische FileMaker-22/26-Exporte schreiben auch über
+-- externe und zweite TOs die echte Feld-UUID. Ohne Heilung verliert der INNER JOIN des
+-- breaks_on_field-Blocks die Kante still → ein nur als Sortierumbruch genutztes Feld
+-- erscheint unbenutzt, während displays_field/sorts_by_field dasselbe Feld treffen.
+-- Auflösung über den mitgelieferten TO-Kontext (Break_TO_UUID → Basistabelle +
+-- Heimatdatei via DS_Name) + Feld-id (entity-frei), datei-skopiert. Bereits kanonische
+-- UUIDs (in FieldsForTables) bleiben unangetastet; ist die Zieldatei nicht im Korpus,
+-- bleibt die UUID unverändert (→ kein Link, wie die übrige Cross-File-Behandlung).
+-- Muss VOR dem breaks_on_field-Block laufen.
+UPDATE LayoutParts lp
+SET Break_Field_UUID = r.field_uuid
+FROM (
+    SELECT toc.TO_UUID, toc.File_Name, f.Field_ID, f.Field_UUID AS field_uuid
+    FROM TableOccurrenceCatalog toc
+    JOIN FieldsForTables f
+      ON f.Table_Name = toc.BT_Name
+     AND f.File_Name = regexp_replace(COALESCE(NULLIF(toc.DS_Name, ''), toc.File_Name), '\.fmp12$', '')
+    WHERE f.Field_UUID IS NOT NULL
+) r
+WHERE lp.Break_Field_ID IS NOT NULL
+  AND (lp.Break_Field_UUID IS NULL
+       OR lp.Break_Field_UUID NOT IN (SELECT Field_UUID FROM FieldsForTables WHERE Field_UUID IS NOT NULL))
+  AND lp.Break_TO_UUID = r.TO_UUID AND lp.File_Name = r.File_Name AND lp.Break_Field_ID = r.Field_ID;
+
+-- Objekt → Layout-Bereich (Schema 1.39.0): LayoutObjects.Part_Seq / Part_Kind für
+-- JEDES Objekt, abgeleitet aus Position und Eltern-Kette statt aus der XML-
+-- Verschachtelung (ein Block für DOM- und Turbo-Pfad, keine P1-Extraktion).
+--   1. Root-Objekte (Nesting_Level = 0): der Bereich desselben (File_Name, Layout_ID),
+--      in dessen Band [Part_Absolute, Part_Absolute + Part_Size) die Oberkante liegt.
+--      Halboffen: eine Oberkante genau auf der Trennlinie gehört zum UNTEREN Bereich —
+--      so ordnet auch der FileMaker-Export zu (an der XML-Verschachtelung belegt).
+--   2. Verschachtelte Objekte erben rekursiv den Bereich ihres Elternobjekts. Ihre
+--      Bounds sind RELATIV zum Elternobjekt und werden nie geometrisch ausgewertet.
+--   3. Root außerhalb aller Bänder → NULL (P6 meldet die Anzahl als WARN).
+-- Layout_ID ist nicht global eindeutig → jeder Join trägt File_Name.
+-- Im selben Schritt übernimmt LayoutObjects.Part_Type den Typ des zugeordneten
+-- Bereichs (oben bereits locale-normalisiert und kind-korrigiert): P1 schreibt dort
+-- den rohen /Part/@type — lokalisiert und mit dem kind-5-Mislabel von FileMaker ≤ 22.
+-- Läuft NACH der LayoutParts-Normalisierung.
+UPDATE LayoutObjects lo
+SET Part_Seq  = a.Part_Seq,
+    Part_Kind = a.Part_Kind,
+    Part_Type = a.Part_Type
+FROM (
+    WITH RECURSIVE assign AS (
+        SELECT o.File_Name, o.Layout_ID, o.Object_ID, o.Nesting_Level,
+               p.Part_Seq, p.Part_Kind, p.Part_Type
+        FROM LayoutObjects o
+        JOIN LayoutParts p
+          ON p.File_Name = o.File_Name
+         AND p.Layout_ID = o.Layout_ID
+         AND p.Part_Absolute <= o.Bounds_Top
+         AND o.Bounds_Top < p.Part_Absolute + p.Part_Size
+        WHERE o.Nesting_Level = 0
+        UNION ALL
+        SELECT c.File_Name, c.Layout_ID, c.Object_ID, c.Nesting_Level,
+               a.Part_Seq, a.Part_Kind, a.Part_Type
+        FROM assign a
+        JOIN LayoutObjects c
+          ON c.File_Name = a.File_Name
+         AND c.Layout_ID = a.Layout_ID
+         AND c.Parent_Object_ID = a.Object_ID
+         AND c.Nesting_Level > a.Nesting_Level
+    )
+    -- Defensiv eindeutig je Objekt (überlappende Bänder kommen im Export nicht vor):
+    -- der oberste Bereich gewinnt.
+    SELECT File_Name, Layout_ID, Object_ID,
+           min(Part_Seq)                AS Part_Seq,
+           arg_min(Part_Kind, Part_Seq) AS Part_Kind,
+           arg_min(Part_Type, Part_Seq) AS Part_Type
+    FROM assign
+    GROUP BY File_Name, Layout_ID, Object_ID
+) a
+WHERE lo.File_Name = a.File_Name
+  AND lo.Layout_ID = a.Layout_ID
+  AND lo.Object_ID = a.Object_ID;
+
 -- Relationship-Prädikatfelder (left_field/right_field): die Join-Feld-UUID im
 -- RelationshipCatalog ist ebenfalls kontext-synthetisch (das Feld wird über die Seiten-TO
 -- referenziert). Über den mitgelieferten Feld-TO-Kontext (Left/Right_Field_TO_UUID) +
@@ -3036,6 +3117,28 @@ WHERE ovl.TO_UUID IS NOT NULL
 
 UNION ALL
 
+-- 13d. Value Lists → Table Occurrences (Start-TO bei „nur verknüpfte Werte ab TO X",
+-- Field/ShowRelated, Schema 1.38.0). Die Werteliste liest ihre Werte über den Pfad von
+-- dieser TO zur Quell-TO (Block 13) — die Start-TO ist damit eine echte Verwendung,
+-- auch wenn nichts anderes sie referenziert. Die Start-TO liegt immer in der Datei der
+-- Werteliste; der dateigleiche Join verhindert Klon-Kreuzungen (geteilte TO-UUIDs).
+SELECT
+    ovl.VL_UUID as Source_UUID,
+    'ValueList' as Source_Type,
+    ovl.ShowRelated_TO_UUID as Target_UUID,
+    'TableOccurrence' as Target_Type,
+    'operational' as Link_Type,
+    'related_values_from' as Link_Role,
+    NULL as Link_Subrole,
+    ovl.File_Name as Source_File,
+    ovl.File_Name as Target_File,
+    FALSE as Is_Cross_File
+FROM OptionsForValueLists ovl
+WHERE ovl.ShowRelated
+  AND ovl.ShowRelated_TO_UUID IS NOT NULL
+
+UNION ALL
+
 -- 13b. Value Lists → Value Lists (External-Quelle, „Werteliste aus anderer Datei")
 -- Ein Wrapper mit <Source value="External"> referenziert eine VL einer anderen Datei.
 -- Die Ziel-ValueListReference trägt im XML eine LEERE UUID → Auflösung über die
@@ -3673,10 +3776,34 @@ LEFT JOIN ObjectCatalog oc_target
    AND oc_target.Object_Type = 'TableOccurrence'
 WHERE f.AutoEnter_Type = 'Looked_up'
   AND f.Lookup_TO_UUID IS NOT NULL
+  AND COALESCE(f.Lookup_Enabled, TRUE)   -- dormanter Lookup (FM 26 enable="False"): keine Kante (wie Block 25/23e)
 QUALIFY ROW_NUMBER() OVER (
     PARTITION BY f.Field_UUID, f.File_Name
     ORDER BY (oc_target.File_Name = f.File_Name) DESC, oc_target.File_Name
   ) = 1
+
+UNION ALL
+
+-- 23e. Field → TableOccurrence (Start-TO des Lookups, „beginnend mit Tabelle",
+-- <Looked_up><Context>, Schema 1.38.0). FileMaker löst den Lookup über den Pfad von
+-- dieser TO zur Lookup-TO (Block 23) auf — die Start-TO ist eine echte Verwendung.
+-- Sie ist eine TO der Feldtabelle in der Datei des Felds → dateigleiche Kante.
+-- Dormanter Lookup (FM 26 enable="False"): keine Kante (wie lookup_source, Block 25).
+SELECT
+    f.Field_UUID as Source_UUID,
+    'Field' as Source_Type,
+    f.Lookup_Context_TO_UUID as Target_UUID,
+    'TableOccurrence' as Target_Type,
+    'operational' as Link_Type,
+    'lookup_context' as Link_Role,
+    NULL as Link_Subrole,
+    f.File_Name as Source_File,
+    f.File_Name as Target_File,
+    FALSE as Is_Cross_File
+FROM FieldsForTables f
+WHERE f.AutoEnter_Type = 'Looked_up'
+  AND f.Lookup_Context_TO_UUID IS NOT NULL
+  AND COALESCE(f.Lookup_Enabled, TRUE)
 
 UNION ALL
 
@@ -4804,6 +4931,8 @@ INSERT INTO LinkRoleRegistry VALUES
     ('left_table',           'usage',       TRUE),
     ('right_field',          'usage',       TRUE),
     ('right_table',          'usage',       TRUE),
+    -- Start-TO des Lookups („beginnend mit Tabelle", Block 23e, Schema 1.38.0)
+    ('lookup_context',       'usage',       TRUE),
     ('lookup_relationship',  'usage',       TRUE),
     ('lookup_source',        'usage',       TRUE),
     ('navigates_to_field',   'usage',       TRUE),
@@ -4815,6 +4944,8 @@ INSERT INTO LinkRoleRegistry VALUES
     ('privilege_set',        'usage',       TRUE),
     ('reads_field',          'usage',       TRUE),
     ('reads_variable',       'usage',       TRUE),
+    -- Werteliste „nur verknüpfte Werte ab TO X" → Start-TO X (Block 13d, Schema 1.38.0)
+    ('related_values_from',  'usage',       TRUE),
     -- Fallback-Rolle des Script→Field-Blocks (Block 16) für Step-Namen ohne
     -- CASE-Zweig. Feuert real bei LOKALISIERTEN Exporten (deutsche Step-Namen
     -- „Feldwert setzen" …) — die Step_Name-basierte Rollen-Zuordnung ist eine

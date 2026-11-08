@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { LayoutMeta, LayoutTrigger } from '../hooks/useLayoutData';
+import type { LayoutMeta, LayoutPart, LayoutTrigger } from '../hooks/useLayoutData';
+import { useSectionParam } from '../hooks/useLayoutSearch';
 import { buildObjectPath } from '../lib/navigation';
+import { partKindKey, partLabel, subSummaryPosition, type PartTranslate } from '../lib/layoutParts';
 import { useTriggerEventFormat } from '../lib/triggerEvents';
 import './FieldViewer.css';
 import './LayoutViewer.css';
@@ -18,6 +20,10 @@ interface LayoutViewerProps {
    * Trigger wird hervorgehoben und in den Sichtbereich gescrollt.
    */
   highlightUuids?: Set<string> | null;
+  /** Layout parts in vertical order (display_layout_parts_data). */
+  parts?: LayoutPart[];
+  /** Objects per part (Part_Seq → count, all nesting levels). */
+  partCounts?: Map<number, number>;
 }
 
 /** Trigger-IDs aus synthetischen ScriptTrigger-UUIDs (`trig_<id>_…`) im Highlight-Set. */
@@ -52,8 +58,20 @@ function prettyTheme(name: string | null): string | null {
  *   rechts = die aktivierten Script-Trigger mit Link zum hinterlegten Script.
  * Bei zu schmaler Breite kollabieren die Spalten untereinander (CSS auto-fit).
  */
-export const LayoutViewer: React.FC<LayoutViewerProps> = ({ meta, triggers, originUuid, highlightUuids }) => {
+export const LayoutViewer: React.FC<LayoutViewerProps> = ({
+  meta, triggers, originUuid, highlightUuids, parts = [], partCounts,
+}) => {
   const { t } = useTranslation(['detail']);
+  const tr: PartTranslate = (k, o) => t(k, o) as string;
+  const [activeSection, setSection] = useSectionParam();
+  // `?ref=part_…` (e.g. from the references of a break field) → highlight + scroll.
+  const hlPartIdx = parts.findIndex(p => !!p.part_uuid && !!highlightUuids?.has(p.part_uuid));
+  const hlPartRef = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    if (hlPartIdx >= 0 && hlPartRef.current) {
+      hlPartRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [hlPartIdx]);
   const navigate = useNavigate();
   const fmtEvent = useTriggerEventFormat();
   const hlTriggerIds = useMemo(() => highlightedTriggerIds(highlightUuids), [highlightUuids]);
@@ -252,6 +270,87 @@ export const LayoutViewer: React.FC<LayoutViewerProps> = ({ meta, triggers, orig
                 );
               })}
             </ul>
+          )}
+
+          {/* Layout-Sektionen in vertikaler Reihenfolge (wie der Dialog „Bereichseinrichtung"). */}
+          {parts.length > 0 && (
+            <>
+              <div className="fm-layout-triggers-heading fm-layout-parts-heading">{t('detail:layoutViewer.partsHeading')}</div>
+              <ul className="fm-layout-parts">
+                {parts.map((p, idx) => {
+                  const seq = p.part_seq;
+                  const count = seq != null ? (partCounts?.get(seq) ?? 0) : p.object_count;
+                  const isActive = seq != null && activeSection === seq;
+                  const isHl = idx === hlPartIdx;
+                  // Sub-summaries read like the dialog: "Sub-summary when sorted by ‹field› (trailing)" —
+                  // term = part link, field = field link, position as suffix.
+                  const pos = subSummaryPosition(p.part_kind);
+                  const label = pos && p.break_field_name
+                    ? t(partKindKey(p.part_kind), { defaultValue: p.part_type }) as string
+                    : partLabel(tr, p);
+                  const fieldText = p.break_to_name ? `${p.break_to_name}::${p.break_field_name}` : p.break_field_name;
+                  return (
+                    <li
+                      key={seq ?? `idx-${idx}`}
+                      ref={isHl ? hlPartRef : undefined}
+                      className={'fm-layout-part' + (isHl ? ' is-highlighted' : '') + (isActive ? ' is-active' : '')}
+                    >
+                      <div className="fm-layout-part-row">
+                        {p.part_uuid ? (
+                          <button
+                            type="button"
+                            className="fm-field-link fm-layout-part-name"
+                            onClick={() => navigate(buildObjectPath(p.part_uuid!, originUuid, meta.file_name))}
+                          >
+                            {label}
+                          </button>
+                        ) : (
+                          <span className="fm-layout-part-name">{label}</span>
+                        )}
+                        {pos && p.break_field_name && (
+                          <span className="fm-layout-part-break">
+                            {p.break_field_uuid ? (
+                              <button
+                                type="button"
+                                className="fm-field-link"
+                                onClick={() => navigate(buildObjectPath(p.break_field_uuid!, originUuid, p.break_field_file ?? meta.file_name))}
+                              >
+                                {fieldText}
+                              </button>
+                            ) : (
+                              <span className="fm-layout-muted" title={t('detail:layoutViewer.partsFieldUnresolved') as string}>
+                                {fieldText}
+                              </span>
+                            )}
+                            <span className="fm-layout-muted"> ({t(`detail:layoutParts.position.${pos}`)})</span>
+                          </span>
+                        )}
+                        <span className="fm-layout-part-meta">
+                          {t('detail:layoutViewer.partsHeight', { size: p.part_size })}
+                          {' · '}
+                          {t('detail:layoutViewer.partsObjects', { count })}
+                        </span>
+                        {seq != null && (
+                          <button
+                            type="button"
+                            className={'fm-layout-part-filter' + (isActive ? ' is-active' : '')}
+                            aria-pressed={isActive}
+                            title={(isActive
+                              ? t('detail:layoutViewer.partsFilterActiveTitle')
+                              : t('detail:layoutViewer.partsFilterTitle')) as string}
+                            onClick={() => setSection(isActive ? null : seq)}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">
+                              <path d="M1.5 2h13l-5 6.2V13l-3 1.5V8.2z" fill={isActive ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
           )}
         </div>
       </div>

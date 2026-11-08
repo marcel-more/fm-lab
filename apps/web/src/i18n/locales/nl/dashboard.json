@@ -376,5 +376,23 @@
     "startup_other": "Opgeruimd na de update: {{count}} restanten van een eerdere versie verplaatst naar {{dir}}.",
     "startupForks_one": "Je bewerkte versie blijft onder Custom bewaard als {{ids}}.",
     "startupForks_other": "Je {{count}} bewerkte versies blijven onder Custom bewaard als {{ids}}."
+  },
+  "renderer": {
+    "primitiveError": "Dit element kan niet worden weergegeven: {{message}}"
+  },
+  "kpi": {
+    "toggleOffHint": "Klik nogmaals om dit filter op te heffen"
+  },
+  "scope": {
+    "label": "Bereik",
+    "file": "Bestand: {{file}}",
+    "object": "Object: {{name}}",
+    "objectTyped": "Object: {{name}} ({{type}})",
+    "objects": "{{count}} object",
+    "objects_one": "{{count}} object",
+    "objects_other": "{{count}} objecten",
+    "clear": "Hele oplossing tonen",
+    "clearTitle": "Bereik verwijderen en de hele oplossing tonen",
+    "hint": "Aantallen en lijsten tonen alleen dit bereik"
   }
 }

@@ -16,6 +16,7 @@
 #   bash tools/fmlab.sh up --claude   # Docker + straight into a Claude Code session
 #   bash tools/fmlab.sh up -d         # Docker: bring the stack up in the background, return
 #   bash tools/fmlab.sh agent         # (re)attach the agent to an already-running stack
+#   bash tools/fmlab.sh down          # stop: Docker stack (if any) + native servers of this folder
 #
 # It does NOT replace the documented `docker compose` idioms — everything it runs is
 # printed first, so the raw commands from the README keep working unchanged.
@@ -62,14 +63,18 @@ die()     { echo "${C_YELLOW}✗${C_RESET}  $*" >&2; exit 1; }
 interactive() { [ -t 0 ] && [ -t 1 ]; }
 
 # --- Resolve the compose command (v2 `docker compose`, fallback v1 `docker-compose`) -
-detect_compose() {
+find_compose() {  # sets COMPOSE; returns 1 when neither variant is installed
     if docker compose version >/dev/null 2>&1; then
         COMPOSE=(docker compose)
     elif command -v docker-compose >/dev/null 2>&1; then
         COMPOSE=(docker-compose)
     else
-        die "Docker Compose not found. Install Docker Desktop (macOS/Windows) or Docker Engine + the compose plugin (Linux): https://docs.docker.com/get-docker/"
+        return 1
     fi
+}
+
+detect_compose() {
+    find_compose || die "Docker Compose not found. Install Docker Desktop (macOS/Windows) or Docker Engine + the compose plugin (Linux): https://docs.docker.com/get-docker/"
     command -v docker >/dev/null 2>&1 || die "The 'docker' CLI is not on PATH."
     docker info >/dev/null 2>&1 || warn "The Docker daemon does not seem to be running — start Docker Desktop / the Docker service first."
 }
@@ -100,7 +105,8 @@ ${C_BOLD}Commands:${C_RESET}
                 'up --claude' / 'agent'): opens URLs requested by the agent —
                 the Claude Code sign-in page included — in your host browser.
                 --check-url <url> tests the whitelist.
-  down          Stop and remove the stack.
+  down          Stop FM-Lab: remove the Docker stack (when Docker is installed)
+                and stop the native servers of this folder (ports 3003/5173).
   logs          Follow the stack logs (opt-in; not shown during 'up').
   update        Update fm-lab to the newest release. Local changes in the way
                 are saved to .fmlab/update-backup/ first (--dry-run: only show).
@@ -449,11 +455,31 @@ cmd_agent() {
     enter_agent
 }
 
+# down stops BOTH ways `up` can start FM-Lab: the Docker stack and the native servers
+# that `up --native` (tools/init.sh) runs on this host. Without Docker it does not abort
+# — that is exactly the native installation.
 cmd_down() {
-    # Tear down whichever combination is up; the claude overlay is a superset, so pass
-    # both files (harmless when only the base stack is running).
+    local rc=0
     info "Stopping FM-Lab …"
-    "${COMPOSE[@]}" -f "$BASE_COMPOSE" -f "$CLAUDE_COMPOSE" down
+
+    # 1) Docker stack — first, so its port forwarders release 3003/5173. Tear down
+    #    whichever combination is up; the claude overlay is a superset, so pass both
+    #    files (harmless when only the base stack is running).
+    if ! find_compose || ! command -v docker >/dev/null 2>&1; then
+        echo "${C_DIM}  Docker not installed — no container stack to stop.${C_RESET}"
+    elif ! docker info >/dev/null 2>&1; then
+        echo "${C_DIM}  Docker is not running — no container stack to stop.${C_RESET}"
+    else
+        echo "${C_DIM}  ${COMPOSE[*]} -f $BASE_COMPOSE -f $CLAUDE_COMPOSE down${C_RESET}"
+        "${COMPOSE[@]}" -f "$BASE_COMPOSE" -f "$CLAUDE_COMPOSE" down \
+            || { warn "docker compose down failed (see above) — stopping the native servers anyway."; rc=1; }
+    fi
+
+    # 2) Native servers of THIS folder. --this-checkout leaves foreign listeners alone:
+    #    a Vite server of another project, or Docker's forwarder if step 1 failed.
+    echo "${C_DIM}  bash tools/stop-servers.sh --this-checkout${C_RESET}"
+    bash "$REPO_ROOT/tools/stop-servers.sh" --this-checkout || rc=1
+    return "$rc"
 }
 
 cmd_logs() {
@@ -520,7 +546,7 @@ main() {
         up)             cmd_up "$@" ;;   # detect_compose runs INSIDE, after the Docker? choice
         agent|claude)   detect_compose; cmd_agent ;;
         open-bridge)    cmd_open_bridge "$@" ;;
-        down|stop)      detect_compose; cmd_down ;;
+        down|stop)      cmd_down ;;      # Docker optional: also stops native servers
         logs)           detect_compose; cmd_logs "$@" ;;
         update)         cmd_update "$@" ;;
         language)       cmd_language "$@" ;;

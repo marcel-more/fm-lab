@@ -25,9 +25,15 @@ SELECT
     ws_restore(xml_extract_text(priv_xml, '/ExtendedPrivilege/Description/text()')[1]) as EP_Description,
     xml_extract_text(priv_xml, '/ExtendedPrivilege/UUID/text()')[1] as EP_UUID,
 
-    -- Array of PrivilegeSet IDs und Namen
-    list(xml_extract_text(ps_xml, '/PrivilegeSetReference/@id')[1]::BIGINT) as PrivilegeSet_IDs,
-    list(xml_extract_text(ps_xml, '/PrivilegeSetReference/@name')[1]) as PrivilegeSet_Names,
+    -- Array of PrivilegeSet IDs und Namen. Eine EP ohne <PrivilegeSetReference> liefert
+    -- über den LEFT JOIN LATERAL eine Zeile mit ps_xml = NULL: ohne FILTER würde list()
+    -- daraus [NULL] machen. FILTER auf 0 Zeilen ergibt NULL → COALESCE auf [] (Vertrag:
+    -- [] = keinem Berechtigungsset erteilt). Gleiches Prädikat in beiden Aggregaten →
+    -- IDs und Namen bleiben positionsgleich.
+    COALESCE(list(xml_extract_text(ps_xml, '/PrivilegeSetReference/@id')[1]::BIGINT)
+        FILTER (WHERE ps_xml IS NOT NULL), []::BIGINT[]) as PrivilegeSet_IDs,
+    COALESCE(list(xml_extract_text(ps_xml, '/PrivilegeSetReference/@name')[1])
+        FILTER (WHERE ps_xml IS NOT NULL), []::VARCHAR[]) as PrivilegeSet_Names,
 
     xml_extract_text(priv_xml, '/ExtendedPrivilege/UUID/@timestamp')[1] as Modified_At,
     xml_unescape(xml_extract_text(priv_xml, '/ExtendedPrivilege/UUID/@userName')[1]) as Modified_By,

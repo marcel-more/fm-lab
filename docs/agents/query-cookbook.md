@@ -78,6 +78,118 @@ authoritative flag: `LinkRoleRegistry.Counts_For_Where_Used` (e.g. `restricts_fi
 granular twin of the `triggers_script·<event>` owner mirror since converter 2.17.0 —
 counting both double-counts every script trigger). See `analysis-workflows.md`.
 
+### Where-used for Table Occurrences
+
+The generic pattern above is **not enough for a TO**. A `TO::Field` reference — in a
+formula, a script step, a field on a layout — creates an edge to the *field*, never to the
+TO. `ObjectLinks` alone therefore shows only layout contexts, portals, relationships,
+GTRR/navigation, lookups and value-list sources, and a TO that is read in hundreds of
+formulas looks almost unused. Read `v_table_occurrence_usage` (schema ≥ 1.38.0): one row
+per (TO, using object, category, role), edges included (`Is_Edge = true`).
+
+```sql
+-- Where is TO X used? — grouped by category (scope by file: TO names repeat across files)
+SELECT u.Category, u.User_Type,
+       count(DISTINCT u.User_UUID)    AS Users,
+       CAST(sum(u.Ref_Count) AS BIGINT) AS Refs,
+       bool_or(u.Is_Edge)             AS Via_Edge
+FROM ObjectCatalog o
+JOIN v_table_occurrence_usage u
+  ON u.TO_UUID = o.Object_UUID AND u.File_Name = o.File_Name
+WHERE o.Object_Type = 'TableOccurrence'
+  AND o.Object_Name = 'Invoices' AND o.File_Name = 'Sales'
+GROUP BY ALL
+ORDER BY Refs DESC;
+
+-- The single usages of one category (LayoutObject users carry their layout as container)
+SELECT u.User_Type,
+       coalesce(u.Container_Name || ' / ', '') || u.User_Name AS Used_In,
+       u.User_File, u.Role, u.Ref_Count
+FROM v_table_occurrence_usage u
+WHERE u.TO_Name = 'Invoices' AND u.File_Name = 'Sales'
+  AND u.Category = 'script_step'          -- e.g. calculation, layout_field, calc_context
+ORDER BY u.User_Name, u.Role;
+
+-- "Can I delete it?" — usage class per TO from count + relationship-path analysis
+SELECT c.File_Name, c.TO_Name, c.Usage_Class, c.Reason,
+       c.Usage_Ref_Count, c.Relationship_Count,
+       c.Dead_Group_Size, c.Anchor_TO_Name, c.Low_Confidence
+FROM v_table_occurrence_class c
+WHERE c.Usage_Class IN ('unused', 'dead_branch', 'dead_island')
+ORDER BY c.File_Name, c.Dead_Group_ID, c.TO_Name;
+```
+
+⚠️ Reading the result:
+- **Formula references need DDR info.** In files without it the category
+  `calculation_text` stands in: `TO::Field` found in the formula text (about 95 % of the
+  pairs, false hits count as usage; unqualified field names and evaluation contexts stay
+  invisible). `v_table_occurrence_class.Low_Confidence = true` marks those files — there
+  `unused`/`dead_*` are **unverified**; `used`/`relationship_bridge` rest on found usages
+  and hold.
+- **`relationship_bridge` is not a finding.** A TO without own usage that sits on the
+  relationship path between two used TOs (the join TO of an n:m relationship) or on a
+  relationship with cascade delete is needed. `dead_*` means "no statically visible path"
+  — a review candidate, not a delete recommendation; `Dead_Group_ID` groups a dead
+  subtree that is cleaned up together.
+- **Dynamic references are invisible** (`GetField`, `Evaluate`, TO names inside
+  `ExecuteSQL` strings).
+- Don't add `ObjectLinks` rows on top of the table — the edges are already in it
+  (`Is_Edge`). Sum `Ref_Count` instead of counting rows when the question is "how often".
+- **"Can I delete TO X?" / "which TOs are dead?" is a test run:** `/fm-test unused-code`
+  (profile `data-model`) — in object scope on the TO it returns its finding with class,
+  dead group and anchor, or none; also file, object-list and cluster scope. Other views:
+  dashboard `schema/table_occurrence_usage`, references tab of the TO in the web frontend.
+  Column details: `schema-reference.md` → `v_table_occurrence_usage` /
+  `v_table_occurrence_class`.
+
+### Usage counts for any object type
+
+"Is X used / unused / rarely used?" and "rank objects by usage" read `v_object_usage`
+(schema 1.40.0) — one row per Field, Script, Layout, CustomFunction, ValueList,
+BaseTable, ExternalDataSource, PrivilegeSet, TableOccurrence, Relationship. It is the
+definition the `unused_*` rules use, so a hand-written `NOT EXISTS` over `ObjectLinks`
+can only drift from it.
+
+```sql
+-- Rarely used custom functions (1–2 using containers), with the roles behind the count
+SELECT File_Name, Object_Name, Usage_Owners, Usage_Refs, Usage_Roles, Usage_Files
+FROM v_object_usage
+WHERE Object_Type = 'CustomFunction' AND Usage_Owners BETWEEN 1 AND 2
+ORDER BY Usage_Owners, File_Name, Object_Name;
+
+-- Unused objects per type and file (= the findings of the test unused-code, TO aside)
+SELECT Object_Type, File_Name, count(*) AS n,
+       count(*) FILTER (WHERE Low_Confidence) AS unverified
+FROM v_object_usage
+WHERE Usage_Class = 'unused'
+GROUP BY ALL
+ORDER BY Object_Type, n DESC;
+
+-- Who uses it? — the edges behind the count (Usage_Refs = these rows)
+SELECT ol.Link_Role, src.Object_Type, src.Object_Name, ol.Source_File
+FROM v_object_usage u
+JOIN ObjectLinks ol ON ol.Target_UUID = u.Object_UUID AND ol.Target_File = u.File_Name
+JOIN LinkRoleRegistry r ON r.Link_Role = ol.Link_Role AND r.Counts_For_Where_Used
+JOIN ObjectCatalog src ON src.Object_UUID = ol.Source_UUID AND src.File_Name = ol.Source_File
+WHERE u.Object_Type = 'ValueList' AND u.Object_Name = 'Status' AND u.File_Name = 'Sales'
+  -- for a Field: drop the aggregate Layout → Field edge (twin of the layout-object edges)
+  AND NOT (ol.Source_Type = 'Layout' AND ol.Link_Role = 'displays_field' AND ol.Link_Subrole IS NULL)
+ORDER BY ol.Link_Role, src.Object_Name;
+```
+
+⚠️ Reading the result:
+- **`Usage_Owners` is the number to show.** A layout object counts as its layout, so a
+  field placed 40 times on one layout is one owner; `Usage_Refs` counts edges (the
+  aggregate Layout → Field edge excluded — every placement has a layout-object edge).
+  Base tables: count `base_table` only, never `parent_table` (their own fields).
+- **Not every zero is a finding.** `entry_point` (script/layout in a menu) and `builtin`
+  (privilege sets 1–3) have no usage but are no delete candidates; TableOccurrence adds
+  `relationship_bridge` (needed) and `dead_*` (findings); Relationship rows have no counts.
+- **`Low_Confidence`** = file without DDR info: formula references are missing there, an
+  `unused` is unverified.
+- The "who uses it" query above applies the registry flag only — for BaseTable keep
+  `Link_Role = 'base_table'`, for a TO use § Where-used for Table Occurrences.
+
 **Which fields does a script set/read?** (forward direction — the reverse of where-used)
 ```sql
 -- sets_field = written, reads_field = read. These are Script→Field edges,

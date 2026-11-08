@@ -58,7 +58,14 @@
       "logic": "로직",
       "slots": "슬롯",
       "moreTargets": "(+{{n}}개 더)"
-    }
+    },
+    "sectionLabel": "레이아웃 파트",
+    "sectionAll": "전체",
+    "sectionOption": "{{label}} ({{count}})",
+    "sectionAria": "개체를 하나의 레이아웃 파트로 제한",
+    "sectionStats_one": "개체 {{count}}개 중 {{n}}개 · 확대/축소 {{zoom}}%",
+    "sectionStats_other": "개체 {{count}}개 중 {{n}}개 · 확대/축소 {{zoom}}%",
+    "sectionInventoryHint": "인벤토리는 선택한 파트만이 아니라 레이아웃 전체를 다룹니다"
   },
   "relationshipGraphCanvas": {
     "searchPlaceholder": "테이블 어커런스 검색…",
@@ -165,6 +172,8 @@
     "ariaLabel": "오브젝트 계층",
     "usedBy": "사용처 ({{count}})",
     "usedByFiltered": "사용처 ({{count}} / {{total}})",
+    "usedByGrouped": "사용처 — 객체별 ({{count}})",
+    "usedByGroupedFiltered": "사용처 — 객체별 ({{count}} / {{total}})",
     "uses": "사용 ({{count}})",
     "usesFiltered": "사용 ({{count}} / {{total}})",
     "structurallyContainedBy": "구조적으로 포함됨 ({{count}})",
@@ -173,6 +182,8 @@
     "structurallyContainsFiltered": "구조적으로 포함 ({{count}} / {{total}})",
     "noReferences": "참조를 찾을 수 없습니다",
     "noFilterMatches": "현재 필터에 일치하는 항목이 없습니다",
+    "toUsageUnavailable": "이 카탈로그는 테이블 어커런스의 직접 링크만 표시합니다. 전체 사용 현황(계산식, 스크립트 단계, 레이아웃의 필드 참조)은 다시 가져온 후에 표시됩니다.",
+    "toUsageTruncated": "사용 현황 축약: 필드 참조 사용 {{total}}건 중 {{count}}건 표시.",
     "crossFileBadge": "파일 간",
     "itemAriaLabel": "{{type}}: {{name}}로 이동",
     "notNavigable": "대상이 가져온 데이터 집합에 없습니다",
@@ -255,8 +266,57 @@
       "menu_action": {
         "short": "Menu",
         "long": "메뉴 동작"
+      },
+      "calculation": {
+        "short": "Calc",
+        "long": "계산식 내 필드 참조"
+      },
+      "calculation_text": {
+        "short": "Calc text",
+        "long": "계산식 텍스트의 필드 참조(DDR 정보 없는 파일)"
+      },
+      "calc_context": {
+        "short": "Context",
+        "long": "계산식의 평가 컨텍스트"
+      },
+      "layout_field": {
+        "short": "Field",
+        "long": "레이아웃의 필드"
+      },
+      "layout_part": {
+        "short": "Break",
+        "long": "레이아웃 파트의 구분 필드"
+      },
+      "script_step": {
+        "short": "Step",
+        "long": "스크립트 단계 내 필드 참조"
+      },
+      "security": {
+        "short": "Access",
+        "long": "권한 세트의 레코드 접근 컨텍스트"
+      },
+      "table_view": {
+        "short": "Table view",
+        "long": "테이블 보기 열"
+      },
+      "value_list": {
+        "short": "VL field",
+        "long": "값 목록의 두 번째 필드"
       }
-    }
+    },
+    "usageSummary": "내부 사용: {{objects}} · {{refs}}",
+    "usageObjects_one": "객체 {{count}}개",
+    "usageObjects_other": "객체 {{count}}개",
+    "usageRefs_one": "참조 {{count}}개",
+    "usageRefs_other": "참조 {{count}}개",
+    "usageSummaryHint": "사용 (내부): 솔루션에서 이 객체를 사용하는 서로 다른 객체의 수 — 레이아웃은 그 객체가 몇 개 표시하든 한 번, 스크립트는 단계 수와 관계없이 한 번 셉니다. 참조: 각 위치마다 따로 (목록에서는 ×N). 포함 관계와 권한 제한은 세지 않습니다. 포함되지 않음: 외부에서의 사용 (서버 일정, Data API, OData, URL 호출, 플러그인 …) 및 동적 참조 (이름으로 스크립트 실행, GetField, Evaluate).",
+    "usageDocs": "어떻게 세나요?",
+    "groupByObjectHint": "사용하는 객체별로 그룹화 (들어오는 방향) — 레이아웃은 그 객체가 몇 개 표시하든 한 번 셉니다",
+    "groupAllRefsHint": "모든 참조 표시",
+    "groupExpand": "참조 표시",
+    "groupCollapse": "참조 숨기기",
+    "noUsageGroup": "사용 없음",
+    "noUsageGroupHint": "사용으로 세지 않는 연결 (예: 권한 제한, 트리거 노드)"
   },
   "searchOptions": {
     "regionAria": "정렬 및 그룹 옵션",
@@ -272,7 +332,14 @@
     "groupFile": "파일",
     "modifiedSinceLabel": "수정일 이후",
     "modifiedSinceHint": "자체 변경 스탬프가 이 날짜 이후인 객체만 — 스크립트 단계, 레이아웃 객체, 계산식에는 자체 스탬프가 없습니다",
-    "modifiedSinceClear": "초기화"
+    "modifiedSinceClear": "초기화",
+    "sortUsage": "사용 (내부)",
+    "usageLabel": "사용 (내부)",
+    "usageOpAria": "비교",
+    "usageHint": "사용하는 객체 수(레이아웃의 객체는 해당 레이아웃으로 셉니다). ≤ 0은 사용되지 않는 객체를 표시합니다. 스크립트 단계, 레이아웃 객체, 계산식, 관계는 사용 수가 없어 제외됩니다 외부에서의 사용 (서버 일정, Data API, OData, URL 호출, 플러그인 …)은 포함되지 않습니다.",
+    "usageUnavailable": "스키마 1.40.0 이상으로 만든 카탈로그가 필요합니다 — 솔루션을 다시 가져오세요",
+    "usageDirAsc": "적게 사용된 순",
+    "usageDirDesc": "많이 사용된 순"
   },
   "fieldViewer": {
     "ariaLabel": "필드 세부 정보",
@@ -372,7 +439,17 @@
     "healedUuidMatch": "UUID로 일치 (중복)",
     "healedUuidTitle": "FileMaker는 이 오브젝트를 검색한 UUID로 관리합니다. 내보내기에서 이 UUID가 여러 번 나타나 카탈로그에는 대체 UUID로 저장되어 있습니다.",
     "idMatch": "ID {{id}}로 일치",
-    "modifiedTooltip": "{{age}} 수정 — 편집한 클라이언트의 로컬 시간(시간대 없음)"
+    "modifiedTooltip": "{{age}} 수정 — 편집한 클라이언트의 로컬 시간(시간대 없음)",
+    "usageTooltip": "내부 사용: {{owners}} · 참조: {{refs}} · 역할: {{roles}} · 파일: {{files}}",
+    "usageCellAria": "사용 {{count}} — 들어오는 참조 열기",
+    "usageEntryPoint": "스크립트 또는 레이아웃 메뉴에 있음 — 참조 없이도 접근 가능",
+    "usageBuiltin": "기본 제공 권한 세트 — 삭제할 수 없음",
+    "usageBridge": "관계 브리지 — 사용 중인 테이블 어커런스 사이 경로에 필요",
+    "usageDead": "관계 그래프의 죽은 가지 — 그 너머는 사용되지 않음",
+    "usageKeyField": "관계의 일치 필드",
+    "usageCrossFile": "다른 파일에서 사용",
+    "usageUnverified": "확인되지 않음 — 파일이 DDR 정보 없이 내보내져 계산식 참조가 없습니다",
+    "usageExternal": "외부에서의 사용 (서버 일정, Data API, OData, URL 호출, AppleScript, 플러그인 …)은 포함되지 않습니다"
   },
   "scriptSearchFilter": {
     "searchAria": "참조 검색",
@@ -805,7 +882,15 @@
     "optFieldFrames": "활성 레코드에서 필드 테두리 표시",
     "optFrameCurrentOnly": "현재 레코드의 필드만 테두리 표시",
     "optShowCurrentInList": "목록 보기에서 레코드 표시",
-    "optQuickFind": "빠른 찾기"
+    "optQuickFind": "빠른 찾기",
+    "partsHeading": "레이아웃 파트",
+    "partsObjects_one": "개체 {{count}}개",
+    "partsObjects_other": "개체 {{count}}개",
+    "partsHeight": "{{size}} pt",
+    "partsSortedBy": "정렬 기준",
+    "partsFilterTitle": "그래픽에서 이 파트만 표시",
+    "partsFilterActiveTitle": "파트 필터 해제",
+    "partsFieldUnresolved": "카탈로그에 필드가 없습니다(파일을 가져오지 않았나요?)"
   },
   "pluginSpec": {
     "tooltip": "{{plugin}} 문서 기준 플랫폼 지원",
@@ -1006,5 +1091,223 @@
     "usedSuffix": "{{used}}개 사용",
     "functionsHeading": "함수",
     "colFunction": "함수"
+  },
+  "tableOccurrence": {
+    "ariaLabel": "테이블 어커런스 세부 정보",
+    "definitionHeading": "정의",
+    "baseTable": "소스 테이블",
+    "baseTableUnresolved": "— 확인할 수 없음 —",
+    "inFile": "파일 “{{file}}”",
+    "dataSource": "데이터 소스",
+    "dsResolved": "파일 “{{file}}”이(가) 카탈로그에 있음",
+    "dsUnresolved": "대상 파일을 가져오지 않음",
+    "diagram": "관계 그래프",
+    "viewLabel": "보기: {{view}}",
+    "view": {
+      "Full": "모든 필드",
+      "Related": "관계 필드만",
+      "Collapse": "이름만"
+    },
+    "usageHeading": "사용",
+    "class": {
+      "used": "사용됨",
+      "relationship_bridge": "관계 브리지",
+      "dead_branch": "미사용 가지",
+      "dead_island": "미사용 섬",
+      "unused": "사용 안 함"
+    },
+    "reason": {
+      "path": "사용 중인 TO 사이의 관계 경로에 있습니다(예: n:m 관계의 조인 TO) — 필요합니다.",
+      "cascade_delete": "연쇄 삭제가 있는 관계에 포함됩니다 — 필요합니다."
+    },
+    "deadBranch_one": "앵커 아래 미사용 가지({{count}}개 TO)의 일부",
+    "deadBranch_other": "앵커 아래 미사용 가지({{count}}개 TO)의 일부",
+    "deadIsland_one": "사용 중인 TO가 없는 TO 그룹({{count}}개 TO).",
+    "deadIsland_other": "사용 중인 TO가 없는 TO 그룹({{count}}개 TO).",
+    "unused": "정적으로 확인되는 사용이 없습니다.",
+    "unusedNoRel": "정적으로 확인되는 사용과 관계가 없습니다.",
+    "reviewHint": "검토 대상일 뿐 삭제 권장이 아닙니다 — 동적 참조(GetField, Evaluate, ExecuteSQL)는 보이지 않습니다.",
+    "toTests": "세부 정보는 테스트 탭",
+    "lowConfidence": "DDR 정보가 없는 파일: 계산식 사용은 텍스트 검색으로 찾았으며 클래스는 확인되지 않았습니다.",
+    "group": {
+      "context": "컨텍스트",
+      "display": "표시",
+      "logic": "로직",
+      "data": "데이터",
+      "graph": "그래프",
+      "other": "기타"
+    },
+    "category": {
+      "layout_context": "레이아웃",
+      "calc_context": "계산 컨텍스트",
+      "security": "권한",
+      "layout_field": "레이아웃 필드",
+      "portal": "포털",
+      "layout_part": "레이아웃 파트",
+      "table_view": "테이블 보기",
+      "script_step": "스크립트 단계",
+      "calculation": "계산식",
+      "calculation_text": "계산식 텍스트",
+      "navigation": "탐색",
+      "lookup": "조회",
+      "lookup_context": "조회 컨텍스트",
+      "value_list": "값 목록",
+      "value_list_related": "값 목록(관련)",
+      "relationship": "관계",
+      "relationship_cascade": "연쇄 삭제"
+    },
+    "chipTitle": "개체 {{users}}개 · 참조 {{refs}}개 — 참조에서 보기",
+    "allUsages": "모든 참조 → 참조",
+    "relationshipsHeading": "관계",
+    "noRelationships": "— 관계 없음 —",
+    "searchPlaceholder": "상대 TO 또는 필드 필터…",
+    "colSelf": "이 TO",
+    "colOperator": "Operator",
+    "colPartnerField": "상대 필드",
+    "colPartner": "상대 TO",
+    "colOptions": "옵션",
+    "colOptionsTitle": "옵션: 이 TO | 상대 TO",
+    "colRelationship": "관계",
+    "and": "그리고",
+    "optCreate": "이 관계를 통한 레코드 생성 허용",
+    "optDeleteSelf": "연쇄 삭제: 관련 레코드가 삭제되면 이 TO의 레코드가 삭제됩니다",
+    "optDeletePartner": "연쇄 삭제: 이 TO의 레코드가 삭제되면 상대 TO의 레코드가 삭제됩니다",
+    "optSort": "정렬됨",
+    "legend": "옵션 “이 TO | 상대 TO”: ＋ 생성 허용 · 🗑 연쇄 삭제 · ⇅ 정렬됨",
+    "siblingsHeading": "“{{bt}}”의 다른 어커런스",
+    "siblingsNone": "— 없음 —",
+    "toBaseTable": "소스 테이블로",
+    "chipTitleInPage": "개체 {{users}}개 — 아래 관계에서 보기",
+    "optionFilterAria": "옵션으로 필터",
+    "option": {
+      "cascade": "연쇄 삭제",
+      "create": "생성 허용",
+      "sorted": "정렬됨"
+    },
+    "siblingsSearch": "TO 또는 파일 필터…",
+    "siblingsScopeAria": "범위",
+    "scope": {
+      "all": "전체",
+      "file": "이 파일",
+      "other": "솔루션 전체"
+    },
+    "scopeTitle": {
+      "all": "솔루션의 모든 어커런스",
+      "file": "이 파일의 어커런스",
+      "other": "솔루션의 다른 파일에 있는 어커런스"
+    },
+    "colTo": "테이블 어커런스",
+    "dataSourceCurrent": "현재 파일",
+    "dataSourceCurrentTitle": "소스 테이블을 데이터 소스 없이 이 파일에서 직접 사용합니다",
+    "dsSelf": "이 파일 자체를 가리킴",
+    "dsSelfSibling": "데이터 소스가 자신의 파일을 가리킴",
+    "inThisFile": "이 파일",
+    "viaDataSource": "데이터 소스 “{{ds}}”",
+    "colDefinedIn": "정의 위치",
+    "colDefinedInTitle": "TO가 있는 관계 그래프의 파일(비어 있음 = 이 파일)",
+    "colSourceTitle": "TO가 소스 테이블에 연결되는 방식: 현재 파일 또는 데이터 소스를 통해",
+    "countFiltered": "{{total}}개 중 {{shown}}개",
+    "defJumpTitle": "아래 섹션으로 이동",
+    "defLayoutsTitle": "이 TO를 기반으로 하는 레이아웃 — 참조에서 보기",
+    "siblingsJump": "다른 어커런스",
+    "ctxHeading": "TO 그룹",
+    "ctxGroup": "그룹",
+    "ctxSingle": "이 TO만 — 관계 없음",
+    "ctxTos_one": "TO {{count}}개",
+    "ctxTos_other": "TO {{count}}개",
+    "ctxLayouts_one": "레이아웃 {{count}}개",
+    "ctxLayouts_other": "레이아웃 {{count}}개",
+    "ctxAnchors": "앵커",
+    "ctxAnchorsNone": "이 그룹의 TO를 기반으로 하는 레이아웃이 없음",
+    "ctxLayoutsTitle_one": "레이아웃 {{count}}개",
+    "ctxLayoutsTitle_other": "레이아웃 {{count}}개",
+    "ctxSelfAnchor_one": "자체가 레이아웃 컨텍스트임(레이아웃 {{count}}개)",
+    "ctxSelfAnchor_other": "자체가 레이아웃 컨텍스트임(레이아웃 {{count}}개)",
+    "ctxSteps_one": "{{count}}단계",
+    "ctxSteps_other": "{{count}}단계",
+    "ctxHint": "앵커 = 레이아웃의 기반이 되는 TO. “가장 가까운 앵커”는 가장 적은 관계를 거쳐 이 TO에 도달하는 앵커입니다.",
+    "ctxAnchorsLess": "목록 닫기",
+    "ctxMoreEachSingle": "+{{count}}개 더(각 레이아웃 1개)",
+    "ctxMoreEach": "+{{count}}개 더(각 레이아웃 {{each}}개)",
+    "ctxMoreTotal": "+{{count}}개 더(레이아웃 총 {{total}}개)",
+    "ctxAnchor": "앵커",
+    "ctxColLayouts": "레이아웃",
+    "ctxColDistance": "거리",
+    "ctxColDistanceTitle": "이 TO까지의 관계 단계",
+    "ctxContext": "레이아웃 컨텍스트",
+    "ctxNearest": "가장 가까운 앵커:",
+    "ctxShowPath": "경로 보기",
+    "ctxHidePath": "경로 숨기기"
+  },
+  "layoutParts": {
+    "kind": {
+      "12": "상단 탐색",
+      "0": "제목 머리말",
+      "1": "머리말",
+      "2": "선행 총계",
+      "3": "다음으로 정렬 시 하위 요약",
+      "4": "본문",
+      "6": "후행 총계",
+      "7": "꼬리말",
+      "8": "제목 꼬리말",
+      "13": "하단 탐색"
+    },
+    "position": {
+      "leading": "선행",
+      "trailing": "후행"
+    },
+    "subSummaryLabel": "{{position}} {{kind}} ‹{{field}}›",
+    "subSummaryLabelNoField": "{{position}} {{kind}}",
+    "option": {
+      "o1": "각 항목이 발생 전에 페이지 나누기",
+      "o2": "항목이 발생 할 때마다 페이지 나누기: {{n}} 번",
+      "o3": "각 항목이 발생 후 페이지 번호 다시 시작",
+      "o4": "페이지 경계 너머로 부분 나누기 허용",
+      "o5": "새로운 페이지 이전의 나머지 부분 버리기",
+      "o6": "대체 행 상태 사용",
+      "o7": "활성화된 행 상태 사용"
+    }
+  },
+  "layoutPartDetail": {
+    "ariaLabel": "레이아웃 파트 세부 정보",
+    "groupGeneral": "일반",
+    "groupSort": "정렬",
+    "groupContext": "컨텍스트",
+    "groupOptions": "부분 정의",
+    "groupTechnical": "기술 정보",
+    "kind": "파트 유형",
+    "exportedType": "내보낸 유형",
+    "exportedTypeTitle": "XML 내보내기에 기록된 유형(현지화되었거나 FileMaker가 잘못 표기함)",
+    "partName": "내부 이름",
+    "position": "위치",
+    "positionValue": "{{total}}개 중 {{pos}}번째",
+    "previous": "이전 파트",
+    "next": "다음 파트",
+    "height": "높이",
+    "top": "위쪽 가장자리",
+    "bottom": "아래쪽 가장자리",
+    "unitPt": "{{value}} pt",
+    "objects": "개체",
+    "objectsValue": "{{total}}(파트 바로 아래 {{root}})",
+    "sortedBy": "정렬 기준",
+    "sortToDiffers": "레이아웃과 다른 테이블 어커런스를 통해({{to}})",
+    "fieldUnresolved": "카탈로그에 필드가 없습니다(파일을 가져오지 않았나요?)",
+    "layout": "레이아웃",
+    "contextTable": "테이블 어커런스",
+    "baseTable": "기본 테이블",
+    "file": "파일",
+    "optionsRaw": "옵션(원시)",
+    "optionsUndecoded": "대화상자 옵션이 없는 비트: {{bits}}",
+    "optionOn": "켜짐",
+    "optionOff": "꺼짐",
+    "sourceLocal": "파트에서 설정",
+    "sourceStyle": "파트 스타일 {{name}}",
+    "sourceTheme": "테마 {{name}}",
+    "sourceDefault": "설정 안 됨(꺼짐)",
+    "sourceClassic": "클래식 테마(꺼짐)",
+    "bodyOnly": "본문 파트에만 해당",
+    "showInLayout": "레이아웃에서 보기",
+    "showInLayoutTitle": "이 파트를 필터로 하여 레이아웃 열기",
+    "objectsShowInReferences": "참조 탭에서 개체 표시"
   }
 }

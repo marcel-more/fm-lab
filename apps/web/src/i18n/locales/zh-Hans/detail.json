@@ -58,7 +58,14 @@
       "logic": "逻辑",
       "slots": "槽位",
       "moreTargets": "(+{{n}} 个)"
-    }
+    },
+    "sectionLabel": "布局部分",
+    "sectionAll": "全部",
+    "sectionOption": "{{label}}({{count}})",
+    "sectionAria": "将对象限定在一个布局部分",
+    "sectionStats_one": "{{count}} 个对象中的 {{n}} 个 · 缩放 {{zoom}}%",
+    "sectionStats_other": "{{count}} 个对象中的 {{n}} 个 · 缩放 {{zoom}}%",
+    "sectionInventoryHint": "清单涵盖整个布局,而不仅是所选部分"
   },
   "relationshipGraphCanvas": {
     "searchPlaceholder": "搜索表实例…",
@@ -165,6 +172,8 @@
     "ariaLabel": "对象层级",
     "usedBy": "使用方 ({{count}})",
     "usedByFiltered": "使用方 ({{count}} / {{total}})",
+    "usedByGrouped": "使用方 — 按对象 ({{count}})",
+    "usedByGroupedFiltered": "使用方 — 按对象 ({{count}} / {{total}})",
     "uses": "使用 ({{count}})",
     "usesFiltered": "使用 ({{count}} / {{total}})",
     "structurallyContainedBy": "结构上被包含 ({{count}})",
@@ -173,6 +182,8 @@
     "structurallyContainsFiltered": "结构上包含 ({{count}} / {{total}})",
     "noReferences": "未找到引用",
     "noFilterMatches": "没有符合当前筛选器的结果",
+    "toUsageUnavailable": "此目录仅显示表格实例的直接链接。完整的使用情况（公式、脚本步骤和布局中的字段引用）将在重新导入后显示。",
+    "toUsageTruncated": "使用情况已截断：显示通过字段引用的 {{total}} 处使用中的 {{count}} 处。",
     "crossFileBadge": "跨文件",
     "itemAriaLabel": "导航到 {{type}}:{{name}}",
     "notNavigable": "目标不在已导入的数据集中",
@@ -255,8 +266,57 @@
       "menu_action": {
         "short": "Menu",
         "long": "菜单动作"
+      },
+      "calculation": {
+        "short": "Calc",
+        "long": "公式中的字段引用"
+      },
+      "calculation_text": {
+        "short": "Calc text",
+        "long": "公式文本中的字段引用（不含 DDR 信息的文件）"
+      },
+      "calc_context": {
+        "short": "Context",
+        "long": "公式的求值上下文"
+      },
+      "layout_field": {
+        "short": "Field",
+        "long": "布局上的字段"
+      },
+      "layout_part": {
+        "short": "Break",
+        "long": "布局部件的分组字段"
+      },
+      "script_step": {
+        "short": "Step",
+        "long": "脚本步骤中的字段引用"
+      },
+      "security": {
+        "short": "Access",
+        "long": "权限集的记录访问上下文"
+      },
+      "table_view": {
+        "short": "Table view",
+        "long": "表格视图列"
+      },
+      "value_list": {
+        "short": "VL field",
+        "long": "值列表的第二个字段"
       }
-    }
+    },
+    "usageSummary": "内部使用：{{objects}} · {{refs}}",
+    "usageObjects_one": "{{count}} 个对象",
+    "usageObjects_other": "{{count}} 个对象",
+    "usageRefs_one": "{{count}} 个引用",
+    "usageRefs_other": "{{count}} 个引用",
+    "usageSummaryHint": "使用（内部）：解决方案中有多少个不同对象使用此对象 — 布局无论其中有多少对象显示它都只计一次；脚本无论在多少步骤中都只计一次。引用：每个出现位置单独计（列表中为 ×N）。包含关系和权限限制不计。不包括：来自外部的使用（服务器计划、Data API、OData、URL 调用、插件 …）以及动态引用（按名称执行脚本、GetField、Evaluate）。",
+    "usageDocs": "如何计数？",
+    "groupByObjectHint": "按使用对象分组（传入）— 布局无论其中有多少对象显示它都只计一次",
+    "groupAllRefsHint": "显示每个引用",
+    "groupExpand": "显示引用",
+    "groupCollapse": "隐藏引用",
+    "noUsageGroup": "无使用",
+    "noUsageGroupHint": "不计为使用的链接（例如权限限制、触发器节点）"
   },
   "searchOptions": {
     "regionAria": "排序和分组选项",
@@ -272,7 +332,14 @@
     "groupFile": "文件",
     "modifiedSinceLabel": "修改起始日期",
     "modifiedSinceHint": "仅显示自身修改标记在该日期当天或之后的对象 — 脚本步骤、布局对象和计算没有自身的标记",
-    "modifiedSinceClear": "重置"
+    "modifiedSinceClear": "重置",
+    "sortUsage": "使用（内部）",
+    "usageLabel": "使用（内部）",
+    "usageOpAria": "比较",
+    "usageHint": "使用它的对象数量（布局上的对象计为其布局）。≤ 0 显示未使用的对象；脚本步骤、布局对象、公式和关系没有使用数，会被排除 来自外部的使用（服务器计划、Data API、OData、URL 调用、插件 …）不包括在内。",
+    "usageUnavailable": "需要使用架构 1.40.0 或更高版本构建的目录 — 请重新导入解决方案",
+    "usageDirAsc": "使用最少的在前",
+    "usageDirDesc": "使用最多的在前"
   },
   "fieldViewer": {
     "ariaLabel": "字段详情",
@@ -372,7 +439,17 @@
     "healedUuidMatch": "按 UUID 匹配(重复)",
     "healedUuidTitle": "FileMaker 以所搜索的 UUID 记录此对象;由于该 UUID 在导出中出现多次,目录中以替代 UUID 保存。",
     "idMatch": "按 ID {{id}} 匹配",
-    "modifiedTooltip": "{{age}}修改 — 编辑客户端的本地时间，无时区"
+    "modifiedTooltip": "{{age}}修改 — 编辑客户端的本地时间，无时区",
+    "usageTooltip": "内部使用：{{owners}} · 引用：{{refs}} · 角色：{{roles}} · 文件：{{files}}",
+    "usageCellAria": "使用 {{count}} — 打开传入引用",
+    "usageEntryPoint": "位于脚本或布局菜单中 — 无需引用即可访问",
+    "usageBuiltin": "内置权限集 — 无法删除",
+    "usageBridge": "关系桥 — 在已使用的表实例之间的路径上必需",
+    "usageDead": "关系图中的死分支 — 其后没有任何使用",
+    "usageKeyField": "关系的匹配字段",
+    "usageCrossFile": "从其他文件使用",
+    "usageUnverified": "未验证 — 文件导出时没有 DDR 信息，缺少公式引用",
+    "usageExternal": "来自外部的使用（服务器计划、Data API、OData、URL 调用、AppleScript、插件 …）不包括在内"
   },
   "scriptSearchFilter": {
     "searchAria": "搜索引用",
@@ -805,7 +882,15 @@
     "optFieldFrames": "记录激活时显示字段框",
     "optFrameCurrentOnly": "仅在当前记录中显示字段框",
     "optShowCurrentInList": "列表视图中显示当前记录",
-    "optQuickFind": "快速查找"
+    "optQuickFind": "快速查找",
+    "partsHeading": "布局部分",
+    "partsObjects_one": "{{count}} 个对象",
+    "partsObjects_other": "{{count}} 个对象",
+    "partsHeight": "{{size}} pt",
+    "partsSortedBy": "排序依据",
+    "partsFilterTitle": "在图形中仅显示此部分",
+    "partsFilterActiveTitle": "取消部分筛选",
+    "partsFieldUnresolved": "字段不在目录中(文件未导入?)"
   },
   "pluginSpec": {
     "tooltip": "根据 {{plugin}} 文档的平台支持情况",
@@ -1006,5 +1091,223 @@
     "usedSuffix": "已使用 {{used}} 个",
     "functionsHeading": "函数",
     "colFunction": "函数"
+  },
+  "tableOccurrence": {
+    "ariaLabel": "表格实例详情",
+    "definitionHeading": "定义",
+    "baseTable": "源表",
+    "baseTableUnresolved": "— 无法解析 —",
+    "inFile": "位于文件“{{file}}”",
+    "dataSource": "数据源",
+    "dsResolved": "文件“{{file}}”在目录中",
+    "dsUnresolved": "目标文件未导入",
+    "diagram": "关系图",
+    "viewLabel": "视图：{{view}}",
+    "view": {
+      "Full": "所有字段",
+      "Related": "仅关系字段",
+      "Collapse": "仅名称"
+    },
+    "usageHeading": "使用情况",
+    "class": {
+      "used": "已使用",
+      "relationship_bridge": "关系桥接",
+      "dead_branch": "未使用分支",
+      "dead_island": "未使用孤岛",
+      "unused": "未使用"
+    },
+    "reason": {
+      "path": "位于已使用 TO 之间的关系路径上（例如 n:m 关系的连接 TO）— 必需。",
+      "cascade_delete": "属于带级联删除的关系 — 必需。"
+    },
+    "deadBranch_one": "锚点下未使用分支（{{count}} 个 TO）的一部分",
+    "deadBranch_other": "锚点下未使用分支（{{count}} 个 TO）的一部分",
+    "deadIsland_one": "没有已使用 TO 的 TO 组（{{count}} 个 TO）。",
+    "deadIsland_other": "没有已使用 TO 的 TO 组（{{count}} 个 TO）。",
+    "unused": "没有静态可见的使用。",
+    "unusedNoRel": "没有静态可见的使用，也没有关系。",
+    "reviewHint": "仅为审查候选，并非删除建议 — 动态引用（GetField、Evaluate、ExecuteSQL）不可见。",
+    "toTests": "详情见“测试”选项卡",
+    "lowConfidence": "文件无 DDR 信息：计算公式中的使用通过文本搜索得出，类别未经确认。",
+    "group": {
+      "context": "上下文",
+      "display": "显示",
+      "logic": "逻辑",
+      "data": "数据",
+      "graph": "图",
+      "other": "其他"
+    },
+    "category": {
+      "layout_context": "布局",
+      "calc_context": "计算上下文",
+      "security": "权限",
+      "layout_field": "布局字段",
+      "portal": "门户",
+      "layout_part": "布局部件",
+      "table_view": "表格视图",
+      "script_step": "脚本步骤",
+      "calculation": "计算公式",
+      "calculation_text": "公式文本",
+      "navigation": "导航",
+      "lookup": "查找",
+      "lookup_context": "查找上下文",
+      "value_list": "值列表",
+      "value_list_related": "值列表（相关）",
+      "relationship": "关系",
+      "relationship_cascade": "级联删除"
+    },
+    "chipTitle": "{{users}} 个对象 · {{refs}} 处引用 — 在“引用”中显示",
+    "allUsages": "所有引用 → 引用",
+    "relationshipsHeading": "关系",
+    "noRelationships": "— 无关系 —",
+    "searchPlaceholder": "筛选对方 TO 或字段…",
+    "colSelf": "此 TO",
+    "colOperator": "Operator",
+    "colPartnerField": "对方字段",
+    "colPartner": "对方 TO",
+    "colOptions": "选项",
+    "colOptionsTitle": "选项：此 TO | 对方 TO",
+    "colRelationship": "关系",
+    "and": "且",
+    "optCreate": "允许通过此关系创建记录",
+    "optDeleteSelf": "级联删除：删除相关记录时，此 TO 的记录将被删除",
+    "optDeletePartner": "级联删除：删除此 TO 的记录时，对方 TO 的记录将被删除",
+    "optSort": "已排序",
+    "legend": "选项“此 TO | 对方 TO”：＋ 允许创建 · 🗑 级联删除 · ⇅ 已排序",
+    "siblingsHeading": "“{{bt}}”的其他实例",
+    "siblingsNone": "— 无 —",
+    "toBaseTable": "转到源表",
+    "chipTitleInPage": "{{users}} 个对象 — 在下方关系中显示",
+    "optionFilterAria": "按选项筛选",
+    "option": {
+      "cascade": "级联删除",
+      "create": "允许创建",
+      "sorted": "已排序"
+    },
+    "siblingsSearch": "筛选 TO 或文件…",
+    "siblingsScopeAria": "范围",
+    "scope": {
+      "all": "全部",
+      "file": "此文件",
+      "other": "整个解决方案"
+    },
+    "scopeTitle": {
+      "all": "解决方案中的所有实例",
+      "file": "此文件中的实例",
+      "other": "解决方案其他文件中的实例"
+    },
+    "colTo": "表格实例",
+    "dataSourceCurrent": "当前文件",
+    "dataSourceCurrentTitle": "源表直接从此文件使用，不经过数据源",
+    "dsSelf": "指向此文件本身",
+    "dsSelfSibling": "数据源指向其自身文件",
+    "inThisFile": "位于此文件",
+    "viaDataSource": "数据源“{{ds}}”",
+    "colDefinedIn": "定义于",
+    "colDefinedInTitle": "包含该 TO 的关系图所在文件（空 = 此文件）",
+    "colSourceTitle": "TO 访问源表的方式：当前文件或通过数据源",
+    "countFiltered": "{{shown}} / {{total}}",
+    "defJumpTitle": "跳转到下方的部分",
+    "defLayoutsTitle": "基于此 TO 的布局 — 在引用中显示",
+    "siblingsJump": "其他实例",
+    "ctxHeading": "TO 组",
+    "ctxGroup": "组",
+    "ctxSingle": "仅此 TO — 无关系",
+    "ctxTos_one": "{{count}} 个 TO",
+    "ctxTos_other": "{{count}} 个 TO",
+    "ctxLayouts_one": "{{count}} 个布局",
+    "ctxLayouts_other": "{{count}} 个布局",
+    "ctxAnchors": "锚点",
+    "ctxAnchorsNone": "没有布局基于此组中的 TO",
+    "ctxLayoutsTitle_one": "{{count}} 个布局",
+    "ctxLayoutsTitle_other": "{{count}} 个布局",
+    "ctxSelfAnchor_one": "本身就是布局上下文（{{count}} 个布局）",
+    "ctxSelfAnchor_other": "本身就是布局上下文（{{count}} 个布局）",
+    "ctxSteps_one": "{{count}} 步",
+    "ctxSteps_other": "{{count}} 步",
+    "ctxHint": "锚点 = 布局所基于的 TO。“最近”是经由最少关系即可到达此 TO 的锚点。",
+    "ctxAnchorsLess": "关闭列表",
+    "ctxMoreEachSingle": "另有 {{count}} 个（各 1 个布局）",
+    "ctxMoreEach": "另有 {{count}} 个（各 {{each}} 个布局）",
+    "ctxMoreTotal": "另有 {{count}} 个（共 {{total}} 个布局）",
+    "ctxAnchor": "锚点",
+    "ctxColLayouts": "布局",
+    "ctxColDistance": "距离",
+    "ctxColDistanceTitle": "到此 TO 的关系步数",
+    "ctxContext": "布局上下文",
+    "ctxNearest": "最近：",
+    "ctxShowPath": "显示路径",
+    "ctxHidePath": "隐藏路径"
+  },
+  "layoutParts": {
+    "kind": {
+      "12": "顶部导航",
+      "0": "标题页眉",
+      "1": "页眉",
+      "2": "前置总计",
+      "3": "按如下方式排序时进行小计",
+      "4": "正文",
+      "6": "后置总计",
+      "7": "页脚",
+      "8": "标题页脚",
+      "13": "底部导航"
+    },
+    "position": {
+      "leading": "前置",
+      "trailing": "后置"
+    },
+    "subSummaryLabel": "{{position}}{{kind}}‹{{field}}›",
+    "subSummaryLabelNoField": "{{position}}{{kind}}",
+    "option": {
+      "o1": "在每次出现之前分页",
+      "o2": "在每出现 {{n}} 次之后分页",
+      "o3": "在每次出现后重新开始为页编号",
+      "o4": "允许部分跨页边界分页",
+      "o5": "丢弃新页之前的剩余部分",
+      "o6": "使用备选行状态",
+      "o7": "使用活动行状态"
+    }
+  },
+  "layoutPartDetail": {
+    "ariaLabel": "布局部分详情",
+    "groupGeneral": "常规",
+    "groupSort": "排序",
+    "groupContext": "上下文",
+    "groupOptions": "部分定义",
+    "groupTechnical": "技术信息",
+    "kind": "部分类型",
+    "exportedType": "导出的类型",
+    "exportedTypeTitle": "XML 导出中记录的类型(已本地化或被 FileMaker 错误标注)",
+    "partName": "内部名称",
+    "position": "位置",
+    "positionValue": "第 {{pos}} 个,共 {{total}} 个",
+    "previous": "上一个部分",
+    "next": "下一个部分",
+    "height": "高度",
+    "top": "上边缘",
+    "bottom": "下边缘",
+    "unitPt": "{{value}} pt",
+    "objects": "对象",
+    "objectsValue": "{{total}}(直接位于部分中 {{root}})",
+    "sortedBy": "排序依据",
+    "sortToDiffers": "通过与布局不同的表格实例({{to}})",
+    "fieldUnresolved": "字段不在目录中(文件未导入?)",
+    "layout": "布局",
+    "contextTable": "表格实例",
+    "baseTable": "基本表",
+    "file": "文件",
+    "optionsRaw": "选项(原始)",
+    "optionsUndecoded": "无对话框选项的位: {{bits}}",
+    "optionOn": "开",
+    "optionOff": "关",
+    "sourceLocal": "在部分上设置",
+    "sourceStyle": "部分样式 {{name}}",
+    "sourceTheme": "主题 {{name}}",
+    "sourceDefault": "未设置(关)",
+    "sourceClassic": "经典主题(关)",
+    "bodyOnly": "仅限正文部分",
+    "showInLayout": "在布局中显示",
+    "showInLayoutTitle": "以此部分为筛选条件打开布局",
+    "objectsShowInReferences": "在引用中显示对象"
   }
 }

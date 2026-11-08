@@ -51,6 +51,17 @@ This distinguishes e.g. a field that *hides* 52 layout objects (`reads_field` + 
 
 **Trigger mirror consolidation (caller direction).** A trigger is stored twice in the link graph: as the granular `trigger_script` edge of its ScriptTrigger sub-node and as the `triggers_script · <event>` mirror edge of its owner — a deliberate two-layer model in which **only the owner mirror counts for where-used** (the granular `trigger_script` edge never does). To keep caller lists free of that duplication, the references endpoint suppresses the granular row whenever its mirror is visible in the list. Display layer only — `ObjectLinks` and the graph are untouched. Consolidated mirror rows carry `Trigger_UUID`: the address of the ScriptTrigger sub-node, so clients can still jump to the trigger's detail view (`null` on `button_action` and `menu_action` rows and every other role).
 
+**Usage of the object (`meta.usage`).** With `meta=true` the response meta carries `usage` = `{ owners, users, refs, class }` — the object's usage as the [search column](Search%20API.md#usage) shows it (`v_object_usage`, schema 1.40.0+). `owners` counts using objects with a layout object counted as its layout, `refs` the references. Each incoming row then carries `Counts_As_Usage`: the counting rows add up (Σ `Call_Count`) to `refs` and their using objects to `owners`; rows that are no usage (containment, privilege restrictions, the granular `trigger_script` edge) carry `false`. Absent for types without a usage notion and on older catalogs. Definitions and limits: [Usage and References](../../schema/Usage%20and%20References.md).
+
+**Layout → field summary link.** Besides the link from each layout object to its field, the catalog keeps one `displays_field` link without subrole per layout and field. It is listed on the layout (outgoing — the layout's fields) and omitted on the field (incoming), where it would duplicate every placement.
+
+**Rows without an edge of their own (read paths).** Two relations live in catalog tables, not in `ObjectLinks`; the endpoint appends them as rows with a role that has no registry entry and never counts for where-used:
+
+- `uses_table_occurrence` — on a table occurrence, the usages a `Table::Field` reference creates (it links only the field), grouped by category in `Subrole_Class` (operational rows; meta `to_usage`). See [TableOccurrence](../../schema/object-types/TableOccurrence.md).
+- `parent_part` — on a [layout part](../../schema/object-types/LayoutPart.md) the objects of the part (`direction` `parent`, `Subrole_Class` = object type, container = the layout), on a layout object its part (`direction` `child`). Read from `LayoutObjects.Part_Seq` — every layout object already hangs on its layout through `parent_layout`, an edge to the part would double it. Structural rows (`link_type=structural` or `all`); meta `part_members` = `{ available, rows, total, truncated }`, `available: false` on catalogs that predate the part assignment (no rows, re-import).
+
+Both respect `limit` and `file` like the edge rows; graph, reference counts and candidates do not see them.
+
 `format=mermaid` / `mermaid-raw` render the reference set as a diagram — see [mermaid](../REST%20API%20Output%20Formats.md#mermaid-mermaid-raw).
 
 ## GET /api/references/candidates

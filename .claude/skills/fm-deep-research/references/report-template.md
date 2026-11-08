@@ -91,7 +91,10 @@
 <!-- section:findings -->
 ## 6 Findings
 <!-- Numbered F-01 …, most important first, in two sub-lists:
-     6.1 Measured — Analysis Tests (solution scope) and metrics: test id, count, severity, evidence
+     6.1 Measured — Analysis Tests (solution scope) and metrics: test id, count, severity, evidence;
+         one finding "Unused code" from unused_code_estimate.mjs: about x % of the objects
+         (n of N), a table per type (share, most affected files, sample of 3 from different
+         files), blind spots, and the pointer to the complete list: `/fm-test unused-code`
      6.2 Interpreted — patterns/anti-patterns, comprehensibility, coupling: hedged
      Every finding carries one "Evidence:" line (object names / numbers) and one "Impact:" line. -->
 <!-- /section -->
@@ -127,7 +130,8 @@
      B.2 Caps and scan coverage — max_communities, members, max_steps, top, findings per test,
          formulaic skip: value and effect, selected / skipped by type / skipped by cap — never silent
      B.3 Tests — ids executed (or why not), summary counts per test (the counters carry the
-         statement), ≤ 5 findings per member, tooling-add-on rows filtered — say what was cut
+         statement), ≤ 5 findings per member, tooling-add-on rows filtered — say what was cut;
+         the unused-code estimate with its totals and any type it could not estimate
      B.4 Catalog caveats — DDR-Info gaps, uuid-integrity, unavailable annotations
      B.5 Hubs — top 20 by logical cluster degree, with Inbound_Users / Unreferenced and the
          dominant link role + share (hubs.sql 1.1.0) — mark unreferenced hubs and import/migration

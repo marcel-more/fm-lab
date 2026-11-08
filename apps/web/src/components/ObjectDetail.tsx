@@ -6,6 +6,7 @@ import { useCurrentFile } from '../lib/currentFileContext';
 import { LayoutCanvas, type LayoutCanvasHandle } from './LayoutCanvas';
 import { LayoutViewer } from './LayoutViewer';
 import { usePersistentState } from '../hooks/usePersistentState';
+import { assignObjectParts, isPartUuid } from '../lib/layoutParts';
 import { DisclosureChevron } from './DisclosureChevron';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ErrorMessage } from './ErrorMessage';
@@ -15,6 +16,7 @@ import { CalculationDetail } from './CalculationDetail';
 import { CustomFunctionDetail } from './CustomFunctionDetail';
 import { GenericObjectDetail } from './GenericObjectDetail';
 import { LayoutObjectDetail } from './LayoutObjectDetail';
+import { LayoutPartDetail } from './LayoutPartDetail';
 import { ScriptTriggerDetail } from './ScriptTriggerDetail';
 import './CustomFunctionViewer.css';
 import './FieldViewer.css';
@@ -24,6 +26,7 @@ import { PrivilegeSetDetail } from './PrivilegeSetDetail';
 import { RelationshipDetail } from './RelationshipDetail';
 import { ValueListDetail } from './ValueListDetail';
 import { BaseTableDetail } from './BaseTableDetail';
+import { TableOccurrenceDetail } from './TableOccurrenceDetail';
 import { BuiltinFunctionDetail } from './BuiltinFunctionDetail';
 import { PluginFunctionDetail } from './PluginFunctionDetail';
 import { PluginComponentDetail } from './PluginComponentDetail';
@@ -90,10 +93,35 @@ const EmbeddedLayoutView: React.FC<{
     () => (highlightUuids ? Array.from(highlightUuids).sort().join(',') : ''),
     [highlightUuids],
   );
+  // Panel-Einträge (Script-Trigger, Layout-Sektionen) als Ref-Ziel → Panel aufklappen.
   const hasTriggerRef = useMemo(
-    () => !!highlightUuids && Array.from(highlightUuids).some(u => u.startsWith('trig_')),
+    () => !!highlightUuids && Array.from(highlightUuids).some(u => u.startsWith('trig_') || isPartUuid(u)),
     [highlightUuids],
   );
+  // object → part (catalog Part_Seq or fallback rule) — Panel-Zähler + Ref-Auflösung.
+  const partOf = useMemo(
+    () => (data ? assignObjectParts(data.objects, data.parts) : new Map<string, number | null>()),
+    [data],
+  );
+  const partCounts = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const seq of partOf.values()) if (seq != null) m.set(seq, (m.get(seq) ?? 0) + 1);
+    return m;
+  }, [partOf]);
+  // Eine Sektion als Ref-Ziel trägt kein Layout-Objekt → für den Canvas in die Objekte
+  // dieser Sektion übersetzen (sonst dimmt die Ref-Vorauswahl das ganze Layout ab).
+  const canvasHighlight = useMemo(() => {
+    if (!highlightUuids || !data) return highlightUuids;
+    const seqs = new Set<number>();
+    for (const p of data.parts) {
+      if (p.part_uuid && p.part_seq != null && highlightUuids.has(p.part_uuid)) seqs.add(p.part_seq);
+    }
+    if (seqs.size === 0) return highlightUuids;
+    const out = new Set<string>();
+    for (const u of highlightUuids) if (!isPartUuid(u)) out.add(u);
+    for (const [uuid, seq] of partOf) if (seq != null && seqs.has(seq)) out.add(uuid);
+    return out;
+  }, [highlightUuids, data, partOf]);
   // Einmal je Ref-Set aufklappen — danach bleibt manuelles Zuklappen erhalten.
   const autoOpenedFor = React.useRef<string | null>(null);
   useEffect(() => {
@@ -131,14 +159,21 @@ const EmbeddedLayoutView: React.FC<{
         </Link>
       </div>
       {isOpen && data.meta && (
-        <LayoutViewer meta={data.meta} triggers={data.triggers} originUuid={uuid} highlightUuids={highlightUuids} />
+        <LayoutViewer
+          meta={data.meta}
+          triggers={data.triggers}
+          originUuid={uuid}
+          highlightUuids={highlightUuids}
+          parts={data.parts}
+          partCounts={partCounts}
+        />
       )}
       {hasObjects ? (
         <div className="layout-detail-canvas">
           <LayoutCanvas
             ref={layoutCanvasRef}
             data={data}
-            externalMatchUuids={highlightUuids}
+            externalMatchUuids={canvasHighlight}
             onClearRef={onClearRef}
             onLiveMatchCount={onLiveMatchCount}
           />
@@ -202,8 +237,14 @@ export const ObjectDetail: React.FC<ObjectDetailProps> = ({
   if (objectType === 'BaseTable') {
     return <BaseTableDetail uuid={uuid} />;
   }
+  if (objectType === 'TableOccurrence') {
+    return <TableOccurrenceDetail uuid={uuid} />;
+  }
   if (objectType === 'LayoutObject') {
     return <LayoutObjectDetail uuid={uuid} objectType={objectType} />;
+  }
+  if (objectType === 'LayoutPart') {
+    return <LayoutPartDetail uuid={uuid} />;
   }
   if (objectType === 'Calculation') {
     return <CalculationDetail uuid={uuid} highlightRefUuids={highlightUuids} onLiveMatchCount={onLiveMatchCount} />;

@@ -179,3 +179,83 @@
 .fm-layout-muted {
   color: var(--color-text-muted);
 }
+
+/* Layout-Sektionen (rechte Spalte unter den Script-Triggern). */
+.fm-layout-parts-heading {
+  margin-top: 0.8rem;
+}
+
+.fm-layout-parts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.fm-layout-part {
+  font-size: 0.82rem;
+  padding: 0.1rem 0.3rem;
+  margin: 0 -0.3rem;
+  border: 1.5px solid transparent;
+  border-radius: 4px;
+}
+
+/* Sektion, zu der per ?ref=part_… navigiert wurde — gleiche Hervorhebung wie beim Trigger. */
+.fm-layout-part.is-highlighted {
+  background: var(--color-accent-soft, rgba(56, 132, 255, 0.16));
+  border: 1.5px solid #dc2626;
+}
+@media (prefers-color-scheme: dark) {
+  .fm-layout-part.is-highlighted { border-color: #ff5a5a; }
+}
+:root[data-theme='light'] .fm-layout-part.is-highlighted { border-color: #dc2626; }
+:root[data-theme='dark'] .fm-layout-part.is-highlighted { border-color: #ff5a5a; }
+
+.fm-layout-part.is-active {
+  box-shadow: inset 2px 0 0 var(--color-accent, #3884ff);
+}
+
+.fm-layout-part-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  column-gap: 0.4rem;
+}
+
+.fm-layout-part-name {
+  font-weight: 500;
+  text-align: left;
+  min-width: 0;
+}
+
+.fm-layout-part-meta {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.fm-layout-part-filter {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.2rem;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  align-self: center;
+}
+
+.fm-layout-part-filter:hover,
+.fm-layout-part-filter.is-active {
+  color: var(--color-accent, #3884ff);
+  border-color: var(--color-border, rgba(127, 127, 127, 0.25));
+}
+
+.fm-layout-part-break {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

@@ -58,7 +58,14 @@
       "logic": "ロジック",
       "slots": "スロット",
       "moreTargets": "(+{{n}} 件)"
-    }
+    },
+    "sectionLabel": "レイアウトパート",
+    "sectionAll": "すべて",
+    "sectionOption": "{{label}}({{count}})",
+    "sectionAria": "オブジェクトを1つのレイアウトパートに限定",
+    "sectionStats_one": "{{count}} 個中 {{n}} オブジェクト · ズーム {{zoom}}%",
+    "sectionStats_other": "{{count}} 個中 {{n}} オブジェクト · ズーム {{zoom}}%",
+    "sectionInventoryHint": "インベントリは選択したパートだけでなくレイアウト全体を対象にします"
   },
   "relationshipGraphCanvas": {
     "searchPlaceholder": "テーブルオカレンスを検索…",
@@ -165,6 +172,8 @@
     "ariaLabel": "オブジェクト階層",
     "usedBy": "使用元 ({{count}})",
     "usedByFiltered": "使用元 ({{count}} / {{total}})",
+    "usedByGrouped": "使用元 — オブジェクト別 ({{count}})",
+    "usedByGroupedFiltered": "使用元 — オブジェクト別 ({{count}} / {{total}})",
     "uses": "使用先 ({{count}})",
     "usesFiltered": "使用先 ({{count}} / {{total}})",
     "structurallyContainedBy": "構造的に含まれる ({{count}})",
@@ -173,6 +182,8 @@
     "structurallyContainsFiltered": "構造的に含む ({{count}} / {{total}})",
     "noReferences": "参照が見つかりません",
     "noFilterMatches": "現在のフィルターに一致する項目はありません",
+    "toUsageUnavailable": "このカタログにはテーブルオカレンスの直接のリンクのみが表示されます。完全な使用状況（計算式、スクリプトステップ、レイアウト上のフィールド参照）は再インポート後に表示されます。",
+    "toUsageTruncated": "使用状況を省略: フィールド参照による使用箇所 {{total}} 件中 {{count}} 件を表示。",
     "crossFileBadge": "ファイル間",
     "itemAriaLabel": "{{type}}: {{name}} に移動",
     "notNavigable": "対象がインポートされたデータセットに存在しません",
@@ -255,8 +266,57 @@
       "menu_action": {
         "short": "Menu",
         "long": "メニューアクション"
+      },
+      "calculation": {
+        "short": "Calc",
+        "long": "計算式内のフィールド参照"
+      },
+      "calculation_text": {
+        "short": "Calc text",
+        "long": "計算式テキスト内のフィールド参照（DDR 情報なしのファイル）"
+      },
+      "calc_context": {
+        "short": "Context",
+        "long": "計算式の評価コンテキスト"
+      },
+      "layout_field": {
+        "short": "Field",
+        "long": "レイアウト上のフィールド"
+      },
+      "layout_part": {
+        "short": "Break",
+        "long": "レイアウトパートの区切りフィールド"
+      },
+      "script_step": {
+        "short": "Step",
+        "long": "スクリプトステップ内のフィールド参照"
+      },
+      "security": {
+        "short": "Access",
+        "long": "アクセス権セットのレコードアクセスのコンテキスト"
+      },
+      "table_view": {
+        "short": "Table view",
+        "long": "テーブル表示の列"
+      },
+      "value_list": {
+        "short": "VL field",
+        "long": "値一覧の 2 番目のフィールド"
       }
-    }
+    },
+    "usageSummary": "内部で使用: {{objects}} · {{refs}}",
+    "usageObjects_one": "{{count}} 個のオブジェクト",
+    "usageObjects_other": "{{count}} 個のオブジェクト",
+    "usageRefs_one": "{{count}} 件の参照",
+    "usageRefs_other": "{{count}} 件の参照",
+    "usageSummaryHint": "使用数 (内部): このオブジェクトを使用するソリューション内の異なるオブジェクトの数 — レイアウトは、そのオブジェクトがいくつ表示していても 1 回、スクリプトはステップ数に関係なく 1 回と数えます。参照: 出現箇所ごと (リストでは ×N)。包含とアクセス権の制限は数えません。対象外: 外部からの使用 (サーバースケジュール、Data API、OData、URL 呼び出し、プラグインなど) と動的参照 (名前によるスクリプト、GetField、Evaluate)。",
+    "usageDocs": "数え方",
+    "groupByObjectHint": "使用しているオブジェクトでグループ化 (入力方向) — レイアウトは、そのオブジェクトがいくつ表示していても 1 回と数えます",
+    "groupAllRefsHint": "すべての参照を表示",
+    "groupExpand": "参照を表示",
+    "groupCollapse": "参照を隠す",
+    "noUsageGroup": "使用なし",
+    "noUsageGroupHint": "使用として数えないリンク (アクセス権の制限、トリガーノードなど)"
   },
   "searchOptions": {
     "regionAria": "並べ替えとグループ化のオプション",
@@ -272,7 +332,14 @@
     "groupFile": "ファイル",
     "modifiedSinceLabel": "更新日以降",
     "modifiedSinceHint": "自身の変更スタンプがこの日以降のオブジェクトのみ — スクリプトステップ、レイアウトオブジェクト、計算式には自身のスタンプがありません",
-    "modifiedSinceClear": "リセット"
+    "modifiedSinceClear": "リセット",
+    "sortUsage": "使用数 (内部)",
+    "usageLabel": "使用数 (内部)",
+    "usageOpAria": "比較",
+    "usageHint": "使用しているオブジェクトの数（レイアウト上のオブジェクトはそのレイアウトとして数えます）。≤ 0 で未使用のオブジェクトを表示します。スクリプトステップ、レイアウトオブジェクト、計算式、リレーションシップには使用数がなく、除外されます 外部からの使用 (サーバースケジュール、Data API、OData、URL 呼び出し、プラグインなど) は対象外です。",
+    "usageUnavailable": "スキーマ 1.40.0 以降で作成したカタログが必要です — ソリューションを再インポートしてください",
+    "usageDirAsc": "使用の少ない順",
+    "usageDirDesc": "使用の多い順"
   },
   "fieldViewer": {
     "ariaLabel": "フィールドの詳細",
@@ -372,7 +439,17 @@
     "healedUuidMatch": "UUID で一致 (重複)",
     "healedUuidTitle": "FileMaker はこのオブジェクトを検索した UUID で管理しています。エクスポート内でこの UUID が重複していたため、カタログでは代替 UUID で保持されています。",
     "idMatch": "ID {{id}} で一致",
-    "modifiedTooltip": "{{age}}に更新 — 編集したクライアントのローカル時刻（タイムゾーンなし）"
+    "modifiedTooltip": "{{age}}に更新 — 編集したクライアントのローカル時刻（タイムゾーンなし）",
+    "usageTooltip": "内部で使用: {{owners}} · 参照: {{refs}} · ロール: {{roles}} · ファイル: {{files}}",
+    "usageCellAria": "使用数 {{count}} — 受信参照を開く",
+    "usageEntryPoint": "スクリプトメニューまたはレイアウトメニューにあります — 参照なしでも到達可能",
+    "usageBuiltin": "組み込みのアクセス権セット — 削除できません",
+    "usageBridge": "リレーションシップのブリッジ — 使用中のテーブルオカレンス間の経路に必要",
+    "usageDead": "リレーションシップグラフの不要な枝 — その先は使用されていません",
+    "usageKeyField": "リレーションシップの照合フィールド",
+    "usageCrossFile": "別のファイルから使用",
+    "usageUnverified": "未検証 — ファイルは DDR 情報なしで書き出されたため、計算式の参照がありません",
+    "usageExternal": "外部からの使用 (サーバースケジュール、Data API、OData、URL 呼び出し、AppleScript、プラグインなど) は対象外です"
   },
   "scriptSearchFilter": {
     "searchAria": "参照を検索",
@@ -805,7 +882,15 @@
     "optFieldFrames": "アクティブレコードでフィールド枠を表示",
     "optFrameCurrentOnly": "現在のレコードのフィールドのみ枠表示",
     "optShowCurrentInList": "リストビューでレコード表示",
-    "optQuickFind": "クイック検索"
+    "optQuickFind": "クイック検索",
+    "partsHeading": "レイアウトパート",
+    "partsObjects_one": "{{count}} オブジェクト",
+    "partsObjects_other": "{{count}} オブジェクト",
+    "partsHeight": "{{size}} pt",
+    "partsSortedBy": "ソート対象",
+    "partsFilterTitle": "グラフィックでこのパートのみ表示",
+    "partsFilterActiveTitle": "パートフィルタを解除",
+    "partsFieldUnresolved": "フィールドがカタログにありません(ファイル未インポート?)"
   },
   "pluginSpec": {
     "tooltip": "{{plugin}}ドキュメントに基づくプラットフォーム対応",
@@ -1006,5 +1091,223 @@
     "usedSuffix": "{{used}} 件使用",
     "functionsHeading": "関数",
     "colFunction": "関数"
+  },
+  "tableOccurrence": {
+    "ariaLabel": "テーブルオカレンスの詳細",
+    "definitionHeading": "定義",
+    "baseTable": "ソーステーブル",
+    "baseTableUnresolved": "— 解決できません —",
+    "inFile": "ファイル「{{file}}」内",
+    "dataSource": "データソース",
+    "dsResolved": "ファイル「{{file}}」はカタログ内にあります",
+    "dsUnresolved": "対象ファイルはインポートされていません",
+    "diagram": "リレーションシップグラフ",
+    "viewLabel": "表示: {{view}}",
+    "view": {
+      "Full": "すべてのフィールド",
+      "Related": "リレーションシップフィールドのみ",
+      "Collapse": "名前のみ"
+    },
+    "usageHeading": "使用状況",
+    "class": {
+      "used": "使用中",
+      "relationship_bridge": "リレーションシップの橋渡し",
+      "dead_branch": "未使用の枝",
+      "dead_island": "未使用の島",
+      "unused": "未使用"
+    },
+    "reason": {
+      "path": "使用中の TO 間のリレーションシップ経路上にあります（例: n:m リレーションシップの結合 TO）— 必要です。",
+      "cascade_delete": "カスケード削除のあるリレーションシップに含まれます — 必要です。"
+    },
+    "deadBranch_one": "アンカー配下の未使用の枝（{{count}} 個の TO）の一部",
+    "deadBranch_other": "アンカー配下の未使用の枝（{{count}} 個の TO）の一部",
+    "deadIsland_one": "使用中の TO がない TO グループ（{{count}} 個の TO）。",
+    "deadIsland_other": "使用中の TO がない TO グループ（{{count}} 個の TO）。",
+    "unused": "静的に確認できる使用はありません。",
+    "unusedNoRel": "静的に確認できる使用もリレーションシップもありません。",
+    "reviewHint": "確認候補であり、削除の推奨ではありません — 動的参照（GetField、Evaluate、ExecuteSQL）は検出されません。",
+    "toTests": "詳細は「テスト」タブ",
+    "lowConfidence": "DDR 情報のないファイル: 計算式での使用はテキスト検索で検出、クラスは未確認です。",
+    "group": {
+      "context": "コンテキスト",
+      "display": "表示",
+      "logic": "ロジック",
+      "data": "データ",
+      "graph": "グラフ",
+      "other": "その他"
+    },
+    "category": {
+      "layout_context": "レイアウト",
+      "calc_context": "計算コンテキスト",
+      "security": "アクセス権",
+      "layout_field": "レイアウトのフィールド",
+      "portal": "ポータル",
+      "layout_part": "レイアウトパート",
+      "table_view": "表形式表示",
+      "script_step": "スクリプトステップ",
+      "calculation": "計算式",
+      "calculation_text": "計算式テキスト",
+      "navigation": "ナビゲーション",
+      "lookup": "ルックアップ",
+      "lookup_context": "ルックアップのコンテキスト",
+      "value_list": "値一覧",
+      "value_list_related": "値一覧（関連）",
+      "relationship": "リレーションシップ",
+      "relationship_cascade": "カスケード削除"
+    },
+    "chipTitle": "{{users}} 個のオブジェクト · {{refs}} 件の参照 — 参照で表示",
+    "allUsages": "すべての参照 → 参照",
+    "relationshipsHeading": "リレーションシップ",
+    "noRelationships": "— リレーションシップなし —",
+    "searchPlaceholder": "相手の TO またはフィールドで絞り込み…",
+    "colSelf": "この TO",
+    "colOperator": "Operator",
+    "colPartnerField": "相手のフィールド",
+    "colPartner": "相手の TO",
+    "colOptions": "オプション",
+    "colOptionsTitle": "オプション: この TO | 相手の TO",
+    "colRelationship": "リレーションシップ",
+    "and": "かつ",
+    "optCreate": "このリレーションシップを使用したレコードの作成を許可",
+    "optDeleteSelf": "カスケード削除: 関連レコードが削除されると、この TO のレコードが削除されます",
+    "optDeletePartner": "カスケード削除: この TO のレコードが削除されると、相手の TO のレコードが削除されます",
+    "optSort": "ソート済み",
+    "legend": "オプション「この TO | 相手の TO」: ＋ 作成を許可 · 🗑 カスケード削除 · ⇅ ソート済み",
+    "siblingsHeading": "「{{bt}}」のその他のオカレンス",
+    "siblingsNone": "— なし —",
+    "toBaseTable": "ソーステーブルへ",
+    "chipTitleInPage": "{{users}} 個のオブジェクト — 下のリレーションシップで表示",
+    "optionFilterAria": "オプションで絞り込み",
+    "option": {
+      "cascade": "カスケード削除",
+      "create": "作成を許可",
+      "sorted": "ソート済み"
+    },
+    "siblingsSearch": "TO またはファイルで絞り込み…",
+    "siblingsScopeAria": "範囲",
+    "scope": {
+      "all": "すべて",
+      "file": "このファイル",
+      "other": "ソリューション全体"
+    },
+    "scopeTitle": {
+      "all": "ソリューション内のすべてのオカレンス",
+      "file": "このファイル内のオカレンス",
+      "other": "ソリューションの他のファイル内のオカレンス"
+    },
+    "colTo": "テーブルオカレンス",
+    "dataSourceCurrent": "現在のファイル",
+    "dataSourceCurrentTitle": "ソーステーブルはデータソースを介さず、このファイルから直接使用されます",
+    "dsSelf": "このファイル自身を参照しています",
+    "dsSelfSibling": "データソースが自身のファイルを参照しています",
+    "inThisFile": "このファイル内",
+    "viaDataSource": "データソース「{{ds}}」",
+    "colDefinedIn": "定義先",
+    "colDefinedInTitle": "TO を含むリレーションシップグラフのファイル（空 = このファイル）",
+    "colSourceTitle": "TO がソーステーブルに到達する方法: 現在のファイル、またはデータソース経由",
+    "countFiltered": "{{total}} 件中 {{shown}} 件",
+    "defJumpTitle": "下のセクションへ移動",
+    "defLayoutsTitle": "このTOに基づくレイアウト — 参照に表示",
+    "siblingsJump": "その他のオカレンス",
+    "ctxHeading": "TO グループ",
+    "ctxGroup": "グループ",
+    "ctxSingle": "この TO のみ — リレーションシップなし",
+    "ctxTos_one": "{{count}} 個の TO",
+    "ctxTos_other": "{{count}} 個の TO",
+    "ctxLayouts_one": "{{count}} 個のレイアウト",
+    "ctxLayouts_other": "{{count}} 個のレイアウト",
+    "ctxAnchors": "アンカー",
+    "ctxAnchorsNone": "このグループの TO に基づくレイアウトはありません",
+    "ctxLayoutsTitle_one": "{{count}} 個のレイアウト",
+    "ctxLayoutsTitle_other": "{{count}} 個のレイアウト",
+    "ctxSelfAnchor_one": "自身がレイアウトのコンテキストです（{{count}} 個のレイアウト）",
+    "ctxSelfAnchor_other": "自身がレイアウトのコンテキストです（{{count}} 個のレイアウト）",
+    "ctxSteps_one": "{{count}} ステップ",
+    "ctxSteps_other": "{{count}} ステップ",
+    "ctxHint": "アンカー = レイアウトの基になっている TO。「最も近い」は、最も少ないリレーションシップでこの TO に到達できるアンカーです。",
+    "ctxAnchorsLess": "リストを閉じる",
+    "ctxMoreEachSingle": "ほか {{count}} 件（各 1 個のレイアウト）",
+    "ctxMoreEach": "ほか {{count}} 件（各 {{each}} 個のレイアウト）",
+    "ctxMoreTotal": "ほか {{count}} 件（合計 {{total}} 個のレイアウト）",
+    "ctxAnchor": "アンカー",
+    "ctxColLayouts": "レイアウト",
+    "ctxColDistance": "距離",
+    "ctxColDistanceTitle": "この TO までのリレーションシップのステップ数",
+    "ctxContext": "レイアウトのコンテキスト",
+    "ctxNearest": "最も近い:",
+    "ctxShowPath": "パスを表示",
+    "ctxHidePath": "パスを隠す"
+  },
+  "layoutParts": {
+    "kind": {
+      "12": "上部ナビゲーション",
+      "0": "タイトルヘッダ",
+      "1": "ヘッダ",
+      "2": "前部総計",
+      "3": "小計ソート対象",
+      "4": "ボディ",
+      "6": "後部総計",
+      "7": "フッタ",
+      "8": "タイトルフッタ",
+      "13": "下部ナビゲーション"
+    },
+    "position": {
+      "leading": "前部",
+      "trailing": "後部"
+    },
+    "subSummaryLabel": "{{position}}{{kind}} ‹{{field}}›",
+    "subSummaryLabelNoField": "{{position}}{{kind}}",
+    "option": {
+      "o1": "各出現の前で改ページ",
+      "o2": "任意の回出現後に改ページ {{n}} 回",
+      "o3": "各出現ごとにページ番号を再開始",
+      "o4": "ページ境界をまたぐ",
+      "o5": "ページの下でパートの残りの部分を捨てる",
+      "o6": "1 行おきに色を変更",
+      "o7": "アクティブな行状態を使用"
+    }
+  },
+  "layoutPartDetail": {
+    "ariaLabel": "レイアウトパートの詳細",
+    "groupGeneral": "一般",
+    "groupSort": "ソート",
+    "groupContext": "コンテキスト",
+    "groupOptions": "パートの定義",
+    "groupTechnical": "技術情報",
+    "kind": "パートの種類",
+    "exportedType": "エクスポートされた種類",
+    "exportedTypeTitle": "XML エクスポートに記載されている種類(ローカライズ済み、または FileMaker による誤った表記)",
+    "partName": "内部名",
+    "position": "位置",
+    "positionValue": "{{total}} 個中 {{pos}} 番目",
+    "previous": "前のパート",
+    "next": "次のパート",
+    "height": "高さ",
+    "top": "上端",
+    "bottom": "下端",
+    "unitPt": "{{value}} pt",
+    "objects": "オブジェクト",
+    "objectsValue": "{{total}}(パート直下に {{root}})",
+    "sortedBy": "ソート対象",
+    "sortToDiffers": "レイアウトとは別のテーブルオカレンス経由({{to}})",
+    "fieldUnresolved": "フィールドがカタログにありません(ファイル未インポート?)",
+    "layout": "レイアウト",
+    "contextTable": "テーブルオカレンス",
+    "baseTable": "ベーステーブル",
+    "file": "ファイル",
+    "optionsRaw": "オプション(生データ)",
+    "optionsUndecoded": "ダイアログオプションに該当しないビット: {{bits}}",
+    "optionOn": "オン",
+    "optionOff": "オフ",
+    "sourceLocal": "パートで設定",
+    "sourceStyle": "パートスタイル {{name}}",
+    "sourceTheme": "テーマ {{name}}",
+    "sourceDefault": "未設定(オフ)",
+    "sourceClassic": "クラシックテーマ(オフ)",
+    "bodyOnly": "ボディパートのみ",
+    "showInLayout": "レイアウトで表示",
+    "showInLayoutTitle": "このパートをフィルタとしてレイアウトを開く",
+    "objectsShowInReferences": "参照タブでオブジェクトを表示"
   }
 }

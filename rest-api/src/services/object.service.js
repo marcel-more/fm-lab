@@ -656,6 +656,50 @@ async function hasCatalogTable(ctx, tableName) {
 }
 
 /**
+ * Like hasCatalogTable, but only a table of the catalog itself counts — not the
+ * empty TEMP stub ensureCoreStubs adds for older catalogs (database.js). Needed
+ * where the UI must tell "no data" from "catalog too old".
+ */
+async function hasPersistentCatalogTable(ctx, tableName) {
+  const key = `${ctx?.solution ?? ''}\u0000persistent:${tableName}`;
+  if (catalogRelationAvailable.has(key)) return catalogRelationAvailable.get(key);
+  let ok = false;
+  try {
+    const r = await db.executeQuery(
+      ctx,
+      'SELECT 1 AS ok FROM duckdb_tables() WHERE table_name = ? AND NOT temporary LIMIT 1',
+      [tableName]
+    );
+    ok = r.rows.length > 0;
+  } catch {
+    ok = false;
+  }
+  catalogRelationAvailable.set(key, ok);
+  return ok;
+}
+
+/**
+ * Like hasCatalogTable, for one column (cached per solution, cleared on reload).
+ */
+async function hasCatalogColumn(ctx, tableName, columnName) {
+  const key = `${ctx?.solution ?? ''}\u0000${tableName}.${columnName}`;
+  if (catalogRelationAvailable.has(key)) return catalogRelationAvailable.get(key);
+  let ok = false;
+  try {
+    const r = await db.executeQuery(
+      ctx,
+      'SELECT 1 AS ok FROM duckdb_columns() WHERE table_name = ? AND column_name = ? LIMIT 1',
+      [tableName, columnName]
+    );
+    ok = r.rows.length > 0;
+  } catch {
+    ok = false;
+  }
+  catalogRelationAvailable.set(key, ok);
+  return ok;
+}
+
+/**
  * Löst den Suchterm in einen ID-Suchauftrag für buildSearchSql auf (inkl.
  * Verfügbarkeit der optionalen Tabellen). null = keine ID-Suche.
  */
@@ -824,7 +868,91 @@ function withChangeMeta(base, change) {
   };
 }
 
-function finalizeSearchSql({ inner, innerParams, orderBy, idSearch, dbType, file, countOnly, limit, offset, change = NO_CHANGE }) {
+/**
+ * Nutzung in der Suche (Spalte „Nutzung", Filter und Sortierung) aus der
+ * Analysesicht v_object_usage — dieselbe Definition wie die unused_*-Regeln.
+ * `Usage` = nutzende Container (Usage_Owners); Pseudo-Typen (Built-ins,
+ * Plug-in-Funktionen/-Komponenten, Step-Typen) tragen ihren usage_count aus
+ * aggregations.js. Typen ohne Nutzungsbegriff (ScriptStep, LayoutObject,
+ * Calculation, Relationship, …) haben Usage NULL: beim Sortieren am Ende, beim
+ * Filter fallen sie heraus (wie Objekte ohne Stempel bei „Geändert seit").
+ *   attach   Spalten anhängen (immer, sobald die Sicht existiert)
+ *   bySort   sort = 'usage', Richtung `dir` (asc = selten zuerst)
+ *   min/max  usage_min / usage_max (ganzzahlig ≥ 0)
+ *   pseudo   Pseudo-Typ-Zählung mitjoinen (nur wenn solche Typen vorkommen können)
+ */
+const NO_USAGE = { attach: false, bySort: false, dir: 'desc', min: null, max: null, pseudo: false, available: false };
+
+function toBound(v) {
+  if (v === undefined || v === null || v === '') return null;
+  const n = Number(v);
+  return Number.isInteger(n) && n >= 0 ? n : null;
+}
+
+function usageOptions({ sort, usageDir, usageMin, usageMax } = {}, { available = false, dbType = null, countOnly = false } = {}) {
+  if (!available) return { ...NO_USAGE };
+  const min = toBound(usageMin);
+  const max = toBound(usageMax);
+  const filtered = min !== null || max !== null;
+  const bySort = !countOnly && sort === 'usage';
+  // Voreinstellung der Richtung: mit Obergrenze „selten zuerst", sonst „meist genutzt zuerst".
+  const dir = usageDir === 'asc' || usageDir === 'desc' ? usageDir : (max !== null ? 'asc' : 'desc');
+  // Der Zähler braucht die Spalten nur für den Filter.
+  const attach = countOnly ? filtered : true;
+  const pseudo = !dbType || aggregations.USAGE_TYPES.includes(dbType);
+  return { attach, bySort, dir, min, max, pseudo, available: true };
+}
+
+// Hängt die Nutzungsspalten an die Suchmenge. Der Aufrufer schachtelt das
+// Ergebnis noch einmal (eindeutige Spaltennamen für ORDER BY).
+function withUsageMeta(base, usage) {
+  const pseudoJoin = usage.pseudo
+    ? `
+      LEFT JOIN (${aggregations.buildPseudoUsageSql()}) p
+        ON p.Object_UUID = c.Object_UUID AND p.Object_Type = c.Object_Type`
+    : '';
+  const pseudoCount = usage.pseudo ? 'p.usage_count' : 'CAST(NULL AS BIGINT)';
+  const usageExpr = `COALESCE(u.Usage_Owners, ${pseudoCount})`;
+  const where = [];
+  const params = [];
+  if (usage.min !== null) { where.push(`${usageExpr} >= ?`); params.push(usage.min); }
+  if (usage.max !== null) { where.push(`${usageExpr} <= ?`); params.push(usage.max); }
+  return {
+    sql: `SELECT c.*,
+             ${usageExpr} AS Usage,
+             COALESCE(u.Usage_Refs, ${pseudoCount}) AS Usage_Refs,
+             u.Usage_Users AS Usage_Users,
+             u.Usage_Roles AS Usage_Roles,
+             u.Usage_Files AS Usage_Files,
+             COALESCE(u.Usage_Class, CASE WHEN ${pseudoCount} > 0 THEN 'used'
+                                          WHEN ${pseudoCount} = 0 THEN 'unused' END) AS Usage_Class,
+             u.Entry_Point AS Usage_Entry_Point,
+             u.Key_Field AS Usage_Key_Field,
+             u.Cross_File AS Usage_Cross_File,
+             u.Low_Confidence AS Usage_Low_Confidence
+      FROM (${base}) c
+      LEFT JOIN v_object_usage u ON u.Object_UUID = c.Object_UUID AND u.File_Name = c.File_Name${pseudoJoin}${
+        where.length ? `\n      WHERE ${where.join(' AND ')}` : ''}`,
+    params,
+  };
+}
+
+/**
+ * Serverseitige Sortierung der Suchliste (die Liste wird seitenweise geladen —
+ * eine Client-Sortierung ordnete nur die geladenen Seiten). Gleichstand → Name,
+ * Datei, damit die Seitengrenzen stabil bleiben. null = Standard-Reihenfolge.
+ */
+const SEARCH_SORT_SQL = {
+  name: 'Object_Name COLLATE NOCASE, Object_Name, File_Name',
+  type: 'Object_Type, Object_Name COLLATE NOCASE, File_Name',
+  file: 'File_Name NULLS LAST, Object_Name COLLATE NOCASE, Object_Name',
+};
+
+function searchSortKey(sort) {
+  return Object.prototype.hasOwnProperty.call(SEARCH_SORT_SQL, sort) ? sort : null;
+}
+
+function finalizeSearchSql({ inner, innerParams, orderBy, idSearch, dbType, file, countOnly, limit, offset, change = NO_CHANGE, usage = NO_USAGE, sortKey = null }) {
   let base = inner;
   let params = [...innerParams];
   let order = orderBy;
@@ -854,6 +982,21 @@ function finalizeSearchSql({ inner, innerParams, orderBy, idSearch, dbType, file
         .filter(Boolean).join(', ');
     }
   }
+  if (usage.attach) {
+    const wrapped = withUsageMeta(base, usage);
+    base = wrapped.sql;
+    params.push(...wrapped.params);
+    if (usage.bySort) {
+      order = [idSearch ? MATCH_RANK_SQL : null,
+        `Usage ${usage.dir === 'asc' ? 'ASC' : 'DESC'} NULLS LAST`,
+        'Object_Name COLLATE NOCASE', 'File_Name', orderBy]
+        .filter(Boolean).join(', ');
+    }
+  }
+  if (sortKey && !change.bySort && !usage.bySort) {
+    order = [idSearch ? MATCH_RANK_SQL : null, SEARCH_SORT_SQL[sortKey], orderBy]
+      .filter(Boolean).join(', ');
+  }
   let sql = countOnly
     ? `SELECT COUNT(*) AS count FROM (${base}) c`
     : `SELECT * FROM (${base}) c ORDER BY ${order}`;
@@ -864,7 +1007,7 @@ function finalizeSearchSql({ inner, innerParams, orderBy, idSearch, dbType, file
   return { sql, params };
 }
 
-function buildSearchSql({ name, dbType, file, limit, offset, countOnly = false, builtinLocalized = false, idSearch = null, change = NO_CHANGE }) {
+function buildSearchSql({ name, dbType, file, limit, offset, countOnly = false, builtinLocalized = false, idSearch = null, change = NO_CHANGE, usage = NO_USAGE, sortKey = null }) {
   const params = [];
 
   // Pfad A0: expliziter ValueList-Filter → Wert-Branch (Name ODER Custom-Value).
@@ -877,7 +1020,7 @@ function buildSearchSql({ name, dbType, file, limit, offset, countOnly = false, 
     }
     return finalizeSearchSql({
       inner: idSearch?.kind === 'object_id' ? null : inner,
-      innerParams: params, orderBy: 'Object_Name', idSearch, dbType, file, countOnly, limit, offset, change,
+      innerParams: params, orderBy: 'Object_Name', idSearch, dbType, file, countOnly, limit, offset, change, usage, sortKey,
     });
   }
 
@@ -911,7 +1054,7 @@ function buildSearchSql({ name, dbType, file, limit, offset, countOnly = false, 
     }
     return finalizeSearchSql({
       inner: idSearch?.kind === 'object_id' ? null : inner,
-      innerParams: params, orderBy: 'Object_Name', idSearch, dbType, file, countOnly, limit, offset, change,
+      innerParams: params, orderBy: 'Object_Name', idSearch, dbType, file, countOnly, limit, offset, change, usage, sortKey,
     });
   }
 
@@ -919,7 +1062,7 @@ function buildSearchSql({ name, dbType, file, limit, offset, countOnly = false, 
   // Namenssuche nach dem Literal 'id:42'.
   if (idSearch?.kind === 'object_id') {
     return finalizeSearchSql({
-      inner: null, innerParams: [], orderBy: 'Object_Name', idSearch, dbType, file, countOnly, limit, offset, change,
+      inner: null, innerParams: [], orderBy: 'Object_Name', idSearch, dbType, file, countOnly, limit, offset, change, usage, sortKey,
     });
   }
 
@@ -954,10 +1097,10 @@ function buildSearchSql({ name, dbType, file, limit, offset, countOnly = false, 
   // Wildcard-only ('%' bzw. nur Wildcards): ScriptStep- und ValueList-Wert-Branch
   // weglassen, sonst landen 196k Steps bzw. teure Wert-Scans in der Default-Liste.
   if (isWildcardOnly) {
-    if (change.active) {
+    if (change.active || usage.attach || sortKey) {
       return finalizeSearchSql({
         inner: nonStepInner, innerParams: params, orderBy: 'Object_Name',
-        idSearch: null, dbType, file, countOnly, limit, offset, change,
+        idSearch: null, dbType, file, countOnly, limit, offset, change, usage, sortKey,
       });
     }
     if (countOnly) {
@@ -1009,7 +1152,7 @@ function buildSearchSql({ name, dbType, file, limit, offset, countOnly = false, 
     params.push(name, name);
   }
   return finalizeSearchSql({
-    inner: combined, innerParams: params, orderBy: 'Object_Name', idSearch, dbType, file, countOnly, limit, offset, change,
+    inner: combined, innerParams: params, orderBy: 'Object_Name', idSearch, dbType, file, countOnly, limit, offset, change, usage, sortKey,
   });
 }
 
@@ -1026,6 +1169,10 @@ async function searchObjects(ctx, searchOptions) {
 
     // Normalize type to PascalCase for database
     const dbType = type ? (OBJECT_TYPE_MAP[type] || type) : null;
+    const usage = usageOptions(searchOptions, {
+      available: await hasPersistentCatalogTable(ctx, 'v_object_usage'), dbType,
+    });
+    const sortKey = searchSortKey(searchOptions.sort);
 
     // ScriptStep-Spezialpfad: Volltextsuche im DDR_Step_Text + Comment-Inhalt
     // aus Parameters_XML, mit Script_Name/Step_Index/Step_Text in der Response.
@@ -1033,7 +1180,7 @@ async function searchObjects(ctx, searchOptions) {
     const idSearch = await resolveIdSearch(ctx, name);
 
     if (dbType === 'ScriptStep') {
-      return await searchScriptSteps(ctx, { name, file, limit, offset, idSearch, change });
+      return await searchScriptSteps(ctx, { name, file, limit, offset, idSearch, change, usage, sortKey });
     }
 
     // Suchstrategie (ScriptStep-Filtering):
@@ -1055,7 +1202,7 @@ async function searchObjects(ctx, searchOptions) {
     // Nachschlage-View trägt (Schema 1.32.0+). Wildcard-only-Suchen brauchen
     // den Zweig nicht — buildSearchSql lässt ihn dort weg.
     const builtinLocalized = await hasBuiltinTokenLookup(ctx);
-    const { sql, params } = buildSearchSql({ name, dbType, file, limit, offset, builtinLocalized, idSearch, change });
+    const { sql, params } = buildSearchSql({ name, dbType, file, limit, offset, builtinLocalized, idSearch, change, usage, sortKey });
 
     const result = await db.executeQuery(ctx, sql, params);
 
@@ -1112,7 +1259,7 @@ const SCRIPTSTEP_SEARCH_CTE = `
  * finalizeSearchSql (ID-Treffer vorn, Dedup). Liste und Count teilen sich den
  * Builder, damit Count == List-Total bleibt.
  */
-function buildScriptStepIdSearchSql({ name, file, idSearch, countOnly, limit, offset, change = NO_CHANGE }) {
+function buildScriptStepIdSearchSql({ name, file, idSearch, countOnly, limit, offset, change = NO_CHANGE, usage = NO_USAGE, sortKey = null }) {
   let inner = `${SCRIPTSTEP_SEARCH_CTE}
     SELECT *
     FROM script_steps
@@ -1126,13 +1273,16 @@ function buildScriptStepIdSearchSql({ name, file, idSearch, countOnly, limit, of
     inner: idSearch?.kind === 'object_id' ? null : inner,
     innerParams,
     orderBy: 'File_Name, Script_Name, Step_Index',
-    idSearch, dbType: 'ScriptStep', file, countOnly, limit, offset, change,
+    idSearch, dbType: 'ScriptStep', file, countOnly, limit, offset, change, usage, sortKey,
   });
 }
 
-async function searchScriptSteps(ctx, { name, file, limit, offset, idSearch = null, change = NO_CHANGE }) {
-  if (idSearch || change.active) {
-    const { sql, params } = buildScriptStepIdSearchSql({ name, file, idSearch, countOnly: false, limit, offset, change });
+async function searchScriptSteps(ctx, { name, file, limit, offset, idSearch = null, change = NO_CHANGE, usage = NO_USAGE, sortKey = null }) {
+  // Script-Schritte haben keinen Nutzungsbegriff: die Spalten nur bei aktivem
+  // Filter/Sortierung (dann fallen alle heraus bzw. stehen gleichauf).
+  const stepUsage = usage.min !== null || usage.max !== null || usage.bySort ? usage : NO_USAGE;
+  if (idSearch || change.active || stepUsage.attach || sortKey) {
+    const { sql, params } = buildScriptStepIdSearchSql({ name, file, idSearch, countOnly: false, limit, offset, change, usage: stepUsage, sortKey });
     const result = await db.executeQuery(ctx, sql, params);
     return { data: convertBigInts(result.rows), meta: result.meta };
   }
@@ -1166,9 +1316,9 @@ async function searchScriptSteps(ctx, { name, file, limit, offset, idSearch = nu
   };
 }
 
-async function countScriptSteps(ctx, { name, file, idSearch = null, change = NO_CHANGE }) {
-  if (idSearch || change.active) {
-    const { sql, params } = buildScriptStepIdSearchSql({ name, file, idSearch, countOnly: true, change });
+async function countScriptSteps(ctx, { name, file, idSearch = null, change = NO_CHANGE, usage = NO_USAGE }) {
+  if (idSearch || change.active || usage.attach) {
+    const { sql, params } = buildScriptStepIdSearchSql({ name, file, idSearch, countOnly: true, change, usage });
     const result = await db.executeQuery(ctx, sql, params);
     return { data: convertBigInts(result.rows), meta: result.meta };
   }
@@ -1198,19 +1348,27 @@ async function countScriptSteps(ctx, { name, file, idSearch = null, change = NO_
  */
 async function countSearchResults(ctx, searchOptions) {
   try {
-    const { name, type, file, modifiedSince } = searchOptions;
+    const { name, type, file, modifiedSince, usageMin, usageMax } = searchOptions;
     // Nur der Filter verändert die Treffermenge — die Sortierung nicht.
     const change = changeOptions({ modifiedSince });
 
     // Normalize type to PascalCase for database
     const dbType = type ? (OBJECT_TYPE_MAP[type] || type) : null;
+    // Verfügbarkeit der Nutzungssicht reist im Zähler mit: die Suche zeigt dann
+    // Spalte und Filter, sonst den Hinweis „neu importieren".
+    const usageAvailable = await hasPersistentCatalogTable(ctx, 'v_object_usage');
+    const usage = usageOptions({ usageMin, usageMax }, { available: usageAvailable, dbType, countOnly: true });
+    const withAvailability = (res) => ({
+      ...res,
+      data: res.data.map((row) => ({ ...row, usage_available: usageAvailable })),
+    });
 
     // ScriptStep-Spezialpfad: muss denselben WHERE-Filter wie searchScriptSteps
     // verwenden, sonst weicht der Total-Count von der gepaginierten Liste ab.
     const idSearch = await resolveIdSearch(ctx, name);
 
     if (dbType === 'ScriptStep') {
-      return await countScriptSteps(ctx, { name, file, idSearch, change });
+      return withAvailability(await countScriptSteps(ctx, { name, file, idSearch, change, usage }));
     }
 
     // Identische Filterlogik wie searchObjects (UNION ALL bei Volltextsuche
@@ -1219,14 +1377,14 @@ async function countSearchResults(ctx, searchOptions) {
     // Schreibweisen: ohne dasselbe Flag zählte der Count weniger als die Liste
     // zeigt.
     const builtinLocalized = await hasBuiltinTokenLookup(ctx);
-    const { sql, params } = buildSearchSql({ name, dbType, file, countOnly: true, builtinLocalized, idSearch, change });
+    const { sql, params } = buildSearchSql({ name, dbType, file, countOnly: true, builtinLocalized, idSearch, change, usage });
 
     const result = await db.executeQuery(ctx, sql, params);
 
-    return {
+    return withAvailability({
       data: convertBigInts(result.rows),
       meta: result.meta,
-    };
+    });
   } catch (error) {
     if (error.code) throw error;
     throw createError('DATABASE_ERROR', error.message, searchOptions);
@@ -1444,15 +1602,8 @@ const DISPLAY_CALC_VARIABLES_SQL = `
  * Liefert ein {data, meta}-Objekt (kompatibel zum Standard-References-Pfad)
  * oder NULL, wenn das Objekt kein Pseudo-Typ ist.
  */
-async function getPseudoTypeReferences(ctx, uuid, direction, link_type, limit, origin = null) {
-  // Object-Type lookup
-  const typeLookup = await db.executeQuery(
-    ctx,
-    'SELECT Object_Type, Object_Name FROM ObjectCatalog WHERE Object_UUID = ?',
-    [uuid]
-  );
-  if (typeLookup.rows.length === 0) return null;
-  const objType = typeLookup.rows[0].Object_Type;
+async function getPseudoTypeReferences(ctx, uuid, objType, direction, link_type, limit, origin = null) {
+  if (!objType) return null;
 
   // Pseudo-Type-Gate: dieser Resolver ist NUR für Aggregate (ScriptStepType,
   // PluginComponent) zuständig. Für alle anderen Typen sofort durchreichen
@@ -1714,11 +1865,250 @@ async function getPseudoTypeReferences(ctx, uuid, direction, link_type, limit, o
 }
 
 /**
+ * Read path "where-used of a table occurrence" over v_table_occurrence_usage.
+ *
+ * ObjectLinks holds only the edges of a TO (layout context, portal, navigation,
+ * relationship, lookup, value list). A field reference TO::Field in a formula, a
+ * script step or on a layout creates an edge to the FIELD only — the TO lives in
+ * the P2 extracts alone, which the analysis table brings together. Only its rows
+ * WITHOUT an edge (`Is_Edge = FALSE`) are appended, so no usage shows twice.
+ * `relationship_cascade` stays out as well: the relationship itself is already
+ * in the list as a left_table/right_table edge.
+ *
+ * Row shape as the direction='all' branch of getReferences (Source_* for
+ * 'parent'), grouped per (using object, category):
+ *   Link_Role      = 'uses_table_occurrence' (read path only, no registry entry)
+ *   Subrole_Class  = category (calculation, script_step, layout_field, …)
+ *   Subrole_Detail = the roles of the group (formula slot, "step 12", …), capped
+ *   Call_Count     = sum of the single references
+ * LayoutObjects carry their layout as container. Clone scoping via File_Name.
+ */
+const TO_USAGE_ROLE = 'uses_table_occurrence';
+const TO_USAGE_DETAIL_MAX = 12;
+
+function buildTableOccurrenceUsageSql({ direction = 'all', focusFile = null, limit = 0 } = {}) {
+  const grouped = `
+    SELECT 'parent' AS direction,
+           u.User_UUID AS uuid,
+           u.User_Type AS Object_Type,
+           any_value(u.User_Name) AS Object_Name,
+           u.User_File AS File_Name,
+           '${TO_USAGE_ROLE}' AS Link_Role,
+           u.Category AS Subrole_Class,
+           -- natural order ("step 2" before "step 10"); bare slot indexes (formula
+           -- slots of a script step) say nothing and stay out, as on the edge path
+           NULLIF(array_to_string([x.r FOR x IN list_slice(list_sort(list_distinct(list({
+               'p': regexp_replace(u.Role, '[0-9]+$', ''),
+               'n': TRY_CAST(regexp_extract(u.Role, '[0-9]+$') AS BIGINT),
+               'r': u.Role}) FILTER (WHERE NOT regexp_full_match(u.Role, '[0-9]+')))),
+               1, ${TO_USAGE_DETAIL_MAX})], ', ')
+             || CASE WHEN count(DISTINCT u.Role) FILTER (WHERE NOT regexp_full_match(u.Role, '[0-9]+'))
+                       > ${TO_USAGE_DETAIL_MAX} THEN ', …' ELSE '' END, '') AS Subrole_Detail,
+           bool_or(u.User_File <> u.File_Name) AS Is_Cross_File,
+           u.Container_UUID,
+           u.Container_Type,
+           any_value(u.Container_Name) AS Container_Name,
+           CASE WHEN u.Container_UUID IS NOT NULL THEN u.User_File END AS Container_File,
+           NULL AS Trigger_UUID,
+           TRUE AS navigable,
+           CAST(sum(u.Ref_Count) AS BIGINT) AS Call_Count,
+           count(*) OVER () AS Total_Count
+    FROM v_table_occurrence_usage u
+    WHERE u.TO_UUID = ?
+      ${focusFile ? 'AND u.File_Name = ?' : ''}
+      AND NOT u.Is_Edge
+      AND u.Category <> 'relationship_cascade'
+    GROUP BY u.User_UUID, u.User_Type, u.User_File, u.Category,
+             u.Container_UUID, u.Container_Type
+    ORDER BY Call_Count DESC, Object_Name, File_Name
+    ${limit > 0 ? 'LIMIT ?' : ''}`;
+  if (direction !== 'parent') return grouped;
+  return `
+    SELECT uuid AS Source_UUID, Object_Type AS Source_Type, Object_Name AS Source_Name,
+           File_Name AS Source_File, Link_Role, Subrole_Class, Subrole_Detail, Is_Cross_File,
+           Container_UUID, Container_Type, Container_Name, Container_File, Trigger_UUID,
+           Call_Count, Total_Count
+    FROM (${grouped}) g`;
+}
+
+/** Group count only — for when the edges already used up the limit. */
+function buildTableOccurrenceUsageCountSql({ focusFile = null } = {}) {
+  return `
+    SELECT count(*) AS n FROM (
+      SELECT 1
+      FROM v_table_occurrence_usage u
+      WHERE u.TO_UUID = ?
+        ${focusFile ? 'AND u.File_Name = ?' : ''}
+        AND NOT u.Is_Edge
+        AND u.Category <> 'relationship_cascade'
+      GROUP BY u.User_UUID, u.User_Type, u.User_File, u.Category,
+               u.Container_UUID, u.Container_Type
+    ) g`;
+}
+
+/**
+ * The appended TO usages plus their meta (`to_usage`):
+ *   { available: true, rows, total, truncated }  — table present
+ *   { available: false }                          — catalog older than schema
+ *     1.38.0: edges only; the frontend points to the re-import
+ * `limit` = what is left of the limit after the edges; `unlimited` = no limit.
+ */
+async function getTableOccurrenceUsageRows(ctx, { uuid, direction, focusFile, limit, unlimited }) {
+  if (!await hasCatalogTable(ctx, 'v_table_occurrence_usage')) {
+    return { rows: [], meta: { available: false } };
+  }
+  const scope = focusFile ? [uuid, focusFile] : [uuid];
+  if (!unlimited && limit <= 0) {
+    const r = await db.executeQuery(ctx, buildTableOccurrenceUsageCountSql({ focusFile }), scope);
+    const total = Number(r.rows[0]?.n ?? 0);
+    return { rows: [], meta: { available: true, rows: 0, total, truncated: total > 0 } };
+  }
+  const sql = buildTableOccurrenceUsageSql({ direction, focusFile, limit: unlimited ? 0 : limit });
+  const r = await db.executeQuery(ctx, sql, unlimited ? scope : [...scope, limit]);
+  const rows = convertBigInts(r.rows);
+  const total = rows.length > 0 ? Number(rows[0].Total_Count) : 0;
+  for (const row of rows) delete row.Total_Count;
+  return { rows, meta: { available: true, rows: rows.length, total, truncated: rows.length < total } };
+}
+
+/**
+ * Read path "objects of a layout part" (and its mirror "part of a layout object").
+ *
+ * Every layout object hangs on its LAYOUT (parent_layout); an edge to its layout
+ * part would double that edge for every object. The part assignment lives in
+ * the catalog instead (LayoutObjects.Part_Seq, schema 1.39.0, derived in P4 from
+ * position and parent chain) — this read path turns it into reference rows:
+ *   focus LayoutPart   → its objects, direction 'parent' (object → part)
+ *   focus LayoutObject → its part,    direction 'child'  (object → part)
+ * Link_Role = 'parent_part' (read path only, no registry entry; containment like
+ * parent_layout, never where-used). Subrole_Class = the object type of the
+ * layout object (one chip per type in the references tab). The container of the
+ * layout object is its layout, as on the edge path. Clone scoping via File_Name.
+ * Row shape as the direction='all' branch of getReferences (Source_* for
+ * 'parent', Target_* for 'child').
+ */
+const PART_MEMBER_ROLE = 'parent_part';
+
+function buildLayoutPartMemberSql({ focusType, direction = 'all', focusFile = null, limit = 0 } = {}) {
+  const partKey = `'part_' || CAST(lp.Layout_ID AS VARCHAR) || '_' || CAST(lp.Part_Kind AS VARCHAR) || '_'
+      || CAST(lp.Part_Seq AS VARCHAR) || '_' || lp.File_Name`;
+  const isPart = focusType === 'LayoutPart';
+  const focusWhere = isPart
+    ? `${partKey} = ?${focusFile ? ' AND lp.File_Name = ?' : ''}`
+    : `lo.Object_UUID = ?${focusFile ? ' AND lo.File_Name = ?' : ''}`;
+  // The listed object: the layout objects of a part — or the part of an object.
+  const listed = isPart
+    ? `lo.Object_UUID AS uuid, 'LayoutObject' AS Object_Type,
+       COALESCE(oc.Object_Name, lo.Object_Type) AS Object_Name, lo.File_Name AS File_Name,
+       lo.Object_Type AS Subrole_Class,
+       l.L_UUID AS Container_UUID, 'Layout' AS Container_Type,
+       l.L_Name AS Container_Name, l.File_Name AS Container_File`
+    : `${partKey} AS uuid, 'LayoutPart' AS Object_Type,
+       COALESCE(pc.Object_Name, lp.Part_Type) AS Object_Name, lp.File_Name AS File_Name,
+       NULL AS Subrole_Class,
+       l.L_UUID AS Container_UUID, 'Layout' AS Container_Type,
+       l.L_Name AS Container_Name, l.File_Name AS Container_File`;
+  const rowDirection = isPart ? 'parent' : 'child';
+  const grouped = `
+    SELECT '${rowDirection}' AS direction,
+           ${listed},
+           '${PART_MEMBER_ROLE}' AS Link_Role,
+           NULL AS Subrole_Detail,
+           FALSE AS Is_Cross_File,
+           NULL AS Trigger_UUID,
+           TRUE AS navigable,
+           CAST(1 AS BIGINT) AS Call_Count,
+           count(*) OVER () AS Total_Count
+    FROM LayoutParts lp
+    JOIN LayoutObjects lo
+      ON lo.File_Name = lp.File_Name AND lo.Layout_ID = lp.Layout_ID AND lo.Part_Seq = lp.Part_Seq
+    JOIN Layouts l ON l.L_ID = lp.Layout_ID AND l.File_Name = lp.File_Name
+    LEFT JOIN ObjectCatalog oc
+      ON oc.Object_UUID = lo.Object_UUID AND oc.File_Name = lo.File_Name AND oc.Object_Type = 'LayoutObject'
+    LEFT JOIN ObjectCatalog pc
+      ON pc.Object_UUID = ${partKey} AND pc.File_Name = lp.File_Name AND pc.Object_Type = 'LayoutPart'
+    WHERE ${focusWhere}
+    ORDER BY lo.Nesting_Level, lo.Bounds_Top, lo.Bounds_Left, Object_Name
+    ${limit > 0 ? 'LIMIT ?' : ''}`;
+  if (direction === 'all') return grouped;
+  const prefix = isPart ? 'Source' : 'Target';
+  return `
+    SELECT uuid AS ${prefix}_UUID, Object_Type AS ${prefix}_Type, Object_Name AS ${prefix}_Name,
+           File_Name AS ${prefix}_File, Link_Role, Subrole_Class, Subrole_Detail, Is_Cross_File,
+           Container_UUID, Container_Type, Container_Name, Container_File, Trigger_UUID,
+           ${isPart ? '' : 'navigable, '}Call_Count, Total_Count
+    FROM (${grouped}) g`;
+}
+
+/**
+ * The appended part-membership rows plus their meta (`part_members`):
+ *   { available: true, rows, total, truncated }  — catalog with Part_Seq
+ *   { available: false }                          — catalog before schema 1.39.0
+ */
+async function getLayoutPartMemberRows(ctx, { uuid, focusType, direction, focusFile, limit, unlimited }) {
+  if (!await hasCatalogColumn(ctx, 'LayoutObjects', 'Part_Seq')) {
+    return { rows: [], meta: { available: false } };
+  }
+  const scope = focusFile ? [uuid, focusFile] : [uuid];
+  const effLimit = unlimited ? 0 : Math.max(limit, 1);
+  const sql = buildLayoutPartMemberSql({ focusType, direction, focusFile, limit: effLimit });
+  const r = await db.executeQuery(ctx, sql, effLimit > 0 ? [...scope, effLimit] : scope);
+  let rows = convertBigInts(r.rows);
+  const total = rows.length > 0 ? Number(rows[0].Total_Count) : 0;
+  // limit already used up by the edges → count only, no rows (as the TO path)
+  if (!unlimited && limit <= 0) rows = [];
+  for (const row of rows) delete row.Total_Count;
+  return { rows, meta: { available: true, rows: rows.length, total, truncated: rows.length < total } };
+}
+
+/**
  * Get object references (dependencies)
  * @param {Object} ctx - Request-Kontext (Solution-Scope)
  * @param {Object} refOptions - Reference options {uuid, direction, link_type, limit}
  * @returns {Promise<Object>} References with metadata
  */
+/**
+ * Marks the incoming rows of a references result with `Counts_As_Usage`: is the
+ * row a usage in the sense of v_object_usage (the definition behind the search
+ * column, the tab header and the unused_* rules)? The grouped view of the tab
+ * ("by object") builds its groups from these rows only, so the group count
+ * equals meta.usage.owners; the other incoming rows (restrictions, an unmirrored
+ * trigger_script, containment) form a separate "no usage" group.
+ * Mirrors the view's definition:
+ *   TableOccurrence  every incoming row except the relationship sides
+ *                    (left_table/right_table — category 'relationship'); a
+ *                    relationship that deletes records of this TO (category
+ *                    relationship_cascade, listed only through its side row)
+ *                    counts
+ *   BaseTable        only base_table (TO → base table)
+ *   otherwise        LinkRoleRegistry.Counts_For_Where_Used
+ */
+async function markUsageRows(ctx, rows, { objType, uuid, focusFile }, isIncoming) {
+  let counts;
+  if (objType === 'TableOccurrence') {
+    const cascade = new Set();
+    if (await hasCatalogTable(ctx, 'v_table_occurrence_usage')) {
+      const r = await db.executeQuery(ctx, `
+        SELECT DISTINCT User_UUID, User_File FROM v_table_occurrence_usage
+        WHERE TO_UUID = ? AND Category = 'relationship_cascade'
+          ${focusFile ? 'AND File_Name = ?' : ''}`, focusFile ? [uuid, focusFile] : [uuid]);
+      for (const x of r.rows) cascade.add(`${x.User_UUID}\u0000${x.User_File}`);
+    }
+    counts = (role, row) => (role !== 'left_table' && role !== 'right_table')
+      || cascade.has(`${row.uuid ?? row.Source_UUID}\u0000${row.File_Name ?? row.Source_File}`);
+  } else if (objType === 'BaseTable') {
+    counts = (role) => role === 'base_table';
+  } else {
+    const r = await db.executeQuery(ctx,
+      'SELECT Link_Role FROM LinkRoleRegistry WHERE Counts_For_Where_Used');
+    const roles = new Set(r.rows.map((x) => x.Link_Role));
+    counts = (role) => roles.has(role);
+  }
+  for (const row of rows) {
+    if (isIncoming(row)) row.Counts_As_Usage = counts(row.Link_Role, row);
+  }
+}
+
 async function getReferences(ctx, refOptions) {
   try {
     const {
@@ -1739,7 +2129,16 @@ async function getReferences(ctx, refOptions) {
     // Pseudo-Type-Sonderfall: ScriptStepType + PluginComponent haben keine
     // (vollständigen) ObjectLinks-Spiegelungen. Die "Verwendet in"-
     // Liste muss daher live aus den Basis-Tabellen aggregiert werden.
-    const pseudoRefs = await getPseudoTypeReferences(ctx, uuid, direction, link_type, limit, origin);
+    // One type lookup for both special paths (pseudo types, TableOccurrence).
+    // A shared clone UUID has the same type in every file.
+    const typeLookup = await db.executeQuery(
+      ctx,
+      'SELECT Object_Type FROM ObjectCatalog WHERE Object_UUID = ? LIMIT 1',
+      [uuid]
+    );
+    const objType = typeLookup.rows[0]?.Object_Type ?? null;
+
+    const pseudoRefs = await getPseudoTypeReferences(ctx, uuid, objType, direction, link_type, limit, origin);
     if (pseudoRefs !== null) return pseudoRefs;
 
     let sql;
@@ -1926,6 +2325,20 @@ async function getReferences(ctx, refOptions) {
           )
         )`;
 
+    // ── Sammelkante Layout → Feld (nur Feld-Seite ausblenden) ─────────────
+    // P4 legt je (Layout, Feld) eine displays_field-Kante OHNE Subrolle an —
+    // zusätzlich zu den granularen LayoutObject → Feld-Kanten, deren Zeilen das
+    // Layout ohnehin als Container tragen. Ausgehend braucht das Layout sie
+    // (nur über sie listet es „seine" Felder); eingehend am Feld verdoppelt sie
+    // jede Platzierung. Sie zählt nicht als Referenz (v_object_usage schließt
+    // sie aus), deshalb fehlt sie in der Aufrufer-Richtung. Die Tabellenansicht-
+    // Spalte (Subrolle table_view_column) bleibt sichtbar. Reine Anzeige-Ebene.
+    const LAYOUT_FIELD_AGGREGATE_FILTER = `AND NOT (
+          ol.Source_Type = 'Layout'
+          AND ol.Link_Role = 'displays_field'
+          AND ol.Link_Subrole IS NULL
+        )`;
+
     // ── Trigger-Absprung auf konsolidierten Spiegel-Zeilen ────────────────
     // Objekt-Level-Spiegelkanten (triggers_script·<Event>) tragen die UUID
     // ihres ScriptTrigger-Sub-Knotens als Zusatzspalte, damit das Frontend
@@ -2010,6 +2423,7 @@ ${CONTAINER_SELECT},
         ${CONTAINER_JOIN}
         WHERE ol.Target_UUID = ?
         ${TRIGGER_MIRROR_FILTER}
+        ${LAYOUT_FIELD_AGGREGATE_FILTER}
       `;
       params = [uuid];
 
@@ -2093,6 +2507,7 @@ ${CONTAINER_SELECT},
         ${CONTAINER_JOIN}
         WHERE ol.Target_UUID = ?
         ${TRIGGER_MIRROR_FILTER}
+        ${LAYOUT_FIELD_AGGREGATE_FILTER}
         ${focusFile ? 'AND ol.Target_File = ?' : ''}
       `;
       // Param-Reihenfolge je UNION-Hälfte: uuid [, focusFile] [, link_type].
@@ -2152,10 +2567,62 @@ ${CONTAINER_SELECT},
     }
 
     const result = await db.executeQuery(ctx, sql, params);
+    let rows = convertBigInts(result.rows);
+    let meta = result.meta;
+
+    // TableOccurrence: append the usages without an edge of their own (TO::Field
+    // in formulas, script steps, layout fields, …) from v_table_occurrence_usage —
+    // a field reference creates an edge to the FIELD only.
+    if (objType === 'TableOccurrence'
+        && (direction === 'all' || direction === 'parent')
+        && link_type !== 'structural') {
+      const usage = await getTableOccurrenceUsageRows(ctx, {
+        uuid, direction, focusFile,
+        limit: limit > 0 ? Math.max(limit - rows.length, 0) : 0,
+        unlimited: !(limit > 0),
+      });
+      rows = rows.concat(usage.rows);
+      meta = { ...meta, to_usage: usage.meta };
+    }
+
+    // LayoutPart ↔ LayoutObject: containment without an edge of its own (the
+    // objects hang on the layout) — read from LayoutObjects.Part_Seq.
+    const partMemberDirection = objType === 'LayoutPart' ? 'parent' : 'child';
+    if ((objType === 'LayoutPart' || objType === 'LayoutObject')
+        && link_type !== 'operational'
+        && (direction === 'all' || direction === partMemberDirection)) {
+      const members = await getLayoutPartMemberRows(ctx, {
+        uuid, focusType: objType, direction, focusFile,
+        limit: limit > 0 ? Math.max(limit - rows.length, 0) : 0,
+        unlimited: !(limit > 0),
+      });
+      rows = rows.concat(members.rows);
+      meta = { ...meta, part_members: members.meta };
+    }
+
+    // Usage of the object as the search column shows it (v_object_usage, schema
+    // 1.40.0): the tab header repeats "n using objects · m references", so the
+    // number in the result list can be checked against the incoming rows here.
+    if (await hasPersistentCatalogTable(ctx, 'v_object_usage')) {
+      const u = await db.executeQuery(ctx, `
+        SELECT Usage_Owners, Usage_Users, Usage_Refs, Usage_Class
+        FROM v_object_usage
+        WHERE Object_UUID = ? AND (CAST(? AS VARCHAR) IS NULL OR File_Name = CAST(? AS VARCHAR))
+        ORDER BY File_Name
+        LIMIT 1`, [uuid, focusFile, focusFile]);
+      if (u.rows[0] && u.rows[0].Usage_Owners !== null) {
+        const r = convertBigInts(u.rows)[0];
+        meta = { ...meta, usage: { owners: r.Usage_Owners, users: r.Usage_Users, refs: r.Usage_Refs, class: r.Usage_Class } };
+      }
+    }
+    if (meta?.usage && (direction === 'all' || direction === 'parent')) {
+      await markUsageRows(ctx, rows, { objType, uuid, focusFile },
+        (row) => direction === 'parent' || row.direction === 'parent');
+    }
 
     return {
-      data: await enrichSubroleEvents(ctx, convertBigInts(result.rows)),
-      meta: result.meta,
+      data: await enrichSubroleEvents(ctx, rows),
+      meta,
     };
   } catch (error) {
     if (error.code) throw error;
@@ -2202,10 +2669,33 @@ async function getDetails(ctx, uuid, file, lang) {
     const result = await templateService.executeTemplate(
       ctx, templateName, { uuid, file: resolvedFile, lang: lang ?? null }, 'report');
 
+    // TableOccurrence: the usage profile (class + counts per category) lives in
+    // the analysis tables of schema >= 1.38.0 — appended from a companion
+    // template only when they exist, so the main projection stays valid on
+    // older catalogs (`to_usage.available` drives the client notice).
+    let data = result.data;
+    let extraMeta = {};
+    if (objectType === 'TableOccurrence') {
+      const available = await hasCatalogTable(ctx, 'v_table_occurrence_usage')
+        && await hasCatalogTable(ctx, 'v_table_occurrence_class');
+      if (available) {
+        const usage = await templateService.executeTemplate(
+          ctx, 'object_details_tableoccurrence_usage', { uuid, file: resolvedFile }, 'report');
+        data = data.concat(usage.data);
+      }
+      // Relationship-graph context (TO group, layout anchors, context path) —
+      // reads only base catalog tables, so it runs on every schema.
+      const graph = await templateService.executeTemplate(
+        ctx, 'object_details_tableoccurrence_graph', { uuid, file: resolvedFile }, 'report');
+      data = data.concat(graph.data);
+      extraMeta = { to_usage: { available }, result_count: data.length };
+    }
+
     return {
-      data: result.data,
+      data,
       meta: {
         ...result.meta,
+        ...extraMeta,
         object_type: objectType,
         object_name: objectInfo.Object_Name,
         file_name: objectInfo.File_Name,
@@ -2238,8 +2728,15 @@ module.exports = {
   classifyIdTerm,
   buildSearchSql,
   buildScriptStepIdSearchSql,
+  usageOptions,
+  searchSortKey,
   // Für Unit-Tests exportiert — Konsumenten nutzen getReferences.
   buildStepTypeVariableSql,
+  buildTableOccurrenceUsageSql,
+  buildLayoutPartMemberSql,
+  PART_MEMBER_ROLE,
+  buildTableOccurrenceUsageCountSql,
+  TO_USAGE_ROLE,
   // Calculation-Detailansicht (object.controller getCalc) + Unit-Tests.
   DISPLAY_CALC_VARIABLES_SQL,
 };

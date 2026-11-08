@@ -200,7 +200,9 @@ SELECT
     ws_restore(Entry_Calculation_Text) as Entry_Calculation_Text,
     ws_restore(Text_Content) as Text_Content,
     ws_restore(object_xml::VARCHAR) as Object_XML,
-    fn.File_Name as File_Name
+    fn.File_Name as File_Name,
+    NULL::BIGINT as Part_Seq,    -- P4 (Objekt → Bereich)
+    NULL::BIGINT as Part_Kind    -- P4 (Objekt → Bereich)
 -- DETERMINISTISCHES DEDUP (Chunk-Invarianz) — identisch zur DOM-Basis:
 -- mit den direkten Kind-Achsen bleibt nur die bekannte Doppel-Serialisierung
 -- (Part-Root + GroupedButton-ObjectList, 12 Korpus-Fälle); pro Identität
@@ -247,7 +249,9 @@ ON CONFLICT (Object_UUID, File_Name) DO UPDATE SET
     Entry_Find = EXCLUDED.Entry_Find,
     Entry_Calculation_Text = EXCLUDED.Entry_Calculation_Text,
     Text_Content = EXCLUDED.Text_Content,
-    Object_XML = EXCLUDED.Object_XML;
+    Object_XML = EXCLUDED.Object_XML,
+    Part_Seq = EXCLUDED.Part_Seq,
+    Part_Kind = EXCLUDED.Part_Kind;
 
 -- Zensus (Dup-Absorption): Emissionsmenge des LayoutObjects-INSERTs — SAX-Fassung,
 -- quellgleich zur TEMP-Stage im DOM-Block der Basis (dort begründet, inkl.

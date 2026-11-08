@@ -54,7 +54,12 @@ parts_extracted AS (
         xml_unescape(xml_extract_text(part_xml, '/Part/Definition/FieldReference/@name')[1]) as Break_Field_Name,
         xml_extract_text(part_xml, '/Part/Definition/FieldReference/@UUID')[1] as Break_Field_UUID,
         xml_unescape(xml_extract_text(part_xml, '/Part/Definition/FieldReference/TableOccurrenceReference/@name')[1]) as Break_TO_Name,
-        xml_extract_text(part_xml, '/Part/Definition/FieldReference/TableOccurrenceReference/@UUID')[1] as Break_TO_UUID
+        xml_extract_text(part_xml, '/Part/Definition/FieldReference/TableOccurrenceReference/@UUID')[1] as Break_TO_UUID,
+        NULLIF(xml_unescape(xml_extract_text(part_xml, '/Part/@name')[1]), '') as Part_Name,
+        TRY_CAST(xml_extract_text(part_xml, '/Part/Definition/@restartEachGroup')[1] AS BIGINT) as Part_Break_Every,
+        NULLIF(xml_unescape(xml_extract_text(part_xml, '/Part/Definition/LocalCSS/@name')[1]), '') as Part_LocalCSS_Name,
+        NULLIF(xml_extract_text(part_xml, '/Part/Definition/LocalCSS/@type')[1], '') as Part_LocalCSS_Type,
+        NULLIF(ws_restore(xml_extract_text(part_xml, '/Part/Definition/LocalCSS')[1]), '') as Part_LocalCSS
     FROM layout_parts
 )
 INSERT INTO LayoutParts
@@ -77,6 +82,21 @@ SELECT
     CASE WHEN Break_Field_ID != 0 THEN Break_Field_UUID END as Break_Field_UUID,
     CASE WHEN Break_Field_ID != 0 THEN Break_TO_Name END as Break_TO_Name,
     CASE WHEN Break_Field_ID != 0 THEN Break_TO_UUID END as Break_TO_UUID,
+    Part_Name,
+    Part_Break_Every,
+    Part_LocalCSS_Name,
+    Part_LocalCSS_Type,
+    Part_LocalCSS,
+    -- Zeilenstatus (Dialog-Optionen „Abwechselnder" / „Aktiver Zeilenstatus") steht
+    -- nicht im Options-Bitfeld, sondern als CSS-Eigenschaft der :normal-Regel. Hier nur
+    -- der LOKAL gesetzte Wert; der effektive Wert folgt der Kaskade lokal → Bereichsstil
+    -- (ThemePartStyles) → Theme-Regel body → aus. Nur am Datenbereich (kind 4) sinnvoll.
+    CASE WHEN Part_Kind = 4 THEN TRY_CAST(NULLIF(regexp_extract(Part_LocalCSS,
+        ':normal \.self\s*\{[^}]*-fm-body-alt-background\s*:\s*(true|false)', 1), '') AS BOOLEAN)
+    END as Part_Alt_Row_Local,
+    CASE WHEN Part_Kind = 4 THEN TRY_CAST(NULLIF(regexp_extract(Part_LocalCSS,
+        ':normal \.self\s*\{[^}]*-fm-use-body-current-row-style\s*:\s*(true|false)', 1), '') AS BOOLEAN)
+    END as Part_Active_Row_Local,
     fn.File_Name as File_Name
 FROM parts_extracted
 CROSS JOIN filename_normalized fn
@@ -94,4 +114,11 @@ ON CONFLICT (Layout_ID, Part_Seq, File_Name) DO UPDATE SET
     Break_Field_Name = EXCLUDED.Break_Field_Name,
     Break_Field_UUID = EXCLUDED.Break_Field_UUID,
     Break_TO_Name = EXCLUDED.Break_TO_Name,
-    Break_TO_UUID = EXCLUDED.Break_TO_UUID;
+    Break_TO_UUID = EXCLUDED.Break_TO_UUID,
+    Part_Name = EXCLUDED.Part_Name,
+    Part_Break_Every = EXCLUDED.Part_Break_Every,
+    Part_LocalCSS_Name = EXCLUDED.Part_LocalCSS_Name,
+    Part_LocalCSS_Type = EXCLUDED.Part_LocalCSS_Type,
+    Part_LocalCSS = EXCLUDED.Part_LocalCSS,
+    Part_Alt_Row_Local = EXCLUDED.Part_Alt_Row_Local,
+    Part_Active_Row_Local = EXCLUDED.Part_Active_Row_Local;

@@ -25,10 +25,19 @@ interface UseInfiniteSearchOptions {
   searchName: string;
   selectedFile: string;
   objectType: string;
-  /** 'modified' = server-side order by the own change stamp (newest first). */
-  sort?: 'modified';
+  /**
+   * Server-side order across all pages: 'modified' = own change stamp (newest
+   * first), 'usage' = usage column (direction `usageDir`), 'name' | 'type' | 'file'.
+   * undefined = standard order.
+   */
+  sort?: 'modified' | 'usage' | 'name' | 'type' | 'file';
+  /** Direction of sort 'usage' — asc = rarely used first. */
+  usageDir?: 'asc' | 'desc';
   /** 'YYYY-MM-DD' — only objects whose own change stamp is on or after this day. */
   modifiedSince?: string;
+  /** Usage filter bounds (inclusive, '' = none) — list and count alike. */
+  usageMin?: string;
+  usageMax?: string;
 }
 
 interface UseInfiniteSearchResult {
@@ -37,6 +46,11 @@ interface UseInfiniteSearchResult {
   loadingMore: boolean;
   hasMore: boolean;
   totalCount: number | null;
+  /**
+   * Whether the catalog carries the usage view (schema 1.40.0+) — from the count
+   * response; null until the first count arrived.
+   */
+  usageAvailable: boolean | null;
   error: string | null;
   loadMore: () => Promise<void>;
   reset: () => void;
@@ -65,11 +79,15 @@ export const useInfiniteSearch = ({
   selectedFile,
   objectType,
   sort,
+  usageDir,
   modifiedSince = '',
+  usageMin = '',
+  usageMax = '',
 }: UseInfiniteSearchOptions): UseInfiniteSearchResult => {
   const [items, setItems] = useState<FMObject[]>([]);
   const [offset, setOffset] = useState(0);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [usageAvailable, setUsageAvailable] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,15 +110,18 @@ export const useInfiniteSearch = ({
   // (oft sehr lange) Liste sichtbar ist und der Virtualizer seinen Range
   // basierend auf der alten Gesamthöhe rendert — sichtbar als "Fragmente".
   // Pattern: "Adjusting state when a prop changes" (React-Docs).
-  const [lastParams, setLastParams] = useState({ searchName, selectedFile, objectType, sort, modifiedSince });
+  const [lastParams, setLastParams] = useState({ searchName, selectedFile, objectType, sort, usageDir, modifiedSince, usageMin, usageMax });
   if (
     lastParams.searchName !== searchName ||
     lastParams.selectedFile !== selectedFile ||
     lastParams.objectType !== objectType ||
     lastParams.sort !== sort ||
-    lastParams.modifiedSince !== modifiedSince
+    lastParams.usageDir !== usageDir ||
+    lastParams.modifiedSince !== modifiedSince ||
+    lastParams.usageMin !== usageMin ||
+    lastParams.usageMax !== usageMax
   ) {
-    setLastParams({ searchName, selectedFile, objectType, sort, modifiedSince });
+    setLastParams({ searchName, selectedFile, objectType, sort, usageDir, modifiedSince, usageMin, usageMax });
     setItems([]);
     setOffset(0);
     setTotalCount(null);
@@ -134,9 +155,12 @@ export const useInfiniteSearch = ({
       offset: withOffset,
       lang,
       sort,
+      usage_dir: sort === 'usage' ? usageDir : undefined,
       modified_since: modifiedSince || undefined,
+      usage_min: usageMin !== '' ? Number(usageMin) : undefined,
+      usage_max: usageMax !== '' ? Number(usageMax) : undefined,
     };
-  }, [searchName, selectedFile, objectType, lang, sort, modifiedSince]);
+  }, [searchName, selectedFile, objectType, lang, sort, usageDir, modifiedSince, usageMin, usageMax]);
 
   /**
    * Reset and load initial data
@@ -166,6 +190,8 @@ export const useInfiniteSearch = ({
           file: searchParams.file,
           type: searchParams.type,
           modified_since: searchParams.modified_since,
+          usage_min: searchParams.usage_min,
+          usage_max: searchParams.usage_max,
         }),
       ]);
 
@@ -196,6 +222,7 @@ export const useInfiniteSearch = ({
           : [countResponse.data];
         if (countData.length > 0 && 'count' in countData[0]) {
           setTotalCount(countData[0].count as number);
+          setUsageAvailable(typeof countData[0].usage_available === 'boolean' ? countData[0].usage_available : null);
         } else {
           setTotalCount(null);
         }
@@ -287,6 +314,7 @@ export const useInfiniteSearch = ({
     loadingMore,
     hasMore,
     totalCount,
+    usageAvailable,
     error,
     loadMore,
     reset,

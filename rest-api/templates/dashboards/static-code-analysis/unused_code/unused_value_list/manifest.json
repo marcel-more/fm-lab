@@ -1,8 +1,8 @@
 {
   "id": "unused_value_list",
-  "version": "1.0.0",
+  "version": "1.2.1",
   "title": "Unused Value List",
-  "description": "Unused-code rule — value lists not attached to any field / layout object, sort order or external wrapper.",
+  "description": "Unused-code rule — value lists not attached to any field / layout object, sort order or external wrapper. Findings in files exported without DDR info are marked unverified.",
   "author": "fm-lab rules",
   "icon": "list",
   "category": "unused_code",
@@ -16,13 +16,13 @@
     "severity": "info",
     "category": "unused_code",
     "rationale": "Orphaned value lists clutter the definitions and can drift out of date.",
-    "remediation": "Delete the value list, or attach it where it is meant to be used.",
+    "remediation": "Delete the value list, or attach it where it is meant to be used. In a file exported without DDR info formula references are missing, so its findings are marked unverified — export it again with DDR info before deleting.",
     "meta": {
       "name": "Unused Value List",
       "author": "fm-lab rules",
       "source": "fm-lab",
       "url": null,
-      "description": "Unused-code rule — value lists not attached to any field / layout object, sort order or external wrapper.",
+      "description": "Unused-code rule — value lists not attached to any field / layout object, sort order or external wrapper. Findings in files exported without DDR info are marked unverified.",
       "created": "2026-07-01",
       "references": []
     }
@@ -38,10 +38,16 @@
     "scope": {
       "supported": [
         "solution",
-        "file"
+        "file",
+        "object",
+        "object-list",
+        "cluster"
       ],
       "anchor": "nav_uuid",
-      "mode": {}
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
     },
     "defaultResult": {
       "dataset": "summary",
@@ -68,6 +74,13 @@
       "type": "string",
       "required": false,
       "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "ddr",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "List filter by DDR info (KPI tile): 'without' = only findings in files exported without DDR info; empty = all. The Findings tile resets it."
     }
   ],
   "permissions": {

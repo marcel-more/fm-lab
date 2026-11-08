@@ -1,15 +1,30 @@
 {
   "manifest": {
     "title": "Script inutilisé",
-    "description": "Règle de code inutilisé : scripts appelés par aucun autre script et démarrés par aucun déclencheur. À vérifier : les démarrages manuels ou depuis un menu personnalisé peuvent apparaître ici.\n\nD’après la règle PMD UnusedPrivateMethod — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod"
+    "description": "Règle de code inutilisé : scripts appelés par aucun autre script, bouton ni menu personnalisé et démarrés par aucun déclencheur. Les scripts du menu Scripts sont des points d’entrée : ils sont listés à part et ne sont pas des résultats. Les résultats des fichiers exportés sans infos DDR sont marqués non vérifiés.\n\nD’après la règle PMD UnusedPrivateMethod — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Résultats",
-    "summary_kpi.props.items[1].label": "Fichiers concernés",
+    "summary_kpi.props.items[1].label": "Sans infos DDR",
+    "summary_kpi.props.items[2].label": "Dans le menu Scripts",
+    "summary_kpi.props.items[3].label": "Fichiers concernés",
     "findings_card.props.title": "Script inutilisé",
     "findings_table.props.searchPlaceholder": "Rechercher un fichier ou un script…",
     "findings_table.props.empty.message": "Aucun script inutilisé trouvé.",
     "findings_table.props.columns[0].label": "Fichier",
-    "findings_table.props.columns[1].label": "Script"
+    "findings_table.props.columns[1].label": "Script",
+    "findings_table.props.columns[2].label": "Statut",
+    "findings_table.props.columns[3].label": "Sans infos DDR",
+    "findings_table.props.columns[2].valueLabels.unused": "Inutilisé",
+    "findings_table.props.columns[2].valueLabels.unused_unverified": "Inutilisé (non vérifié)",
+    "findings_table.props.columns[3].valueLabels.true": "Oui",
+    "findings_table.props.columns[3].valueLabels.false": "Non",
+    "entry_points_card.props.title": "Points d’entrée : dans le menu Scripts, sans appel",
+    "entry_points_table.props.searchPlaceholder": "Rechercher un fichier ou un script…",
+    "entry_points_table.props.empty.message": "Aucun point d’entrée trouvé.",
+    "entry_points_table.props.columns[0].label": "Fichier",
+    "entry_points_table.props.columns[1].label": "Script",
+    "notes_card.props.title": "Signification du statut",
+    "notes_md.props.content": "**Non vérifié.** Le fichier a été exporté sans infos DDR. Il ne contient alors aucune référence issue des formules : une utilisation dans un calcul reste invisible. Un tel résultat est marqué *Inutilisé (non vérifié)* ; la vignette *Sans infos DDR* les liste. Exportez à nouveau le fichier avec les infos DDR avant toute suppression.\n\n**Points d’entrée.** L’utilisateur peut démarrer un script du menu Scripts même si rien ne l’appelle. Ce n’est pas un résultat ; la liste *Points d’entrée* le montre. S’il ne doit pas être démarré, retirez-le du menu : il devient alors un résultat.\n\n**Limites.** Seule l’utilisation à l’intérieur de la solution importée compte. Non visibles : **appels depuis l’extérieur** — planifications du serveur, Data API, OData, URL `fmp://`, AppleScript/ActiveX, plug-ins, fichiers non importés ; **références dynamiques internes** — *Exécuter un script* par nom, `GetField`, `Evaluate`, noms dans des chaînes SQL. Un résultat est un candidat à vérifier, pas une recommandation de suppression. [Comment l’utilisation est comptée](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

@@ -1,0 +1,123 @@
+/* LayoutPart detail — options as dialog-like check list, two-column top row.
+ * Groups and key/value rows come from FieldViewer.css (.fm-field-section / .fm-field-props). */
+
+/* Allgemein | Bereichsdefinition: zwei Spalten, sobald die Detailansicht breit genug
+ * ist; darunter untereinander. container-type misst die Breite der Ansicht selbst
+ * (nicht den Viewport) — wie das Eigenschaften-Panel des Layouts. */
+.fm-lp {
+  container-type: inline-size;
+}
+
+.fm-lp-cols {
+  display: grid;
+  grid-template-columns: 1fr;
+  column-gap: 2rem;
+  align-items: start;
+}
+
+@container (min-width: 46rem) {
+  .fm-lp-cols {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  /* Die rechte Spalte beginnt auf derselben Höhe wie die linke. */
+  .fm-lp-cols > .fm-field-section .fm-field-section-title {
+    margin-top: 0;
+  }
+}
+
+.fm-lp-cols > .fm-field-section {
+  min-width: 0;
+}
+
+/* Erste Sektion direkt unter dem Trenner (Regel aus FieldViewer.css greift nur für
+ * direkte Kinder von .fm-field-sections). */
+.fm-field-sections > .fm-lp-cols:first-child > .fm-field-section:first-child .fm-field-section-title {
+  margin-top: 0;
+}
+
+.fm-lp-actions {
+  margin: 0.2rem 0 0.6rem;
+}
+
+/* „Im Layout zeigen" als Button — gleicher Stil wie „In FileMaker öffnen"
+ * (.fmide-open-button), ohne Icon. */
+.fm-lp-show-in-layout {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.7rem;
+  background: transparent;
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.fm-lp-show-in-layout:hover {
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+}
+
+.fm-lp-show-in-layout:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.fm-lp-options {
+  list-style: none;
+  margin: 0;
+  padding: 0.1rem 0 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.85rem;
+}
+
+.fm-lp-options li {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* O5 belongs to O4 in the dialog (only selectable together). */
+.fm-lp-option-sub {
+  padding-left: 1.4rem;
+}
+
+.fm-lp-check {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  color: var(--color-text-primary);
+}
+
+.fm-lp-check.is-muted {
+  color: var(--color-text-muted);
+}
+
+.fm-lp-check-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.85rem;
+  height: 0.85rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 2px;
+  font-size: 0.7rem;
+  line-height: 1;
+  align-self: center;
+}
+
+.fm-lp-check.is-on .fm-lp-check-box {
+  background: var(--color-accent-soft, rgba(56, 132, 255, 0.16));
+  border-color: var(--color-accent, #3884ff);
+  color: var(--color-accent, #3884ff);
+}
+
+.fm-lp-option-source {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}

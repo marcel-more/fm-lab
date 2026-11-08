@@ -33,11 +33,16 @@ The definition details of every value list, one row per list: the literal custom
 | `External_DS_UUID` | `VARCHAR` |
 | `External_VL_ID` | `BIGINT` |
 | `External_VL_Name` | `VARCHAR` |
+| `ShowRelated` | `BOOLEAN` |
+| `ShowRelated_TO_ID` | `BIGINT` |
+| `ShowRelated_TO_Name` | `VARCHAR` |
+| `ShowRelated_TO_UUID` | `VARCHAR` |
 | `File_Name` | `VARCHAR` |
 
 ## Notes
 
 - Field-based lists produce `source_field`/`source_table` graph links.
+- `ShowRelated = true` is the option "Include only related values starting from": `ShowRelated_TO_*` is the occurrence FileMaker starts from and walks the relationship graph to the source occurrence `TO_*` (→ `related_values_from` link, since schema 1.38.0). With "all values" the columns stay empty.
 - External wrappers (`Source_Type='External'`) carry `External_DS_*` (the data source) and `External_VL_*` (the target list). The target UUID is absent in the XML; the import resolves it via data source + list ID and links it as `source_valuelist`.
 
 **See also:** [ValueListCatalog](ValueListCatalog.md) · [ExternalDataSourceCatalog](ExternalDataSourceCatalog.md)

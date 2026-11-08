@@ -1,8 +1,8 @@
 {
   "id": "unused_field",
-  "version": "1.0.0",
+  "version": "1.2.1",
   "title": "Unused Field",
-  "description": "Unused-code rule — fields not read, displayed, set, found, sorted, imported or exported anywhere.\n\nBased on the PMD rule UnusedPrivateField — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatefield",
+  "description": "Unused-code rule — fields with no usage anywhere: not read, displayed, set, found, sorted, imported, exported or summarized, and not used as the source of a value list or as a break field. Every link role the catalog counts as where-used is a usage. Findings in files exported without DDR info are marked unverified.\n\nBased on the PMD rule UnusedPrivateField — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatefield",
   "author": "fm-lab rules",
   "icon": "trash-2",
   "category": "unused_code",
@@ -16,13 +16,13 @@
     "severity": "info",
     "category": "unused_code",
     "rationale": "Unused fields bloat tables and confuse data models.",
-    "remediation": "Confirm no external / SQL usage, then delete the field.",
+    "remediation": "Confirm no external / SQL usage, then delete the field. In a file exported without DDR info formula references are missing, so its findings are marked unverified — export it again with DDR info before deleting.",
     "meta": {
       "name": "Unused Field",
       "author": "fm-lab rules",
       "source": "PMD",
       "url": "https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatefield",
-      "description": "Unused-code rule — fields not read, displayed, set, found, sorted, imported or exported anywhere.",
+      "description": "Unused-code rule — fields with no usage anywhere: not read, displayed, set, found, sorted, imported, exported or summarized, and not used as the source of a value list or as a break field. Every link role the catalog counts as where-used is a usage. Findings in files exported without DDR info are marked unverified.",
       "created": "2026-07-01",
       "references": [
         {
@@ -44,10 +44,16 @@
     "scope": {
       "supported": [
         "solution",
-        "file"
+        "file",
+        "object",
+        "object-list",
+        "cluster"
       ],
       "anchor": "nav_uuid",
-      "mode": {}
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
     },
     "defaultResult": {
       "dataset": "summary",
@@ -74,6 +80,13 @@
       "type": "string",
       "required": false,
       "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "ddr",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "List filter by DDR info (KPI tile): 'without' = only findings in files exported without DDR info; empty = all. The Findings tile resets it."
     }
   ],
   "permissions": {

@@ -1,15 +1,34 @@
 {
   "manifest": {
     "title": "Occurrence de table inutilisée",
-    "description": "Règle de code inutilisé : occurrences de table ne servant ni de contexte de Layout, ni de source de portail, ni de cible GTRR, ni de côté de relation."
+    "description": "Règle de code inutilisé : occurrences de table supprimables, utilisées nulle part ou seulement comme côté d’une relation sans occurrence utilisée au-delà (branche ou îlot mort du graphe des relations). Compte toute utilisation, y compris les références Table::Rubrique dans les formules, pas de script et rubriques de Layout ; les occurrences intermédiaires sur le chemin entre deux occurrences utilisées (par ex. la table de jointure d’une relation n:m) sont conservées."
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Résultats",
-    "summary_kpi.props.items[1].label": "Fichiers concernés",
+    "summary_kpi.props.items[1].label": "Utilisée nulle part",
+    "summary_kpi.props.items[2].label": "Branche morte",
+    "summary_kpi.props.items[3].label": "Îlot mort",
+    "summary_kpi.props.items[4].label": "Sans infos DDR",
+    "summary_kpi.props.items[5].label": "Fichiers concernés",
     "findings_card.props.title": "Occurrence de table inutilisée",
-    "findings_table.props.searchPlaceholder": "Rechercher un fichier ou un nom…",
+    "findings_table.props.searchPlaceholder": "Rechercher un fichier, un nom ou un motif…",
     "findings_table.props.empty.message": "Aucune correspondance trouvée.",
     "findings_table.props.columns[0].label": "Fichier",
-    "findings_table.props.columns[1].label": "Nom"
+    "findings_table.props.columns[1].label": "Nom",
+    "findings_table.props.columns[2].label": "Table de base",
+    "findings_table.props.columns[3].label": "Motif",
+    "findings_table.props.columns[4].label": "Rattachée à",
+    "findings_table.props.columns[5].label": "Taille du groupe mort",
+    "findings_table.props.columns[6].label": "Sans infos DDR",
+    "findings_table.props.columns[3].valueLabels.unused": "Utilisée nulle part",
+    "findings_table.props.columns[3].valueLabels.dead_branch": "Branche morte",
+    "findings_table.props.columns[3].valueLabels.dead_island": "Îlot mort",
+    "findings_table.props.columns[3].valueLabels.unused_unverified": "Utilisée nulle part (non vérifié)",
+    "findings_table.props.columns[3].valueLabels.dead_branch_unverified": "Branche morte (non vérifié)",
+    "findings_table.props.columns[3].valueLabels.dead_island_unverified": "Îlot mort (non vérifié)",
+    "findings_table.props.columns[6].valueLabels.true": "Oui",
+    "findings_table.props.columns[6].valueLabels.false": "Non",
+    "notes_card.props.title": "Signification des motifs",
+    "notes_md.props.content": "**Utilisée nulle part.** Aucun modèle, tableau externe, formule, pas de script, champ de modèle, liste de valeurs, référence ni jeu de privilèges ne fait référence à l'occurrence de table, et elle n'a aucun lien. Elle peut être supprimée seule.\n\n**Branche morte.** L'occurrence de table n'est utilisée que comme côté de liens, et rien au-delà n'est utilisé. *Rattachée à* nomme l'occurrence de table utilisée à laquelle la branche est attachée ; *Taille du groupe mort* compte les occurrences de table de la branche — elles peuvent être supprimées ensemble.\n\n**Îlot mort.** Aucune occurrence de table de son groupe de liens n'est utilisée. Le groupe entier peut être supprimé ; *Taille du groupe mort* le compte.\n\n**Jamais un résultat.** Une occurrence de table sur le chemin entre deux occurrences utilisées — typiquement l'occurrence de table intermédiaire d'un lien n:m — est nécessaire même si rien n'y fait directement référence. Il en va de même pour les deux côtés d'un lien qui supprime les enregistrements liés.\n\n**Sans infos DDR.** Le fichier a été exporté sans infos DDR. Les références `Table::Champ` dans les formules ne sont alors reconnues que dans le texte de la formule et les contextes d’évaluation manquent : une utilisation peut rester invisible. Un tel résultat est marqué *non vérifié* (p. ex. *Branche morte (non vérifié)*) ; la vignette *Sans infos DDR* les liste. Exportez à nouveau le fichier avec les infos DDR avant toute suppression.\n\n**Limites.** Seule l’utilisation à l’intérieur de la solution importée compte. Non visibles : **accès depuis l’extérieur** — OData, ODBC/JDBC, Data API, fichiers non importés ; **références dynamiques internes** — `GetField`, `Evaluate`, noms dans des chaînes SQL. Un résultat est un candidat à vérifier, pas une recommandation de suppression. [Comment l’utilisation est comptée](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

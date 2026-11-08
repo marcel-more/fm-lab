@@ -25,6 +25,8 @@ type Props = {
    * (Layout-Scope via file + scope_uuids). Fehlender Eintrag = kein Link.
    */
   calcInventoryUrls?: Partial<Record<CalcCategoryKey, string>>;
+  /** Appended to the inventory link title while a section filter is active. */
+  inventoryScopeHint?: string;
 };
 
 type Category = {
@@ -72,6 +74,7 @@ export function LayoutTypeFilter({
   activeCalc,
   onToggleCalc,
   calcInventoryUrls,
+  inventoryScopeHint,
 }: Props) {
   const { t } = useTranslation(['detail']);
   const palette = useLayoutObjectPalette();
@@ -201,7 +204,7 @@ export function LayoutTypeFilter({
                   <Link
                     to={inventoryUrl}
                     className="layout-calc-pill-jump"
-                    title={`${label} — ${t('detail:layoutTypeFilter.calcInventoryOpen', { defaultValue: 'Open inventory' })}`}
+                    title={`${label} — ${t('detail:layoutTypeFilter.calcInventoryOpen', { defaultValue: 'Open inventory' })}${inventoryScopeHint ? ` (${inventoryScopeHint})` : ''}`}
                   >
                     ↗
                   </Link>

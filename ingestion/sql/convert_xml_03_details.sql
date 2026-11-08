@@ -1478,6 +1478,53 @@ WHERE (l.Folder_Type IS NULL OR l.Folder_Type = 'False')
 
 
 -- ============================================
+-- A.11b: ThemePartStyles — Zeilenstatus-Vorgaben der Themes (Schema 1.39.0)
+-- ============================================
+-- Die Dialog-Optionen „Abwechselnder Zeilenstatus" und „Aktiver Zeilenstatus" eines
+-- Datenbereichs sind CSS-Eigenschaften (-fm-body-alt-background,
+-- -fm-use-body-current-row-style), keine Bits in Definition/@Options. Ihr effektiver
+-- Wert folgt einer Kaskade:
+--   1. lokal am Bereich             LayoutParts.Part_Alt_Row_Local / _Active_Row_Local
+--   2. benannter Bereichsstil       Regel part.<name>:normal .self (LayoutParts.Part_LocalCSS_Name)
+--   3. Theme-Vorgabe Datenbereich   Regel body:normal .self
+--   4. nirgends gesetzt / Classic   aus
+-- Diese Tabelle hält die Stufen 2 und 3 je Theme, einmal beim Import aus dem
+-- Theme-CSS (ThemeCatalog.Theme_XML) gelesen — kein Regex zur Laufzeit.
+--   Style_Name = 'body' für die Theme-Vorgabe, sonst der Stilname aus part.<name>.
+--   Alt_Background / Active_Row_Style = gesetzter Wert, NULL = in dieser Regel nicht
+--   gesetzt. Nur die :normal-Regel zählt (:checked & Co. tragen die Eigenschaften nicht).
+-- Eine Zeile je (Theme_UUID, File_Name, Style_Name); bei mehrfacher Regel gewinnt die
+-- erste im CSS. Classic hat in der Regel keine Vorgabe → keine bzw. NULL-Zeile → aus.
+-- DROP+CREATE: Neuaufbau je P3-Lauf (Muster LayoutObjectConditions).
+DROP TABLE IF EXISTS ThemePartStyles;
+CREATE TABLE ThemePartStyles AS
+WITH rules AS (
+    -- regexp_extract_all über dieselbe Quelle und dasselbe Muster → Gruppe 1 und 2
+    -- bleiben positionsgleich; Rule_Pos hält die Reihenfolge im CSS.
+    SELECT tc.Theme_UUID, tc.Theme_Name, tc.File_Name,
+           unnest(regexp_extract_all(tc.Theme_XML,
+               '(?:^|[\s}])(body|part\.[A-Za-z0-9_-]+):normal \.self\s*\{([^}]*)\}', 1)) AS Selector,
+           unnest(regexp_extract_all(tc.Theme_XML,
+               '(?:^|[\s}])(body|part\.[A-Za-z0-9_-]+):normal \.self\s*\{([^}]*)\}', 2)) AS Rule_Body,
+           unnest(generate_series(1, len(regexp_extract_all(tc.Theme_XML,
+               '(?:^|[\s}])(body|part\.[A-Za-z0-9_-]+):normal \.self\s*\{([^}]*)\}', 1))))  AS Rule_Pos
+    FROM ThemeCatalog tc
+    WHERE tc.Theme_XML IS NOT NULL
+)
+SELECT
+    Theme_UUID,
+    any_value(Theme_Name)                                         AS Theme_Name,
+    File_Name,
+    CASE WHEN Selector = 'body' THEN 'body' ELSE substr(Selector, 6) END AS Style_Name,
+    TRY_CAST(NULLIF(regexp_extract(arg_min(Rule_Body, Rule_Pos),
+        '-fm-body-alt-background\s*:\s*(true|false)', 1), '') AS BOOLEAN)        AS Alt_Background,
+    TRY_CAST(NULLIF(regexp_extract(arg_min(Rule_Body, Rule_Pos),
+        '-fm-use-body-current-row-style\s*:\s*(true|false)', 1), '') AS BOOLEAN) AS Active_Row_Style
+FROM rules
+GROUP BY Theme_UUID, File_Name, Selector;
+
+
+-- ============================================
 -- A.12: LayoutObjectConditions — Conditional-Formatting-Regeln (Schema 1.25.0)
 -- ============================================
 -- Eine Zeile pro CF-Regel, DEPTH-VERANKERT extrahiert: Object_XML jedes

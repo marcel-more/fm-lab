@@ -1,15 +1,30 @@
 {
   "manifest": {
     "title": "未使用的脚本",
-    "description": "未使用代码规则 — 未被任何其他脚本调用、也未被任何触发器启动的脚本。请核查：手动或自定义菜单启动可能出现在此。\n\n基于 PMD 规则 UnusedPrivateMethod — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod"
+    "description": "未使用代码规则 — 未被任何其他脚本、按钮或自定义菜单调用、也未被任何触发器启动的脚本。脚本菜单中的脚本是入口点：单独列出，不算作结果。 不含 DDR 信息导出的文件中的结果标记为未验证。\n\n基于 PMD 规则 UnusedPrivateMethod — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "结果数",
-    "summary_kpi.props.items[1].label": "受影响文件",
+    "summary_kpi.props.items[1].label": "无 DDR 信息",
+    "summary_kpi.props.items[2].label": "在脚本菜单中",
+    "summary_kpi.props.items[3].label": "受影响文件",
     "findings_card.props.title": "未使用的脚本",
     "findings_table.props.searchPlaceholder": "搜索文件或脚本…",
     "findings_table.props.empty.message": "未找到未使用的脚本。",
     "findings_table.props.columns[0].label": "文件",
-    "findings_table.props.columns[1].label": "脚本"
+    "findings_table.props.columns[1].label": "脚本",
+    "findings_table.props.columns[2].label": "状态",
+    "findings_table.props.columns[3].label": "无 DDR 信息",
+    "findings_table.props.columns[2].valueLabels.unused": "未使用",
+    "findings_table.props.columns[2].valueLabels.unused_unverified": "未使用 (未验证)",
+    "findings_table.props.columns[3].valueLabels.true": "是",
+    "findings_table.props.columns[3].valueLabels.false": "否",
+    "entry_points_card.props.title": "入口点：在脚本菜单中，未被调用",
+    "entry_points_table.props.searchPlaceholder": "搜索文件或脚本…",
+    "entry_points_table.props.empty.message": "未找到入口点。",
+    "entry_points_table.props.columns[0].label": "文件",
+    "entry_points_table.props.columns[1].label": "脚本",
+    "notes_card.props.title": "状态说明",
+    "notes_md.props.content": "**未验证。** 该文件导出时不含 DDR 信息。此时文件中完全没有来自公式的引用——在计算中的使用不可见。此类结果标记为 *未使用 (未验证)*；磁贴 *无 DDR 信息* 会列出它们。删除任何内容之前，请重新导出带 DDR 信息的文件。\n\n**入口点。** 脚本菜单中的脚本即使没有被任何对象调用，用户也可以启动。它不算作结果，列表 *入口点* 会显示它。如果不打算让用户启动，请将其从菜单中移除——之后它就会成为结果。\n\n**限制。** 仅统计导入的解决方案内部的使用。不可见：**来自外部的调用** — 服务器计划、Data API、OData、`fmp://` URL、AppleScript/ActiveX、插件、未导入的文件；**内部的动态引用** — 按名称 *执行脚本*、`GetField`、`Evaluate`、SQL 字符串中的名称。结果是待检查的候选项，而非删除建议。[如何统计使用](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

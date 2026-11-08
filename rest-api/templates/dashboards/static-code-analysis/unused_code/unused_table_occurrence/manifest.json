@@ -1,8 +1,8 @@
 {
   "id": "unused_table_occurrence",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "title": "Unused Table Occurrence",
-  "description": "Unused-code rule — table occurrences not used as a layout context, portal source, GTRR target or relationship side.",
+  "description": "Unused-code rule — table occurrences that can be removed: not used anywhere, or used only as a relationship side with no used table occurrence beyond them (dead branch or island of the relationship graph). Counts every usage, including Table::Field references in formulas, script steps and layout fields; intermediate table occurrences on a path between two used ones (e.g. the join TO of an n:m relationship) are kept.",
   "author": "fm-lab rules",
   "icon": "table",
   "category": "unused_code",
@@ -15,14 +15,14 @@
   "rule": {
     "severity": "info",
     "category": "unused_code",
-    "rationale": "Orphaned occurrences enlarge the relationship graph without adding function.",
-    "remediation": "Remove the occurrence from the relationship graph.",
+    "rationale": "Orphaned occurrences and dead branches enlarge the relationship graph without adding function.",
+    "remediation": "Check the finding (dynamic references such as GetField or Evaluate are not visible; in files without DDR info formula references come only from the formula text, so their findings are marked unverified), then remove the occurrence — for a dead branch together with the rest of its dead group.",
     "meta": {
       "name": "Unused Table Occurrence",
       "author": "fm-lab rules",
       "source": "fm-lab",
       "url": null,
-      "description": "Unused-code rule — table occurrences not used as a layout context, portal source, GTRR target or relationship side.",
+      "description": "Unused-code rule — table occurrences that can be removed: not used anywhere, or used only as a relationship side with no used table occurrence beyond them (dead branch or island of the relationship graph). Counts every usage, including Table::Field references in formulas, script steps and layout fields; intermediate table occurrences on a path between two used ones (e.g. the join TO of an n:m relationship) are kept.",
       "created": "2026-07-01",
       "references": []
     }
@@ -38,10 +38,16 @@
     "scope": {
       "supported": [
         "solution",
-        "file"
+        "file",
+        "object",
+        "object-list",
+        "cluster"
       ],
       "anchor": "nav_uuid",
-      "mode": {}
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
     },
     "defaultResult": {
       "dataset": "summary",
@@ -68,6 +74,20 @@
       "type": "string",
       "required": false,
       "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "reason",
+      "type": "string",
+      "required": false,
+      "description": "List filter by reason (KPI tile): unused, dead_branch, dead_island; empty = all. Sticky, so it combines with ddr; the Findings tile resets both.",
+      "sticky": true
+    },
+    {
+      "name": "ddr",
+      "type": "string",
+      "required": false,
+      "description": "List filter by DDR info (KPI tile): 'without' = only findings in files exported without DDR info; empty = all. Sticky, so it combines with reason; the Findings tile resets both.",
+      "sticky": true
     }
   ],
   "permissions": {

@@ -58,7 +58,14 @@
       "logic": "Lógica",
       "slots": "Slots",
       "moreTargets": "(+{{n}} más)"
-    }
+    },
+    "sectionLabel": "Sección del layout",
+    "sectionAll": "Todas",
+    "sectionOption": "{{label}} ({{count}})",
+    "sectionAria": "Limitar los objetos a una sección del layout",
+    "sectionStats_one": "{{n}} de {{count}} objeto · Zoom {{zoom}}%",
+    "sectionStats_other": "{{n}} de {{count}} objetos · Zoom {{zoom}}%",
+    "sectionInventoryHint": "Los inventarios abarcan todo el layout, no solo la sección elegida"
   },
   "relationshipGraphCanvas": {
     "searchPlaceholder": "Buscar ocurrencia de tabla…",
@@ -165,6 +172,8 @@
     "ariaLabel": "Jerarquía de objetos",
     "usedBy": "Usado por ({{count}})",
     "usedByFiltered": "Usado por ({{count}} / {{total}})",
+    "usedByGrouped": "Usado por — por objeto ({{count}})",
+    "usedByGroupedFiltered": "Usado por — por objeto ({{count}} / {{total}})",
     "uses": "Usa ({{count}})",
     "usesFiltered": "Usa ({{count}} / {{total}})",
     "structurallyContainedBy": "Contenido estructuralmente por ({{count}})",
@@ -173,6 +182,8 @@
     "structurallyContainsFiltered": "Contiene estructuralmente ({{count}} / {{total}})",
     "noReferences": "No se encontraron referencias",
     "noFilterMatches": "Sin coincidencias para los filtros actuales",
+    "toUsageUnavailable": "Este catálogo solo muestra los vínculos directos de la instancia de tabla. Su uso completo (referencias de campo en fórmulas, pasos de guion y presentaciones) aparece tras una nueva importación.",
+    "toUsageTruncated": "Uso recortado: se muestran {{count}} de {{total}} usos por referencias de campo.",
     "crossFileBadge": "Entre archivos",
     "itemAriaLabel": "Navegar a {{type}}: {{name}}",
     "notNavigable": "El destino no está en el conjunto de datos importado",
@@ -255,8 +266,57 @@
       "menu_action": {
         "short": "Menu",
         "long": "Acción de menú"
+      },
+      "calculation": {
+        "short": "Calc",
+        "long": "Referencia de campo en una fórmula"
+      },
+      "calculation_text": {
+        "short": "Calc text",
+        "long": "Referencia a campo en el texto de la fórmula (archivo sin información DDR)"
+      },
+      "calc_context": {
+        "short": "Context",
+        "long": "Contexto de evaluación de una fórmula"
+      },
+      "layout_field": {
+        "short": "Field",
+        "long": "Campo en la presentación"
+      },
+      "layout_part": {
+        "short": "Break",
+        "long": "Campo de salto de una parte de la presentación"
+      },
+      "script_step": {
+        "short": "Step",
+        "long": "Referencia de campo en un paso de guion"
+      },
+      "security": {
+        "short": "Access",
+        "long": "Contexto de acceso a registros de un conjunto de privilegios"
+      },
+      "table_view": {
+        "short": "Table view",
+        "long": "Columna de la vista de tabla"
+      },
+      "value_list": {
+        "short": "VL field",
+        "long": "Segundo campo de una lista de valores"
       }
-    }
+    },
+    "usageSummary": "Usado internamente por {{objects}} · {{refs}}",
+    "usageObjects_one": "{{count}} objeto",
+    "usageObjects_other": "{{count}} objetos",
+    "usageRefs_one": "{{count}} referencia",
+    "usageRefs_other": "{{count}} referencias",
+    "usageSummaryHint": "Uso (interno): cuántos objetos distintos de la solución usan este objeto — un formato cuenta una vez, aunque muchos de sus objetos lo muestren; un guion una vez, en cuantos pasos sea. Referencias: cada aparición por separado (×N en la lista). La pertenencia y las restricciones de privilegios no cuentan. No se registra: el uso desde fuera (programaciones del servidor, Data API, OData, llamadas URL, plug-ins …) ni las referencias dinámicas (guion por nombre, GetField, Evaluate).",
+    "usageDocs": "¿Cómo se cuenta?",
+    "groupByObjectHint": "Agrupar por objeto que lo usa (entrante) — un formato cuenta una vez, aunque muchos de sus objetos lo muestren",
+    "groupAllRefsHint": "Mostrar cada referencia",
+    "groupExpand": "Mostrar referencias",
+    "groupCollapse": "Ocultar referencias",
+    "noUsageGroup": "Sin uso",
+    "noUsageGroupHint": "Vínculos que no cuentan como uso (p. ej., restricciones de privilegios, nodos de disparador)"
   },
   "searchOptions": {
     "regionAria": "Opciones de orden y agrupación",
@@ -272,7 +332,14 @@
     "groupFile": "Archivo",
     "modifiedSinceLabel": "Modificado desde",
     "modifiedSinceHint": "Solo objetos cuya propia marca de cambio es de este día o posterior: los pasos de guion, los objetos de formato y los cálculos no tienen marca propia",
-    "modifiedSinceClear": "Restablecer"
+    "modifiedSinceClear": "Restablecer",
+    "sortUsage": "Uso (interno)",
+    "usageLabel": "Uso (interno)",
+    "usageOpAria": "Comparación",
+    "usageHint": "Número de objetos que lo usan (un objeto en un formato cuenta como su formato). ≤ 0 muestra los objetos sin uso; los pasos de guion, objetos de formato, fórmulas y relaciones no tienen uso y quedan fuera El uso desde fuera (programaciones del servidor, Data API, OData, llamadas URL, plug-ins …) no se registra.",
+    "usageUnavailable": "Requiere un catálogo creado con el esquema 1.40.0 o posterior — vuelva a importar la solución",
+    "usageDirAsc": "Menos usados primero",
+    "usageDirDesc": "Más usados primero"
   },
   "fieldViewer": {
     "ariaLabel": "Detalles del campo",
@@ -372,7 +439,17 @@
     "healedUuidMatch": "Coincidencia por UUID (duplicado)",
     "healedUuidTitle": "FileMaker registra este objeto con el UUID buscado; como el UUID aparecía varias veces en la exportación, el catálogo lo guarda con un UUID de sustitución.",
     "idMatch": "Coincidencia por ID {{id}}",
-    "modifiedTooltip": "Modificado {{age}} — hora local del cliente que editó, sin zona horaria"
+    "modifiedTooltip": "Modificado {{age}} — hora local del cliente que editó, sin zona horaria",
+    "usageTooltip": "Usado internamente por: {{owners}} · Referencias: {{refs}} · Roles: {{roles}} · Archivos: {{files}}",
+    "usageCellAria": "Uso {{count}} — abrir las referencias entrantes",
+    "usageEntryPoint": "En el menú Guiones o de formatos — accesible sin referencia",
+    "usageBuiltin": "Conjunto de privilegios integrado — no se puede eliminar",
+    "usageBridge": "Puente de relación — necesario en la ruta entre ocurrencias de tabla usadas",
+    "usageDead": "Rama muerta del gráfico de relaciones — nada más allá se usa",
+    "usageKeyField": "Campo de coincidencia de una relación",
+    "usageCrossFile": "Usado desde otro archivo",
+    "usageUnverified": "Sin verificar — el archivo se exportó sin información DDR, faltan las referencias de fórmulas",
+    "usageExternal": "El uso desde fuera (programaciones del servidor, Data API, OData, llamadas URL, AppleScript, plug-ins …) no se registra"
   },
   "scriptSearchFilter": {
     "searchAria": "Buscar referencias",
@@ -805,7 +882,15 @@
     "optFieldFrames": "Marcos de campo con registro activo",
     "optFrameCurrentOnly": "Delimitar campos solo en el registro actual",
     "optShowCurrentInList": "Indicador de registro en vista lista",
-    "optQuickFind": "Búsqueda rápida"
+    "optQuickFind": "Búsqueda rápida",
+    "partsHeading": "Secciones del layout",
+    "partsObjects_one": "{{count}} objeto",
+    "partsObjects_other": "{{count}} objetos",
+    "partsHeight": "{{size}} pt",
+    "partsSortedBy": "ordenado por",
+    "partsFilterTitle": "Mostrar solo esta sección en el gráfico",
+    "partsFilterActiveTitle": "Quitar el filtro de sección",
+    "partsFieldUnresolved": "Campo no presente en el catálogo (¿archivo no importado?)"
   },
   "pluginSpec": {
     "tooltip": "Compatibilidad de plataformas según la documentación de {{plugin}}",
@@ -1006,5 +1091,223 @@
     "usedSuffix": "{{used}} en uso",
     "functionsHeading": "Funciones",
     "colFunction": "Función"
+  },
+  "tableOccurrence": {
+    "ariaLabel": "Detalles de la instancia de tabla",
+    "definitionHeading": "Definición",
+    "baseTable": "Tabla base",
+    "baseTableUnresolved": "— no resoluble —",
+    "inFile": "en el archivo «{{file}}»",
+    "dataSource": "Fuente de datos",
+    "dsResolved": "Archivo «{{file}}» en el catálogo",
+    "dsUnresolved": "Archivo de destino no importado",
+    "diagram": "Gráfico de relaciones",
+    "viewLabel": "Vista: {{view}}",
+    "view": {
+      "Full": "todos los campos",
+      "Related": "solo campos de relación",
+      "Collapse": "solo nombre"
+    },
+    "usageHeading": "Uso",
+    "class": {
+      "used": "usada",
+      "relationship_bridge": "puente de relación",
+      "dead_branch": "rama muerta",
+      "dead_island": "isla muerta",
+      "unused": "no usada"
+    },
+    "reason": {
+      "path": "Está en la ruta de relaciones entre TO usadas (p. ej. la TO de unión de una relación n:m) — necesaria.",
+      "cascade_delete": "Participa en una relación con eliminación en cascada — necesaria."
+    },
+    "deadBranch_one": "Parte de una rama muerta ({{count}} TO) bajo el ancla",
+    "deadBranch_other": "Parte de una rama muerta ({{count}} TO) bajo el ancla",
+    "deadIsland_one": "Grupo de TO sin TO usada ({{count}} TO).",
+    "deadIsland_other": "Grupo de TO sin TO usada ({{count}} TO).",
+    "unused": "Ningún uso visible estáticamente.",
+    "unusedNoRel": "Ningún uso visible estáticamente, ninguna relación.",
+    "reviewHint": "Candidato a revisión, no una recomendación de borrado — las referencias dinámicas (GetField, Evaluate, ExecuteSQL) siguen invisibles.",
+    "toTests": "Detalles en la pestaña Tests",
+    "lowConfidence": "Archivo sin información DDR: uso en fórmulas hallado por búsqueda de texto, clase no verificada.",
+    "group": {
+      "context": "Contexto",
+      "display": "Visualización",
+      "logic": "Lógica",
+      "data": "Datos",
+      "graph": "Gráfico",
+      "other": "Otros"
+    },
+    "category": {
+      "layout_context": "Formatos",
+      "calc_context": "Contexto de cálculo",
+      "security": "Privilegios",
+      "layout_field": "Campos de formato",
+      "portal": "Portales",
+      "layout_part": "Partes del formato",
+      "table_view": "Vista de tabla",
+      "script_step": "Pasos de guion",
+      "calculation": "Fórmulas",
+      "calculation_text": "Texto de fórmula",
+      "navigation": "Navegación",
+      "lookup": "Valores de consulta",
+      "lookup_context": "Contexto de consulta",
+      "value_list": "Listas de valores",
+      "value_list_related": "Listas de valores (relacionadas)",
+      "relationship": "Relaciones",
+      "relationship_cascade": "Eliminación en cascada"
+    },
+    "chipTitle": "{{users}} objetos · {{refs}} referencias — mostrar en Referencias",
+    "allUsages": "todas las referencias → Referencias",
+    "relationshipsHeading": "Relaciones",
+    "noRelationships": "— ninguna relación —",
+    "searchPlaceholder": "Filtrar TO asociada o campo…",
+    "colSelf": "Esta TO",
+    "colOperator": "Operator",
+    "colPartnerField": "Campo asociado",
+    "colPartner": "TO asociada",
+    "colOptions": "Opciones",
+    "colOptionsTitle": "Opciones: esta TO | TO asociada",
+    "colRelationship": "Relación",
+    "and": "Y",
+    "optCreate": "Permitir la creación de registros mediante esta relación",
+    "optDeleteSelf": "Eliminación en cascada: los registros de esta TO se eliminan cuando se elimina el registro relacionado",
+    "optDeletePartner": "Eliminación en cascada: los registros de la TO asociada se eliminan cuando se elimina un registro de esta TO",
+    "optSort": "Ordenado",
+    "legend": "Opciones «esta TO | TO asociada»: ＋ creación permitida · 🗑 eliminación en cascada · ⇅ ordenado",
+    "siblingsHeading": "Otras instancias de «{{bt}}»",
+    "siblingsNone": "— ninguna —",
+    "toBaseTable": "a la tabla base",
+    "chipTitleInPage": "{{users}} objetos — mostrar en las relaciones de abajo",
+    "optionFilterAria": "Filtrar por opción",
+    "option": {
+      "cascade": "Eliminación en cascada",
+      "create": "Creación permitida",
+      "sorted": "ordenado"
+    },
+    "siblingsSearch": "Filtrar TO o archivo…",
+    "siblingsScopeAria": "Ámbito",
+    "scope": {
+      "all": "todas",
+      "file": "este archivo",
+      "other": "toda la solución"
+    },
+    "scopeTitle": {
+      "all": "Todas las instancias de la solución",
+      "file": "Instancias en este archivo",
+      "other": "Instancias en los demás archivos de la solución"
+    },
+    "colTo": "Instancia de tabla",
+    "dataSourceCurrent": "archivo actual",
+    "dataSourceCurrentTitle": "La tabla base se usa directamente desde este archivo, sin fuente de datos",
+    "dsSelf": "apunta a este mismo archivo",
+    "dsSelfSibling": "La fuente de datos apunta a su propio archivo",
+    "inThisFile": "en este archivo",
+    "viaDataSource": "fuente de datos «{{ds}}»",
+    "colDefinedIn": "definida en",
+    "colDefinedInTitle": "Archivo cuyo gráfico de relaciones contiene la TO (vacío = este archivo)",
+    "colSourceTitle": "Cómo llega la TO a la tabla base: archivo actual o mediante una fuente de datos",
+    "countFiltered": "{{shown}} de {{total}}",
+    "defJumpTitle": "Ir a la sección más abajo",
+    "defLayoutsTitle": "Formatos basados en esta TO — mostrar en Referencias",
+    "siblingsJump": "Otras instancias",
+    "ctxHeading": "Grupo de TO",
+    "ctxGroup": "Grupo",
+    "ctxSingle": "solo esta TO — ninguna relación",
+    "ctxTos_one": "{{count}} TO",
+    "ctxTos_other": "{{count}} TO",
+    "ctxLayouts_one": "{{count}} formato",
+    "ctxLayouts_other": "{{count}} formatos",
+    "ctxAnchors": "Anclas",
+    "ctxAnchorsNone": "ningún formato se basa en una TO de este grupo",
+    "ctxLayoutsTitle_one": "{{count}} formato",
+    "ctxLayoutsTitle_other": "{{count}} formatos",
+    "ctxSelfAnchor_one": "es ella misma contexto de formato ({{count}} formato)",
+    "ctxSelfAnchor_other": "es ella misma contexto de formato ({{count}} formatos)",
+    "ctxSteps_one": "{{count}} paso",
+    "ctxSteps_other": "{{count}} pasos",
+    "ctxHint": "Ancla = TO en la que se basan formatos. «Más cercano» es el ancla desde la que se llega a esta TO con el menor número de relaciones.",
+    "ctxAnchorsLess": "cerrar lista",
+    "ctxMoreEachSingle": "+{{count}} más con 1 formato cada una",
+    "ctxMoreEach": "+{{count}} más con {{each}} formatos cada una",
+    "ctxMoreTotal": "+{{count}} más con {{total}} formatos en total",
+    "ctxAnchor": "Ancla",
+    "ctxColLayouts": "Formatos",
+    "ctxColDistance": "Distancia",
+    "ctxColDistanceTitle": "Pasos de relación hasta esta TO",
+    "ctxContext": "Contexto de formato",
+    "ctxNearest": "más cercano:",
+    "ctxShowPath": "mostrar ruta",
+    "ctxHidePath": "ocultar ruta"
+  },
+  "layoutParts": {
+    "kind": {
+      "12": "Navegación superior",
+      "0": "Cabecera inicial",
+      "1": "Cabecera",
+      "2": "Sumario general principal",
+      "3": "Subsumario al ordenarse por",
+      "4": "Cuerpo",
+      "6": "Sumario general continuo",
+      "7": "Pie de página",
+      "8": "Pie de página inicial",
+      "13": "Navegación inferior"
+    },
+    "position": {
+      "leading": "principal",
+      "trailing": "continuo"
+    },
+    "subSummaryLabel": "{{kind}} ‹{{field}}› ({{position}})",
+    "subSummaryLabelNoField": "{{kind}} ({{position}})",
+    "option": {
+      "o1": "Salto de página antes de imprimir la parte",
+      "o2": "Salto de página tras imprimir la parte {{n}} veces",
+      "o3": "Empezar a numerar las páginas tras imprimir la parte",
+      "o4": "Imprimir parte incluso si abarca más de una página",
+      "o5": "No imprimir la parte sobrante en la página siguiente",
+      "o6": "Usar alternar estado de fila",
+      "o7": "Usar estado de fila activo"
+    }
+  },
+  "layoutPartDetail": {
+    "ariaLabel": "Detalles de la sección del layout",
+    "groupGeneral": "General",
+    "groupSort": "Ordenación",
+    "groupContext": "Contexto",
+    "groupOptions": "Definición de la parte",
+    "groupTechnical": "Técnico",
+    "kind": "Tipo de sección",
+    "exportedType": "Tipo exportado",
+    "exportedTypeTitle": "El tipo tal como aparece en la exportación XML (localizado o mal etiquetado por FileMaker)",
+    "partName": "Nombre interno",
+    "position": "Posición",
+    "positionValue": "{{pos}} de {{total}}",
+    "previous": "Sección anterior",
+    "next": "Sección siguiente",
+    "height": "Altura",
+    "top": "Borde superior",
+    "bottom": "Borde inferior",
+    "unitPt": "{{value}} pt",
+    "objects": "Objetos",
+    "objectsValue": "{{total}} ({{root}} directamente en la sección)",
+    "sortedBy": "Ordenado por",
+    "sortToDiffers": "mediante otra instancia de tabla distinta de la del layout ({{to}})",
+    "fieldUnresolved": "Campo no presente en el catálogo (¿archivo no importado?)",
+    "layout": "Layout",
+    "contextTable": "Instancia de tabla",
+    "baseTable": "Tabla base",
+    "file": "Archivo",
+    "optionsRaw": "Opciones (sin procesar)",
+    "optionsUndecoded": "Bits sin opción de diálogo: {{bits}}",
+    "optionOn": "activado",
+    "optionOff": "desactivado",
+    "sourceLocal": "definido en la sección",
+    "sourceStyle": "estilo de sección {{name}}",
+    "sourceTheme": "tema {{name}}",
+    "sourceDefault": "sin definir (desactivado)",
+    "sourceClassic": "tema clásico (desactivado)",
+    "bodyOnly": "solo en el cuerpo",
+    "showInLayout": "Mostrar en el layout",
+    "showInLayoutTitle": "Abrir el layout filtrado por esta sección",
+    "objectsShowInReferences": "Mostrar los objetos en las referencias"
   }
 }

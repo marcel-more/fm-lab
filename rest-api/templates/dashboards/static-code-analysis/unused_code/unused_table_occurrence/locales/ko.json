@@ -1,15 +1,34 @@
 {
   "manifest": {
     "title": "사용되지 않는 테이블 어커런스",
-    "description": "미사용 코드 규칙 — Layout 컨텍스트, 포털 원본, GTRR 대상, 관계의 한쪽 중 어느 것으로도 사용되지 않는 테이블 어커런스."
+    "description": "미사용 코드 규칙 — 제거할 수 있는 테이블 어커런스: 어디에서도 사용되지 않거나 관계의 한쪽으로만 사용되고 그 너머에 사용 중인 어커런스가 없는 것(관계 그래프의 죽은 가지 또는 섬). 수식, 스크립트 단계, Layout 필드의 테이블::필드 참조를 포함한 모든 사용을 셉니다. 사용 중인 두 어커런스 사이 경로의 중간 어커런스(예: n:m 관계의 조인 테이블)는 유지됩니다."
   },
   "layout": {
-    "summary_kpi.props.items[0].label": "발견 수",
-    "summary_kpi.props.items[1].label": "영향받는 파일",
+    "summary_kpi.props.items[0].label": "결과",
+    "summary_kpi.props.items[1].label": "어디에서도 사용되지 않음",
+    "summary_kpi.props.items[2].label": "죽은 가지",
+    "summary_kpi.props.items[3].label": "죽은 섬",
+    "summary_kpi.props.items[4].label": "DDR 정보 없음",
+    "summary_kpi.props.items[5].label": "영향받는 파일",
     "findings_card.props.title": "사용되지 않는 테이블 어커런스",
-    "findings_table.props.searchPlaceholder": "파일 또는 이름 검색…",
+    "findings_table.props.searchPlaceholder": "파일, 이름 또는 이유 검색…",
     "findings_table.props.empty.message": "일치하는 항목을 찾을 수 없습니다.",
     "findings_table.props.columns[0].label": "파일",
-    "findings_table.props.columns[1].label": "이름"
+    "findings_table.props.columns[1].label": "이름",
+    "findings_table.props.columns[2].label": "기본 테이블",
+    "findings_table.props.columns[3].label": "이유",
+    "findings_table.props.columns[4].label": "연결 대상",
+    "findings_table.props.columns[5].label": "죽은 그룹 크기",
+    "findings_table.props.columns[6].label": "DDR 정보 없음",
+    "findings_table.props.columns[3].valueLabels.unused": "어디에서도 사용되지 않음",
+    "findings_table.props.columns[3].valueLabels.dead_branch": "죽은 가지",
+    "findings_table.props.columns[3].valueLabels.dead_island": "죽은 섬",
+    "findings_table.props.columns[3].valueLabels.unused_unverified": "어디에서도 사용되지 않음 (미검증)",
+    "findings_table.props.columns[3].valueLabels.dead_branch_unverified": "죽은 가지 (미검증)",
+    "findings_table.props.columns[3].valueLabels.dead_island_unverified": "죽은 섬 (미검증)",
+    "findings_table.props.columns[6].valueLabels.true": "예",
+    "findings_table.props.columns[6].valueLabels.false": "아니요",
+    "notes_card.props.title": "이유의 의미",
+    "notes_md.props.content": "**어디에서도 사용되지 않음.** 어떤 레이아웃, 포털, 계산식, 스크립트 단계, 레이아웃 필드, 값 목록, 조회, 권한 세트도 이 테이블 어커런스를 참조하지 않으며 관계도 없습니다. 단독으로 삭제할 수 있습니다.\n\n**죽은 가지.** 이 테이블 어커런스는 관계의 한쪽으로만 사용되며, 그 너머에서는 아무것도 사용되지 않습니다. *연결 대상*은 가지가 매달린 사용 중인 테이블 어커런스를, *죽은 그룹 크기*는 가지에 속한 테이블 어커런스 수를 나타냅니다. 이들은 함께 삭제할 수 있습니다.\n\n**죽은 섬.** 관계 그룹의 어떤 테이블 어커런스도 사용되지 않습니다. 그룹 전체를 삭제할 수 있으며 *죽은 그룹 크기*가 그 수입니다.\n\n**결과에 포함되지 않음.** 사용 중인 두 테이블 어커런스 사이 경로에 있는 테이블 어커런스(대개 n:m 관계의 중간 테이블 어커런스)는 직접 참조되지 않아도 필요합니다. 관련 레코드를 삭제하는 관계의 양쪽도 마찬가지입니다.\n\n**DDR 정보 없음.** 파일이 DDR 정보 없이 내보내졌습니다. 이 경우 계산식의 `테이블::필드` 참조는 계산식 텍스트에서만 인식되고 평가 컨텍스트가 없으므로 사용이 보이지 않을 수 있습니다. 이런 결과는 *미검증*으로 표시됩니다(예: *죽은 가지 (미검증)*). *DDR 정보 없음* 타일에서 목록을 볼 수 있습니다. 삭제하기 전에 DDR 정보를 포함해 파일을 다시 내보내십시오.\n\n**한계.** 가져온 솔루션 내부의 사용만 셉니다. 보이지 않는 것: **외부에서의 접근** — OData, ODBC/JDBC, Data API, 가져오지 않은 파일; **내부의 동적 참조** — `GetField`, `Evaluate`, SQL 문자열 안의 이름. 결과는 검토 후보이며 삭제 권장이 아닙니다. [사용을 세는 방법](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

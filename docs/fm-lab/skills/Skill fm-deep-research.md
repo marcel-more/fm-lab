@@ -34,6 +34,7 @@ Semantic names from an earlier `fm-graph-cluster` run are welcome but not requir
 - **Development activity** — the data state, the share of mass and technical stamps, the individual changes in the last 90 and 365 days, the [activity class](../schema/catalog-tables/ObjectChangeMeta.md#activity-classes) of every segment of Appendix A and the timeline of the larger mass events (`scripts/community_activity.sql`). When mass events dominate, the report gives no activity verdict per module and describes the lifetime save counters instead.
 - **Duplication** — scripts with the same name in several files are counted as per-file copies with their cross-file call count (usually zero), never mistaken for a shared dependency.
 - **Measured findings** — the default set of Analysis Tests in solution scope (error checks, code quality, performance; twelve tests, the counters plus at most five findings per check, tooling add-on scripts filtered out), plus metrics such as modularity, singletons, largest share and folder alignment.
+- **Unused code** — an estimate of how much of the solution nothing points at: the share per object type, the most affected files and a sample of three objects per type from different files. The complete list is a separate run of the analysis test `unused-code` ([details](../Wiki/Analysis%20Tests.md#unused-code)).
 
 Every bound is explicit: how many segments were scanned and how many were skipped, which tests ran, what was cut — in the chat line and in the report's protocol appendix.
 

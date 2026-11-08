@@ -49,13 +49,16 @@ follow-up cards get a title, and only a genuine section label.
 | Primitive | Props |
 |---|---|
 | `KPI` | `label`, `field`, `format`, `onClick` (ActionSpec) |
-| `KPIStrip` | `items[]` of `{ label, field, format?, onClick? }` |
+| `KPIStrip` | `items[]` of `{ label, field, format?, onClick?, toggle? }` |
 | `DefinitionList` | `items[]` same shape, rendered as "Label / value" rows (settings-style panels) |
 
 **Clickable KPIs** (the filter-hero pattern): give an item `onClick` with an
 `openDashboard` self-navigation whose `args.params` set a filter param. The tile
 renders as a button and gets an **active state** automatically when the URL params
-match `args.params` (see §Active state below).
+match `args.params` (see §Active state below). With `"toggle": true` (KPIStrip
+items only) a second click on the **active** tile sends its own `args.params` as
+`""` — it removes exactly this tile's filter, other sticky filters stay (see
+§Sticky params, combinable KPI filters).
 
 ## Collection primitives (many rows)
 
@@ -107,6 +110,44 @@ chip groups values in the SQL (a hidden chip column, e.g. `_chip_step`).
 `nowrap: true` keeps a column on one line (timestamps, names, counts); the
 remaining columns absorb the width and wrap instead.
 
+`breakAt` lets long identifiers without spaces wrap — FileMaker names such as
+`PDF_Textbausteine_Preisschlüssel` are one unbreakable word otherwise and push
+the table past its card:
+
+```json
+{ "field": "object_name", "label": "Name", "breakAt": "separators" }
+```
+- `"separators"`: break only after `_` and `-` (the separator stays at the line
+  end; no break after a leading or trailing one). `"anywhere"`: break between
+  any two characters.
+- Measured, not permanent: the opportunities switch on only while the table
+  would overflow its card without them, and off again once the window is wide
+  enough — a reader who wants the names on one line widens the window.
+- Ignored together with `nowrap`. Leave `nowrap` off the other text columns of
+  such a table (a `nowrap` file column alone can be what overflows it).
+- Reference bundles: `static-code-analysis/unused_code/unused_table_occurrence`,
+  `schema/table_occurrence_usage` (`usage_table`).
+
+`valueLabels` maps the codes a column carries to short captions — the SQL emits
+a stable code, the layout names it, the locales translate it:
+
+```json
+{ "field": "reason", "label": "Reason",
+  "valueLabels": { "unused": "Not used anywhere", "dead_branch": "Dead branch" } }
+```
+- Locale key per code: `"<table-id>.props.columns[N].valueLabels.<code>"`.
+- The cell keeps its code for sort, server search, click tokens (`{{reason}}`)
+  and the badge tone; works with and without `format: "badge"`, and a caption
+  replaces `format` (`{ "true": "Yes", "false": "No" }` for a boolean column).
+- A code without an entry shows as it is; an explicit `""` shows an empty cell.
+- The client search also matches the captions. The server search (SQL `q`)
+  sees only the row's columns — emit an English caption column (e.g.
+  `class_label`, not shown) when a term like "dead branch" must find the code.
+- Prefer it over long explanatory text in a cell: a short caption in the table,
+  the explanation in a `Markdown` card below it.
+- Reference bundles: `static-code-analysis/unused_code/unused_table_occurrence`
+  (`reason`, `low_confidence`), `schema/table_occurrence_usage` (`usage_class`).
+
 **Server-side paging** — for every list that can outgrow one page (the rule,
 not the exception; a fixed `LIMIT` is only for Top-N rankings and short group
 lists):
@@ -144,6 +185,15 @@ lists):
   bundles — a custom bundle is not covered by it, so follow them by hand.
 - Without `pageParam`, a `_row_total` above the loaded rows only names the
   cut-off of a LIMIT-capped result ("500 of 3,104").
+- `keepViewOnRowClick: true` (master-detail selection): an `onRowClick` that
+  navigates to the **same** dashboard carries this table's search term, sort
+  (`sortParam`/`dirParam`) and page (`pageParam`) along — also a local search
+  or sort of `clientMode`. Without it `openDashboard` rebuilds the query string,
+  so the list falls back to page 1, default order and no search, and the
+  selected row is often off screen. Values the click args set win. To keep the
+  search and sort across KPI tile clicks too, declare `q`/`sort`/`dir` (or the
+  table's own names) `sticky` in the manifest; keep the page param click-scoped,
+  so a filter change returns to page 1. Reference: `schema/table_occurrence_usage`.
 - Reference bundles: `dashboards/static-code-analysis/unused_code/variable_set_never_read`
   (FilterChips + paging), `…/best_practices/relationship_with_sort` (server chip).
 
@@ -243,11 +293,42 @@ not carry is dropped. Two ways to keep a *mode/lens* param alive across clicks:
 - **Carry it in the click args** (works everywhere, also cross-dashboard):
   `"params": { "host": "{{host}}", "comment": "{{comment}}" }`.
 
-A legacy base set (`api_set`, `file`, `comment`) is always sticky for backward
-compatibility (`STICKY_DASHBOARD_PARAMS` in `apps/web/src/dashboard/actions.ts`).
+A base set (`api_set`, `file`, `comment`, `scope_uuids`) is always sticky for backward
+compatibility and for the Analysis-Test scope (`STICKY_DASHBOARD_PARAMS` in `apps/web/src/dashboard/actions.ts`).
 Truly click-scoped filters (the thing a KPI tile or drilldown row *sets*) must
 NOT be declared sticky — otherwise they can never be reset by a click that
 omits them.
+
+Exception — **combinable KPI filters**: two filter params a KPI strip sets
+independently (reason × DDR info) may both be sticky, so a tile keeps the other
+filter. The reset tile then sends **every** such param explicitly as `""`
+(`"params": { "reason": "", "ddr": "" }`); an empty value is not preserved, so
+the reset works. To let one filter be dropped alone, mark its tile
+`"toggle": true`: a second click on the active tile sends its params as `""`,
+the other filters stay. Without `toggle` a second click on an active tile
+changes nothing and only the reset tile clears it. Reference:
+`static-code-analysis/unused_code/unused_table_occurrence` (tile *Without DDR
+info*).
+
+### `ScopeNotice` — visible scope of the page (automatic)
+
+An Analysis Test opens its member dashboards with the scope it ran in: `file`
+and `scope_uuids` (object, object list or cluster) in the URL. The SQL filters
+on both (scope block, `references/sql-rules.md`), so every KPI and list counts
+only that scope. The host places a `ScopeNotice` above the layout of every
+content dashboard (`/dashboard/:id`) whenever such a param is set — "Scope:
+File: Adressen · Object: Markiert (Table occurrence)", the number of objects for
+a list or cluster, and a "Show whole solution" button that drops `file`,
+`scope_uuids` and `page`. Nothing to add to a layout.
+
+- It only names what the dashboard applies: `scope_uuids` needs an object-like
+  scope in `analysis.scope.supported`, `file` the file scope or a declared
+  `file` param — never a filter the counts ignore.
+- A `file` the layout already shows in its own control (`props.param: "file"`,
+  e.g. a file `Select`) is left out of the notice.
+- `scope_uuids` is sticky like `file`: KPI tiles and chips keep the scope.
+- To place it yourself (e.g. inside a card), add `{ "type": "ScopeNotice" }`
+  (prop `hideFile: true` leaves the file out); the host then adds none.
 
 ## Chart primitives (many rows, draw only)
 

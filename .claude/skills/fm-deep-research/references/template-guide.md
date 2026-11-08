@@ -49,7 +49,7 @@ Read this before rendering (R4) and whenever a custom template is passed with `-
 | architecture | module map · file topology · granularity (K, sizes, singletons, largest share, Q) · folders vs. communities (alignment %) · hubs/god-nodes | R0, R1 #7–#11, R2, hubs | metrics cited |
 | activity | data state · mass/technical share · individual changes 90/365 d · module classes · telling segments by name · mass-event timeline · interplay with findings only; mass dominance → no per-module verdict (save counters + mass events instead); no stamps → one paragraph | `community_activity.sql` #1–#3 | ≤ ½ page; one line per Appendix A segment |
 | technical | conventions · script patterns · UI · data · APIs/plugins · security · platform footprint | R1, R2, script_steps | — |
-| findings | 6.1 measured (tests + metrics) · 6.2 interpreted; each with Evidence + Impact | R3 | top 15 in body, rest in Appendix B; ≤ 5 findings per test member, tooling noise filtered |
+| findings | 6.1 measured (tests + unused-code estimate + metrics) · 6.2 interpreted; each with Evidence + Impact | R3 | top 15 in body, rest in Appendix B; ≤ 5 findings per test member, tooling noise filtered |
 | recommendations | R-nn → F-nn · horizon · theme | 6 | — |
 | open | what the catalog cannot show · verification tasks | 2–6 | — |
 | segments | per segment: name · description · members · dominant file/type · anchors · domain · activity line | R2, `community_activity.sql` #2 | `--top` |

@@ -375,5 +375,23 @@
     "startup_other": "アップデート後に整理しました：以前のバージョンの残り {{count}} 件を {{dir}} に移動しました。",
     "startupForks_one": "編集したバージョンは Custom に {{ids}} として残ります。",
     "startupForks_other": "編集した {{count}} 件のバージョンは Custom に {{ids}} として残ります。"
+  },
+  "renderer": {
+    "primitiveError": "この要素を表示できませんでした: {{message}}"
+  },
+  "kpi": {
+    "toggleOffHint": "もう一度クリックするとこのフィルターを解除します"
+  },
+  "scope": {
+    "label": "スコープ",
+    "file": "ファイル: {{file}}",
+    "object": "オブジェクト: {{name}}",
+    "objectTyped": "オブジェクト: {{name}}（{{type}}）",
+    "objects": "{{count}} 個のオブジェクト",
+    "objects_one": "{{count}} 個のオブジェクト",
+    "objects_other": "{{count}} 個のオブジェクト",
+    "clear": "ソリューション全体を表示",
+    "clearTitle": "スコープを解除してソリューション全体を表示",
+    "hint": "数値と一覧はこのスコープのみを表示します"
   }
 }

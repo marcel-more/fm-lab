@@ -1,15 +1,34 @@
 {
   "manifest": {
     "title": "Aparición de tabla sin usar",
-    "description": "Regla de código sin usar: apariciones de tabla que no sirven como contexto de Layout, origen de portal, destino de GTRR ni lado de relación."
+    "description": "Regla de código no utilizado: ocurrencias de tabla que se pueden eliminar, sin ningún uso o usadas solo como lado de una relación sin ninguna ocurrencia usada detrás (rama o isla muerta del gráfico de relaciones). Cuenta todo uso, incluidas las referencias Tabla::Campo en fórmulas, pasos de script y campos de Layout; las ocurrencias intermedias en la ruta entre dos ocurrencias usadas (p. ej. la tabla de unión de una relación n:m) se conservan."
   },
   "layout": {
-    "summary_kpi.props.items[0].label": "Hallazgos",
-    "summary_kpi.props.items[1].label": "Archivos afectados",
+    "summary_kpi.props.items[0].label": "Resultados",
+    "summary_kpi.props.items[1].label": "Sin ningún uso",
+    "summary_kpi.props.items[2].label": "Rama muerta",
+    "summary_kpi.props.items[3].label": "Isla muerta",
+    "summary_kpi.props.items[4].label": "Sin información DDR",
+    "summary_kpi.props.items[5].label": "Archivos afectados",
     "findings_card.props.title": "Aparición de tabla sin usar",
-    "findings_table.props.searchPlaceholder": "Buscar archivo o nombre…",
+    "findings_table.props.searchPlaceholder": "Buscar archivo, nombre o motivo…",
     "findings_table.props.empty.message": "No se encontraron coincidencias.",
     "findings_table.props.columns[0].label": "Archivo",
-    "findings_table.props.columns[1].label": "Nombre"
+    "findings_table.props.columns[1].label": "Nombre",
+    "findings_table.props.columns[2].label": "Tabla base",
+    "findings_table.props.columns[3].label": "Motivo",
+    "findings_table.props.columns[4].label": "Unida a",
+    "findings_table.props.columns[5].label": "Tamaño del grupo muerto",
+    "findings_table.props.columns[6].label": "Sin información DDR",
+    "findings_table.props.columns[3].valueLabels.unused": "Sin ningún uso",
+    "findings_table.props.columns[3].valueLabels.dead_branch": "Rama muerta",
+    "findings_table.props.columns[3].valueLabels.dead_island": "Isla muerta",
+    "findings_table.props.columns[3].valueLabels.unused_unverified": "Sin ningún uso (sin verificar)",
+    "findings_table.props.columns[3].valueLabels.dead_branch_unverified": "Rama muerta (sin verificar)",
+    "findings_table.props.columns[3].valueLabels.dead_island_unverified": "Isla muerta (sin verificar)",
+    "findings_table.props.columns[6].valueLabels.true": "Sí",
+    "findings_table.props.columns[6].valueLabels.false": "No",
+    "notes_card.props.title": "Qué significan los motivos",
+    "notes_md.props.content": "**Sin ningún uso.** Ningún formato, portal, fórmula, paso de guion, campo de formato, lista de valores, búsqueda de valores ni conjunto de privilegios hace referencia a la aparición de tabla, y no tiene ninguna relación. Se puede eliminar por sí sola.\n\n**Rama muerta.** La aparición de tabla solo se usa como lado de relaciones, y nada más allá de ella se usa. *Unida a* indica la aparición de tabla usada de la que cuelga la rama; *Tamaño del grupo muerto* cuenta las apariciones de tabla de la rama — se pueden eliminar juntas.\n\n**Isla muerta.** No se usa ninguna aparición de tabla de su grupo de relaciones. Se puede eliminar el grupo entero; *Tamaño del grupo muerto* lo cuenta.\n\n**Nunca es un resultado.** Una aparición de tabla en el camino entre dos usadas — normalmente la aparición de tabla intermedia de una relación n:m — es necesaria aunque nada haga referencia directa a ella. Lo mismo vale para ambos lados de una relación que elimina registros relacionados.\n\n**Sin información DDR.** El archivo se exportó sin información DDR. Las referencias `Tabla::Campo` en las fórmulas solo se reconocen entonces en el texto de la fórmula y faltan los contextos de evaluación: un uso puede quedar invisible. Un resultado así figura como *sin verificar* (p. ej. *Rama muerta (sin verificar)*); el mosaico *Sin información DDR* los muestra. Exporte el archivo de nuevo con información DDR antes de eliminar nada.\n\n**Límites.** Solo cuenta el uso dentro de la solución importada. No es visible: **acceso desde fuera** — OData, ODBC/JDBC, Data API, archivos no importados; **referencias dinámicas dentro** — `GetField`, `Evaluate`, nombres en cadenas SQL. Un resultado es un candidato a revisar, no una recomendación de eliminar. [Cómo se cuenta el uso](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

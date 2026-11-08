@@ -1,15 +1,34 @@
 {
   "manifest": {
     "title": "未使用的表实例",
-    "description": "未使用代码规则 — 既不用作 Layout 上下文、门户来源、GTRR 目标，也不用作关系一方的表实例。"
+    "description": "未使用代码规则 — 可以删除的表实例：任何地方都未使用，或仅作为关系一方使用且其后没有已使用的表实例（关系图中的死分支或孤岛）。统计所有使用，包括公式、脚本步骤和 Layout 字段中的 表::字段 引用；位于两个已使用表实例之间路径上的中间表实例（例如 n:m 关系的连接表）会保留。"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "结果数",
-    "summary_kpi.props.items[1].label": "受影响文件",
+    "summary_kpi.props.items[1].label": "任何地方都未使用",
+    "summary_kpi.props.items[2].label": "死分支",
+    "summary_kpi.props.items[3].label": "死孤岛",
+    "summary_kpi.props.items[4].label": "无 DDR 信息",
+    "summary_kpi.props.items[5].label": "受影响文件",
     "findings_card.props.title": "未使用的表实例",
-    "findings_table.props.searchPlaceholder": "搜索文件或名称…",
+    "findings_table.props.searchPlaceholder": "搜索文件、名称或原因…",
     "findings_table.props.empty.message": "未找到匹配项。",
     "findings_table.props.columns[0].label": "文件",
-    "findings_table.props.columns[1].label": "名称"
+    "findings_table.props.columns[1].label": "名称",
+    "findings_table.props.columns[2].label": "基本表",
+    "findings_table.props.columns[3].label": "原因",
+    "findings_table.props.columns[4].label": "连接到",
+    "findings_table.props.columns[5].label": "死组大小",
+    "findings_table.props.columns[6].label": "无 DDR 信息",
+    "findings_table.props.columns[3].valueLabels.unused": "任何地方都未使用",
+    "findings_table.props.columns[3].valueLabels.dead_branch": "死分支",
+    "findings_table.props.columns[3].valueLabels.dead_island": "死孤岛",
+    "findings_table.props.columns[3].valueLabels.unused_unverified": "任何地方都未使用 (未验证)",
+    "findings_table.props.columns[3].valueLabels.dead_branch_unverified": "死分支 (未验证)",
+    "findings_table.props.columns[3].valueLabels.dead_island_unverified": "死孤岛 (未验证)",
+    "findings_table.props.columns[6].valueLabels.true": "是",
+    "findings_table.props.columns[6].valueLabels.false": "否",
+    "notes_card.props.title": "原因说明",
+    "notes_md.props.content": "**任何地方都未使用。** 没有任何布局、门户、公式、脚本步骤、布局字段、值列表、查找或权限集引用此表实例，它也没有任何关系。可以单独删除。\n\n**死分支。** 此表实例仅作为关系的一侧使用，其后没有任何被使用的表实例。*连接到* 指分支所挂接的已使用表实例；*死组大小* 统计该分支中的表实例数——它们可以一起删除。\n\n**死孤岛。** 其关系组中没有任何表实例被使用。整个组都可以删除，*死组大小* 即其数量。\n\n**绝不是结果。** 位于两个已使用表实例之间路径上的表实例（通常是 n:m 关系的中间表实例）即使没有被直接引用也是必需的。删除相关记录的关系的两侧同样如此。\n\n**无 DDR 信息。** 该文件导出时不含 DDR 信息。此时公式中的 `表::字段` 引用只能从公式文本中识别，且缺少计算上下文——某些使用可能不可见。此类结果标记为 *未验证*（例如 *死分支 (未验证)*）；磁贴 *无 DDR 信息* 会列出它们。删除任何内容之前，请重新导出带 DDR 信息的文件。\n\n**限制。** 仅统计导入的解决方案内部的使用。不可见：**来自外部的访问** — OData、ODBC/JDBC、Data API、未导入的文件；**内部的动态引用** — `GetField`、`Evaluate`、SQL 字符串中的名称。结果是待检查的候选项，而非删除建议。[如何统计使用](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

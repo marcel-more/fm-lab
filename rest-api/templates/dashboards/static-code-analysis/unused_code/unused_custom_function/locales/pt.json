@@ -1,15 +1,24 @@
 {
   "manifest": {
     "title": "Custom Function não utilizada",
-    "description": "Regra de código não utilizado — Custom Functions não chamadas por nenhum cálculo, script ou outra função.\n\nBaseado na regra PMD UnusedPrivateMethod — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod"
+    "description": "Regra de código não utilizado — Custom Functions não chamadas por nenhum cálculo, script ou outra função. Resultados de arquivos exportados sem informações DDR são marcados como não verificados.\n\nBaseado na regra PMD UnusedPrivateMethod — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Ocorrências",
-    "summary_kpi.props.items[1].label": "Arquivos afetados",
+    "summary_kpi.props.items[1].label": "Sem informações DDR",
+    "summary_kpi.props.items[2].label": "Arquivos afetados",
     "findings_card.props.title": "Custom Function não utilizada",
     "findings_table.props.searchPlaceholder": "Pesquisar arquivo ou nome…",
     "findings_table.props.empty.message": "Nenhuma correspondência encontrada.",
     "findings_table.props.columns[0].label": "Arquivo",
-    "findings_table.props.columns[1].label": "Nome"
+    "findings_table.props.columns[1].label": "Nome",
+    "findings_table.props.columns[2].label": "Status",
+    "findings_table.props.columns[3].label": "Sem informações DDR",
+    "findings_table.props.columns[2].valueLabels.unused": "Sem uso",
+    "findings_table.props.columns[2].valueLabels.unused_unverified": "Sem uso (não verificado)",
+    "findings_table.props.columns[3].valueLabels.true": "Sim",
+    "findings_table.props.columns[3].valueLabels.false": "Não",
+    "notes_card.props.title": "O que significa o status",
+    "notes_md.props.content": "**Não verificado.** O arquivo foi exportado sem informações DDR. Ele então não contém nenhuma referência de fórmulas: um uso em um cálculo fica invisível. Um resultado assim aparece como *Sem uso (não verificado)*; o bloco *Sem informações DDR* os lista. Exporte o arquivo novamente com informações DDR antes de excluir qualquer coisa.\n\n**Limites.** Só conta o uso dentro da solução importada. Não visíveis: **chamadas de fora** — agendamentos do servidor, Data API, OData, URLs `fmp://`, AppleScript/ActiveX, plug-ins, arquivos não importados; **referências dinâmicas internas** — *Executar script* por nome, `GetField`, `Evaluate`, nomes dentro de strings SQL. Um resultado é um candidato a revisão, não uma recomendação de exclusão. [Como o uso é contado](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

@@ -1,15 +1,24 @@
 {
   "manifest": {
     "title": "Custom Function inutilisée",
-    "description": "Règle de code inutilisé : Custom Functions appelées depuis aucun calcul, script ni autre fonction.\n\nD’après la règle PMD UnusedPrivateMethod — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod"
+    "description": "Règle de code inutilisé : Custom Functions appelées depuis aucun calcul, script ni autre fonction. Les résultats des fichiers exportés sans infos DDR sont marqués non vérifiés.\n\nD’après la règle PMD UnusedPrivateMethod — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Résultats",
-    "summary_kpi.props.items[1].label": "Fichiers concernés",
+    "summary_kpi.props.items[1].label": "Sans infos DDR",
+    "summary_kpi.props.items[2].label": "Fichiers concernés",
     "findings_card.props.title": "Custom Function inutilisée",
     "findings_table.props.searchPlaceholder": "Rechercher un fichier ou un nom…",
     "findings_table.props.empty.message": "Aucune correspondance trouvée.",
     "findings_table.props.columns[0].label": "Fichier",
-    "findings_table.props.columns[1].label": "Nom"
+    "findings_table.props.columns[1].label": "Nom",
+    "findings_table.props.columns[2].label": "Statut",
+    "findings_table.props.columns[3].label": "Sans infos DDR",
+    "findings_table.props.columns[2].valueLabels.unused": "Inutilisé",
+    "findings_table.props.columns[2].valueLabels.unused_unverified": "Inutilisé (non vérifié)",
+    "findings_table.props.columns[3].valueLabels.true": "Oui",
+    "findings_table.props.columns[3].valueLabels.false": "Non",
+    "notes_card.props.title": "Signification du statut",
+    "notes_md.props.content": "**Non vérifié.** Le fichier a été exporté sans infos DDR. Il ne contient alors aucune référence issue des formules : une utilisation dans un calcul reste invisible. Un tel résultat est marqué *Inutilisé (non vérifié)* ; la vignette *Sans infos DDR* les liste. Exportez à nouveau le fichier avec les infos DDR avant toute suppression.\n\n**Limites.** Seule l’utilisation à l’intérieur de la solution importée compte. Non visibles : **appels depuis l’extérieur** — planifications du serveur, Data API, OData, URL `fmp://`, AppleScript/ActiveX, plug-ins, fichiers non importés ; **références dynamiques internes** — *Exécuter un script* par nom, `GetField`, `Evaluate`, noms dans des chaînes SQL. Un résultat est un candidat à vérifier, pas une recommandation de suppression. [Comment l’utilisation est comptée](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

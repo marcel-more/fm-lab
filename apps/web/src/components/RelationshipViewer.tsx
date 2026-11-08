@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { buildObjectPath } from '../lib/navigation';
+import { operatorSymbol } from '../lib/relationshipOperator';
 import './RelationshipViewer.css';
 
 /**
@@ -36,33 +37,6 @@ export interface RelationshipRow {
 
 interface RelationshipViewerProps {
   data: Array<Record<string, unknown>>;
-}
-
-/**
- * FileMaker-Join-Operator → mathematisches Symbol.
- *
- * Die Werte im Katalog sind `Equal`/`NotEqual`/`Less`/`LessOrEqual`/`Greater`/
- * `GreaterOrEqual`/`CartesianProduct` (SaXML-Schreibweise). Ältere Aliasse
- * (`LessThan`, `Cartesian`, …) werden zur Sicherheit mitgemappt — sonst fiele
- * der Operator in den Default und das lange Wort (z.B. „CartesianProduct")
- * überliefe die schmale Operator-Spalte und überlappte das rechte Prädikat.
- */
-function operatorSymbol(op: string | null): string {
-  switch (op) {
-    case 'Equal': return '=';
-    case 'NotEqual': return '≠';
-    case 'Less':
-    case 'LessThan': return '<';
-    case 'LessOrEqual':
-    case 'LessThanEqual': return '≤';
-    case 'Greater':
-    case 'GreaterThan': return '>';
-    case 'GreaterOrEqual':
-    case 'GreaterThanEqual': return '≥';
-    case 'CartesianProduct':
-    case 'Cartesian': return '✕';
-    default: return op ?? '=';
-  }
 }
 
 export const RelationshipViewer: React.FC<RelationshipViewerProps> = ({ data }) => {

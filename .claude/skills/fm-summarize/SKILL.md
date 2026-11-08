@@ -10,7 +10,7 @@ description: >-
   technically". Triggers (German): "beschreibe Script X", "fasse das Feld X zusammen", "erkläre
   mir das Layout X technisch". Also responds to equivalent requests in other languages.
 metadata:
-  version: "0.8.5"
+  version: "0.9.18"
 ---
 
 # FileMaker Object Summary
@@ -107,7 +107,13 @@ long scripts and formulas complete: without an output mode DuckDB 2.0 cuts resul
   `Target_UUID = CF-UUID`.
 - **ValueList** [VL1]: users via ObjectLinks `Target_UUID = VL-UUID`, role `uses_valuelist`.
 - **BaseTable** [BT1, BT2 fields, BT3 table occurrences].
-- **TableOccurrence** [TO1, TO2 relationships].
+- **TableOccurrence** [TO1, TO2 relationships, TO3 usage per category, TO4 usage class]:
+  report the usage from TO3, not from the incoming links of Step 3 — a `TO::Field`
+  reference links only the field, so the edges miss formulas, script steps and layout
+  fields. Name the class from TO4 (`relationship_bridge` is needed, `dead_*` is a review
+  candidate; `Low_Confidence` = unverified, no DDR info). Pitfalls:
+  `docs/agents/query-cookbook.md` § Where-used for Table Occurrences. For a cleanup verdict
+  offer `/fm-test unused-code` in object scope.
 - **Relationship** [R1]: predicates in `Left_*`/`Right_*`, operator in `Operator`.
 - **Calculation** [C1 instance, C2 resolved targets, C3 sibling slots of the owner]:
   a calculation INSTANCE (schema 1.22.0, `CalculationsCatalog`) — identity is

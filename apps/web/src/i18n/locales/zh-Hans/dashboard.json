@@ -375,5 +375,23 @@
     "startup_other": "更新后已清理：已将早期版本的 {{count}} 个残留移至 {{dir}}。",
     "startupForks_one": "你编辑过的版本以 {{ids}} 保留在 Custom 下。",
     "startupForks_other": "你编辑过的 {{count}} 个版本以 {{ids}} 保留在 Custom 下。"
+  },
+  "renderer": {
+    "primitiveError": "无法显示此元素：{{message}}"
+  },
+  "kpi": {
+    "toggleOffHint": "再次单击可取消此筛选"
+  },
+  "scope": {
+    "label": "范围",
+    "file": "文件：{{file}}",
+    "object": "对象：{{name}}",
+    "objectTyped": "对象：{{name}}（{{type}}）",
+    "objects": "{{count}} 个对象",
+    "objects_one": "{{count}} 个对象",
+    "objects_other": "{{count}} 个对象",
+    "clear": "显示整个解决方案",
+    "clearTitle": "移除范围并显示整个解决方案",
+    "hint": "数字和列表仅显示此范围"
   }
 }

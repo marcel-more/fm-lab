@@ -58,7 +58,14 @@
       "logic": "Logique",
       "slots": "Slots",
       "moreTargets": "(+{{n}} autres)"
-    }
+    },
+    "sectionLabel": "Section de mise en page",
+    "sectionAll": "Toutes",
+    "sectionOption": "{{label}} ({{count}})",
+    "sectionAria": "Limiter les objets à une section de mise en page",
+    "sectionStats_one": "{{n}} sur {{count}} objet · Zoom {{zoom}} %",
+    "sectionStats_other": "{{n}} sur {{count}} objets · Zoom {{zoom}} %",
+    "sectionInventoryHint": "Les inventaires couvrent tout le modèle, pas seulement la section choisie"
   },
   "relationshipGraphCanvas": {
     "searchPlaceholder": "Rechercher une occurrence de table…",
@@ -165,6 +172,8 @@
     "ariaLabel": "Hiérarchie des objets",
     "usedBy": "Utilisé par ({{count}})",
     "usedByFiltered": "Utilisé par ({{count}} / {{total}})",
+    "usedByGrouped": "Utilisé par — par objet ({{count}})",
+    "usedByGroupedFiltered": "Utilisé par — par objet ({{count}} / {{total}})",
     "uses": "Utilise ({{count}})",
     "usesFiltered": "Utilise ({{count}} / {{total}})",
     "structurallyContainedBy": "Structurellement contenu par ({{count}})",
@@ -173,6 +182,8 @@
     "structurallyContainsFiltered": "Contient structurellement ({{count}} / {{total}})",
     "noReferences": "Aucune référence trouvée",
     "noFilterMatches": "Aucun résultat pour les filtres actuels",
+    "toUsageUnavailable": "Ce catalogue ne montre que les liens directs de l'occurrence de table. Son utilisation complète (références de rubrique dans les formules, les étapes de script et sur les modèles) apparaît après une nouvelle importation.",
+    "toUsageTruncated": "Utilisation tronquée : {{count}} sur {{total}} utilisations par références de rubrique affichées.",
     "crossFileBadge": "Inter-fichiers",
     "itemAriaLabel": "Naviguer vers {{type}} : {{name}}",
     "notNavigable": "Cible absente du jeu de données importé",
@@ -255,8 +266,57 @@
       "menu_action": {
         "short": "Menu",
         "long": "Action de menu"
+      },
+      "calculation": {
+        "short": "Calc",
+        "long": "Référence de rubrique dans une formule"
+      },
+      "calculation_text": {
+        "short": "Calc text",
+        "long": "Référence de champ dans le texte de la formule (fichier sans infos DDR)"
+      },
+      "calc_context": {
+        "short": "Context",
+        "long": "Contexte d'évaluation d'une formule"
+      },
+      "layout_field": {
+        "short": "Field",
+        "long": "Rubrique sur le modèle"
+      },
+      "layout_part": {
+        "short": "Break",
+        "long": "Rubrique de rupture d'une partie de modèle"
+      },
+      "script_step": {
+        "short": "Step",
+        "long": "Référence de rubrique dans une étape de script"
+      },
+      "security": {
+        "short": "Access",
+        "long": "Contexte d'accès aux enregistrements d'un jeu de privilèges"
+      },
+      "table_view": {
+        "short": "Table view",
+        "long": "Colonne du mode Tableau"
+      },
+      "value_list": {
+        "short": "VL field",
+        "long": "Deuxième rubrique d'une liste de valeurs"
       }
-    }
+    },
+    "usageSummary": "Utilisé en interne par {{objects}} · {{refs}}",
+    "usageObjects_one": "{{count}} objet",
+    "usageObjects_other": "{{count}} objets",
+    "usageRefs_one": "{{count}} référence",
+    "usageRefs_other": "{{count}} références",
+    "usageSummaryHint": "Utilisation (interne) : combien d’objets différents de la solution utilisent cet objet — un modèle compte une fois, quel que soit le nombre de ses objets qui l’affichent ; un script une fois, quel que soit le nombre d’étapes. Références : chaque occurrence séparément (×N dans la liste). L’appartenance et les restrictions de privilèges ne comptent pas. Non pris en compte : l’utilisation depuis l’extérieur (planifications du serveur, Data API, OData, appels URL, plug-ins …) et les références dynamiques (script par nom, GetField, Evaluate).",
+    "usageDocs": "Comment est-ce compté ?",
+    "groupByObjectHint": "Grouper par objet utilisateur (entrant) — un modèle compte une fois, quel que soit le nombre de ses objets qui l’affichent",
+    "groupAllRefsHint": "Afficher chaque référence",
+    "groupExpand": "Afficher les références",
+    "groupCollapse": "Masquer les références",
+    "noUsageGroup": "Aucune utilisation",
+    "noUsageGroupHint": "Liens qui ne comptent pas comme utilisation (p. ex. restrictions de privilèges, nœuds de déclencheur)"
   },
   "searchOptions": {
     "regionAria": "Options de tri et de regroupement",
@@ -272,7 +332,14 @@
     "groupFile": "Fichier",
     "modifiedSinceLabel": "Modifié depuis",
     "modifiedSinceHint": "Uniquement les objets dont l’horodatage propre est à cette date ou après — les pas de script, objets de modèle et calculs n’ont pas d’horodatage propre",
-    "modifiedSinceClear": "Réinitialiser"
+    "modifiedSinceClear": "Réinitialiser",
+    "sortUsage": "Utilisation (interne)",
+    "usageLabel": "Utilisation (interne)",
+    "usageOpAria": "Comparaison",
+    "usageHint": "Nombre d’objets utilisateurs (un objet sur un modèle compte comme son modèle). ≤ 0 affiche les objets inutilisés ; les pas de script, objets de modèle, formules et liens n’ont pas d’utilisation et sont exclus L’utilisation depuis l’extérieur (planifications du serveur, Data API, OData, appels URL, plug-ins …) n’est pas prise en compte.",
+    "usageUnavailable": "Nécessite un catalogue créé avec le schéma 1.40.0 ou plus récent — importez de nouveau la solution",
+    "usageDirAsc": "Les moins utilisés d’abord",
+    "usageDirDesc": "Les plus utilisés d’abord"
   },
   "fieldViewer": {
     "ariaLabel": "Détails du champ",
@@ -372,7 +439,17 @@
     "healedUuidMatch": "Trouvé par UUID (doublon)",
     "healedUuidTitle": "FileMaker référence cet objet sous l’UUID recherché ; cet UUID apparaissant plusieurs fois dans l’export, le catalogue le conserve sous un UUID de remplacement.",
     "idMatch": "Trouvé par ID {{id}}",
-    "modifiedTooltip": "Modifié {{age}} — heure locale du client ayant modifié, sans fuseau horaire"
+    "modifiedTooltip": "Modifié {{age}} — heure locale du client ayant modifié, sans fuseau horaire",
+    "usageTooltip": "Utilisé en interne par : {{owners}} · Références : {{refs}} · Rôles : {{roles}} · Fichiers : {{files}}",
+    "usageCellAria": "Utilisation {{count}} — ouvrir les références entrantes",
+    "usageEntryPoint": "Dans le menu Scripts ou des modèles — accessible sans référence",
+    "usageBuiltin": "Jeu de privilèges intégré — impossible à supprimer",
+    "usageBridge": "Pont de liens — nécessaire sur le chemin entre occurrences de table utilisées",
+    "usageDead": "Branche morte du graphe de liens — rien au-delà n’est utilisé",
+    "usageKeyField": "Rubrique de correspondance d’un lien",
+    "usageCrossFile": "Utilisé depuis un autre fichier",
+    "usageUnverified": "Non vérifié — le fichier a été exporté sans infos DDR, les références de formules manquent",
+    "usageExternal": "L’utilisation depuis l’extérieur (planifications du serveur, Data API, OData, appels URL, AppleScript, plug-ins …) n’est pas prise en compte"
   },
   "scriptSearchFilter": {
     "searchAria": "Rechercher des références",
@@ -805,7 +882,15 @@
     "optFieldFrames": "Cadres de champ si enregistrement actif",
     "optFrameCurrentOnly": "Encadrer les champs de l'enregistrement actuel uniquement",
     "optShowCurrentInList": "Indicateur d'enregistrement en vue liste",
-    "optQuickFind": "Recherche rapide"
+    "optQuickFind": "Recherche rapide",
+    "partsHeading": "Sections de mise en page",
+    "partsObjects_one": "{{count}} objet",
+    "partsObjects_other": "{{count}} objets",
+    "partsHeight": "{{size}} pt",
+    "partsSortedBy": "trié sur",
+    "partsFilterTitle": "Afficher uniquement cette section dans le graphique",
+    "partsFilterActiveTitle": "Supprimer le filtre de section",
+    "partsFieldUnresolved": "Rubrique absente du catalogue (fichier non importé ?)"
   },
   "pluginSpec": {
     "tooltip": "Prise en charge des plateformes selon la documentation {{plugin}}",
@@ -1006,5 +1091,223 @@
     "usedSuffix": "{{used}} utilisées",
     "functionsHeading": "Fonctions",
     "colFunction": "Fonction"
+  },
+  "tableOccurrence": {
+    "ariaLabel": "Détails de l'occurrence de table",
+    "definitionHeading": "Définition",
+    "baseTable": "Table source",
+    "baseTableUnresolved": "— non résolvable —",
+    "inFile": "dans le fichier « {{file}} »",
+    "dataSource": "Source de données",
+    "dsResolved": "Fichier « {{file}} » dans le catalogue",
+    "dsUnresolved": "Fichier cible non importé",
+    "diagram": "Graphique des liens",
+    "viewLabel": "Affichage : {{view}}",
+    "view": {
+      "Full": "toutes les rubriques",
+      "Related": "rubriques de lien uniquement",
+      "Collapse": "nom uniquement"
+    },
+    "usageHeading": "Utilisation",
+    "class": {
+      "used": "utilisée",
+      "relationship_bridge": "pont de liens",
+      "dead_branch": "branche morte",
+      "dead_island": "îlot mort",
+      "unused": "non utilisée"
+    },
+    "reason": {
+      "path": "Se trouve sur le chemin de liens entre des OT utilisées (p. ex. l'OT de jonction d'un lien n:m) — nécessaire.",
+      "cascade_delete": "Participe à un lien avec suppression en cascade — nécessaire."
+    },
+    "deadBranch_one": "Fait partie d'une branche morte ({{count}} OT) sous l'ancre",
+    "deadBranch_other": "Fait partie d'une branche morte ({{count}} OT) sous l'ancre",
+    "deadIsland_one": "Groupe d’OT sans OT utilisée ({{count}} OT).",
+    "deadIsland_other": "Groupe d’OT sans OT utilisée ({{count}} OT).",
+    "unused": "Aucune utilisation visible statiquement.",
+    "unusedNoRel": "Aucune utilisation visible statiquement, aucun lien.",
+    "reviewHint": "Candidat à examiner, pas une recommandation de suppression — les références dynamiques (GetField, Evaluate, ExecuteSQL) restent invisibles.",
+    "toTests": "Détails dans l'onglet Tests",
+    "lowConfidence": "Fichier sans info DDR : utilisation dans les formules trouvée par recherche textuelle, classe non vérifiée.",
+    "group": {
+      "context": "Contexte",
+      "display": "Affichage",
+      "logic": "Logique",
+      "data": "Données",
+      "graph": "Graphique",
+      "other": "Autres"
+    },
+    "category": {
+      "layout_context": "Modèles",
+      "calc_context": "Contexte de calcul",
+      "security": "Privilèges",
+      "layout_field": "Rubriques de modèle",
+      "portal": "Tables externes",
+      "layout_part": "Parties de modèle",
+      "table_view": "Mode Tableau",
+      "script_step": "Pas de script",
+      "calculation": "Formules",
+      "calculation_text": "Texte de formule",
+      "navigation": "Navigation",
+      "lookup": "Références",
+      "lookup_context": "Contexte de référence",
+      "value_list": "Listes de valeurs",
+      "value_list_related": "Listes de valeurs (liées)",
+      "relationship": "Liens",
+      "relationship_cascade": "Suppression en cascade"
+    },
+    "chipTitle": "{{users}} objets · {{refs}} occurrences — afficher dans Références",
+    "allUsages": "toutes les occurrences → Références",
+    "relationshipsHeading": "Liens",
+    "noRelationships": "— aucun lien —",
+    "searchPlaceholder": "Filtrer OT partenaire ou rubrique…",
+    "colSelf": "Cette OT",
+    "colOperator": "Operator",
+    "colPartnerField": "Rubrique partenaire",
+    "colPartner": "OT partenaire",
+    "colOptions": "Options",
+    "colOptionsTitle": "Options : cette OT | OT partenaire",
+    "colRelationship": "Lien",
+    "and": "ET",
+    "optCreate": "Autoriser la création d'enregistrements via ce lien",
+    "optDeleteSelf": "Suppression en cascade : les enregistrements de cette OT sont supprimés lorsque l'enregistrement lié est supprimé",
+    "optDeletePartner": "Suppression en cascade : les enregistrements de l'OT partenaire sont supprimés lorsqu'un enregistrement de cette OT est supprimé",
+    "optSort": "Trié",
+    "legend": "Options « cette OT | OT partenaire » : ＋ création autorisée · 🗑 suppression en cascade · ⇅ trié",
+    "siblingsHeading": "Autres occurrences de « {{bt}} »",
+    "siblingsNone": "— aucune —",
+    "toBaseTable": "vers la table source",
+    "chipTitleInPage": "{{users}} objets — afficher dans les liens ci-dessous",
+    "optionFilterAria": "Filtrer par option",
+    "option": {
+      "cascade": "Suppression en cascade",
+      "create": "Création autorisée",
+      "sorted": "trié"
+    },
+    "siblingsSearch": "Filtrer OT ou fichier…",
+    "siblingsScopeAria": "Portée",
+    "scope": {
+      "all": "toutes",
+      "file": "ce fichier",
+      "other": "toute la solution"
+    },
+    "scopeTitle": {
+      "all": "Toutes les occurrences de la solution",
+      "file": "Occurrences dans ce fichier",
+      "other": "Occurrences dans les autres fichiers de la solution"
+    },
+    "colTo": "Occurrence de table",
+    "dataSourceCurrent": "fichier actuel",
+    "dataSourceCurrentTitle": "La table source est utilisée directement depuis ce fichier, sans source de données",
+    "dsSelf": "renvoie vers ce même fichier",
+    "dsSelfSibling": "La source de données renvoie vers son propre fichier",
+    "inThisFile": "dans ce fichier",
+    "viaDataSource": "source de données « {{ds}} »",
+    "colDefinedIn": "définie dans",
+    "colDefinedInTitle": "Fichier dont le graphique des liens contient l’OT (vide = ce fichier)",
+    "colSourceTitle": "Comment l’OT atteint la table source : fichier actuel ou via une source de données",
+    "countFiltered": "{{shown}} sur {{total}}",
+    "defJumpTitle": "Aller à la section plus bas",
+    "defLayoutsTitle": "Modèles basés sur cette TO — afficher dans Références",
+    "siblingsJump": "Autres occurrences",
+    "ctxHeading": "Groupe d’OT",
+    "ctxGroup": "Groupe",
+    "ctxSingle": "uniquement cette OT — aucun lien",
+    "ctxTos_one": "{{count}} OT",
+    "ctxTos_other": "{{count}} OT",
+    "ctxLayouts_one": "{{count}} modèle",
+    "ctxLayouts_other": "{{count}} modèles",
+    "ctxAnchors": "Ancres",
+    "ctxAnchorsNone": "aucun modèle ne repose sur une OT de ce groupe",
+    "ctxLayoutsTitle_one": "{{count}} modèle",
+    "ctxLayoutsTitle_other": "{{count}} modèles",
+    "ctxSelfAnchor_one": "est elle-même contexte de modèle ({{count}} modèle)",
+    "ctxSelfAnchor_other": "est elle-même contexte de modèle ({{count}} modèles)",
+    "ctxSteps_one": "{{count}} étape",
+    "ctxSteps_other": "{{count}} étapes",
+    "ctxHint": "Ancre = OT sur laquelle reposent des modèles. « Le plus proche » est l’ancre depuis laquelle cette OT est atteinte par le moins de liens.",
+    "ctxAnchorsLess": "fermer la liste",
+    "ctxMoreEachSingle": "+{{count}} autres avec 1 modèle chacune",
+    "ctxMoreEach": "+{{count}} autres avec {{each}} modèles chacune",
+    "ctxMoreTotal": "+{{count}} autres avec {{total}} modèles au total",
+    "ctxAnchor": "Ancre",
+    "ctxColLayouts": "Modèles",
+    "ctxColDistance": "Distance",
+    "ctxColDistanceTitle": "Étapes de lien jusqu’à cette OT",
+    "ctxContext": "Contexte de modèle",
+    "ctxNearest": "le plus proche :",
+    "ctxShowPath": "afficher le chemin",
+    "ctxHidePath": "masquer le chemin"
+  },
+  "layoutParts": {
+    "kind": {
+      "12": "Navigation de haut de page",
+      "0": "En-tête initial",
+      "1": "En-tête",
+      "2": "Récapitulatif d'en-tête",
+      "3": "Sous-récapitulatif après tri sur",
+      "4": "Corps",
+      "6": "Récapitulatif de pied de page",
+      "7": "Pied de page",
+      "8": "Pied de page initial",
+      "13": "Navigation de bas de page"
+    },
+    "position": {
+      "leading": "d'en-tête",
+      "trailing": "de pied de page"
+    },
+    "subSummaryLabel": "{{kind}} ‹{{field}}› ({{position}})",
+    "subSummaryLabelNoField": "{{kind}} ({{position}})",
+    "option": {
+      "o1": "Saut de page avant chaque occurrence",
+      "o2": "Saut de page après {{n}} occurrence(s)",
+      "o3": "N° de page initial après chaque occurrence",
+      "o4": "Autoriser le chevauchement sur deux pages",
+      "o5": "Ne pas placer le reste sur la page suivante",
+      "o6": "Utiliser l'état rangée alternée",
+      "o7": "Utiliser l'état rangée active"
+    }
+  },
+  "layoutPartDetail": {
+    "ariaLabel": "Détails de la section de mise en page",
+    "groupGeneral": "Général",
+    "groupSort": "Tri",
+    "groupContext": "Contexte",
+    "groupOptions": "Définition de la section",
+    "groupTechnical": "Technique",
+    "kind": "Type de section",
+    "exportedType": "Type exporté",
+    "exportedTypeTitle": "Le type tel qu'il figure dans l'export XML (localisé ou mal étiqueté par FileMaker)",
+    "partName": "Nom interne",
+    "position": "Position",
+    "positionValue": "{{pos}} sur {{total}}",
+    "previous": "Section précédente",
+    "next": "Section suivante",
+    "height": "Hauteur",
+    "top": "Bord supérieur",
+    "bottom": "Bord inférieur",
+    "unitPt": "{{value}} pt",
+    "objects": "Objets",
+    "objectsValue": "{{total}} ({{root}} directement dans la section)",
+    "sortedBy": "Trié sur",
+    "sortToDiffers": "via une autre occurrence de table que celle du modèle ({{to}})",
+    "fieldUnresolved": "Rubrique absente du catalogue (fichier non importé ?)",
+    "layout": "Modèle",
+    "contextTable": "Occurrence de table",
+    "baseTable": "Table source",
+    "file": "Fichier",
+    "optionsRaw": "Options (brutes)",
+    "optionsUndecoded": "Bits sans option de dialogue : {{bits}}",
+    "optionOn": "activé",
+    "optionOff": "désactivé",
+    "sourceLocal": "défini sur la section",
+    "sourceStyle": "style de section {{name}}",
+    "sourceTheme": "thème {{name}}",
+    "sourceDefault": "non défini (désactivé)",
+    "sourceClassic": "thème Classique (désactivé)",
+    "bodyOnly": "uniquement pour le corps",
+    "showInLayout": "Afficher dans le modèle",
+    "showInLayoutTitle": "Ouvrir le modèle filtré sur cette section",
+    "objectsShowInReferences": "Afficher les objets dans les références"
   }
 }

@@ -3,7 +3,7 @@
 Part of the [FM-Lab schema](../Schema.md) · Object catalog · `db/fm_catalog.duckdb` (solution catalog)
 **XML source:** curated registry (no XML source)
 
-The classification registry for every link role that can appear in [ObjectLinks](ObjectLinks.md) (60 registered roles: 49 usage, 9 containment, 2 restriction). Each role is categorized by `Link_Kind` — `usage` (a functional dependency), `containment` (a structural owner relation) or `restriction` (an access limitation) — and carries the boolean `Counts_For_Where_Used` flag that where-used and dead-code analyses rely on.
+The classification registry for every link role that can appear in [ObjectLinks](ObjectLinks.md) (63 registered roles: 52 usage, 9 containment, 2 restriction). Each role is categorized by `Link_Kind` — `usage` (a functional dependency), `containment` (a structural owner relation) or `restriction` (an access limitation) — and carries the boolean `Counts_For_Where_Used` flag that where-used and dead-code analyses rely on.
 
 ## Columns
 

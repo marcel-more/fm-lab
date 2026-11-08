@@ -49,7 +49,9 @@ API — after generating locales, the validation gate's log check will surface t
 **Only user-visible literals:**
 - card `title` / `subtitle`
 - KPI / DefinitionList item `label`s
-- table column `label`s
+- table column `label`s and the captions of a column's `valueLabels` — one key
+  per code: `"<table-id>.props.columns[3].valueLabels.dead_branch": "Toter Ast"`
+  (the code itself is the key and stays English)
 - List `primary`/`secondary`/… template **text** (keep the `{{tokens}}` intact)
 - `searchPlaceholder`, `empty.message`
 - `FilterChips` / `Select` option `label`s, `Slider` `label`

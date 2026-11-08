@@ -71,7 +71,7 @@ function DocsEntryRoute() {
   const { set, category, fn } = useParams();
   return <DocsEntryView key={`${set}/${category}/${fn}`} />;
 }
-import type { SortOption, GroupOption, VirtualListRow, FMObject } from './types';
+import type { SortOption, GroupOption, VirtualListRow, FMObject, UsageDir, UsageOp } from './types';
 import './App.css';
 
 type FileInfo = {
@@ -115,6 +115,14 @@ function SearchView() {
   const [sortBy, setSortBy] = useState<SortOption>((searchParams.get('sort') as SortOption) || 'standard');
   const [groupBy, setGroupBy] = useState<GroupOption>((searchParams.get('group') as GroupOption) || 'none');
   const [modifiedSince, setModifiedSince] = useState<string>(searchParams.get('since') || '');
+  // Usage filter: one bound, ≤ (URL umax) or ≥ (URL umin); default ≤.
+  const [usageOp, setUsageOp] = useState<UsageOp>(searchParams.get('umin') !== null && searchParams.get('umax') === null ? 'ge' : 'le');
+  const [usageValue, setUsageValue] = useState<string>(searchParams.get('umax') ?? searchParams.get('umin') ?? '');
+  // Direction of the usage sort; '' = default (rarely used first with ≤, otherwise most used first).
+  const [usageDir, setUsageDir] = useState<UsageDir | ''>(
+    searchParams.get('udir') === 'asc' || searchParams.get('udir') === 'desc' ? searchParams.get('udir') as UsageDir : '');
+  const usageBound = /^\d+$/.test(usageValue) ? usageValue : '';
+  const effectiveUsageDir: UsageDir = usageDir || (usageBound !== '' && usageOp === 'le' ? 'asc' : 'desc');
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
@@ -127,14 +135,17 @@ function SearchView() {
 
   // Use infinite search hook (only relevant in 'search' mode, but called unconditionally
   // to keep hook order stable; the result is simply ignored when mode === 'tree').
-  const { items, loading, loadingMore, hasMore, totalCount, error, loadMore } = useInfiniteSearch({
+  const { items, loading, loadingMore, hasMore, totalCount, usageAvailable, error, loadMore } = useInfiniteSearch({
     searchName: debouncedSearchName || '*',
     selectedFile,
     objectType,
-    // 'modified' sorts on the server (the list is paginated); the other sorts
-    // reorder the loaded items on the client.
-    sort: sortBy === 'modified' ? 'modified' : undefined,
+    // Every sort runs on the server — the list is loaded page by page, a client
+    // sort would only reorder the pages loaded so far.
+    sort: sortBy === 'standard' ? undefined : sortBy,
+    usageDir: effectiveUsageDir,
     modifiedSince,
+    usageMin: usageOp === 'ge' ? usageBound : '',
+    usageMax: usageOp === 'le' ? usageBound : '',
   });
 
   // Zwei-Wege-Sync zwischen URL und Filter-State. Die Implementierung muss zwei
@@ -201,6 +212,8 @@ function SearchView() {
       if (sortBy !== 'standard') params.set('sort', sortBy);
       if (groupBy !== 'none') params.set('group', groupBy);
       if (modifiedSince) params.set('since', modifiedSince);
+      if (usageBound !== '') params.set(usageOp === 'ge' ? 'umin' : 'umax', usageBound);
+      if (sortBy === 'usage' && usageDir) params.set('udir', usageDir);
       // Externe Deep-Link-Params (kommen aus Dashboard-Action-URLs, z.B. von
       // den Counter-Pills im docset_home) durchreichen, damit der State→URL-
       // Effekt sie nicht beim ersten Tick wieder strippt. PseudoTokenView /
@@ -220,7 +233,7 @@ function SearchView() {
       setSearchParams(params, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, treeSubtype, debouncedSearchName, selectedFile, objectType, sortBy, groupBy, modifiedSince]);
+  }, [mode, treeSubtype, debouncedSearchName, selectedFile, objectType, sortBy, groupBy, modifiedSince, usageBound, usageOp, usageDir]);
 
   // Load available files on mount
   useEffect(() => {
@@ -267,25 +280,8 @@ function SearchView() {
   const lang = i18n.language;
   const unknownLabel = t('common:unknown');
   const processedRows: VirtualListRow[] = useMemo(() => {
-    let sorted: FMObject[];
-    if (sortBy === 'standard' || sortBy === 'modified') {
-      sorted = items;
-    } else {
-      sorted = [...items].sort((a, b) => {
-        switch (sortBy) {
-          case 'name':
-            return (a.Object_Name || '').localeCompare(b.Object_Name || '', lang);
-          case 'type':
-            return (a.Object_Type || '').localeCompare(b.Object_Type || '', lang)
-              || (a.Object_Name || '').localeCompare(b.Object_Name || '', lang);
-          case 'file':
-            return (a.File_Name || '').localeCompare(b.File_Name || '', lang)
-              || (a.Object_Name || '').localeCompare(b.Object_Name || '', lang);
-          default:
-            return 0;
-        }
-      });
-    }
+    // Items arrive in the server's order (every sort runs there).
+    const sorted: FMObject[] = items;
 
     if (groupBy === 'none') {
       return sorted.map(obj => ({ _type: 'item' as const, object: obj }));
@@ -314,7 +310,7 @@ function SearchView() {
       }
     }
     return rows;
-  }, [items, sortBy, groupBy, expandedGroups, lang, unknownLabel]);
+  }, [items, groupBy, expandedGroups, lang, unknownLabel]);
 
   // Scroll-Reset bei Filter-/Sort-/Group-Wechsel. Sonst bleibt nach einem weit
   // gescrollten Ergebnis die alte Scroll-Position stehen, während die neue
@@ -326,7 +322,7 @@ function SearchView() {
     if (el && el.scrollTop > 0) {
       el.scrollTop = 0;
     }
-  }, [sortBy, groupBy, debouncedSearchName, selectedFile, objectType]);
+  }, [sortBy, groupBy, debouncedSearchName, selectedFile, objectType, usageBound, usageOp, effectiveUsageDir, modifiedSince]);
 
   const handleToggleGroup = useCallback((groupKey: string) => {
     setExpandedGroups(prev => {
@@ -475,6 +471,13 @@ function SearchView() {
       onGroupChange={setGroupBy}
       modifiedSince={modifiedSince}
       onModifiedSinceChange={setModifiedSince}
+      usageOp={usageOp}
+      onUsageOpChange={setUsageOp}
+      usageValue={usageValue}
+      onUsageValueChange={setUsageValue}
+      usageDir={effectiveUsageDir}
+      onUsageDirChange={setUsageDir}
+      usageAvailable={usageAvailable}
     />
   ) : null;
 

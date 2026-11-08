@@ -1,8 +1,8 @@
 {
   "id": "unused_privilege_set",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "title": "Unused Privilege Set",
-  "description": "Unused-code rule — custom privilege sets assigned to no account (built-in [Full Access] / [Data Entry Only] / [Read-Only Access] are excluded).",
+  "description": "Unused-code rule — custom privilege sets assigned to no account (the built-in sets [Full Access] / [Data Entry Only] / [Read-Only Access] are excluded in every language).",
   "author": "fm-lab rules",
   "icon": "shield",
   "category": "unused_code",
@@ -22,7 +22,7 @@
       "author": "fm-lab rules",
       "source": "fm-lab",
       "url": null,
-      "description": "Unused-code rule — custom privilege sets assigned to no account (built-in [Full Access] / [Data Entry Only] / [Read-Only Access] are excluded).",
+      "description": "Unused-code rule — custom privilege sets assigned to no account (the built-in sets [Full Access] / [Data Entry Only] / [Read-Only Access] are excluded in every language).",
       "created": "2026-07-01",
       "references": []
     }
@@ -38,10 +38,16 @@
     "scope": {
       "supported": [
         "solution",
-        "file"
+        "file",
+        "object",
+        "object-list",
+        "cluster"
       ],
       "anchor": "nav_uuid",
-      "mode": {}
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
     },
     "defaultResult": {
       "dataset": "summary",

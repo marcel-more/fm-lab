@@ -73,6 +73,9 @@ All fields of all base tables, with the complete field definition: data type, st
 | `Lookup_Enabled` | `BOOLEAN` |
 | `Validation_Calc_Enabled` | `BOOLEAN` |
 | `Validation_Message_Calc_Enabled` | `BOOLEAN` |
+| `Lookup_Context_TO_ID` | `BIGINT` |
+| `Lookup_Context_TO_Name` | `VARCHAR` |
+| `Lookup_Context_TO_UUID` | `VARCHAR` |
 | `Modified_At` | `VARCHAR` |
 | `Modified_By` | `VARCHAR` |
 | `Modified_Account` | `VARCHAR` |
@@ -82,7 +85,7 @@ All fields of all base tables, with the complete field definition: data type, st
 ## Notes
 
 - `Calculation_Text`/`DDR_Hash` belong to true Calculated fields (`Field_Type='Calculated'`); `AE_Calc_Text`/`AE_Calc_Hash` belong to Normal fields with an auto-enter calculation. A field never has both populated.
-- Lookup fields carry their source field and relationship in the `Lookup_*` columns (→ `lookup_source` / `lookup_relationship` links).
+- Lookup fields carry their source field and relationship in the `Lookup_*` columns (→ `lookup_source` / `lookup_relationship` links). `Lookup_Context_TO_*` is the occurrence the lookup starts from ("Starting with table"); FileMaker walks the relationship graph from there to `Lookup_TO_*` (→ `lookup_context` link, since schema 1.38.0).
 - Validation by value list is captured in `Validation_VL_*` (→ `uses_valuelist` link with subrole `validation`); validation by calculation in `Validation_Calc_*` (→ `validates_by_calc` link).
 - `Validation_MaxChars` is sentinel-normalized at import: FileMaker serializes "no character limit" as `4294967295` (UINT32_MAX, the unsigned form of an internal `-1`); the importer stores it as `NULL` — the same state as validation without a configured maximum. Real limits import verbatim. A guard check (`v_check_numeric_sentinels`) warns if a future export ships an unrecognized implausible value (> 10⁹) instead.
 - Summary fields describe their operation and target in the `Summary_*` columns (→ `summarizes_field` link).

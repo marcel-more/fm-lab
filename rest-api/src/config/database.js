@@ -281,6 +281,14 @@ const CORE_STUB_DDL = {
      Files BIGINT, Objects BIGINT, Bursts BIGINT, Mod1_Share DOUBLE,
      File_Names VARCHAR[], Object_Types VARCHAR[], Authors VARCHAR[]
    )`,
+  // Objekt-Nutzung (Schema 1.40.0) — die unused_*-Regeln lesen die Analysesicht; auf
+  // Alt-/Leer-DBs liefern sie mit dem leeren Stub 0 Treffer statt „Table … does not exist".
+  v_object_usage: `CREATE TEMP TABLE v_object_usage (
+     Object_UUID VARCHAR, Object_Type VARCHAR, Object_Name VARCHAR, File_Name VARCHAR,
+     Usage_Owners BIGINT, Usage_Users BIGINT, Usage_Refs BIGINT, Usage_Roles VARCHAR[],
+     Usage_Files BIGINT, Cross_File BOOLEAN, Entry_Point BOOLEAN, Key_Field BOOLEAN,
+     Low_Confidence BOOLEAN, Usage_Class VARCHAR
+   )`,
   // Such-UNION (Wertelisten-Werte, Script-Step-Texte) und Ordnerbaum
   // (list_with_folders) — eine leere Lösung liefert leere Treffer statt HTTP 500.
   // FolderHierarchy ist in konvertierten DBs eine View; der Stub deckt die leere DB.
@@ -291,7 +299,8 @@ const CORE_STUB_DDL = {
      Secondary_Field_UUID VARCHAR, Secondary_TO_ID BIGINT, Secondary_TO_Name VARCHAR,
      Secondary_TO_UUID VARCHAR, Secondary_Sort BOOLEAN, External_DS_ID BIGINT,
      External_DS_Name VARCHAR, External_DS_UUID VARCHAR, External_VL_ID BIGINT,
-     External_VL_Name VARCHAR, File_Name VARCHAR
+     External_VL_Name VARCHAR, ShowRelated BOOLEAN, ShowRelated_TO_ID BIGINT,
+     ShowRelated_TO_Name VARCHAR, ShowRelated_TO_UUID VARCHAR, File_Name VARCHAR
    )`,
   StepsForScripts: `CREATE TEMP TABLE StepsForScripts (
      Script_ID BIGINT, Script_Name VARCHAR, Script_UUID VARCHAR, Step_Index BIGINT, Step_ID BIGINT,

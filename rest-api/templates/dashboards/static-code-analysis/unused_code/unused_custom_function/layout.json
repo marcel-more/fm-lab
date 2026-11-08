@@ -26,7 +26,31 @@
                 {
                   "label": "Findings",
                   "field": "finding_count",
-                  "format": "number"
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "unused_custom_function",
+                      "params": {
+                        "ddr": ""
+                      }
+                    }
+                  }
+                },
+                {
+                  "label": "Without DDR info",
+                  "field": "low_confidence_count",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "unused_custom_function",
+                      "params": {
+                        "ddr": "without"
+                      }
+                    }
+                  },
+                  "toggle": true
                 },
                 {
                   "label": "Affected files",
@@ -71,6 +95,23 @@
                 {
                   "field": "object_name",
                   "label": "Name"
+                },
+                {
+                  "field": "reason_status",
+                  "label": "Status",
+                  "nowrap": true,
+                  "valueLabels": {
+                    "unused": "Unused",
+                    "unused_unverified": "Unused (unverified)"
+                  }
+                },
+                {
+                  "field": "low_confidence",
+                  "label": "Without DDR info",
+                  "valueLabels": {
+                    "true": "Yes",
+                    "false": "No"
+                  }
                 }
               ],
               "onRowClick": {
@@ -83,6 +124,23 @@
               "empty": {
                 "message": "No unused custom function found."
               }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "notes_card",
+        "props": {
+          "span": 12,
+          "title": "What the status means"
+        },
+        "children": [
+          {
+            "type": "Markdown",
+            "id": "notes_md",
+            "props": {
+              "content": "**Unverified.** The file was exported without DDR info. It then carries no references from formulas at all — a use in a calculation stays invisible. Such a finding reads *Unused (unverified)*; the tile *Without DDR info* lists them. Export the file again with DDR info before deleting anything.\n\n**Limits.** Only usage inside the imported solution counts. Not visible: **calls from outside** — server schedules, Data API, OData, `fmp://` URLs, AppleScript/ActiveX, plug-ins, files that were not imported; **dynamic references inside** — *Perform Script* by name, `GetField`, `Evaluate`, names inside SQL strings. A finding is a review candidate, not a delete recommendation. [How usage is counted](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
             }
           }
         ]

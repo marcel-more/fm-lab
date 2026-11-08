@@ -152,7 +152,9 @@ fan_in AS (
            count(DISTINCT (l.Source_UUID, l.Source_File)) AS fan_in
     FROM ObjectLinks l
     JOIN LinkRoleRegistry r ON r.Link_Role = l.Link_Role AND r.Counts_For_Where_Used
-    WHERE l.Source_UUID <> l.Target_UUID OR l.Source_File IS DISTINCT FROM l.Target_File
+    WHERE (l.Source_UUID <> l.Target_UUID OR l.Source_File IS DISTINCT FROM l.Target_File)
+      -- aggregate Layout → Field edge: twin of the layout-object edges, no own user
+      AND NOT (l.Source_Type = 'Layout' AND l.Link_Role = 'displays_field' AND l.Link_Subrole IS NULL)
     GROUP BY l.Target_UUID, l.Target_File
 ),
 menu_reach AS (

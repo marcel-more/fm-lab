@@ -146,6 +146,24 @@ WHERE hm.Catalog = 'TableOccurrenceCatalog'
   AND hm.Orig_UUID = o.Secondary_TO_UUID
   AND hm.Discriminator = 'to_id=' || o.Secondary_TO_ID::VARCHAR;
 
+UPDATE OptionsForValueLists o
+SET ShowRelated_TO_UUID = hm.Healed_UUID
+FROM _heal_map hm
+WHERE hm.Catalog = 'TableOccurrenceCatalog'
+  AND hm.File_Name = o.File_Name
+  AND hm.Orig_UUID = o.ShowRelated_TO_UUID
+  AND hm.Discriminator = 'to_id=' || o.ShowRelated_TO_ID::VARCHAR;
+
+-- Start-TO des Lookups (Schema 1.38.0) trägt — anders als Lookup_TO_UUID — ihren
+-- ID-Begleiter und wird deshalb nachgezogen.
+UPDATE FieldsForTables f
+SET Lookup_Context_TO_UUID = hm.Healed_UUID
+FROM _heal_map hm
+WHERE hm.Catalog = 'TableOccurrenceCatalog'
+  AND hm.File_Name = f.File_Name
+  AND hm.Orig_UUID = f.Lookup_Context_TO_UUID
+  AND hm.Discriminator = 'to_id=' || f.Lookup_Context_TO_ID::VARCHAR;
+
 -- ---------------------------------------------------------------------------
 -- FieldsForTables geheilt → Field_UUID-Träger (zweistufig: Feld-IDs sind
 -- tabellen-lokal → Tabellen-Kontext über den TO- bzw. BaseTable-ID-Begleiter)

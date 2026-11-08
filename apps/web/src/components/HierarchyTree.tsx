@@ -1,15 +1,24 @@
 import React, { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { GroupedReferences, ReferenceCandidates, ReferenceItem } from '../types';
 import { ReferencesFilter } from './ReferencesFilter';
 import { ReferencesMissing } from './ReferencesMissing';
 import { useUrlState, stringSetCodec, type UrlStateCodec } from '../hooks/useUrlState';
+import { LAYOUT_PART_MEMBER_ROLE, referenceRoleKey } from '../lib/referenceRoleKey';
+import { buildUsageGroups, isGroupExpandable, refWeight, sumRefs, usageOwnerOf, type UsageGroup, type UsageOwner } from '../lib/usageGroups';
 import { buildNavigablePath, buildObjectPath } from '../lib/navigation';
 import { useCurrentFile } from '../lib/currentFileContext';
 import { formatObjectDisplayName } from '../lib/objectName';
+import { parsePartKey, partLabel, subSummaryPosition } from '../lib/layoutParts';
 
 const EMPTY_TYPES = new Set<string>();
+
+/** fm-lab docs page that explains "usage (internal)" vs. "references". */
+const USAGE_DOCS_PATH = `/docs/fm-lab/schema/${encodeURIComponent('schema/Usage and References')}`;
+/** Placeholder markers for splicing nodes into a translated sentence. */
+const USAGE_SLOT = (name: string) => `\u0000${name}\u0000`;
+const USAGE_SLOT_RE = /\u0000(\w+)\u0000/;
 
 /**
  * Richtungs-Filter der Referenzliste. Semantisch aufwärts/abwärts: parent
@@ -25,6 +34,20 @@ const dirFilterCodec: UrlStateCodec<DirFilter> = {
   parse: (raw) => (raw === 'in' || raw === 'out' ? raw : 'both'),
   serialize: (value) => (value === 'both' ? null : value),
 };
+
+/**
+ * Grouping of the incoming references (URL `rgroup`): 'owner' = one row per
+ * using object — the "n objects" of the usage summary (a layout object or
+ * layout part counts as its layout); 'flat' (default, dropped from the URL) =
+ * every reference. Applies to the incoming direction only (`rdir=in`).
+ */
+type GroupMode = 'owner' | 'flat';
+const groupModeCodec: UrlStateCodec<GroupMode> = {
+  parse: (raw) => (raw === 'owner' ? 'owner' : 'flat'),
+  serialize: (value) => (value === 'owner' ? 'owner' : null),
+};
+
+const NO_USAGE_GROUP_KEY = '\u0000no-usage';
 
 interface HierarchyTreeProps {
   references: GroupedReferences;
@@ -57,33 +80,9 @@ function buildSearchText(ref: ReferenceItem, subroleLabels: string): string {
   ].join(' ').toLowerCase();
 }
 
-/**
- * Kuratiertes Chip-Vokabular: nur diese Slot-Klassen bilden eigene Rollen-Chips
- * (Spiegel der i18n-Wörterbuch-Keys `hierarchyTree.subroles.*`). `Subrole_Class`
- * ist API-seitig ein bewusster Roh-Durchreicher („Unbekanntes wird nie
- * verschluckt") — instanzgebundene Werte (Trigger-Events, Part-Namen,
- * Slot-Indizes wie `script_trigger_parameter:12`) würden sonst je Instanz einen
- * eigenen Filter-Chip prägen (Kardinalität 1 = sinnlose Filter-Dimension).
- */
-const CURATED_CHIP_CLASSES = new Set([
-  'active_segment', 'auto_enter', 'button_action', 'conditional_format', 'hide', 'mbs_runscript',
-  'menu_action', 'menu_install', 'on_server', 'placeholder', 'popover_title', 'portal_filter',
-  'script_trigger_parameter', 'tooltip', 'transaction_parameter_field',
-  'validation', 'web_viewer_url',
-]);
-
-/**
- * Chip-/Filter-Identität einer Referenzzeile: Rolle und ggf. Slot-Klasse als
- * KOMBINIERTE Einheit (`reads_field~conditional_format`). Tilde als Separator —
- * kollisionsfrei zu Rollen-/Klassen-Keys und URL-unkritisch (`roles=`-Param).
- * Die Klasse wird für die CHIP-Identität normalisiert: numerisches
- * Instanz-Suffix gestrippt (`:12`), dann nur kuratierte Klassen als eigener
- * Chip — alles andere fällt auf den nackten Rollen-Chip zurück. Zeilen-Labels
- * und Suchindex behalten die volle Detailtiefe (Events bleiben tippbar).
- */
+/** Chip-/Filter-Identität einer Referenzzeile (siehe lib/referenceRoleKey). */
 function roleKeyOf(ref: ReferenceItem): string {
-  const cls = ref.Subrole_Class ? ref.Subrole_Class.replace(/:\d+$/, '') : null;
-  return cls && CURATED_CHIP_CLASSES.has(cls) ? `${ref.Link_Role}~${cls}` : ref.Link_Role;
+  return referenceRoleKey(ref.Link_Role, ref.Subrole_Class);
 }
 
 /**
@@ -106,6 +105,18 @@ function subroleI18nKey(cls: string): string {
 type RefSortKey = 'origin' | 'name' | 'role';
 interface RefSortState { key: RefSortKey; dir: 'asc' | 'desc'; }
 
+/**
+ * Layout parts of the same layout in layout order (Part_Seq) instead of
+ * alphabetically (Body, Footer, Header) — 0 for every other pair.
+ */
+function comparePartOrder(a: ReferenceItem, b: ReferenceItem): number {
+  if (a.Object_Type !== 'LayoutPart' || b.Object_Type !== 'LayoutPart') return 0;
+  const pa = parsePartKey(a.uuid);
+  const pb = parsePartKey(b.uuid);
+  if (!pa || !pb || pa.layoutId !== pb.layoutId) return 0;
+  return pa.seq - pb.seq;
+}
+
 function compareRefs(a: ReferenceItem, b: ReferenceItem, key: RefSortKey): number {
   const cmp = (x: string, y: string) =>
     (x ?? '').localeCompare(y ?? '', undefined, { sensitivity: 'base', numeric: true });
@@ -116,6 +127,7 @@ function compareRefs(a: ReferenceItem, b: ReferenceItem, key: RefSortKey): numbe
     return cmp(a.File_Name, b.File_Name)
       || cmp(a.Container_Name ?? '', b.Container_Name ?? '')
       || cmp(a.Object_Type, b.Object_Type)
+      || comparePartOrder(a, b)
       || cmp(a.Object_Name, b.Object_Name);
   }
   if (key === 'role') {
@@ -152,6 +164,9 @@ export const HierarchyTree = forwardRef<HierarchyTreeHandle, HierarchyTreeProps>
   const [activeTypes, setActiveTypes] = useUrlState<Set<string>>('types', EMPTY_TYPES, stringSetCodec);
   const [activeRoles, setActiveRoles] = useUrlState<Set<string>>('roles', EMPTY_TYPES, stringSetCodec);
   const [dirFilter] = useUrlState<DirFilter>('rdir', 'both', dirFilterCodec);
+  const [groupMode] = useUrlState<GroupMode>('rgroup', 'flat', groupModeCodec);
+  // Expanded groups of the "by object" view (owner key; NO_USAGE_GROUP_KEY).
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
   const [, setSearchParams] = useSearchParams();
   const treeRef = useRef<HTMLElement>(null);
   // Generische Referenz-Sortierung. Default: Herkunft (Datei) aufsteigend.
@@ -199,10 +214,16 @@ export const HierarchyTree = forwardRef<HierarchyTreeHandle, HierarchyTreeProps>
    * nur die Langlabels (Tooltip) sind übersetzt. Fallback-Prinzip: unbekannte
    * Klasse → Roh-Anzeige des Keys, niemals verschlucken.
    */
-  const subroleShort = useCallback((cls: string) =>
-    t(`detail:hierarchyTree.subroles.${subroleI18nKey(cls)}.short`, { defaultValue: cls }) as string, [t]);
-  const subroleLong = useCallback((cls: string) =>
-    t(`detail:hierarchyTree.subroles.${subroleI18nKey(cls)}.long`, { defaultValue: cls }) as string, [t]);
+  // parent_part (objects of a layout part): the class is the layout-object type →
+  // its localized type name (same dictionary as the canvas type chips).
+  const subroleShort = useCallback((cls: string, role?: string) =>
+    (role === LAYOUT_PART_MEMBER_ROLE
+      ? t(`detail:layoutTypeFilter.types.${cls}`, { defaultValue: cls })
+      : t(`detail:hierarchyTree.subroles.${subroleI18nKey(cls)}.short`, { defaultValue: cls })) as string, [t]);
+  const subroleLong = useCallback((cls: string, role?: string) =>
+    (role === LAYOUT_PART_MEMBER_ROLE
+      ? t(`detail:layoutTypeFilter.types.${cls}`, { defaultValue: cls })
+      : t(`detail:hierarchyTree.subroles.${subroleI18nKey(cls)}.long`, { defaultValue: cls })) as string, [t]);
 
   /**
    * Sub-Knoten-Referenzen MIT eigener Detail-Seite (LayoutObject, ScriptTrigger)
@@ -301,24 +322,35 @@ export const HierarchyTree = forwardRef<HierarchyTreeHandle, HierarchyTreeProps>
     ...(outOn ? references.structuralChild : []),
   ], [references, inOn, outOn]);
 
-  const typeCounts = useMemo(() => {
+  // "By object" view: only with a usage summary and for the incoming direction.
+  const grouped = references.usage != null && groupMode === 'owner' && dirFilter === 'in';
+
+  // Chip counts: references (Σ ×N); in the "by object" view the rows of
+  // "used by" count as their using objects instead (how many groups a click on
+  // the chip leaves), structural rows stay references.
+  const chipCounts = useCallback((keyOf: (r: ReferenceItem) => string) => {
     const m = new Map<string, number>();
+    const usedBy = grouped ? new Set(references.parent) : null;
+    const seen = new Set<string>();
     for (const r of directionScopedRefs) {
-      m.set(r.Object_Type, (m.get(r.Object_Type) ?? 0) + 1);
+      const key = keyOf(r);
+      if (usedBy?.has(r)) {
+        const ownerKey = `${key}\u0001${usageOwnerOf(r).key}`;
+        if (seen.has(ownerKey)) continue;
+        seen.add(ownerKey);
+        m.set(key, (m.get(key) ?? 0) + 1);
+      } else {
+        m.set(key, (m.get(key) ?? 0) + refWeight(r));
+      }
     }
     return m;
-  }, [directionScopedRefs]);
+  }, [directionScopedRefs, grouped, references.parent]);
+
+  const typeCounts = useMemo(() => chipCounts(r => r.Object_Type), [chipCounts]);
 
   // Zähler der kombinierten Rollen-Chips (Rolle bzw. Rolle~Klasse) — wie die
   // Typ-Pillen richtungs-skopiert, von Typ-/Such-Filter unabhängig.
-  const roleCounts = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const r of directionScopedRefs) {
-      const key = roleKeyOf(r);
-      m.set(key, (m.get(key) ?? 0) + 1);
-    }
-    return m;
-  }, [directionScopedRefs]);
+  const roleCounts = useMemo(() => chipCounts(roleKeyOf), [chipCounts]);
 
   // Gegentypen je Richtung, wie sie die Typ-Pillen zeigen (in = parent +
   // structuralParent, out = child + structuralChild) — die Kandidaten-Zeile
@@ -336,7 +368,7 @@ export const HierarchyTree = forwardRef<HierarchyTreeHandle, HierarchyTreeProps>
       // Slot-Klasse + Labels in den Suchindex aufnehmen — `hide`, `cf`,
       // „bedingte" werden tippbar.
       const subroleLabels = r.Subrole_Class
-        ? `${subroleShort(r.Subrole_Class)} ${subroleLong(r.Subrole_Class)}`
+        ? `${subroleShort(r.Subrole_Class, r.Link_Role)} ${subroleLong(r.Subrole_Class, r.Link_Role)}`
         : '';
       if (!buildSearchText(r, subroleLabels).includes(queryLower)) return false;
     }
@@ -352,14 +384,38 @@ export const HierarchyTree = forwardRef<HierarchyTreeHandle, HierarchyTreeProps>
 
   // Treffer je Richtung (Typ-/Such-Filter berücksichtigt, Richtungs-Filter NICHT)
   // — beschriftet die Richtungs-Buttons und bleibt beim Umschalten stabil.
+  // Alle Zähler in Referenzen (Σ ×N), nicht in Zeilen — siehe refWeight.
   const dirCounts = useMemo(() => ({
-    in: references.parent.filter(filterFn).length + references.structuralParent.filter(filterFn).length,
-    out: references.child.filter(filterFn).length + references.structuralChild.filter(filterFn).length,
+    in: sumRefs(references.parent.filter(filterFn)) + sumRefs(references.structuralParent.filter(filterFn)),
+    out: sumRefs(references.child.filter(filterFn)) + sumRefs(references.structuralChild.filter(filterFn)),
   }), [references, filterFn]);
 
-  const totalCount = directionScopedRefs.length;
-  const matchCount = matches.parent.length + matches.child.length
-    + matches.structuralParent.length + matches.structuralChild.length;
+  // Referenzen je Sektion (gesamt bzw. nach Filter) für die Überschriften.
+  const sectionTotals = useMemo(() => ({
+    parent: sumRefs(references.parent),
+    child: sumRefs(references.child),
+    structuralParent: sumRefs(references.structuralParent),
+    structuralChild: sumRefs(references.structuralChild),
+  }), [references]);
+  const sectionMatches = useMemo(() => ({
+    parent: sumRefs(matches.parent),
+    child: sumRefs(matches.child),
+    structuralParent: sumRefs(matches.structuralParent),
+    structuralChild: sumRefs(matches.structuralChild),
+  }), [matches]);
+
+  const usageGroups = useMemo(
+    () => (grouped ? buildUsageGroups(matches.parent) : null),
+    [grouped, matches.parent],
+  );
+  const usageGroupsTotal = useMemo(
+    () => (grouped ? buildUsageGroups(references.parent).groups.length : 0),
+    [grouped, references.parent],
+  );
+
+  const totalCount = sumRefs(directionScopedRefs);
+  const matchCount = sectionMatches.parent + sectionMatches.child
+    + sectionMatches.structuralParent + sectionMatches.structuralChild;
 
   // Richtungs-Leiste nur, wenn beide Richtungen überhaupt Referenzen haben (sonst
   // ist der Filter sinnlos). Basiert auf den Rohdaten, nicht auf dem aktiven Filter.
@@ -408,6 +464,19 @@ export const HierarchyTree = forwardRef<HierarchyTreeHandle, HierarchyTreeProps>
     });
   };
 
+  // Grouping toggle (the two numbers of the usage summary). "By object" also
+  // switches to the incoming direction — the groups exist for it only.
+  const setGroupMode = (m: GroupMode) => {
+    runUserUpdate(p => {
+      if (m === 'owner') {
+        p.set('rgroup', 'owner');
+        p.set('rdir', 'in');
+      } else {
+        p.delete('rgroup');
+      }
+    });
+  };
+
   // Sucheingabe: bei nicht-leerer Eingabe atomar mit ref-Clear; leerer Wert
   // (Backspace, Clear-Button, ESC) ist programmatisch und lässt ref unverändert.
   const handleQueryChange = (q: string) => {
@@ -451,15 +520,39 @@ export const HierarchyTree = forwardRef<HierarchyTreeHandle, HierarchyTreeProps>
     const subroleEvents = subroleCls === 'script_trigger_parameter' && ref.Subrole_Event
       ? ref.Subrole_Event.split(',').map(s => s.trim()).filter(Boolean)
       : [];
-    const roleLabel = subroleCls
-      ? `${ref.Link_Role} · ${subroleEvents.length === 1 ? subroleEvents[0] : subroleShort(subroleCls)}`
+    // Layout parts: the subrole of their edges (parent_layout, breaks_on_field) is
+    // the canonical English part type → show the localized dialog term of the part
+    // kind instead (catalog name stays English). The part is either the listed row
+    // or the focus object itself (its layout / break field listed).
+    const partKey = ref.Object_Type === 'LayoutPart' ? parsePartKey(ref.uuid) : null;
+    const focusPartKey = !partKey && (ref.Link_Role === 'parent_layout' || ref.Link_Role === 'breaks_on_field')
+      ? parsePartKey(currentUuid)
+      : null;
+    const subroleKind = partKey?.kind ?? focusPartKey?.kind;
+    // breaks_on_field exists on sub-summaries only — the kind term says nothing
+    // new there (the part name carries it), the position does: "· trailing".
+    const subrolePos = ref.Link_Role === 'breaks_on_field' && subroleKind != null
+      ? subSummaryPosition(subroleKind)
+      : null;
+    const partSubrole = subrolePos
+      ? t(`detail:layoutParts.position.${subrolePos}`) as string
+      : subroleKind != null
+      ? partLabel((k, o) => t(k, o) as string, { part_kind: subroleKind, part_type: ref.Subrole_Detail ?? subroleCls })
+      : null;
+    // A part's catalog name already names its layout ("Layout [Body]") → no
+    // second container name behind it; the file moves into the name tooltip.
+    const showContainer = !!ref.Container_Name && ref.Object_Type !== 'LayoutPart';
+    const roleLabel = partSubrole
+      ? `${ref.Link_Role} · ${partSubrole}`
+      : subroleCls
+      ? `${ref.Link_Role} · ${subroleEvents.length === 1 ? subroleEvents[0] : subroleShort(subroleCls, ref.Link_Role)}`
       : ref.Link_Role;
     const subroleDetail = subroleCls
       && ref.Subrole_Detail
       && ref.Subrole_Detail.toLowerCase() !== subroleCls.toLowerCase()
       ? ref.Subrole_Detail : null;
     const roleTitle = subroleCls
-      ? `${ref.Link_Role} · ${subroleLong(subroleCls)}`
+      ? `${ref.Link_Role} · ${subroleLong(subroleCls, ref.Link_Role)}`
         + (subroleEvents.length > 0 ? ` · ${subroleEvents.join(', ')}` : '')
         + (subroleDetail ? ` (${subroleDetail})` : '')
       : ref.Link_Role;
@@ -540,14 +633,19 @@ export const HierarchyTree = forwardRef<HierarchyTreeHandle, HierarchyTreeProps>
             ↗
           </button>
         )}
-        <span className="ref-name" title={ref.Object_Name}>
+        <span
+          className="ref-name"
+          title={ref.Object_Type === 'LayoutPart' && ref.File_Name && ref.File_Name !== focusFile
+            ? `${ref.Object_Name} (${ref.File_Name})`
+            : ref.Object_Name}
+        >
           {formatObjectDisplayName(ref.Object_Type, ref.Object_Name)}
         </span>
         {/* Container-Verortung (z.B. Layout eines ScriptTriggers): macht sonst
             identische Sub-Knoten unterscheidbar. Dateiname nur bei Abweichung vom
             Fokus-Objekt (referenziertes Script/Layout). */}
-        {ref.Container_Name && (
-          <span className="ref-container" title={ref.Container_Name}>
+        {showContainer && (
+          <span className="ref-container" title={ref.Container_Name ?? undefined}>
             <span className="ref-container-sep" aria-hidden="true">›</span>
             {ref.Container_Name}
             {ref.Container_File && ref.Container_File !== focusFile && (
@@ -573,7 +671,7 @@ export const HierarchyTree = forwardRef<HierarchyTreeHandle, HierarchyTreeProps>
             // Pfeil-Tooltip Rolle und Slot weiter).
             <span className="ref-role-label" title={subroleDetail ?? undefined}>{roleLabel}</span>
           )}
-          {ref.File_Name && ref.File_Name !== focusFile && !ref.Container_Name && (
+          {ref.File_Name && ref.File_Name !== focusFile && !ref.Container_Name && ref.Object_Type !== 'LayoutPart' && (
             <span className="ref-file">
               ({ref.File_Name})
             </span>
@@ -697,6 +795,194 @@ export const HierarchyTree = forwardRef<HierarchyTreeHandle, HierarchyTreeProps>
     );
   };
 
+  /**
+   * Tab header "Used internally by n objects · m references" (same two numbers
+   * and words as the search column) + ⓘ link to the docs page that explains
+   * the counting. The sentence comes from ONE template with the placeholders
+   * {{objects}} / {{refs}} (word order differs per language); the two numbers
+   * are spliced in as their own nodes.
+   */
+  const renderUsageSummary = (owners: number, refs: number) => {
+    // The two numbers switch the view: "by object" (groups) / "all references".
+    const parts: Record<string, React.ReactNode> = {
+      objects: (
+        <button
+          type="button"
+          className={`references-usage-count references-usage-toggle${grouped ? ' is-active' : ''}`}
+          aria-pressed={grouped}
+          title={t('detail:hierarchyTree.groupByObjectHint') as string}
+          onClick={() => setGroupMode('owner')}
+        >
+          {t('detail:hierarchyTree.usageObjects', { count: owners })}
+        </button>
+      ),
+      refs: (
+        <button
+          type="button"
+          className={`references-usage-count references-usage-toggle${grouped ? '' : ' is-active'}`}
+          aria-pressed={!grouped}
+          title={t('detail:hierarchyTree.groupAllRefsHint') as string}
+          onClick={() => setGroupMode('flat')}
+        >
+          {t('detail:hierarchyTree.usageRefs', { count: refs })}
+        </button>
+      ),
+    };
+    const template = t('detail:hierarchyTree.usageSummary', {
+      objects: USAGE_SLOT('objects'), refs: USAGE_SLOT('refs'),
+    }) as string;
+    const docsLabel = t('detail:hierarchyTree.usageDocs') as string;
+    return (
+      <div className="references-usage-summary" title={t('detail:hierarchyTree.usageSummaryHint') as string}>
+        {template.split(USAGE_SLOT_RE).map((chunk, i) => (
+          i % 2 === 1 ? <React.Fragment key={i}>{parts[chunk] ?? chunk}</React.Fragment> : chunk
+        ))}
+        <Link className="references-usage-docs" to={USAGE_DOCS_PATH} title={docsLabel} aria-label={docsLabel}>ⓘ</Link>
+      </div>
+    );
+  };
+
+  const toggleGroup = (key: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const openOwner = (owner: UsageOwner) => {
+    navigate(buildObjectPath(owner.uuid, currentUuid ?? null, owner.file ?? null));
+  };
+
+  // Groups in the order of the sort bar (owner as the listed object).
+  const sortGroups = (groups: UsageGroup[]) => {
+    const sign = refSort.dir === 'asc' ? 1 : -1;
+    const asItem = (g: UsageGroup) => ({
+      uuid: g.owner.uuid, Object_Type: g.owner.type, Object_Name: g.owner.name,
+      File_Name: g.owner.file, Link_Role: g.roles[0] ?? '', Container_Name: null,
+    }) as ReferenceItem;
+    return [...groups].sort((a, b) => sign * compareRefs(asItem(a), asItem(b), refSort.key));
+  };
+
+  /**
+   * Role of a single reference as the row shows it (`reads_field · CF`; one
+   * resolved trigger event replaces the class label) — the head of a group
+   * without toggle carries it, so the slot class stays visible.
+   */
+  const shortRoleLabel = (ref: ReferenceItem) => {
+    const cls = ref.Subrole_Class;
+    if (!cls) return ref.Link_Role;
+    const events = cls === 'script_trigger_parameter' && ref.Subrole_Event
+      ? ref.Subrole_Event.split(',').map(s => s.trim()).filter(Boolean)
+      : [];
+    return `${ref.Link_Role} · ${events.length === 1 ? events[0] : subroleShort(cls, ref.Link_Role)}`;
+  };
+
+  /**
+   * One using object: head row (type, name, file, references, roles) opens the
+   * object; ▸ expands its references (the usual rows). Arrow right/left on the
+   * head expand/collapse. A group whose expansion would only repeat the head
+   * (isGroupExpandable) gets an empty slot of the toggle's width instead, so
+   * pills and names stay aligned.
+   */
+  const renderGroupHead = (
+    key: string, open: boolean, expandable: boolean, onOpen: (() => void) | null,
+    content: React.ReactNode, ariaLabel: string, title?: string,
+  ) => (
+    <div
+      className="reference-item reference-group-head"
+      tabIndex={0}
+      role="button"
+      aria-expanded={expandable ? open : undefined}
+      aria-label={ariaLabel}
+      title={title}
+      onClick={() => (onOpen ? onOpen() : toggleGroup(key))}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (onOpen) onOpen(); else toggleGroup(key);
+        } else if (expandable && e.key === 'ArrowRight' && !open) {
+          e.preventDefault();
+          toggleGroup(key);
+        } else if (expandable && e.key === 'ArrowLeft' && open) {
+          e.preventDefault();
+          toggleGroup(key);
+        }
+      }}
+    >
+      {expandable ? (
+        <button
+          type="button"
+          className="reference-group-toggle"
+          aria-label={(open
+            ? t('detail:hierarchyTree.groupCollapse')
+            : t('detail:hierarchyTree.groupExpand')) as string}
+          aria-expanded={open}
+          tabIndex={-1}
+          onClick={(e) => { e.stopPropagation(); toggleGroup(key); }}
+        >
+          {open ? '▾' : '▸'}
+        </button>
+      ) : (
+        <span className="reference-group-toggle reference-group-toggle--none" aria-hidden="true" />
+      )}
+      {content}
+    </div>
+  );
+
+  const renderUsageGroups = ({ groups, noUsage }: { groups: UsageGroup[]; noUsage: ReferenceItem[] }) => (
+    <ul className="reference-list reference-group-list">
+      {sortGroups(groups).map(g => {
+        const expandable = isGroupExpandable(g);
+        const open = expandable && expandedGroups.has(g.owner.key);
+        // Without toggle the head stands for its single reference: show the role
+        // with its slot class (`reads_field · CF`) instead of the bare role list.
+        const roles = expandable ? g.roles.join(', ') : shortRoleLabel(g.rows[0]);
+        return (
+          <li key={g.owner.key} className="reference-group">
+            {renderGroupHead(g.owner.key, open, expandable, () => openOwner(g.owner), (
+              <>
+                <span className="object-type">
+                  {t(`types:objectTypes.${g.owner.type}`, { defaultValue: g.owner.type })}
+                </span>
+                <span className="ref-name" title={g.owner.name}>
+                  {formatObjectDisplayName(g.owner.type, g.owner.name)}
+                </span>
+                <span className="ref-meta">
+                  <span className="ref-call-count">{t('detail:hierarchyTree.usageRefs', { count: g.refs })}</span>
+                  <span className="ref-role-label" title={roles}>{roles}</span>
+                  {g.owner.file && g.owner.file !== focusFile && (
+                    <span className="ref-file">({g.owner.file})</span>
+                  )}
+                </span>
+              </>
+            ), t('detail:hierarchyTree.itemAriaLabel', {
+              type: g.owner.type, name: formatObjectDisplayName(g.owner.type, g.owner.name),
+            }) as string)}
+            {open && renderSectionList(g.rows, 'in')}
+          </li>
+        );
+      })}
+      {noUsage.length > 0 && (() => {
+        const open = expandedGroups.has(NO_USAGE_GROUP_KEY);
+        return (
+          <li key={NO_USAGE_GROUP_KEY} className="reference-group reference-group--no-usage">
+            {renderGroupHead(NO_USAGE_GROUP_KEY, open, true, null, (
+              <>
+                <span className="ref-name">{t('detail:hierarchyTree.noUsageGroup')}</span>
+                <span className="ref-meta">
+                  <span className="ref-call-count">{t('detail:hierarchyTree.usageRefs', { count: sumRefs(noUsage) })}</span>
+                </span>
+              </>
+            ), t('detail:hierarchyTree.noUsageGroup') as string, t('detail:hierarchyTree.noUsageGroupHint') as string)}
+            {open && renderSectionList(noUsage, 'in')}
+          </li>
+        );
+      })()}
+    </ul>
+  );
+
   const renderSectionList = (items: ReferenceItem[], dir: 'in' | 'out') => (
     <ul className="reference-list">
       {sortItems(items).map((ref, idx) => renderReferenceItem(ref, idx, dir))}
@@ -741,20 +1027,34 @@ export const HierarchyTree = forwardRef<HierarchyTreeHandle, HierarchyTreeProps>
         onKeyDown={handleTreeKeyDown}
       >
         {(hasAny || showDirBar) && renderToolbar()}
+        {references.toUsage && (references.toUsage.available === false || references.toUsage.truncated) && (
+          <div className="references-notice" role="note">
+            {references.toUsage.available === false
+              ? t('detail:hierarchyTree.toUsageUnavailable')
+              : t('detail:hierarchyTree.toUsageTruncated', {
+                count: references.toUsage.rows ?? 0, total: references.toUsage.total ?? 0,
+              })}
+          </div>
+        )}
+        {references.usage && renderUsageSummary(references.usage.owners, references.usage.refs ?? 0)}
         {hasParents && (
           <section className="hierarchy-section">
-            <h2>{filterActive
-              ? t('detail:hierarchyTree.usedByFiltered', { count: matches.parent.length, total: references.parent.length })
-              : t('detail:hierarchyTree.usedBy', { count: matches.parent.length })}</h2>
-            {renderSectionList(matches.parent, 'in')}
+            <h2>{usageGroups
+              ? (filterActive
+                ? t('detail:hierarchyTree.usedByGroupedFiltered', { count: usageGroups.groups.length, total: usageGroupsTotal })
+                : t('detail:hierarchyTree.usedByGrouped', { count: usageGroups.groups.length }))
+              : filterActive
+              ? t('detail:hierarchyTree.usedByFiltered', { count: sectionMatches.parent, total: sectionTotals.parent })
+              : t('detail:hierarchyTree.usedBy', { count: sectionMatches.parent })}</h2>
+            {usageGroups ? renderUsageGroups(usageGroups) : renderSectionList(matches.parent, 'in')}
           </section>
         )}
 
         {hasChildren && (
           <section className="hierarchy-section">
             <h2>{filterActive
-              ? t('detail:hierarchyTree.usesFiltered', { count: matches.child.length, total: references.child.length })
-              : t('detail:hierarchyTree.uses', { count: matches.child.length })}</h2>
+              ? t('detail:hierarchyTree.usesFiltered', { count: sectionMatches.child, total: sectionTotals.child })
+              : t('detail:hierarchyTree.uses', { count: sectionMatches.child })}</h2>
             {renderSectionList(matches.child, 'out')}
           </section>
         )}
@@ -762,8 +1062,8 @@ export const HierarchyTree = forwardRef<HierarchyTreeHandle, HierarchyTreeProps>
         {hasStructParents && (
           <section className="hierarchy-section">
             <h2>{filterActive
-              ? t('detail:hierarchyTree.structurallyContainedByFiltered', { count: matches.structuralParent.length, total: references.structuralParent.length })
-              : t('detail:hierarchyTree.structurallyContainedBy', { count: matches.structuralParent.length })}</h2>
+              ? t('detail:hierarchyTree.structurallyContainedByFiltered', { count: sectionMatches.structuralParent, total: sectionTotals.structuralParent })
+              : t('detail:hierarchyTree.structurallyContainedBy', { count: sectionMatches.structuralParent })}</h2>
             {renderSectionList(matches.structuralParent, 'in')}
           </section>
         )}
@@ -771,8 +1071,8 @@ export const HierarchyTree = forwardRef<HierarchyTreeHandle, HierarchyTreeProps>
         {hasStructChildren && (
           <section className="hierarchy-section">
             <h2>{filterActive
-              ? t('detail:hierarchyTree.structurallyContainsFiltered', { count: matches.structuralChild.length, total: references.structuralChild.length })
-              : t('detail:hierarchyTree.structurallyContains', { count: matches.structuralChild.length })}</h2>
+              ? t('detail:hierarchyTree.structurallyContainsFiltered', { count: sectionMatches.structuralChild, total: sectionTotals.structuralChild })
+              : t('detail:hierarchyTree.structurallyContains', { count: sectionMatches.structuralChild })}</h2>
             {renderSectionList(matches.structuralChild, 'out')}
           </section>
         )}

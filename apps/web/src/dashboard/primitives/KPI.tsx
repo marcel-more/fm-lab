@@ -20,6 +20,10 @@ export interface KpiItem {
   tone?: string;
   toneWhen?: 'always' | 'nonzero';
   onClick?: ActionSpec;
+  // KPIStrip only: a second click on the ACTIVE tile clears the params of its
+  // own `onClick` (sends them as ""), other sticky filters stay. For combinable
+  // KPI filters, so one of them can be dropped without the reset tile.
+  toggle?: boolean;
 }
 
 export function KPI({ node, row, navigate }: PrimitiveProps) {

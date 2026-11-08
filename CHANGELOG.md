@@ -10,6 +10,37 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 ---
 
+## [0.9.18] — 2026-11-08
+
+<!-- components:auto --> *Components: schema 1.40.0 · xml-import 5.5.0 (converter 2.45.0) · fm-spec 2.9.0 · plugin-spec 1.2.0*
+
+fm-lab now shows how often every object is used — in the search, the references tab and a new dashboard — and the unused-code rules read the same numbers, with fewer false findings. Table occurrences get a usage analysis and a detail view, layouts can be read part by part.
+
+- **Re-import your solutions** — the new analyses need a catalog built by this release; the first import is a full rebuild and takes longer. Older catalogs keep working, but the unused-code rules report nothing until the re-import
+- **Usage of every object** — how many objects use a field, script, layout, custom function, value list, table, table occurrence, relationship, data source or privilege set, and how many references there are. Calls from outside the solution and dynamic references stay invisible; the new documentation page *Usage and References* explains both numbers
+  - **Search** — a usage column on every hit, the filter *Usage ≤ / ≥ n* and the sort *Usage*, e.g. for the unused scripts of one file. *Name*, *Type* and *File* now sort across all pages
+  - **References tab** — shows both numbers and lists the incoming references by using object or one by one
+  - **Dashboard *Object Usage*** (rubric Top) — all objects in one list, unused and rarely used first, with tiles and a type filter
+- **Unused code**
+  - **Analysis Test *Unused Code*** — bundles the nine unused-code rules; on a single object it answers *can I delete it?*
+  - **Table occurrences** — usage now includes `Table::Field` references in formulas, script steps and layouts, so TOs used only there are no longer reported. Each TO gets a class (*used*, *relationship bridge*, *dead branch*, *dead island*, *unused*); new dashboard *Table Occurrence Usage* (rubric Schema)
+  - **Fewer false findings** — fields used only by value lists, summary fields or sub-summaries are no longer reported; scripts and layouts in their menu are listed as entry points instead of findings
+  - **Files without DDR info** — findings there are marked *unverified*
+- **Detail view of a table occurrence** — data source and base table, usage, the TO group with the path to the nearest layout-based TO, all relationships with their options, and the other occurrences of the base table
+- **Layout parts** — a parts list in the layout properties, a part filter on the wireframe and a detail view per part; part names follow FileMaker's *Part Definition* dialog in every UI language
+- **Dashboards** — a second click on an active tile removes its filter; dashboards opened from a test name their scope; a row click keeps search, sort and page
+- **AI agent** — `fm-summarize` and `fm-analyze` report the usage of table occurrences; `fm-deep-research` estimates the share of unused code
+- **Own queries** — new analysis tables `v_object_usage`, `v_table_occurrence_usage`, `v_table_occurrence_class` and `ThemePartStyles`; `LayoutParts` and `LayoutObjects` gain part details. **Changed:** `LayoutObjects.Part_Type` is now canonical English instead of the localized export value
+- **REST API** — search parameters `sort=usage`, `usage_min`, `usage_max`; usage data in the references response (`meta.usage`)
+- **Fixes**
+  - **Sub-summary break fields** — a field used only as a break field could be reported as unused
+  - **Field counted twice** — a field on a layout counted once for the layout object and once for the layout
+  - **Unused privilege sets** — built-in privilege sets are recognized in every language, not only in English
+  - **Extended privileges** — `PrivilegeSet_IDs` / `PrivilegeSet_Names` hold `[]` instead of `[NULL]` when nothing is granted, and the import check for such files works again
+  - **`fmlab.sh down` on a native installation** — stopped only the Docker stack, so the servers started with `up` → *No* (native) kept running, and without Docker the command aborted. It now also stops the servers of this fm-lab folder and works without Docker; other programs on ports 3003/5173 stay running
+
+---
+
 ## [0.9.17] — 2026-11-05
 
 <!-- components:auto --> *Components: schema 1.37.0 · xml-import 5.5.0 (converter 2.42.0) · fm-spec 2.9.0 · plugin-spec 1.2.0*
@@ -1030,7 +1061,8 @@ Initial release: XML conversion pipeline, core database structure, and first AI 
 <!-- Link references. compare-ranges span adjacent tagged releases; documentation-only
      versions that were never tagged (e.g. 0.8.7, 0.8.1, 0.8.0, 0.7.5–0.7.7, …) are
      intentionally left unlinked and render as plain text. Add a line here per new tag. -->
-[Unreleased]: https://github.com/marcel-more/fm-lab/compare/v0.9.17...HEAD
+[Unreleased]: https://github.com/marcel-more/fm-lab/compare/v0.9.18...HEAD
+[0.9.18]: https://github.com/marcel-more/fm-lab/compare/v0.9.17...v0.9.18
 [0.9.17]: https://github.com/marcel-more/fm-lab/compare/v0.9.16...v0.9.17
 [0.9.16]: https://github.com/marcel-more/fm-lab/compare/v0.9.15...v0.9.16
 [0.9.15]: https://github.com/marcel-more/fm-lab/compare/v0.9.14...v0.9.15

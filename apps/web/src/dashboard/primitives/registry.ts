@@ -29,6 +29,7 @@ import { XmlEmptyStateCard } from './XmlEmptyStateCard';
 import { SemanticNamesStatus } from './SemanticNamesStatus';
 import { XmlImportIntegrity } from './XmlImportIntegrity';
 import { CalendarHeatmap, StackedTimeSeries, Sparkline } from './Charts';
+import { ScopeNotice } from './ScopeNotice';
 import { registerInlineControl } from './inlineControls';
 
 const registry = new Map<string, PrimitiveComponent>();
@@ -72,6 +73,7 @@ registerPrimitive('XmlImportIntegrity', XmlImportIntegrity);
 registerPrimitive('CalendarHeatmap', CalendarHeatmap);
 registerPrimitive('StackedTimeSeries', StackedTimeSeries);
 registerPrimitive('Sparkline', Sparkline);
+registerPrimitive('ScopeNotice', ScopeNotice);
 
 // Inline-Controls (rendered inside List rows when rowTemplate.inlineControl is set)
 registerInlineControl('docsInstall', DocsetInstallControl);

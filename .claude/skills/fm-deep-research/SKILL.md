@@ -12,7 +12,7 @@ description: >-
   Lösung", "beschreibe die Architektur dieser Lösung", "erstelle einen Lösungsbericht", "was macht
   diese Lösung insgesamt". Also responds to equivalent requests in other languages.
 metadata:
-  version: "0.9.0"
+  version: "0.9.18"
 ---
 
 # FileMaker Solution Deep Research
@@ -165,11 +165,23 @@ Domain, Anchors[]}` — name priority when writing prose: `User_Name` > existing
 ### R3. Findings
 
 - **Measured** — run the default tests of `references/tests.md` through the `fm-test` skill in
-  solution scope (max 12 tests; per member the **counters** plus at most **5** findings,
+  solution scope (max 12 tests plus the unused-code estimate below; per member the **counters** plus at most **5** findings,
   severity-sorted; drop findings that belong to tooling add-ons such as scripts named after
   an IDE plugin before they enter the context; say what was cut).
+  **Unused code** — not through `fm-test`, but one estimate over the members of the test
+  `unused-code`: `node .claude/skills/fm-deep-research/scripts/unused_code_estimate.mjs
+  --db=db/fm_catalog.duckdb` (literal bundle path under a session pin; ≈ 1 s, read-only).
+  It prints the share of unused objects overall and per type, the most affected files and a
+  sample of 3 objects per type, each from a different file — only this block enters the
+  context, never the full lists. In the report it is one measured finding: "about x % of
+  the objects are unused", the table, the sample as illustration, and the pointer that the
+  complete list is a separate run (`/fm-test unused-code`, profiles `data-model` / `logic`,
+  also per file or module). Every row is a review candidate, not a delete list; name the
+  blind spots (dynamic references, scripts started by hand, files not imported, findings
+  marked unverified because their file has no DDR info). Scripts and layouts in the menus
+  are entry points: the estimate reports them on their own line, never as unused.
   Metrics: #9 god-nodes, #10 shape (singletons, largest share, Q), #11 alignment, duplication,
-  hubs. Skip with `--no-tests` (protocol says so).
+  hubs. Skip with `--no-tests` (protocol says so; it skips the estimate too).
 - **Interpreted** — from R2: patterns/anti-patterns, comprehensibility, coupling, security
   smells, platform footprint (`reference/fm_spec.duckdb` `step_compat` for anchor steps when the
   platform matters — never from memory).
@@ -234,7 +246,7 @@ Protocol: readiness <level> · scanned <n_deep>/<K> · tests <n> run · write-ba
 - `references/report-template.md` — default template (read before R4)
 - `references/template-guide.md` — grammar, placeholders, section checklist, maturity scale (read before R4 and for any `--template`)
 - `references/tests.md` — default test set for R3 (read at R3)
-- `scripts/solution_profile.sql`, `scripts/community_signals.sql`, `scripts/script_steps.sql`, `scripts/duplication.sql`, `scripts/community_activity.sql` (section activity, Appendix A activity lines), `scripts/segment_inventory.sql` (B.6), `scripts/session_usage.sh` + `session_usage.sql` (B.7 run metrics from the session transcript, DuckDB only)
+- `scripts/unused_code_estimate.mjs` (R3 unused-code estimate over the members of the test `unused-code`), `scripts/solution_profile.sql`, `scripts/community_signals.sql`, `scripts/script_steps.sql`, `scripts/duplication.sql`, `scripts/community_activity.sql` (section activity, Appendix A activity lines), `scripts/segment_inventory.sql` (B.6), `scripts/session_usage.sh` + `session_usage.sql` (B.7 run metrics from the session transcript, DuckDB only)
 - `../_shared/scripts/cluster_state.sh`, `../_shared/scripts/community_members.sql`, `../_shared/scripts/cluster_run_named.sh`; `../fm-graph-cluster/scripts/hubs.sql`
 - `../_shared/response-language.md` — hedging vocabulary per language
 

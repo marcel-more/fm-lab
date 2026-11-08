@@ -115,7 +115,7 @@ For running **from a shell** (with or without Docker), the wrapper is the single
      → No  = analysis only
 ```
 
-Skip the prompts with flags: `--docker` / `--native`, `--claude` / `--no-claude`, `-d` (background only). `bash tools/fmlab.sh down` stops the stack, `… logs` follows the logs, `… agent` re-attaches Claude to a running stack.
+Skip the prompts with flags: `--docker` / `--native`, `--claude` / `--no-claude`, `-d` (background only). `bash tools/fmlab.sh down` stops FM-Lab — the Docker stack and the native servers of this folder, `… logs` follows the logs, `… agent` re-attaches Claude to a running stack.
 
 ### a) Docker (recommended, all platforms)
 
@@ -196,7 +196,7 @@ bash ingestion/convert_fm_xml.sh "MyDatabase.xml"  # a single file
 ```bash
 ## Docker
 bash tools/fmlab.sh up         # start servers
-bash tools/fmlab.sh down       # stop servers
+bash tools/fmlab.sh down       # stop servers (also stops native servers)
 
 ## native
 bash tools/start-servers.sh    # start servers
@@ -231,6 +231,7 @@ The project has grown along a clear arc — from a solid foundation toward an in
 - **v0.9.12** · _FileMaker 26 support_ — across the whole stack: XML import, object catalog, web client, FileMaker reference, and code generation.
 - **v0.9.15 – v0.9.16** · _Version updates + change history_ — DuckDB 2.0 and Node.js 22. The catalog imports the last change of every object, shown in the web client dashboards.
 - **v0.9.17** · _Dashboard & test overview + update path_ — list view, favorites and filters; custom queries become dashboards. Own files stay apart from shipped ones, so updates leave them untouched. Docker image on Node.js 26.
+- **v0.9.18** · _Object usage + unused code_ — how often every object is used, shown in search, references and a new dashboard. Fewer false unused-code findings, a usage analysis and detail view for table occurrences, layouts readable part by part.
 
 - More details in [`CHANGELOG.md`](CHANGELOG.md) — release history
 

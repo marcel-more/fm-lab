@@ -1,15 +1,24 @@
 {
   "manifest": {
     "title": "未使用的值列表",
-    "description": "未使用代码规则 — 未绑定到任何字段/Layout 对象、排序或外部包装器的值列表。"
+    "description": "未使用代码规则 — 未绑定到任何字段/Layout 对象、排序或外部包装器的值列表。 不含 DDR 信息导出的文件中的结果标记为未验证。"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "结果数",
-    "summary_kpi.props.items[1].label": "受影响文件",
+    "summary_kpi.props.items[1].label": "无 DDR 信息",
+    "summary_kpi.props.items[2].label": "受影响文件",
     "findings_card.props.title": "未使用的值列表",
     "findings_table.props.searchPlaceholder": "搜索文件或名称…",
     "findings_table.props.empty.message": "未找到匹配项。",
     "findings_table.props.columns[0].label": "文件",
-    "findings_table.props.columns[1].label": "名称"
+    "findings_table.props.columns[1].label": "名称",
+    "findings_table.props.columns[2].label": "状态",
+    "findings_table.props.columns[3].label": "无 DDR 信息",
+    "findings_table.props.columns[2].valueLabels.unused": "未使用",
+    "findings_table.props.columns[2].valueLabels.unused_unverified": "未使用 (未验证)",
+    "findings_table.props.columns[3].valueLabels.true": "是",
+    "findings_table.props.columns[3].valueLabels.false": "否",
+    "notes_card.props.title": "状态说明",
+    "notes_md.props.content": "**未验证。** 该文件导出时不含 DDR 信息。此时文件中完全没有来自公式的引用——在计算中的使用不可见。此类结果标记为 *未使用 (未验证)*；磁贴 *无 DDR 信息* 会列出它们。删除任何内容之前，请重新导出带 DDR 信息的文件。\n\n**限制。** 仅统计导入的解决方案内部的使用。不可见：**来自外部的调用** — 服务器计划、Data API、OData、`fmp://` URL、AppleScript/ActiveX、插件、未导入的文件；**内部的动态引用** — 按名称 *执行脚本*、`GetField`、`Evaluate`、SQL 字符串中的名称。结果是待检查的候选项，而非删除建议。[如何统计使用](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

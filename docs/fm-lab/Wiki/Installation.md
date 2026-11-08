@@ -25,7 +25,7 @@ For running **from a shell** (with or without Docker), the wrapper is the single
      → No  = analysis only
 ```
 
-Skip the prompts with flags: `--docker` / `--native`, `--claude` / `--no-claude`, `-d` (background only). `bash tools/fmlab.sh down` stops the stack, `… logs` follows the logs, `… agent` re-attaches Claude to a running stack.
+Skip the prompts with flags: `--docker` / `--native`, `--claude` / `--no-claude`, `-d` (background only). `bash tools/fmlab.sh down` stops FM-Lab — the Docker stack and the native servers of this folder, `… logs` follows the logs, `… agent` re-attaches Claude to a running stack.
 
 
 ---

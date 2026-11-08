@@ -1,0 +1,194 @@
+{
+  "id": "unused-code",
+  "version": "1.1.0",
+  "title": "Unused Code",
+  "description": "Objects nothing points at: scripts never called, fields never read, displayed or set, custom functions without a call, layouts never navigated to, value lists attached to nothing, table occurrences without usage or on a dead branch of the relationship graph, base tables without an occurrence, external data sources without a reference and privilege sets without an account. Based on the references resolved at import; table occurrences also count through field references in formulas, script steps and on layouts. Every finding is a review candidate, not a delete recommendation — dynamic references, scripts started by hand and files that were not imported stay invisible. Scripts and layouts in the Scripts or layout menu are entry points, not findings; findings in files exported without DDR info are marked unverified.",
+  "keywords": [
+    "unused",
+    "dead-code",
+    "cleanup",
+    "where-used",
+    "table-occurrence"
+  ],
+  "testType": "code-quality",
+  "objectTypes": [
+    "Script",
+    "Field",
+    "CustomFunction",
+    "Layout",
+    "ValueList",
+    "TableOccurrence",
+    "BaseTable",
+    "ExternalDataSource",
+    "PrivilegeSet"
+  ],
+  "scopes": [
+    "solution",
+    "file",
+    "object",
+    "object-list",
+    "cluster"
+  ],
+  "outputs": [
+    "count",
+    "findings-table"
+  ],
+  "members": [
+    {
+      "kind": "dashboard",
+      "ref": "unused_table_occurrence"
+    },
+    {
+      "kind": "dashboard",
+      "ref": "unused_base_table"
+    },
+    {
+      "kind": "dashboard",
+      "ref": "unused_external_data_source"
+    },
+    {
+      "kind": "dashboard",
+      "ref": "unused_field"
+    },
+    {
+      "kind": "dashboard",
+      "ref": "unused_value_list"
+    },
+    {
+      "kind": "dashboard",
+      "ref": "unused_script"
+    },
+    {
+      "kind": "dashboard",
+      "ref": "unused_custom_function"
+    },
+    {
+      "kind": "dashboard",
+      "ref": "unused_layout"
+    },
+    {
+      "kind": "dashboard",
+      "ref": "unused_privilege_set"
+    }
+  ],
+  "profiles": [
+    {
+      "id": "data-model",
+      "title": "Data Model",
+      "description": "Table occurrences, base tables, external data sources, fields and value lists.",
+      "members": [
+        "unused_table_occurrence",
+        "unused_base_table",
+        "unused_external_data_source",
+        "unused_field",
+        "unused_value_list"
+      ]
+    },
+    {
+      "id": "logic",
+      "title": "Logic",
+      "description": "Scripts, custom functions and layouts.",
+      "members": [
+        "unused_script",
+        "unused_custom_function",
+        "unused_layout"
+      ]
+    },
+    {
+      "id": "full",
+      "title": "Full Check"
+    }
+  ],
+  "locales": {
+    "de": {
+      "title": "Ungenutzter Code",
+      "description": "Objekte, auf die nichts verweist: Scripts, die nie aufgerufen werden, Felder, die nirgends gelesen, angezeigt oder gesetzt werden, Custom Functions ohne Aufruf, Layouts ohne Navigation, Wertelisten ohne Verwendung, Tabellenauftreten ohne Nutzung oder als toter Ast des Beziehungsgraphen, Basistabellen ohne Tabellenauftreten, externe Datenquellen ohne Bezug und Berechtigungen ohne Konto. Grundlage sind die beim Import aufgelösten Referenzen; Tabellenauftreten zählen auch über Feldreferenzen in Formeln, Script-Schritten und auf Layouts. Alle Befunde sind Prüfkandidaten, keine Löschempfehlung — dynamische Referenzen, manuell gestartete Scripts und nicht importierte Dateien bleiben unsichtbar. Scripts und Layouts im Scripts- bzw. Layout-Menü sind Einstiegspunkte, keine Befunde; Befunde in Dateien ohne DDR-Info gelten als ungeprüft.",
+      "profiles.data-model.title": "Datenmodell",
+      "profiles.data-model.description": "Tabellenauftreten, Basistabellen, externe Datenquellen, Felder und Wertelisten.",
+      "profiles.logic.title": "Logik",
+      "profiles.logic.description": "Scripts, Custom Functions und Layouts.",
+      "profiles.full.title": "Vollprüfung"
+    },
+    "es": {
+      "title": "Código sin usar",
+      "description": "Objetos a los que nada hace referencia: guiones que nunca se llaman, campos que no se leen, muestran ni establecen en ningún sitio, funciones personalizadas sin llamada, presentaciones sin navegación, listas de valores sin uso, instancias de tabla sin uso o como rama muerta del gráfico de relaciones, tablas base sin instancia de tabla, orígenes de datos externos sin referencia y conjuntos de privilegios sin cuenta. Se basa en las referencias resueltas en la importación; las instancias de tabla cuentan también por las referencias de campo en fórmulas, pasos de guion y presentaciones. Todos los hallazgos son candidatos a revisar, no una recomendación de borrado: las referencias dinámicas, los guiones iniciados a mano y los archivos no importados quedan invisibles. Los scripts y Layouts de los menús Scripts y Layouts son puntos de entrada, no hallazgos; los hallazgos de archivos exportados sin información DDR se marcan como sin verificar.",
+      "profiles.data-model.title": "Modelo de datos",
+      "profiles.data-model.description": "Instancias de tabla, tablas base, orígenes de datos externos, campos y listas de valores.",
+      "profiles.logic.title": "Lógica",
+      "profiles.logic.description": "Guiones, funciones personalizadas y presentaciones.",
+      "profiles.full.title": "Comprobación completa"
+    },
+    "fr": {
+      "title": "Code inutilisé",
+      "description": "Objets vers lesquels rien ne pointe : scripts jamais appelés, rubriques jamais lues, affichées ni définies, fonctions personnalisées sans appel, modèles sans navigation, listes de valeurs inutilisées, occurrences de table sans utilisation ou en branche morte du graphe de liens, tables sources sans occurrence, sources de données externes sans référence et jeux de privilèges sans compte. La base est l'ensemble des références résolues à l'import ; les occurrences de table comptent aussi par les références de rubrique dans les formules, les étapes de script et sur les modèles. Tous les résultats sont des candidats à vérifier, pas une recommandation de suppression : références dynamiques, scripts lancés à la main et fichiers non importés restent invisibles. Les scripts et Layouts des menus Scripts et Layouts sont des points d’entrée, pas des résultats ; les résultats des fichiers exportés sans infos DDR sont marqués non vérifiés.",
+      "profiles.data-model.title": "Modèle de données",
+      "profiles.data-model.description": "Occurrences de table, tables sources, sources de données externes, rubriques et listes de valeurs.",
+      "profiles.logic.title": "Logique",
+      "profiles.logic.description": "Scripts, fonctions personnalisées et modèles.",
+      "profiles.full.title": "Vérification complète"
+    },
+    "it": {
+      "title": "Codice inutilizzato",
+      "description": "Oggetti a cui nulla fa riferimento: script mai richiamati, campi mai letti, mostrati o impostati, funzioni personalizzate senza chiamata, formati senza navigazione, liste valori inutilizzate, ricorrenze di tabella senza uso o come ramo morto del grafico delle relazioni, tabelle di base senza ricorrenza, origini dati esterne senza riferimento e set di privilegi senza account. La base sono i riferimenti risolti all'importazione; le ricorrenze di tabella contano anche tramite i riferimenti di campo in formule, istruzioni di script e formati. Tutti i risultati sono candidati da verificare, non una raccomandazione di eliminazione: riferimenti dinamici, script avviati a mano e file non importati restano invisibili. Script e Layout nei menu Script e Layout sono punti di ingresso, non risultati; i risultati dei file esportati senza info DDR sono indicati come non verificati.",
+      "profiles.data-model.title": "Modello dati",
+      "profiles.data-model.description": "Ricorrenze di tabella, tabelle di base, origini dati esterne, campi e liste valori.",
+      "profiles.logic.title": "Logica",
+      "profiles.logic.description": "Script, funzioni personalizzate e formati.",
+      "profiles.full.title": "Controllo completo"
+    },
+    "ja": {
+      "title": "未使用コード",
+      "description": "何からも参照されていないオブジェクトを検出します。呼び出されないスクリプト、どこでも読み取り・表示・設定されないフィールド、呼び出しのないカスタム関数、移動先にならないレイアウト、使われない値一覧、使用されていないかリレーションシップグラフの死んだ枝にあるテーブルオカレンス、テーブルオカレンスのないベーステーブル、参照のない外部データソース、アカウントのないアクセス権セットが対象です。インポート時に解決された参照に基づき、テーブルオカレンスは計算式・スクリプトステップ・レイアウト上のフィールド参照も使用として数えます。結果はすべて確認候補であり、削除の推奨ではありません。動的な参照、手動で実行するスクリプト、インポートされていないファイルは見えません。スクリプトメニューまたは Layout メニューにあるスクリプトと Layout はエントリポイントであり、検出結果ではありません。DDR 情報なしでエクスポートされたファイルの検出結果は未検証として表示されます。",
+      "profiles.data-model.title": "データモデル",
+      "profiles.data-model.description": "テーブルオカレンス、ベーステーブル、外部データソース、フィールド、値一覧。",
+      "profiles.logic.title": "ロジック",
+      "profiles.logic.description": "スクリプト、カスタム関数、レイアウト。",
+      "profiles.full.title": "フルチェック"
+    },
+    "ko": {
+      "title": "미사용 코드",
+      "description": "아무것도 참조하지 않는 객체를 찾습니다. 호출되지 않는 스크립트, 어디서도 읽거나 표시하거나 설정하지 않는 필드, 호출 없는 사용자 정의 함수, 이동 대상이 아닌 레이아웃, 사용되지 않는 값 목록, 사용되지 않거나 관계 그래프의 죽은 가지인 테이블 어커런스, 테이블 어커런스가 없는 기본 테이블, 참조 없는 외부 데이터 원본, 계정이 없는 권한 세트가 대상입니다. 가져올 때 해석된 참조를 기준으로 하며, 테이블 어커런스는 계산식·스크립트 단계·레이아웃의 필드 참조도 사용으로 셉니다. 모든 결과는 검토 후보이며 삭제 권고가 아닙니다. 동적 참조, 수동으로 실행하는 스크립트, 가져오지 않은 파일은 보이지 않습니다. 스크립트 메뉴 또는 Layout 메뉴에 있는 스크립트와 Layout은 진입점이며 결과가 아닙니다. DDR 정보 없이 내보낸 파일의 결과는 미검증으로 표시됩니다.",
+      "profiles.data-model.title": "데이터 모델",
+      "profiles.data-model.description": "테이블 어커런스, 기본 테이블, 외부 데이터 원본, 필드, 값 목록.",
+      "profiles.logic.title": "로직",
+      "profiles.logic.description": "스크립트, 사용자 정의 함수, 레이아웃.",
+      "profiles.full.title": "전체 검사"
+    },
+    "nl": {
+      "title": "Ongebruikte code",
+      "description": "Objecten waarnaar niets verwijst: scripts die nooit worden aangeroepen, velden die nergens worden gelezen, getoond of ingesteld, eigen functies zonder aanroep, lay-outs zonder navigatie, ongebruikte waardelijsten, tabelinstanties zonder gebruik of als dode tak van de relatiegrafiek, basistabellen zonder tabelinstantie, externe gegevensbronnen zonder verwijzing en privilegesets zonder account. De basis zijn de bij de import opgeloste verwijzingen; tabelinstanties tellen ook via veldverwijzingen in formules, scriptstappen en op lay-outs. Alle bevindingen zijn kandidaten om te controleren, geen verwijderadvies — dynamische verwijzingen, handmatig gestarte scripts en niet-geïmporteerde bestanden blijven onzichtbaar. Scripts en Layouts in het menu Scripts of Layouts zijn startpunten, geen resultaten; resultaten in bestanden die zonder DDR-info zijn geëxporteerd, worden als niet geverifieerd gemarkeerd.",
+      "profiles.data-model.title": "Gegevensmodel",
+      "profiles.data-model.description": "Tabelinstanties, basistabellen, externe gegevensbronnen, velden en waardelijsten.",
+      "profiles.logic.title": "Logica",
+      "profiles.logic.description": "Scripts, eigen functies en lay-outs.",
+      "profiles.full.title": "Volledige controle"
+    },
+    "pt": {
+      "title": "Código não utilizado",
+      "description": "Objetos para os quais nada aponta: scripts nunca chamados, campos nunca lidos, exibidos ou definidos, funções personalizadas sem chamada, layouts sem navegação, listas de valores sem uso, ocorrências de tabela sem uso ou como ramo morto do gráfico de relacionamentos, tabelas base sem ocorrência, fontes de dados externas sem referência e conjuntos de privilégios sem conta. A base são as referências resolvidas na importação; as ocorrências de tabela contam também pelas referências de campo em fórmulas, etapas de script e layouts. Todos os resultados são candidatos a verificar, não uma recomendação de exclusão — referências dinâmicas, scripts iniciados manualmente e arquivos não importados ficam invisíveis. Scripts e Layouts nos menus Scripts e Layouts são pontos de entrada, não resultados; resultados de arquivos exportados sem informações DDR são marcados como não verificados.",
+      "profiles.data-model.title": "Modelo de dados",
+      "profiles.data-model.description": "Ocorrências de tabela, tabelas base, fontes de dados externas, campos e listas de valores.",
+      "profiles.logic.title": "Lógica",
+      "profiles.logic.description": "Scripts, funções personalizadas e layouts.",
+      "profiles.full.title": "Verificação completa"
+    },
+    "sv": {
+      "title": "Oanvänd kod",
+      "description": "Objekt som ingenting pekar på: script som aldrig anropas, fält som aldrig läses, visas eller anges, egna funktioner utan anrop, layouter utan navigering, oanvända värdelistor, tabellförekomster utan användning eller som död gren i relationsdiagrammet, bastabeller utan tabellförekomst, externa datakällor utan referens och behörighetsuppsättningar utan konto. Grunden är de referenser som löses vid importen; tabellförekomster räknas också via fältreferenser i formler, scriptsteg och på layouter. Alla resultat är kandidater att granska, ingen rekommendation att radera — dynamiska referenser, manuellt startade script och filer som inte importerats syns inte. Skript och Layouter i menyn Skript eller Layouter är startpunkter, inte träffar; träffar i filer som exporterats utan DDR-info markeras som overifierade.",
+      "profiles.data-model.title": "Datamodell",
+      "profiles.data-model.description": "Tabellförekomster, bastabeller, externa datakällor, fält och värdelistor.",
+      "profiles.logic.title": "Logik",
+      "profiles.logic.description": "Script, egna funktioner och layouter.",
+      "profiles.full.title": "Fullständig kontroll"
+    },
+    "zh-Hans": {
+      "title": "未使用代码",
+      "description": "查找没有任何引用的对象：从未被调用的脚本、在任何地方都未被读取、显示或设置的字段、未被调用的自定义函数、未被导航到的布局、未使用的值列表、未被使用或处于关系图死分支的表格实例、没有表格实例的基表、未被引用的外部数据源，以及没有账户的权限集。依据是导入时解析的引用；表格实例也通过公式、脚本步骤和布局中的字段引用计为使用。所有结果都是待审查的候选项，而不是删除建议——动态引用、手动启动的脚本和未导入的文件不可见。脚本菜单或 Layout 菜单中的脚本和 Layout 是入口点，不算作结果；不含 DDR 信息导出的文件中的结果标记为未验证。",
+      "profiles.data-model.title": "数据模型",
+      "profiles.data-model.description": "表格实例、基表、外部数据源、字段和值列表。",
+      "profiles.logic.title": "逻辑",
+      "profiles.logic.description": "脚本、自定义函数和布局。",
+      "profiles.full.title": "完整检查"
+    }
+  }
+}

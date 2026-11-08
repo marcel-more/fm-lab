@@ -7,6 +7,7 @@ import { useApiLang } from '../hooks/useApiLang';
 import { useCurrentFile } from '../lib/currentFileContext';
 import { buildObjectPath } from '../lib/navigation';
 import { FIELD_NAV_TYPES, SCRIPT_NAV_TYPES } from '../lib/layoutObjectNav';
+import { partLabel } from '../lib/layoutParts';
 import { ScriptViewer } from './ScriptViewer';
 import { CalcTokenList, normalizeCalcWhitespace } from './CalcTokenSpan';
 import { LayoutFormulaLine } from './LayoutFormulaLine';
@@ -907,10 +908,23 @@ const LayoutObjectPropsPanel: React.FC<{
             <dd>{objectName}</dd>
           </>
         )}
-        {loCtx.partType && (
+        {(loCtx.partType || loCtx.partKind != null) && (
           <>
             <dt>{t('detail:layoutObjectDetail.propPart', { defaultValue: 'Layout part' })}</dt>
-            <dd>{loCtx.partType}</dd>
+            <dd>
+              {(() => {
+                // Dialog term by kind (locale-robust); the raw type string only on
+                // catalogs before schema 1.39.0 (no part assignment yet).
+                const label = loCtx.partKind != null
+                  ? partLabel((k, o) => t(k, o) as string, { part_kind: loCtx.partKind, part_type: loCtx.partType ?? null })
+                  : (loCtx.partType as string);
+                return loCtx.partUuid ? (
+                  <Link className="fm-field-link" to={buildObjectPath(loCtx.partUuid, uuid, file)}>
+                    {label}
+                  </Link>
+                ) : label;
+              })()}
+            </dd>
           </>
         )}
         {b && (

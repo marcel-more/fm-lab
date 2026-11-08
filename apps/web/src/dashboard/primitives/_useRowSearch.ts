@@ -41,6 +41,7 @@ export interface RowSearchOptions {
   resetParams?: string[];
   clientFilter?: boolean;
   debounceMs?: number;
+  extraText?: (row: Record<string, unknown>) => string;
 }
 
 export interface RowSearchResult<T> {
@@ -99,6 +100,7 @@ export function useRowSearch<T extends Record<string, unknown>>(
   const effectivePlaceholder = placeholder ?? (t('searchPlaceholder') as string);
   const [searchParams, setSearchParams] = useSearchParams();
   const debounceMs = searchParam && (options.debounceMs ?? 0) > 0 ? (options.debounceMs as number) : 0;
+  const extraText = options.extraText;
 
   // URL-Modus (searchParam gesetzt) vs. Komponenten-State. Das Eingabefeld
   // zeigt immer `input`; im URL-Modus gilt für das Filtern der URL-Wert, den
@@ -173,8 +175,9 @@ export function useRowSearch<T extends Record<string, unknown>>(
     if (!visible || !clientFilter) return rows;
     const needle = filterTerm.trim().toLowerCase();
     if (!needle) return rows;
-    return rows.filter(row => rowMatches(row, needle));
-  }, [rows, filterTerm, visible, clientFilter]);
+    return rows.filter(row =>
+      rowMatches(row, needle) || (!!extraText && extraText(row).toLowerCase().includes(needle)));
+  }, [rows, filterTerm, visible, clientFilter, extraText]);
 
   return {
     visible,

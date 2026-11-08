@@ -1,8 +1,8 @@
 {
   "id": "unused_custom_function",
-  "version": "1.0.0",
+  "version": "1.2.1",
   "title": "Unused Custom Function",
-  "description": "Unused-code rule — custom functions never called from any calculation, script or other function.\n\nBased on the PMD rule UnusedPrivateMethod — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod",
+  "description": "Unused-code rule — custom functions never called from any calculation, script or other function. Findings in files exported without DDR info are marked unverified.\n\nBased on the PMD rule UnusedPrivateMethod — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod",
   "author": "fm-lab rules",
   "icon": "function-square",
   "category": "unused_code",
@@ -16,13 +16,13 @@
     "severity": "info",
     "category": "unused_code",
     "rationale": "Dead custom functions carry maintenance cost with no benefit.",
-    "remediation": "Confirm no dynamic usage, then delete the function.",
+    "remediation": "Confirm no dynamic usage, then delete the function. In a file exported without DDR info formula references are missing, so its findings are marked unverified — export it again with DDR info before deleting.",
     "meta": {
       "name": "Unused Custom Function",
       "author": "fm-lab rules",
       "source": "PMD",
       "url": "https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod",
-      "description": "Unused-code rule — custom functions never called from any calculation, script or other function.",
+      "description": "Unused-code rule — custom functions never called from any calculation, script or other function. Findings in files exported without DDR info are marked unverified.",
       "created": "2026-07-01",
       "references": [
         {
@@ -44,10 +44,16 @@
     "scope": {
       "supported": [
         "solution",
-        "file"
+        "file",
+        "object",
+        "object-list",
+        "cluster"
       ],
       "anchor": "nav_uuid",
-      "mode": {}
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
     },
     "defaultResult": {
       "dataset": "summary",
@@ -74,6 +80,13 @@
       "type": "string",
       "required": false,
       "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "ddr",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "List filter by DDR info (KPI tile): 'without' = only findings in files exported without DDR info; empty = all. The Findings tile resets it."
     }
   ],
   "permissions": {

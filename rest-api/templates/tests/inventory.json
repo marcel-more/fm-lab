@@ -102,6 +102,10 @@
       "path": "solution/unfinished-work"
     },
     {
+      "id": "unused-code",
+      "path": "solution/unused-code"
+    },
+    {
       "id": "uuid-integrity",
       "path": "solution/uuid-integrity"
     },

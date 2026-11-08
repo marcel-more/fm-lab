@@ -1,15 +1,34 @@
 {
   "manifest": {
     "title": "Ocorrência de tabela não utilizada",
-    "description": "Regra de código não utilizado — ocorrências de tabela que não servem como contexto de Layout, origem de portal, destino de GTRR nem lado de relacionamento."
+    "description": "Regra de código não utilizado: ocorrências de tabela que podem ser removidas, sem nenhum uso ou usadas apenas como lado de um relacionamento sem ocorrência usada além delas (ramo ou ilha morta do gráfico de relacionamentos). Conta todo uso, incluindo referências Tabela::Campo em fórmulas, etapas de script e campos de Layout; ocorrências intermediárias no caminho entre duas ocorrências usadas (por ex. a tabela de junção de um relacionamento n:m) são mantidas."
   },
   "layout": {
-    "summary_kpi.props.items[0].label": "Ocorrências",
-    "summary_kpi.props.items[1].label": "Arquivos afetados",
+    "summary_kpi.props.items[0].label": "Resultados",
+    "summary_kpi.props.items[1].label": "Sem nenhum uso",
+    "summary_kpi.props.items[2].label": "Ramo morto",
+    "summary_kpi.props.items[3].label": "Ilha morta",
+    "summary_kpi.props.items[4].label": "Sem informações DDR",
+    "summary_kpi.props.items[5].label": "Arquivos afetados",
     "findings_card.props.title": "Ocorrência de tabela não utilizada",
-    "findings_table.props.searchPlaceholder": "Pesquisar arquivo ou nome…",
+    "findings_table.props.searchPlaceholder": "Pesquisar arquivo, nome ou motivo…",
     "findings_table.props.empty.message": "Nenhuma correspondência encontrada.",
     "findings_table.props.columns[0].label": "Arquivo",
-    "findings_table.props.columns[1].label": "Nome"
+    "findings_table.props.columns[1].label": "Nome",
+    "findings_table.props.columns[2].label": "Tabela base",
+    "findings_table.props.columns[3].label": "Motivo",
+    "findings_table.props.columns[4].label": "Ligada a",
+    "findings_table.props.columns[5].label": "Tamanho do grupo morto",
+    "findings_table.props.columns[6].label": "Sem informações DDR",
+    "findings_table.props.columns[3].valueLabels.unused": "Sem nenhum uso",
+    "findings_table.props.columns[3].valueLabels.dead_branch": "Ramo morto",
+    "findings_table.props.columns[3].valueLabels.dead_island": "Ilha morta",
+    "findings_table.props.columns[3].valueLabels.unused_unverified": "Sem nenhum uso (não verificado)",
+    "findings_table.props.columns[3].valueLabels.dead_branch_unverified": "Ramo morto (não verificado)",
+    "findings_table.props.columns[3].valueLabels.dead_island_unverified": "Ilha morta (não verificado)",
+    "findings_table.props.columns[6].valueLabels.true": "Sim",
+    "findings_table.props.columns[6].valueLabels.false": "Não",
+    "notes_card.props.title": "O que significam os motivos",
+    "notes_md.props.content": "**Sem nenhum uso.** Nenhum layout, portal, fórmula, etapa de script, campo de layout, lista de valores, pesquisa ou conjunto de privilégios faz referência à ocorrência de tabela, e ela não tem nenhum relacionamento. Pode ser excluída sozinha.\n\n**Ramo morto.** A ocorrência de tabela é usada apenas como lado de relacionamentos, e nada além dela é usado. *Ligada a* indica a ocorrência de tabela usada à qual o ramo está ligado; *Tamanho do grupo morto* conta as ocorrências de tabela do ramo — elas podem ser excluídas juntas.\n\n**Ilha morta.** Nenhuma ocorrência de tabela do seu grupo de relacionamentos é usada. O grupo inteiro pode ser excluído; *Tamanho do grupo morto* o conta.\n\n**Nunca é um resultado.** Uma ocorrência de tabela no caminho entre duas usadas — normalmente a ocorrência de tabela intermediária de um relacionamento n:m — é necessária mesmo que nada faça referência direta a ela. O mesmo vale para os dois lados de um relacionamento que exclui registros relacionados.\n\n**Sem informações DDR.** O arquivo foi exportado sem informações DDR. As referências `Tabela::Campo` nas fórmulas são então reconhecidas apenas no texto da fórmula e faltam os contextos de avaliação: um uso pode ficar invisível. Um resultado assim aparece como *não verificado* (p. ex. *Ramo morto (não verificado)*); o bloco *Sem informações DDR* os lista. Exporte o arquivo novamente com informações DDR antes de excluir qualquer coisa.\n\n**Limites.** Só conta o uso dentro da solução importada. Não visíveis: **acesso de fora** — OData, ODBC/JDBC, Data API, arquivos não importados; **referências dinâmicas internas** — `GetField`, `Evaluate`, nomes dentro de strings SQL. Um resultado é um candidato a revisão, não uma recomendação de exclusão. [Como o uso é contado](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

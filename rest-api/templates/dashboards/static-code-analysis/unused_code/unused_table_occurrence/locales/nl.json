@@ -1,15 +1,34 @@
 {
   "manifest": {
     "title": "Ongebruikte tabelinstantie",
-    "description": "Ongebruikte-code-regel — tabelinstanties die niet dienen als Layout-context, portaalbron, GTRR-doel of relatiezijde."
+    "description": "Regel voor ongebruikte code: tabelinstanties die weg kunnen, nergens gebruikt of alleen als kant van een relatie zonder gebruikte instantie erachter (dode tak of dood eiland van de relatiegrafiek). Telt elk gebruik, ook verwijzingen Tabel::Veld in formules, scriptstappen en Layout-velden; tussenliggende instanties op het pad tussen twee gebruikte instanties (bijv. de koppeltabel van een n:m-relatie) blijven behouden."
   },
   "layout": {
-    "summary_kpi.props.items[0].label": "Bevindingen",
-    "summary_kpi.props.items[1].label": "Betrokken bestanden",
+    "summary_kpi.props.items[0].label": "Resultaten",
+    "summary_kpi.props.items[1].label": "Nergens gebruikt",
+    "summary_kpi.props.items[2].label": "Dode tak",
+    "summary_kpi.props.items[3].label": "Dood eiland",
+    "summary_kpi.props.items[4].label": "Zonder DDR-info",
+    "summary_kpi.props.items[5].label": "Betrokken bestanden",
     "findings_card.props.title": "Ongebruikte tabelinstantie",
-    "findings_table.props.searchPlaceholder": "Bestand of naam zoeken…",
+    "findings_table.props.searchPlaceholder": "Zoek bestand, naam of reden…",
     "findings_table.props.empty.message": "Geen resultaten gevonden.",
     "findings_table.props.columns[0].label": "Bestand",
-    "findings_table.props.columns[1].label": "Naam"
+    "findings_table.props.columns[1].label": "Naam",
+    "findings_table.props.columns[2].label": "Basistabel",
+    "findings_table.props.columns[3].label": "Reden",
+    "findings_table.props.columns[4].label": "Gekoppeld aan",
+    "findings_table.props.columns[5].label": "Grootte van de dode groep",
+    "findings_table.props.columns[6].label": "Zonder DDR-info",
+    "findings_table.props.columns[3].valueLabels.unused": "Nergens gebruikt",
+    "findings_table.props.columns[3].valueLabels.dead_branch": "Dode tak",
+    "findings_table.props.columns[3].valueLabels.dead_island": "Dood eiland",
+    "findings_table.props.columns[3].valueLabels.unused_unverified": "Nergens gebruikt (niet geverifieerd)",
+    "findings_table.props.columns[3].valueLabels.dead_branch_unverified": "Dode tak (niet geverifieerd)",
+    "findings_table.props.columns[3].valueLabels.dead_island_unverified": "Dood eiland (niet geverifieerd)",
+    "findings_table.props.columns[6].valueLabels.true": "Ja",
+    "findings_table.props.columns[6].valueLabels.false": "Nee",
+    "notes_card.props.title": "Wat de redenen betekenen",
+    "notes_md.props.content": "**Nergens gebruikt.** Geen lay-out, portaal, formule, scriptstap, lay-outveld, waardelijst, opzoeking of privilegeset verwijst naar de tabelinstantie, en ze heeft geen relatie. Ze kan op zichzelf worden verwijderd.\n\n**Dode tak.** De tabelinstantie wordt alleen als kant van relaties gebruikt, en verder wordt er niets gebruikt. *Gekoppeld aan* noemt de gebruikte tabelinstantie waaraan de tak hangt; *Grootte van de dode groep* telt de tabelinstanties van de tak — ze kunnen samen worden verwijderd.\n\n**Dood eiland.** Geen enkele tabelinstantie van de relatiegroep wordt gebruikt. De hele groep kan worden verwijderd; *Grootte van de dode groep* telt haar.\n\n**Nooit een resultaat.** Een tabelinstantie op het pad tussen twee gebruikte — meestal de tussen-tabelinstantie van een n:m-relatie — is nodig, ook als niets er rechtstreeks naar verwijst. Hetzelfde geldt voor beide kanten van een relatie die gerelateerde records verwijdert.\n\n**Zonder DDR-info.** Het bestand is zonder DDR-info geëxporteerd. Verwijzingen `Tabel::Veld` in formules worden dan alleen in de formuletekst herkend en evaluatiecontexten ontbreken — een gebruik kan onzichtbaar blijven. Zo’n resultaat heet *niet geverifieerd* (bijv. *Dode tak (niet geverifieerd)*); de tegel *Zonder DDR-info* toont ze. Exporteer het bestand opnieuw met DDR-info voordat u iets verwijdert.\n\n**Grenzen.** Alleen gebruik binnen de geïmporteerde oplossing telt. Niet zichtbaar: **toegang van buitenaf** — OData, ODBC/JDBC, Data API, niet-geïmporteerde bestanden; **dynamische verwijzingen binnenin** — `GetField`, `Evaluate`, namen in SQL-strings. Een resultaat is een kandidaat om te controleren, geen advies om te verwijderen. [Hoe gebruik wordt geteld](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

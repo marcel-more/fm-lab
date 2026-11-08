@@ -1,15 +1,30 @@
 {
   "manifest": {
     "title": "Script sin usar",
-    "description": "Regla de código sin usar: scripts que ningún otro script llama y que ningún activador inicia. Revise: los inicios manuales o desde menú personalizado pueden aparecer aquí.\n\nBasado en la regla de PMD UnusedPrivateMethod — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod"
+    "description": "Regla de código sin usar: scripts que ningún otro script, botón ni menú personalizado llama y que ningún activador inicia. Los scripts del menú Scripts son puntos de entrada: se listan aparte y no son resultados. Los resultados de archivos exportados sin información DDR se marcan como sin verificar.\n\nBasado en la regla de PMD UnusedPrivateMethod — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Hallazgos",
-    "summary_kpi.props.items[1].label": "Archivos afectados",
+    "summary_kpi.props.items[1].label": "Sin información DDR",
+    "summary_kpi.props.items[2].label": "En el menú Scripts",
+    "summary_kpi.props.items[3].label": "Archivos afectados",
     "findings_card.props.title": "Script sin usar",
     "findings_table.props.searchPlaceholder": "Buscar archivo o script…",
     "findings_table.props.empty.message": "No se encontraron scripts sin usar.",
     "findings_table.props.columns[0].label": "Archivo",
-    "findings_table.props.columns[1].label": "Script"
+    "findings_table.props.columns[1].label": "Script",
+    "findings_table.props.columns[2].label": "Estado",
+    "findings_table.props.columns[3].label": "Sin información DDR",
+    "findings_table.props.columns[2].valueLabels.unused": "Sin uso",
+    "findings_table.props.columns[2].valueLabels.unused_unverified": "Sin uso (sin verificar)",
+    "findings_table.props.columns[3].valueLabels.true": "Sí",
+    "findings_table.props.columns[3].valueLabels.false": "No",
+    "entry_points_card.props.title": "Puntos de entrada: en el menú Scripts, sin llamada",
+    "entry_points_table.props.searchPlaceholder": "Buscar archivo o script…",
+    "entry_points_table.props.empty.message": "No se encontraron puntos de entrada.",
+    "entry_points_table.props.columns[0].label": "Archivo",
+    "entry_points_table.props.columns[1].label": "Script",
+    "notes_card.props.title": "Qué significa el estado",
+    "notes_md.props.content": "**Sin verificar.** El archivo se exportó sin información DDR. Entonces no contiene ninguna referencia de fórmulas: un uso en un cálculo queda invisible. Un resultado así figura como *Sin uso (sin verificar)*; el mosaico *Sin información DDR* los muestra. Exporte el archivo de nuevo con información DDR antes de eliminar nada.\n\n**Puntos de entrada.** El usuario puede iniciar un script del menú Scripts aunque nada lo llame. No es un resultado; la lista *Puntos de entrada* lo muestra. Si no debe iniciarse, quítelo del menú: entonces pasa a ser un resultado.\n\n**Límites.** Solo cuenta el uso dentro de la solución importada. No es visible: **llamadas desde fuera** — programaciones del servidor, Data API, OData, URL `fmp://`, AppleScript/ActiveX, plug-ins, archivos no importados; **referencias dinámicas dentro** — *Ejecutar guion* por nombre, `GetField`, `Evaluate`, nombres en cadenas SQL. Un resultado es un candidato a revisar, no una recomendación de eliminar. [Cómo se cuenta el uso](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

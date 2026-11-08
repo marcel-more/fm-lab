@@ -217,12 +217,33 @@ export interface paths {
                     /** @description Filter by filename */
                     file?: components["parameters"]["FileFilter"];
                     /**
-                     * @description `modified` — order by the object's own change stamp, newest first;
-                     *     objects without a stamp of their own (script steps, layout objects,
-                     *     built-ins, …) come last. Results then carry `Modified_At`. Without
-                     *     `sort` the result order is unchanged.
+                     * @description Server-side order across all pages; ties fall back to name and file.
+                     *     - `modified` — the object's own change stamp, newest first; objects
+                     *       without a stamp of their own (script steps, layout objects,
+                     *       built-ins, …) come last. Results then carry `Modified_At`.
+                     *     - `usage` — the `Usage` column, direction `usage_dir`; types without a
+                     *       usage notion come last.
+                     *     - `name` (case-insensitive), `type`, `file`.
+                     *     Without `sort` the result order is unchanged.
                      */
-                    sort?: "modified";
+                    sort?: "modified" | "usage" | "name" | "type" | "file";
+                    /**
+                     * @description Direction of `sort=usage`: `asc` = rarely used first. Default `asc`
+                     *     when `usage_max` is set, `desc` otherwise.
+                     */
+                    usage_dir?: "asc" | "desc";
+                    /**
+                     * @description Keep only objects with `Usage` >= n (inclusive). Types without a usage
+                     *     notion (script steps, layout objects, calculations, relationships, …)
+                     *     drop out.
+                     */
+                    usage_min?: components["parameters"]["UsageMin"];
+                    /**
+                     * @description Keep only objects with `Usage` <= n (inclusive) — `0` lists the unused
+                     *     objects, menu entry points and built-in privilege sets (see
+                     *     `Usage_Class`). Types without a usage notion drop out.
+                     */
+                    usage_max?: components["parameters"]["UsageMax"];
                     /**
                      * @description Keep only objects whose own change stamp is on or after this day
                      *     (`YYYY-MM-DD`, local time of the editing client). Objects without a stamp
@@ -293,6 +314,18 @@ export interface paths {
                      */
                     modified_since?: components["parameters"]["ModifiedSince"];
                     /**
+                     * @description Keep only objects with `Usage` >= n (inclusive). Types without a usage
+                     *     notion (script steps, layout objects, calculations, relationships, …)
+                     *     drop out.
+                     */
+                    usage_min?: components["parameters"]["UsageMin"];
+                    /**
+                     * @description Keep only objects with `Usage` <= n (inclusive) — `0` lists the unused
+                     *     objects, menu entry points and built-in privilege sets (see
+                     *     `Usage_Class`). Types without a usage notion drop out.
+                     */
+                    usage_max?: components["parameters"]["UsageMax"];
+                    /**
                      * @description Output format
                      * @default json
                      */
@@ -308,7 +341,11 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Search result count */
+                /**
+                 * @description Search result count. The row also carries `usage_available` — false
+                 *     on a catalog built before schema 1.40.0 (no `v_object_usage`): the
+                 *     search then has no usage column and ignores the usage parameters.
+                 */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -385,7 +422,20 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get object references */
+        /**
+         * Get object references
+         * @description With `meta=true` the response meta carries `usage` = `{owners, users,
+         *     refs, class}` — the object's usage as the search column shows it
+         *     (`v_object_usage`, catalogs with schema 1.40.0+; absent for types
+         *     without a usage notion). The incoming rows then carry
+         *     `Counts_As_Usage` (boolean): the counting rows add up (Σ `Call_Count`)
+         *     to `usage.refs`, and their using objects (a layout object or layout part
+         *     counts as its layout) to `usage.owners`.
+         *
+         *     Incoming rows never contain the aggregate edge Layout → Field
+         *     (`displays_field` without subrole): it duplicates the layout-object
+         *     edges and is listed on the layout side (outgoing) only.
+         */
         get: {
             parameters: {
                 query: {
@@ -1591,6 +1641,38 @@ export interface components {
              */
             Modified_At?: string | null;
             /**
+             * @description Search only, catalogs with schema 1.40.0+: number of using containers
+             *     (`v_object_usage.Usage_Owners` — a layout object counts as its layout);
+             *     built-ins, plug-in functions/components and step types carry their
+             *     usage count. Null for types without a usage notion.
+             */
+            Usage?: number | null;
+            /** @description Search only — number of usage references (incoming rows of the references tab, ×N summed; `meta.usage.refs`). */
+            Usage_Refs?: number | null;
+            /** @description Search only — number of distinct using objects. */
+            Usage_Users?: number | null;
+            /** @description Search only — the link roles behind the usage. */
+            Usage_Roles?: string[] | null;
+            /** @description Search only — number of files the usage comes from. */
+            Usage_Files?: number | null;
+            /**
+             * @description Search only — `used`, `unused`, `entry_point` (no usage, but in the
+             *     Scripts / layout menu), `builtin` (built-in privilege set); table
+             *     occurrences also `relationship_bridge`, `dead_branch`, `dead_island`.
+             */
+            Usage_Class?: string | null;
+            /** @description Search only — script in the Scripts menu / layout in the layout menu. */
+            Usage_Entry_Point?: boolean | null;
+            /** @description Search only — field is a match field of a relationship. */
+            Usage_Key_Field?: boolean | null;
+            /** @description Search only — used from at least one other file. */
+            Usage_Cross_File?: boolean | null;
+            /**
+             * @description Search only — file exported without DDR info: formula references are
+             *     missing, a usage of 0 is unverified.
+             */
+            Usage_Low_Confidence?: boolean | null;
+            /**
              * @description What matched the search term, when it was not the object's name.
              *     ValueList: the stored custom values that matched (max. 20).
              *     BuiltinFunction: the localized spelling(s) that matched — a built-in
@@ -1656,10 +1738,14 @@ export interface components {
         CountResponse: components["schemas"]["ApiResponse"] & {
             data?: {
                 count?: number;
+                /** @description Search count only — false on a catalog without `v_object_usage` */
+                usage_available?: boolean;
             } | {
                 Object_Type?: components["schemas"]["ObjectType"];
                 File_Name?: string;
                 count?: number;
+                /** @description Search count only — false on a catalog without `v_object_usage` */
+                usage_available?: boolean;
             }[];
         };
         ReferencesResponse: components["schemas"]["ApiResponse"] & {
@@ -1954,6 +2040,18 @@ export interface components {
          *     of their own drop out. Results then carry `Modified_At`.
          */
         ModifiedSince: string;
+        /**
+         * @description Keep only objects with `Usage` >= n (inclusive). Types without a usage
+         *     notion (script steps, layout objects, calculations, relationships, …)
+         *     drop out.
+         */
+        UsageMin: number;
+        /**
+         * @description Keep only objects with `Usage` <= n (inclusive) — `0` lists the unused
+         *     objects, menu entry points and built-in privilege sets (see
+         *     `Usage_Class`). Types without a usage notion drop out.
+         */
+        UsageMax: number;
         /** @description Clone disambiguation: exact source file (File_Name) of the object. Geklonte/modulare FileMaker-Dateien teilen sich dieselbe Object_UUID, d.h. eine bare UUID kann mehrdeutig sein. Mit `file` wird das Paar (UUID, File_Name) eindeutig aufgelöst. Fehlt der Param, gilt Graceful Downgrade (bare UUID, solange eindeutig; sonst 409 AMBIGUOUS_UUID). */
         CloneFile: string;
         /** @description Maximum number of results (0 = all) */

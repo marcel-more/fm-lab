@@ -1,15 +1,34 @@
 {
   "manifest": {
     "title": "Occorrenza di tabella inutilizzata",
-    "description": "Regola di codice inutilizzato: occorrenze di tabella che non fungono da contesto di Layout, origine di portale, destinazione GTRR né lato di relazione."
+    "description": "Regola di codice inutilizzato: ricorrenze di tabella rimovibili, non usate da nessuna parte o usate solo come lato di una relazione senza ricorrenze usate oltre (ramo o isola morta del grafico delle relazioni). Conta ogni uso, compresi i riferimenti Tabella::Campo in formule, istruzioni di script e campi di Layout; le ricorrenze intermedie sul percorso tra due ricorrenze usate (ad es. la tabella di collegamento di una relazione n:m) vengono mantenute."
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Risultati",
-    "summary_kpi.props.items[1].label": "File interessati",
+    "summary_kpi.props.items[1].label": "Non usata da nessuna parte",
+    "summary_kpi.props.items[2].label": "Ramo morto",
+    "summary_kpi.props.items[3].label": "Isola morta",
+    "summary_kpi.props.items[4].label": "Senza info DDR",
+    "summary_kpi.props.items[5].label": "File interessati",
     "findings_card.props.title": "Occorrenza di tabella inutilizzata",
-    "findings_table.props.searchPlaceholder": "Cerca file o nome…",
+    "findings_table.props.searchPlaceholder": "Cerca file, nome o motivo…",
     "findings_table.props.empty.message": "Nessun risultato trovato.",
     "findings_table.props.columns[0].label": "File",
-    "findings_table.props.columns[1].label": "Nome"
+    "findings_table.props.columns[1].label": "Nome",
+    "findings_table.props.columns[2].label": "Tabella di base",
+    "findings_table.props.columns[3].label": "Motivo",
+    "findings_table.props.columns[4].label": "Collegata a",
+    "findings_table.props.columns[5].label": "Dimensione del gruppo morto",
+    "findings_table.props.columns[6].label": "Senza info DDR",
+    "findings_table.props.columns[3].valueLabels.unused": "Non usata da nessuna parte",
+    "findings_table.props.columns[3].valueLabels.dead_branch": "Ramo morto",
+    "findings_table.props.columns[3].valueLabels.dead_island": "Isola morta",
+    "findings_table.props.columns[3].valueLabels.unused_unverified": "Non usata da nessuna parte (non verificato)",
+    "findings_table.props.columns[3].valueLabels.dead_branch_unverified": "Ramo morto (non verificato)",
+    "findings_table.props.columns[3].valueLabels.dead_island_unverified": "Isola morta (non verificato)",
+    "findings_table.props.columns[6].valueLabels.true": "Sì",
+    "findings_table.props.columns[6].valueLabels.false": "No",
+    "notes_card.props.title": "Significato dei motivi",
+    "notes_md.props.content": "**Non usata da nessuna parte.** Nessun formato, portale, formula, istruzione di script, campo di formato, elenco valori, ricerca o set di privilegi fa riferimento all'occorrenza di tabella, e non ha alcuna relazione. Si può eliminare da sola.\n\n**Ramo morto.** L'occorrenza di tabella è usata solo come lato di relazioni, e nulla oltre di essa è usato. *Collegata a* indica l'occorrenza di tabella usata a cui è appeso il ramo; *Dimensione del gruppo morto* conta le occorrenze di tabella del ramo — si possono eliminare insieme.\n\n**Isola morta.** Nessuna occorrenza di tabella del suo gruppo di relazioni è usata. Si può eliminare l'intero gruppo; *Dimensione del gruppo morto* lo conta.\n\n**Mai un risultato.** Un'occorrenza di tabella sul percorso tra due occorrenze usate — tipicamente l'occorrenza di tabella intermedia di una relazione n:m — è necessaria anche se nulla vi fa riferimento diretto. Lo stesso vale per entrambi i lati di una relazione che elimina i record correlati.\n\n**Senza info DDR.** Il file è stato esportato senza info DDR. I riferimenti `Tabella::Campo` nelle formule vengono allora riconosciuti solo nel testo della formula e mancano i contesti di valutazione: un utilizzo può restare invisibile. Un risultato del genere è indicato come *non verificato* (ad es. *Ramo morto (non verificato)*); il riquadro *Senza info DDR* li elenca. Esporta di nuovo il file con le info DDR prima di eliminare qualcosa.\n\n**Limiti.** Conta solo l’uso all’interno della soluzione importata. Non visibili: **accessi dall’esterno** — OData, ODBC/JDBC, Data API, file non importati; **riferimenti dinamici interni** — `GetField`, `Evaluate`, nomi nelle stringhe SQL. Un risultato è un candidato da verificare, non una raccomandazione di eliminazione. [Come viene contato l’uso](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

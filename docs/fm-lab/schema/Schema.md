@@ -84,12 +84,13 @@ The [XML export](../xml/XML.md) represents each object type as its own dictionar
 | Table | Content |
 |---|---|
 | [Layouts](catalog-tables/Layouts.md) | Layouts incl. folder tree, context TO, theme/menu-set refs, view options |
-| [LayoutParts](catalog-tables/LayoutParts.md) | Layout parts in sequence, incl. sub-summary break fields |
+| [LayoutParts](catalog-tables/LayoutParts.md) | Layout parts in sequence, incl. sub-summary break fields and part definition options |
 | [LayoutObjects](catalog-tables/LayoutObjects.md) | All layout objects (22 types) with real container nesting |
 | [LayoutObjectConditions](catalog-tables/LayoutObjectConditions.md) | Conditional-formatting rules, one row per rule, with parsed condition and format |
 | [LayoutObjectSymbols](catalog-tables/LayoutObjectSymbols.md) | `{{…}}` symbol inventory per text layout object |
 | [LayoutTableViewColumns](catalog-tables/LayoutTableViewColumns.md) | Columns of a layout's table view incl. their field reference (FileMaker 26 exports only) |
 | [ThemeCatalog](catalog-tables/ThemeCatalog.md) | Layout themes incl. raw CSS rule set |
+| [ThemePartStyles](catalog-tables/ThemePartStyles.md) | Row-state defaults of the themes (body rule and named part styles) |
 
 ### Custom functions
 
@@ -148,7 +149,7 @@ Most object tables above carry the raw change stamp of each object (`Modified_At
 
 ### Internal & auxiliary tables
 
-Beyond the documented surface, the catalog contains working tables the pipeline and the tooling use internally: raw reference extractions before resolution (`XMLStepReferences`, `XMLLayoutReferences`, `XMLCalcReferences`, `LayoutObjectSteps`), resolver helpers (`TableOccurrenceResolution`, `ObjectHomes`, `ScriptStepRoleMap`, `GetSubparameterMap`, `MBS_SubnameMap`, `DataSourceFileMap`, `step_metadata`, `sql_name_wrappers`), import monitoring and the [duplicate census](UUID%20Healing%20and%20Duplicate%20Census.md) (`DuplicateAbsorptions`, `DuplicateAbsorptionDetails`, `MergeAbsorptions` — since schema 1.19.0 also the UUID-healing mapping), bookkeeping (`PasteIndexList`, `SchemaInfo`) and the graph-clustering layer (`ObjectClusters`, `CommunityNames`, `ClusterNodeUniverse`, `ClusterEdgesBaseMat`). A set of `v_check_*` views implements the import quality gate, and analysis views (`v_calculation_links`, `v_script_block_tree`, `v_cross_file_dependencies`, `LogicalLinks`, `FolderHierarchy`, …) provide prepared perspectives for common queries — `v_calc_anchors` lives on as a materialized compatibility facade over [CalculationsCatalog](catalog-tables/CalculationsCatalog.md) (a table, not a view, since schema 1.22.0). They are stable enough to query, but their shape follows the pipeline's needs and may change between releases — treat the tables above as the documented contract.
+Beyond the documented surface, the catalog contains working tables the pipeline and the tooling use internally: raw reference extractions before resolution (`XMLStepReferences`, `XMLLayoutReferences`, `XMLCalcReferences`, `LayoutObjectSteps`), resolver helpers (`TableOccurrenceResolution`, `ObjectHomes`, `ScriptStepRoleMap`, `GetSubparameterMap`, `MBS_SubnameMap`, `DataSourceFileMap`, `step_metadata`, `sql_name_wrappers`), import monitoring and the [duplicate census](UUID%20Healing%20and%20Duplicate%20Census.md) (`DuplicateAbsorptions`, `DuplicateAbsorptionDetails`, `MergeAbsorptions` — since schema 1.19.0 also the UUID-healing mapping), bookkeeping (`PasteIndexList`, `SchemaInfo`) and the graph-clustering layer (`ObjectClusters`, `CommunityNames`, `ClusterNodeUniverse`, `ClusterEdgesBaseMat`). A set of `v_check_*` views implements the import quality gate, and analysis views (`v_calculation_links`, `v_script_block_tree`, `v_table_occurrence_usage`/`v_table_occurrence_class` — the full usage of a table occurrence, see [TableOccurrence](object-types/TableOccurrence.md#usage-through-fields) —, `v_object_usage` — usage counts and usage class of every field, script, layout, custom function, value list, base table, data source, privilege set, occurrence and relationship, the definition behind the unused-code rules —, `v_cross_file_dependencies`, `LogicalLinks`, `FolderHierarchy`, …) provide prepared perspectives for common queries — `v_calc_anchors` lives on as a materialized compatibility facade over [CalculationsCatalog](catalog-tables/CalculationsCatalog.md) (a table, not a view, since schema 1.22.0). They are stable enough to query, but their shape follows the pipeline's needs and may change between releases — treat the tables above as the documented contract.
 
 
 ---

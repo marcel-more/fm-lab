@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { LayoutNode, DashboardLayout, DashboardDataResponse, DatasetResult } from '../api/dashboardApi';
 import { getPrimitive } from './primitives/registry';
 import { SelectionProvider } from './selectionContext';
+import { PrimitiveErrorBoundary } from './PrimitiveErrorBoundary';
 
 interface Props {
   layout: DashboardLayout;
@@ -69,15 +70,18 @@ export function DashboardRenderer({ layout, datasets }: Props) {
         ));
       };
 
+      // One failing element must not blank the whole dashboard.
       return (
-        <Primitive
-          node={node}
-          dataset={dataset}
-          row={parentRow}
-          datasets={datasets}
-          renderChildren={renderChildren}
-          navigate={navigate}
-        />
+        <PrimitiveErrorBoundary nodeLabel={`${node.type}${node.id ? `#${node.id}` : ''}`} resetKey={dataset}>
+          <Primitive
+            node={node}
+            dataset={dataset}
+            row={parentRow}
+            datasets={datasets}
+            renderChildren={renderChildren}
+            navigate={navigate}
+          />
+        </PrimitiveErrorBoundary>
       );
     },
     [datasets, navigate]

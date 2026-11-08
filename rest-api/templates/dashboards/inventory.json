@@ -277,6 +277,11 @@
       "unit": "file"
     },
     {
+      "id": "table_occurrence_usage",
+      "path": "schema/table_occurrence_usage",
+      "unit": "bundle"
+    },
+    {
       "id": "table_width_ranking",
       "path": "schema/table_width_ranking.sql",
       "unit": "file"
@@ -1024,6 +1029,11 @@
     {
       "id": "xml_convert",
       "path": "system/xml_convert",
+      "unit": "bundle"
+    },
+    {
+      "id": "object_usage",
+      "path": "top/object_usage",
       "unit": "bundle"
     },
     {

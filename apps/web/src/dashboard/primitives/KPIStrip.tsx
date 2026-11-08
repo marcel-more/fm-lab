@@ -8,6 +8,7 @@ import { translateCellValue } from './_cellTranslate';
 import { badgeToneClass } from './_badgeTone';
 import type { ActionSpec } from '../actions';
 import type { KpiItem } from './KPI';
+import { withClearedParams } from './_kpiToggle';
 
 export function KPIStrip({ node, row, dataset, navigate }: PrimitiveProps) {
   const { t, i18n } = useTranslation(['common', 'dashboard']);
@@ -33,6 +34,9 @@ export function KPIStrip({ node, row, dataset, navigate }: PrimitiveProps) {
         const click: ActionSpec | undefined = item.onClick;
         const clickable = !!click;
         const active = clickable ? isActionActive(click, row, searchParams) : false;
+        // Toggle tile: clicked while active, it removes only its own filter.
+        const toggleOff = clickable && !!item.toggle && active;
+        const dispatched = toggleOff && click ? withClearedParams(click) : click;
         const badgeClass = isBadge ? ` dash-kpi__value--badge ${badgeToneClass(rawValue, item.badgeTone)}` : '';
         // Result-state colour for a plain value (see KpiItem.tone). With
         // `toneWhen: 'nonzero'` a zero stays neutral, so the colour appears
@@ -51,9 +55,10 @@ export function KPIStrip({ node, row, dataset, navigate }: PrimitiveProps) {
             key={`${item.label}-${i}`}
             type="button"
             className={cls}
-            onClick={clickable ? () => dispatchAction(click, row, { navigate }) : undefined}
+            onClick={dispatched ? () => dispatchAction(dispatched, row, { navigate }) : undefined}
             disabled={!clickable}
             aria-pressed={active}
+            title={toggleOff ? t('dashboard:kpi.toggleOffHint', { defaultValue: 'Click again to remove this filter' }) : undefined}
           >
             <span className="dash-kpi__label">{item.label}</span>
             <span className={`dash-kpi__value${badgeClass}${toneClass}`}>{formatted}</span>

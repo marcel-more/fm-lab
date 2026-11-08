@@ -95,6 +95,13 @@ export interface ReferenceItem {
    * der Schritt im Herkunfts-Script schreibt). Die UI pinnt/markiert solche Zeilen.
    */
   Origin_Hit?: boolean;
+  /**
+   * Incoming rows of objects with a usage notion (meta.usage present): true when
+   * the row is a usage in the sense of v_object_usage — these rows add up to
+   * meta.usage.refs and form the groups of the "by object" view. Missing on
+   * outgoing rows and on older API versions.
+   */
+  Counts_As_Usage?: boolean;
 }
 
 /**
@@ -109,6 +116,36 @@ export interface GroupedReferences {
   child: ReferenceItem[];
   structuralParent: ReferenceItem[];
   structuralChild: ReferenceItem[];
+  /**
+   * Table occurrences only: state of the usages appended from the analysis
+   * table (`uses_table_occurrence` rows — TO::Field in formulas, script steps,
+   * layout fields, …). `available: false` = catalog older than schema 1.38.0,
+   * the list holds the edges alone. Absent for every other object type.
+   */
+  toUsage?: TableOccurrenceUsageMeta | null;
+  /**
+   * Usage as the search column shows it (v_object_usage, schema 1.40.0):
+   * owners = using objects (an object on a layout counts as its layout),
+   * refs = usage links. Absent for types without a usage notion and on older
+   * catalogs.
+   */
+  usage?: ObjectUsageMeta | null;
+}
+
+export interface ObjectUsageMeta {
+  owners: number;
+  users: number | null;
+  refs: number | null;
+  class: string | null;
+}
+
+export interface TableOccurrenceUsageMeta {
+  available: boolean;
+  /** Usage rows delivered (after the reference limit). */
+  rows?: number;
+  /** Usage rows in total. */
+  total?: number;
+  truncated?: boolean;
 }
 
 /**
@@ -133,7 +170,11 @@ export interface BreadcrumbItem {
 }
 
 // Sort & Group options (Phase 3)
-export type SortOption = 'standard' | 'name' | 'type' | 'file' | 'modified';
+export type SortOption = 'standard' | 'name' | 'type' | 'file' | 'modified' | 'usage';
+/** Direction of the usage sort: asc = rarely used first. */
+export type UsageDir = 'asc' | 'desc';
+/** Comparison of the usage filter: le = usage ≤ n, ge = usage ≥ n. */
+export type UsageOp = 'le' | 'ge';
 export type GroupOption = 'none' | 'type' | 'file';
 
 export interface GroupHeader {

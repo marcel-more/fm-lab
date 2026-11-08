@@ -1,7 +1,7 @@
 {
   "title": "Top",
   "icon": "bar-chart",
-  "description": "Top-N rankings — the most used scripts, layouts, tables, custom functions, variables and plug-in functions.",
+  "description": "Top-N rankings — the most used scripts, layouts, tables, custom functions, variables and plug-in functions — and Object Usage: how often every object is used, with the unused and rarely used ones first.",
   "order": 9,
   "locales": {
     "de": "Top",

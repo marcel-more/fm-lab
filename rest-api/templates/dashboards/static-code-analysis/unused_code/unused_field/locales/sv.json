@@ -1,15 +1,24 @@
 {
   "manifest": {
     "title": "Oanvänt fält",
-    "description": "Oanvänd-kod-regel — fält som ingenstans läses, visas, sätts, söks, sorteras, importeras eller exporteras.\n\nBaserad på PMD-regeln UnusedPrivateField — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatefield"
+    "description": "Oanvänd-kod-regel — fält utan någon användning: ingenstans lästa, visade, satta, sökta, sorterade, importerade, exporterade eller summerade, och varken källa för en värdelista eller brytfält. Varje länkroll som katalogen räknar som användning är en användning. Träffar i filer som exporterats utan DDR-info markeras som overifierade.\n\nBaserad på PMD-regeln UnusedPrivateField — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatefield"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Träffar",
-    "summary_kpi.props.items[1].label": "Berörda filer",
+    "summary_kpi.props.items[1].label": "Utan DDR-info",
+    "summary_kpi.props.items[2].label": "Berörda filer",
     "findings_card.props.title": "Oanvänt fält",
     "findings_table.props.searchPlaceholder": "Sök fil eller namn…",
     "findings_table.props.empty.message": "Inga träffar hittades.",
     "findings_table.props.columns[0].label": "Fil",
-    "findings_table.props.columns[1].label": "Namn"
+    "findings_table.props.columns[1].label": "Namn",
+    "findings_table.props.columns[2].label": "Status",
+    "findings_table.props.columns[3].label": "Utan DDR-info",
+    "findings_table.props.columns[2].valueLabels.unused": "Oanvänd",
+    "findings_table.props.columns[2].valueLabels.unused_unverified": "Oanvänd (overifierad)",
+    "findings_table.props.columns[3].valueLabels.true": "Ja",
+    "findings_table.props.columns[3].valueLabels.false": "Nej",
+    "notes_card.props.title": "Vad statusen betyder",
+    "notes_md.props.content": "**Overifierad.** Filen exporterades utan DDR-info. Den innehåller då inga referenser från formler alls — en användning i en beräkning förblir osynlig. En sådan träff heter *Oanvänd (overifierad)*; rutan *Utan DDR-info* listar dem. Exportera filen igen med DDR-info innan du tar bort något.\n\n**Begränsningar.** Endast användning inom den importerade lösningen räknas. Syns inte: **anrop utifrån** — serverscheman, Data API, OData, `fmp://`-URL:er, AppleScript/ActiveX, plugin-program, filer som inte importerats; **dynamiska referenser inifrån** — *Utför skript* via namn, `GetField`, `Evaluate`, namn i SQL-strängar. Ett resultat är en kandidat för granskning, ingen rekommendation att radera. [Hur användning räknas](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

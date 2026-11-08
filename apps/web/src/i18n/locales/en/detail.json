@@ -58,7 +58,14 @@
       "logic": "Logic",
       "slots": "Slots",
       "moreTargets": "(+{{n}} more)"
-    }
+    },
+    "sectionLabel": "Layout part",
+    "sectionAll": "All",
+    "sectionOption": "{{label}} ({{count}})",
+    "sectionAria": "Limit the objects to one layout part",
+    "sectionStats_one": "{{n}} of {{count}} object · Zoom {{zoom}}%",
+    "sectionStats_other": "{{n}} of {{count}} objects · Zoom {{zoom}}%",
+    "sectionInventoryHint": "Inventories cover the whole layout, not only the selected part"
   },
   "relationshipGraphCanvas": {
     "searchPlaceholder": "Search table occurrence…",
@@ -165,6 +172,8 @@
     "ariaLabel": "Object hierarchy",
     "usedBy": "Used by ({{count}})",
     "usedByFiltered": "Used by ({{count}} / {{total}})",
+    "usedByGrouped": "Used by — by object ({{count}})",
+    "usedByGroupedFiltered": "Used by — by object ({{count}} / {{total}})",
     "uses": "Uses ({{count}})",
     "usesFiltered": "Uses ({{count}} / {{total}})",
     "structurallyContainedBy": "Structurally contained by ({{count}})",
@@ -173,6 +182,8 @@
     "structurallyContainsFiltered": "Structurally contains ({{count}} / {{total}})",
     "noReferences": "No references found",
     "noFilterMatches": "No matches for the current filters",
+    "toUsageUnavailable": "This catalog lists only the direct links of the table occurrence. Its full usage (field references in formulas, script steps and on layouts) appears after a re-import.",
+    "toUsageTruncated": "Usage cut short: {{count}} of {{total}} field-reference usages shown.",
     "crossFileBadge": "Cross-file",
     "itemAriaLabel": "Navigate to {{type}}: {{name}}",
     "notNavigable": "Target not in the imported dataset",
@@ -255,8 +266,57 @@
       "menu_action": {
         "short": "Menu",
         "long": "Menu action"
+      },
+      "calculation": {
+        "short": "Calc",
+        "long": "Field reference in a formula"
+      },
+      "calculation_text": {
+        "short": "Calc text",
+        "long": "Field reference in the formula text (file without DDR info)"
+      },
+      "calc_context": {
+        "short": "Context",
+        "long": "Evaluation context of a formula"
+      },
+      "layout_field": {
+        "short": "Field",
+        "long": "Field on the layout"
+      },
+      "layout_part": {
+        "short": "Break",
+        "long": "Break field of a layout part"
+      },
+      "script_step": {
+        "short": "Step",
+        "long": "Field reference in a script step"
+      },
+      "security": {
+        "short": "Access",
+        "long": "Record-access context of a privilege set"
+      },
+      "table_view": {
+        "short": "Table view",
+        "long": "Table view column"
+      },
+      "value_list": {
+        "short": "VL field",
+        "long": "Second field of a value list"
       }
-    }
+    },
+    "usageSummary": "Used internally by {{objects}} · {{refs}}",
+    "usageObjects_one": "{{count}} object",
+    "usageObjects_other": "{{count}} objects",
+    "usageRefs_one": "{{count}} reference",
+    "usageRefs_other": "{{count}} references",
+    "usageSummaryHint": "Usage (internal): how many different objects of the solution use this object — a layout counts once, however many of its objects show it; a script once, in however many steps. References: every occurrence on its own (×N in the list). Containment and privilege restrictions do not count. Not covered: usage from outside (server schedules, Data API, OData, URL calls, plug-ins …) and dynamic references (script by name, GetField, Evaluate).",
+    "usageDocs": "How is this counted?",
+    "groupByObjectHint": "Group by using object (incoming) — a layout counts once, however many of its objects show it",
+    "groupAllRefsHint": "Show every reference",
+    "groupExpand": "Show references",
+    "groupCollapse": "Hide references",
+    "noUsageGroup": "No usage",
+    "noUsageGroupHint": "Links that do not count as usage (e.g. privilege restrictions, trigger nodes)"
   },
   "searchOptions": {
     "regionAria": "Sort and group options",
@@ -272,7 +332,14 @@
     "groupFile": "File",
     "modifiedSinceLabel": "Modified since",
     "modifiedSinceHint": "Only objects whose own change stamp is on or after this day — script steps, layout objects and calculations have no stamp of their own",
-    "modifiedSinceClear": "Reset"
+    "modifiedSinceClear": "Reset",
+    "sortUsage": "Usage (internal)",
+    "usageLabel": "Usage (internal)",
+    "usageOpAria": "Comparison",
+    "usageHint": "Number of using objects (an object on a layout counts as its layout). ≤ 0 lists unused objects; script steps, layout objects, formulas and relationships have no usage and drop out Usage from outside (server schedules, Data API, OData, URL calls, plug-ins …) is not covered.",
+    "usageUnavailable": "Needs a catalog built with schema 1.40.0 or later — import the solution again",
+    "usageDirAsc": "Rarely used first",
+    "usageDirDesc": "Most used first"
   },
   "fieldViewer": {
     "ariaLabel": "Field details",
@@ -372,7 +439,17 @@
     "healedUuidMatch": "Matched by UUID (duplicate)",
     "healedUuidTitle": "FileMaker lists this object under the searched UUID; because the UUID occurred more than once in the export, the catalog keeps it under a replacement UUID.",
     "idMatch": "Matched by ID {{id}}",
-    "modifiedTooltip": "Last modified {{age}} — local time of the editing client, without time zone"
+    "modifiedTooltip": "Last modified {{age}} — local time of the editing client, without time zone",
+    "usageTooltip": "Used internally by: {{owners}} · References: {{refs}} · Roles: {{roles}} · Files: {{files}}",
+    "usageCellAria": "Usage {{count}} — open the incoming references",
+    "usageEntryPoint": "In the Scripts or layout menu — reachable without a reference",
+    "usageBuiltin": "Built-in privilege set — cannot be deleted",
+    "usageBridge": "Relationship bridge — needed on the path between used table occurrences",
+    "usageDead": "Dead branch of the relationship graph — nothing beyond it is used",
+    "usageKeyField": "Match field of a relationship",
+    "usageCrossFile": "Used from another file",
+    "usageUnverified": "Unverified — the file was exported without DDR info, formula references are missing",
+    "usageExternal": "Usage from outside (server schedules, Data API, OData, URL calls, AppleScript, plug-ins …) is not covered"
   },
   "scriptSearchFilter": {
     "searchAria": "Search references",
@@ -805,7 +882,15 @@
     "optFieldFrames": "Field frames when record active",
     "optFrameCurrentOnly": "Frame fields in current record only",
     "optShowCurrentInList": "Record indicator in list view",
-    "optQuickFind": "Quick find"
+    "optQuickFind": "Quick find",
+    "partsHeading": "Layout parts",
+    "partsObjects_one": "{{count}} object",
+    "partsObjects_other": "{{count}} objects",
+    "partsHeight": "{{size}} pt",
+    "partsSortedBy": "sorted by",
+    "partsFilterTitle": "Show only this part in the graphic",
+    "partsFilterActiveTitle": "Clear the part filter",
+    "partsFieldUnresolved": "Field not in the catalog (file not imported?)"
   },
   "pluginSpec": {
     "tooltip": "Platform support per {{plugin}} documentation",
@@ -1006,5 +1091,223 @@
     "usedSuffix": "{{used}} used",
     "functionsHeading": "Functions",
     "colFunction": "Function"
+  },
+  "tableOccurrence": {
+    "ariaLabel": "Table occurrence details",
+    "definitionHeading": "Definition",
+    "baseTable": "Base table",
+    "baseTableUnresolved": "— not resolvable —",
+    "inFile": "in file “{{file}}”",
+    "dataSource": "Data source",
+    "dsResolved": "File “{{file}}” in the catalog",
+    "dsUnresolved": "Target file not imported",
+    "diagram": "Relationships graph",
+    "viewLabel": "View: {{view}}",
+    "view": {
+      "Full": "all fields",
+      "Related": "relationship fields only",
+      "Collapse": "name only"
+    },
+    "usageHeading": "Usage",
+    "class": {
+      "used": "used",
+      "relationship_bridge": "relationship bridge",
+      "dead_branch": "dead branch",
+      "dead_island": "dead island",
+      "unused": "unused"
+    },
+    "reason": {
+      "path": "Sits on the relationship path between used TOs (e.g. the join TO of an n:m relationship) — needed.",
+      "cascade_delete": "Part of a relationship with cascade delete — needed."
+    },
+    "deadBranch_one": "Part of a dead branch ({{count}} TO) under anchor",
+    "deadBranch_other": "Part of a dead branch ({{count}} TOs) under anchor",
+    "deadIsland_one": "TO group without a used TO ({{count}} TO).",
+    "deadIsland_other": "TO group without a used TO ({{count}} TOs).",
+    "unused": "No statically visible usage.",
+    "unusedNoRel": "No statically visible usage, no relationship.",
+    "reviewHint": "Review candidate, not a delete recommendation — dynamic references (GetField, Evaluate, ExecuteSQL) stay invisible.",
+    "toTests": "Details in the Tests tab",
+    "lowConfidence": "File without DDR info: formula usage found by text search, class unverified.",
+    "group": {
+      "context": "Context",
+      "display": "Display",
+      "logic": "Logic",
+      "data": "Data",
+      "graph": "Graph",
+      "other": "Other"
+    },
+    "category": {
+      "layout_context": "Layouts",
+      "calc_context": "Calculation context",
+      "security": "Privileges",
+      "layout_field": "Layout fields",
+      "portal": "Portals",
+      "layout_part": "Layout parts",
+      "table_view": "Table view",
+      "script_step": "Script steps",
+      "calculation": "Formulas",
+      "calculation_text": "Formula text",
+      "navigation": "Navigation",
+      "lookup": "Lookups",
+      "lookup_context": "Lookup context",
+      "value_list": "Value lists",
+      "value_list_related": "Value lists (related)",
+      "relationship": "Relationships",
+      "relationship_cascade": "Cascade delete"
+    },
+    "chipTitle": "{{users}} objects · {{refs}} references — show in References",
+    "allUsages": "all references → References",
+    "relationshipsHeading": "Relationships",
+    "noRelationships": "— no relationship —",
+    "searchPlaceholder": "Filter partner TO or field…",
+    "colSelf": "This TO",
+    "colOperator": "Operator",
+    "colPartnerField": "Partner field",
+    "colPartner": "Partner TO",
+    "colOptions": "Options",
+    "colOptionsTitle": "Options: this TO | partner TO",
+    "colRelationship": "Relationship",
+    "and": "AND",
+    "optCreate": "Allow creation of records via this relationship",
+    "optDeleteSelf": "Cascade delete: records of this TO are deleted when the related record is deleted",
+    "optDeletePartner": "Cascade delete: records of the partner TO are deleted when a record of this TO is deleted",
+    "optSort": "Sorted",
+    "legend": "Options “this TO | partner TO”: ＋ create allowed · 🗑 cascade delete · ⇅ sorted",
+    "siblingsHeading": "Other occurrences of “{{bt}}”",
+    "siblingsNone": "— none —",
+    "toBaseTable": "to the base table",
+    "chipTitleInPage": "{{users}} objects — show in the relationships below",
+    "optionFilterAria": "Filter by option",
+    "option": {
+      "cascade": "Cascade delete",
+      "create": "Create allowed",
+      "sorted": "sorted"
+    },
+    "siblingsSearch": "Filter TO or file…",
+    "siblingsScopeAria": "Scope",
+    "scope": {
+      "all": "all",
+      "file": "this file",
+      "other": "solution-wide"
+    },
+    "scopeTitle": {
+      "all": "All occurrences in the solution",
+      "file": "Occurrences in this file",
+      "other": "Occurrences in the other files of the solution"
+    },
+    "colTo": "Table occurrence",
+    "dataSourceCurrent": "current file",
+    "dataSourceCurrentTitle": "The base table is used directly from this file, without a data source",
+    "dsSelf": "points back at this very file",
+    "dsSelfSibling": "Data source points back at its own file",
+    "inThisFile": "in this file",
+    "viaDataSource": "data source “{{ds}}”",
+    "colDefinedIn": "defined in",
+    "colDefinedInTitle": "File whose relationships graph holds the TO (empty = this file)",
+    "colSourceTitle": "How the TO reaches the base table: current file or through a data source",
+    "countFiltered": "{{shown}} of {{total}}",
+    "defJumpTitle": "Go to the section further down",
+    "defLayoutsTitle": "Layouts based on this TO — show in References",
+    "siblingsJump": "Other occurrences",
+    "ctxHeading": "TO group",
+    "ctxGroup": "Group",
+    "ctxSingle": "only this TO — no relationship",
+    "ctxTos_one": "{{count}} TO",
+    "ctxTos_other": "{{count}} TOs",
+    "ctxLayouts_one": "{{count}} layout",
+    "ctxLayouts_other": "{{count}} layouts",
+    "ctxAnchors": "Anchors",
+    "ctxAnchorsNone": "no layout is based on a TO of this group",
+    "ctxLayoutsTitle_one": "{{count}} layout",
+    "ctxLayoutsTitle_other": "{{count}} layouts",
+    "ctxSelfAnchor_one": "is a layout context itself ({{count}} layout)",
+    "ctxSelfAnchor_other": "is a layout context itself ({{count}} layouts)",
+    "ctxSteps_one": "{{count}} step",
+    "ctxSteps_other": "{{count}} steps",
+    "ctxHint": "Anchor = a TO that layouts are based on. “Nearest” is the anchor from which this TO is reached through the fewest relationships.",
+    "ctxAnchorsLess": "close list",
+    "ctxMoreEachSingle": "+{{count}} more with 1 layout each",
+    "ctxMoreEach": "+{{count}} more with {{each}} layouts each",
+    "ctxMoreTotal": "+{{count}} more with {{total}} layouts together",
+    "ctxAnchor": "Anchor",
+    "ctxColLayouts": "Layouts",
+    "ctxColDistance": "Distance",
+    "ctxColDistanceTitle": "Relationship steps to this TO",
+    "ctxContext": "Layout context",
+    "ctxNearest": "nearest:",
+    "ctxShowPath": "show path",
+    "ctxHidePath": "hide path"
+  },
+  "layoutParts": {
+    "kind": {
+      "12": "Top Navigation",
+      "0": "Title Header",
+      "1": "Header",
+      "2": "Leading Grand Summary",
+      "3": "Sub-summary when sorted by",
+      "4": "Body",
+      "6": "Trailing Grand Summary",
+      "7": "Footer",
+      "8": "Title Footer",
+      "13": "Bottom Navigation"
+    },
+    "position": {
+      "leading": "leading",
+      "trailing": "trailing"
+    },
+    "subSummaryLabel": "{{kind}} ‹{{field}}› ({{position}})",
+    "subSummaryLabelNoField": "{{kind}} ({{position}})",
+    "option": {
+      "o1": "Page break before each occurrence",
+      "o2": "Page break after every {{n}} occurrence(s)",
+      "o3": "Restart page numbers after each occurrence",
+      "o4": "Allow part to break across page boundaries",
+      "o5": "Discard remainder of part before new page",
+      "o6": "Use alternate row state",
+      "o7": "Use active row state"
+    }
+  },
+  "layoutPartDetail": {
+    "ariaLabel": "Layout part details",
+    "groupGeneral": "General",
+    "groupSort": "Sorting",
+    "groupContext": "Context",
+    "groupOptions": "Part definition",
+    "groupTechnical": "Technical",
+    "kind": "Part type",
+    "exportedType": "Exported type",
+    "exportedTypeTitle": "The type as written in the XML export (localized or mislabeled by FileMaker)",
+    "partName": "Internal name",
+    "position": "Position",
+    "positionValue": "{{pos}} of {{total}}",
+    "previous": "Previous part",
+    "next": "Next part",
+    "height": "Height",
+    "top": "Top edge",
+    "bottom": "Bottom edge",
+    "unitPt": "{{value}} pt",
+    "objects": "Objects",
+    "objectsValue": "{{total}} ({{root}} directly in the part)",
+    "sortedBy": "Sorted by",
+    "sortToDiffers": "via a different table occurrence than the layout ({{to}})",
+    "fieldUnresolved": "Field not in the catalog (file not imported?)",
+    "layout": "Layout",
+    "contextTable": "Table occurrence",
+    "baseTable": "Base table",
+    "file": "File",
+    "optionsRaw": "Options (raw)",
+    "optionsUndecoded": "Bits without a dialog option: {{bits}}",
+    "optionOn": "on",
+    "optionOff": "off",
+    "sourceLocal": "set on the part",
+    "sourceStyle": "part style {{name}}",
+    "sourceTheme": "theme {{name}}",
+    "sourceDefault": "not set (off)",
+    "sourceClassic": "Classic theme (off)",
+    "bodyOnly": "body part only",
+    "showInLayout": "Show in layout",
+    "showInLayoutTitle": "Open the layout with this part as filter",
+    "objectsShowInReferences": "Show the objects in the references tab"
   }
 }

@@ -1,15 +1,24 @@
 {
   "manifest": {
     "title": "Campo sin usar",
-    "description": "Regla de código sin usar: campos que no se leen, muestran, establecen, buscan, ordenan, importan ni exportan en ningún sitio.\n\nBasado en la regla de PMD UnusedPrivateField — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatefield"
+    "description": "Regla de código sin usar: campos sin ningún uso: no se leen, muestran, establecen, buscan, ordenan, importan, exportan ni resumen en ningún sitio, y no sirven de origen de una lista de valores ni de campo de salto. Cuenta como uso cada rol de vínculo que el catálogo considera uso. Los resultados de archivos exportados sin información DDR se marcan como sin verificar.\n\nBasado en la regla de PMD UnusedPrivateField — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatefield"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "Hallazgos",
-    "summary_kpi.props.items[1].label": "Archivos afectados",
+    "summary_kpi.props.items[1].label": "Sin información DDR",
+    "summary_kpi.props.items[2].label": "Archivos afectados",
     "findings_card.props.title": "Campo sin usar",
     "findings_table.props.searchPlaceholder": "Buscar archivo o nombre…",
     "findings_table.props.empty.message": "No se encontraron coincidencias.",
     "findings_table.props.columns[0].label": "Archivo",
-    "findings_table.props.columns[1].label": "Nombre"
+    "findings_table.props.columns[1].label": "Nombre",
+    "findings_table.props.columns[2].label": "Estado",
+    "findings_table.props.columns[3].label": "Sin información DDR",
+    "findings_table.props.columns[2].valueLabels.unused": "Sin uso",
+    "findings_table.props.columns[2].valueLabels.unused_unverified": "Sin uso (sin verificar)",
+    "findings_table.props.columns[3].valueLabels.true": "Sí",
+    "findings_table.props.columns[3].valueLabels.false": "No",
+    "notes_card.props.title": "Qué significa el estado",
+    "notes_md.props.content": "**Sin verificar.** El archivo se exportó sin información DDR. Entonces no contiene ninguna referencia de fórmulas: un uso en un cálculo queda invisible. Un resultado así figura como *Sin uso (sin verificar)*; el mosaico *Sin información DDR* los muestra. Exporte el archivo de nuevo con información DDR antes de eliminar nada.\n\n**Límites.** Solo cuenta el uso dentro de la solución importada. No es visible: **llamadas desde fuera** — programaciones del servidor, Data API, OData, URL `fmp://`, AppleScript/ActiveX, plug-ins, archivos no importados; **referencias dinámicas dentro** — *Ejecutar guion* por nombre, `GetField`, `Evaluate`, nombres en cadenas SQL. Un resultado es un candidato a revisar, no una recomendación de eliminar. [Cómo se cuenta el uso](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

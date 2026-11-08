@@ -376,5 +376,23 @@
     "startup_other": "Limpieza tras la actualización: {{count}} restos de una versión anterior movidos a {{dir}}.",
     "startupForks_one": "Tu versión editada se conserva en Custom como {{ids}}.",
     "startupForks_other": "Tus {{count}} versiones editadas se conservan en Custom como {{ids}}."
+  },
+  "renderer": {
+    "primitiveError": "No se pudo mostrar este elemento: {{message}}"
+  },
+  "kpi": {
+    "toggleOffHint": "Vuelva a hacer clic para quitar este filtro"
+  },
+  "scope": {
+    "label": "Ámbito",
+    "file": "Archivo: {{file}}",
+    "object": "Objeto: {{name}}",
+    "objectTyped": "Objeto: {{name}} ({{type}})",
+    "objects": "{{count}} objeto",
+    "objects_one": "{{count}} objeto",
+    "objects_other": "{{count}} objetos",
+    "clear": "Mostrar toda la solución",
+    "clearTitle": "Quitar el ámbito y mostrar toda la solución",
+    "hint": "Las cifras y listas muestran solo este ámbito"
   }
 }

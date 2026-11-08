@@ -52,6 +52,12 @@ export interface DashboardManifest {
   }>;
   permissions: { read_only: boolean; allow_navigation: boolean };
   /**
+   * Analysis-Test capability (bundles: manifest `analysis`; single-file
+   * dashboards: derived from the SQL header). Only the scope part is read here
+   * — which URL scope params the dataset SQL applies (ScopeNotice).
+   */
+  analysis?: { scope?: { supported?: string[] } } & Record<string, unknown>;
+  /**
    * Message-token catalog for findings context deep links (`ref_msgid` →
    * template with `{name}` placeholders). Localized server-side via the
    * `messages.<key>` manifest overrides in the bundle's locale files.

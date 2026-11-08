@@ -1,15 +1,30 @@
 {
   "manifest": {
     "title": "未使用のスクリプト",
-    "description": "未使用コードルール — 他のどのスクリプトからも呼び出されず、どのトリガーからも起動されないスクリプト。確認：手動やカスタムメニューからの起動がここに現れることがあります。\n\nPMD ルール UnusedPrivateMethod — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod"
+    "description": "未使用コードルール — 他のスクリプト・ボタン・カスタムメニューのいずれからも呼び出されず、どのトリガーからも起動されないスクリプト。スクリプトメニューにあるスクリプトはエントリポイントであり、別に一覧され、検出結果にはなりません。 DDR 情報なしでエクスポートされたファイルの検出結果は未検証として表示されます。\n\nPMD ルール UnusedPrivateMethod — https://docs.pmd-code.org/latest/pmd_rules_java_bestpractices.html#unusedprivatemethod"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "検出数",
-    "summary_kpi.props.items[1].label": "対象ファイル数",
+    "summary_kpi.props.items[1].label": "DDR 情報なし",
+    "summary_kpi.props.items[2].label": "スクリプトメニュー内",
+    "summary_kpi.props.items[3].label": "対象ファイル数",
     "findings_card.props.title": "未使用のスクリプト",
     "findings_table.props.searchPlaceholder": "ファイルまたはスクリプトを検索…",
     "findings_table.props.empty.message": "未使用のスクリプトは見つかりませんでした。",
     "findings_table.props.columns[0].label": "ファイル",
-    "findings_table.props.columns[1].label": "スクリプト"
+    "findings_table.props.columns[1].label": "スクリプト",
+    "findings_table.props.columns[2].label": "状態",
+    "findings_table.props.columns[3].label": "DDR 情報なし",
+    "findings_table.props.columns[2].valueLabels.unused": "未使用",
+    "findings_table.props.columns[2].valueLabels.unused_unverified": "未使用 (未検証)",
+    "findings_table.props.columns[3].valueLabels.true": "はい",
+    "findings_table.props.columns[3].valueLabels.false": "いいえ",
+    "entry_points_card.props.title": "エントリポイント: スクリプトメニュー内、呼び出しなし",
+    "entry_points_table.props.searchPlaceholder": "ファイルまたはスクリプトを検索…",
+    "entry_points_table.props.empty.message": "エントリポイントは見つかりませんでした。",
+    "entry_points_table.props.columns[0].label": "ファイル",
+    "entry_points_table.props.columns[1].label": "スクリプト",
+    "notes_card.props.title": "状態の意味",
+    "notes_md.props.content": "**未検証。** このファイルは DDR 情報なしでエクスポートされています。その場合、計算式からの参照は一切含まれないため、計算式での使用は見えません。こうした検出結果は *未使用 (未検証)* と表示され、タイル *DDR 情報なし* で一覧できます。削除する前に DDR 情報付きで再エクスポートしてください。\n\n**エントリポイント。** スクリプトメニューにあるスクリプトは、何からも呼び出されていなくてもユーザーが起動できます。検出結果ではなく、一覧 *エントリポイント* に表示されます。起動させる意図がなければメニューから外してください。その時点で検出結果になります。\n\n**制限。** 数えるのはインポートしたソリューション内部での使用だけです。見えないもの: **外部からの呼び出し** — サーバースケジュール、Data API、OData、`fmp://` URL、AppleScript/ActiveX、プラグイン、インポートしていないファイル。**内部の動的参照** — 名前による *スクリプト実行*、`GetField`、`Evaluate`、SQL 文字列内の名前。結果は確認の候補であり、削除の推奨ではありません。[使用数の数え方](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

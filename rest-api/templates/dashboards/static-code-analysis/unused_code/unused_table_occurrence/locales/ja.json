@@ -1,15 +1,34 @@
 {
   "manifest": {
     "title": "未使用のテーブルオカレンス",
-    "description": "未使用コードルール — Layout コンテキスト、ポータルソース、GTRR の移動先、リレーションシップの一方のいずれとしても使われないテーブルオカレンス。"
+    "description": "未使用コードルール — 削除できるテーブルオカレンス：どこでも使われていない、またはリレーションシップの一方としてのみ使われ、その先に使用中のオカレンスがないもの（リレーションシップグラフの死んだ枝または孤島）。数式、スクリプトステップ、Layout フィールド内の テーブル::フィールド 参照を含め、すべての使用をカウントします。使用中の 2 つのオカレンス間のパス上にある中間オカレンス（n:m リレーションシップの結合テーブルなど）は残します。"
   },
   "layout": {
     "summary_kpi.props.items[0].label": "検出数",
-    "summary_kpi.props.items[1].label": "対象ファイル数",
+    "summary_kpi.props.items[1].label": "どこでも未使用",
+    "summary_kpi.props.items[2].label": "死んだ枝",
+    "summary_kpi.props.items[3].label": "死んだ孤島",
+    "summary_kpi.props.items[4].label": "DDR 情報なし",
+    "summary_kpi.props.items[5].label": "対象ファイル数",
     "findings_card.props.title": "未使用のテーブルオカレンス",
-    "findings_table.props.searchPlaceholder": "ファイルまたは名前を検索…",
+    "findings_table.props.searchPlaceholder": "ファイル、名前、理由を検索…",
     "findings_table.props.empty.message": "該当する項目は見つかりませんでした。",
     "findings_table.props.columns[0].label": "ファイル",
-    "findings_table.props.columns[1].label": "名前"
+    "findings_table.props.columns[1].label": "名前",
+    "findings_table.props.columns[2].label": "基本テーブル",
+    "findings_table.props.columns[3].label": "理由",
+    "findings_table.props.columns[4].label": "接続先",
+    "findings_table.props.columns[5].label": "死んだグループのサイズ",
+    "findings_table.props.columns[6].label": "DDR 情報なし",
+    "findings_table.props.columns[3].valueLabels.unused": "どこでも未使用",
+    "findings_table.props.columns[3].valueLabels.dead_branch": "死んだ枝",
+    "findings_table.props.columns[3].valueLabels.dead_island": "死んだ孤島",
+    "findings_table.props.columns[3].valueLabels.unused_unverified": "どこでも未使用 (未検証)",
+    "findings_table.props.columns[3].valueLabels.dead_branch_unverified": "死んだ枝 (未検証)",
+    "findings_table.props.columns[3].valueLabels.dead_island_unverified": "死んだ孤島 (未検証)",
+    "findings_table.props.columns[6].valueLabels.true": "はい",
+    "findings_table.props.columns[6].valueLabels.false": "いいえ",
+    "notes_card.props.title": "理由の意味",
+    "notes_md.props.content": "**どこでも未使用。** レイアウト、ポータル、計算式、スクリプトステップ、レイアウトフィールド、値一覧、ルックアップ、アクセス権セットのどれもこのテーブルオカレンスを参照しておらず、リレーションシップもありません。単独で削除できます。\n\n**死んだ枝。** このテーブルオカレンスはリレーションシップの一方としてのみ使われ、その先では何も使われていません。*接続先* は枝がつながっている使用中のテーブルオカレンスを示し、*死んだグループのサイズ* は枝に含まれるテーブルオカレンスの数です。これらはまとめて削除できます。\n\n**死んだ孤島。** リレーションシップグループ内のどのテーブルオカレンスも使われていません。グループ全体を削除でき、*死んだグループのサイズ* がその数です。\n\n**検出対象外。** 使用中の 2 つのテーブルオカレンスの間の経路上にあるもの（典型的には n:m リレーションシップの中間テーブルオカレンス）は、直接参照されていなくても必要です。関連レコードを削除するリレーションシップの両側も同様です。\n\n**DDR 情報なし。** このファイルは DDR 情報なしでエクスポートされています。その場合、計算式内の `テーブル::フィールド` 参照は計算式のテキストからのみ認識され、評価コンテキストは欠けるため、使用が見えないままになることがあります。こうした検出結果は *未検証* と表示されます（例: *死んだ枝 (未検証)*）。タイル *DDR 情報なし* で一覧できます。削除する前に DDR 情報付きで再エクスポートしてください。\n\n**制限。** 数えるのはインポートしたソリューション内部での使用だけです。見えないもの: **外部からのアクセス** — OData、ODBC/JDBC、Data API、インポートしていないファイル。**内部の動的参照** — `GetField`、`Evaluate`、SQL 文字列内の名前。結果は確認の候補であり、削除の推奨ではありません。[使用数の数え方](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
   }
 }

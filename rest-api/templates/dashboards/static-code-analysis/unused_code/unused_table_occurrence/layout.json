@@ -26,7 +26,77 @@
                 {
                   "label": "Findings",
                   "field": "finding_count",
-                  "format": "number"
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "unused_table_occurrence",
+                      "params": {
+                        "reason": "",
+                        "ddr": ""
+                      }
+                    }
+                  }
+                },
+                {
+                  "label": "Not used anywhere",
+                  "field": "unused_count",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "unused_table_occurrence",
+                      "params": {
+                        "reason": "unused"
+                      }
+                    }
+                  },
+                  "toggle": true
+                },
+                {
+                  "label": "Dead branch",
+                  "field": "dead_branch_count",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "unused_table_occurrence",
+                      "params": {
+                        "reason": "dead_branch"
+                      }
+                    }
+                  },
+                  "toggle": true
+                },
+                {
+                  "label": "Dead island",
+                  "field": "dead_island_count",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "unused_table_occurrence",
+                      "params": {
+                        "reason": "dead_island"
+                      }
+                    }
+                  },
+                  "toggle": true
+                },
+                {
+                  "label": "Without DDR info",
+                  "field": "low_confidence_count",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "unused_table_occurrence",
+                      "params": {
+                        "ddr": "without"
+                      }
+                    }
+                  },
+                  "toggle": true
                 },
                 {
                   "label": "Affected files",
@@ -62,7 +132,7 @@
               "searchParam": "q",
               "sortParam": "sort",
               "clientMode": true,
-              "searchPlaceholder": "Search file or name…",
+              "searchPlaceholder": "Search file, name or reason…",
               "columns": [
                 {
                   "field": "file_name",
@@ -70,19 +140,75 @@
                 },
                 {
                   "field": "object_name",
-                  "label": "Name"
+                  "label": "Name",
+                  "breakAt": "separators"
+                },
+                {
+                  "field": "base_table",
+                  "label": "Base table",
+                  "breakAt": "separators"
+                },
+                {
+                  "field": "reason_status",
+                  "label": "Reason",
+                  "nowrap": true,
+                  "valueLabels": {
+                    "unused": "Not used anywhere",
+                    "dead_branch": "Dead branch",
+                    "dead_island": "Dead island",
+                    "unused_unverified": "Not used anywhere (unverified)",
+                    "dead_branch_unverified": "Dead branch (unverified)",
+                    "dead_island_unverified": "Dead island (unverified)"
+                  }
+                },
+                {
+                  "field": "anchor_to",
+                  "label": "Attached to",
+                  "breakAt": "separators"
+                },
+                {
+                  "field": "branch_size",
+                  "label": "Dead group size",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "low_confidence",
+                  "label": "Without DDR info",
+                  "valueLabels": {
+                    "true": "Yes",
+                    "false": "No"
+                  }
                 }
               ],
               "onRowClick": {
                 "action": "openObject",
                 "args": {
                   "uuid": "{{nav_uuid}}",
-                  "type": "TableOccurrence"
+                  "type": "TableOccurrence",
+                  "file": "{{file_name}}"
                 }
               },
               "empty": {
                 "message": "No unused table occurrence found."
               }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "notes_card",
+        "props": {
+          "span": 12,
+          "title": "What the reasons mean"
+        },
+        "children": [
+          {
+            "type": "Markdown",
+            "id": "notes_md",
+            "props": {
+              "content": "**Not used anywhere.** No layout, portal, formula, script step, layout field, value list, lookup or privilege set refers to the table occurrence, and it has no relationship. It can be deleted on its own.\n\n**Dead branch.** The table occurrence is used only as a side of relationships, and nothing beyond it is used. *Attached to* names the used table occurrence the branch hangs on; *Dead group size* counts the table occurrences of the branch — they can be deleted together.\n\n**Dead island.** No table occurrence of its relationship group is used. The whole group can be deleted; *Dead group size* counts it.\n\n**Never a finding.** A table occurrence on the path between two used ones — typically the join table occurrence of an n:m relationship — is needed even when nothing refers to it directly. The same holds for both sides of a relationship that deletes related records.\n\n**Without DDR info.** The file was exported without DDR info. Formula references `Table::Field` are then recognized only in the formula text, and evaluation contexts are missing — a usage can stay invisible. Such a finding reads *unverified* (e.g. *Dead branch (unverified)*); the tile *Without DDR info* lists them. Export the file again with DDR info before deleting anything.\n\n**Limits.** Only usage inside the imported solution counts. Not visible: **access from outside** — OData, ODBC/JDBC, Data API, files that were not imported; **dynamic references inside** — `GetField`, `Evaluate`, names inside SQL strings. A finding is a review candidate, not a delete recommendation. [How usage is counted](/docs/fm-lab/schema/schema%2FUsage%20and%20References)"
             }
           }
         ]

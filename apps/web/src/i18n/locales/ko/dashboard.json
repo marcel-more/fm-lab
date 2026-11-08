@@ -375,5 +375,23 @@
     "startup_other": "업데이트 후 정리: 이전 버전의 잔여물 {{count}}개를 {{dir}}(으)로 옮겼습니다.",
     "startupForks_one": "편집한 버전은 Custom에 {{ids}}(으)로 남습니다.",
     "startupForks_other": "편집한 버전 {{count}}개는 Custom에 {{ids}}(으)로 남습니다."
+  },
+  "renderer": {
+    "primitiveError": "이 요소를 표시할 수 없습니다: {{message}}"
+  },
+  "kpi": {
+    "toggleOffHint": "다시 클릭하면 이 필터가 해제됩니다"
+  },
+  "scope": {
+    "label": "범위",
+    "file": "파일: {{file}}",
+    "object": "개체: {{name}}",
+    "objectTyped": "개체: {{name}} ({{type}})",
+    "objects": "개체 {{count}}개",
+    "objects_one": "개체 {{count}}개",
+    "objects_other": "개체 {{count}}개",
+    "clear": "전체 솔루션 표시",
+    "clearTitle": "범위를 해제하고 전체 솔루션 표시",
+    "hint": "수치와 목록은 이 범위만 표시합니다"
   }
 }

@@ -376,5 +376,23 @@
     "startup_other": "Städat efter uppdateringen: {{count}} rester från en tidigare version flyttade till {{dir}}.",
     "startupForks_one": "Din redigerade version finns kvar under Custom som {{ids}}.",
     "startupForks_other": "Dina {{count}} redigerade versioner finns kvar under Custom som {{ids}}."
+  },
+  "renderer": {
+    "primitiveError": "Det här elementet kunde inte visas: {{message}}"
+  },
+  "kpi": {
+    "toggleOffHint": "Klicka igen för att ta bort det här filtret"
+  },
+  "scope": {
+    "label": "Omfång",
+    "file": "Fil: {{file}}",
+    "object": "Objekt: {{name}}",
+    "objectTyped": "Objekt: {{name}} ({{type}})",
+    "objects": "{{count}} objekt",
+    "objects_one": "{{count}} objekt",
+    "objects_other": "{{count}} objekt",
+    "clear": "Visa hela lösningen",
+    "clearTitle": "Ta bort omfånget och visa hela lösningen",
+    "hint": "Siffror och listor visar bara detta omfång"
   }
 }

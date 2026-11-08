@@ -104,8 +104,16 @@ const schemas = {
     // Änderungs-Metadaten: 'modified' sortiert nach dem eigenen Stempel (neueste
     // zuerst, ohne Stempel am Ende); modified_since behält nur Objekte, deren
     // eigener Stempel an oder nach dem Tag liegt. Beide liefern Modified_At mit.
-    sort: Joi.string().lowercase().valid('modified').optional(),
+    // 'name' | 'type' | 'file' sortieren serverseitig über alle Seiten.
+    sort: Joi.string().lowercase().valid('modified', 'usage', 'name', 'type', 'file').optional(),
     modified_since: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    // Nutzung (v_object_usage, nutzende Container): Richtung der Sortierung
+    // 'usage' (asc = selten zuerst; Voreinstellung asc mit usage_max, sonst desc)
+    // und Filter usage_min/usage_max (inklusive). Typen ohne Nutzungsbegriff
+    // fallen beim Filter heraus.
+    usage_dir: Joi.string().lowercase().valid('asc', 'desc').optional(),
+    usage_min: Joi.number().integer().min(0).optional(),
+    usage_max: Joi.number().integer().min(0).optional(),
   }),
 
   // GET /api/search/count
@@ -114,6 +122,8 @@ const schemas = {
     type: Joi.string().lowercase().valid(...OBJECT_TYPES.map(t => t.toLowerCase())).optional(),
     file: Joi.string().optional(),
     modified_since: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    usage_min: Joi.number().integer().min(0).optional(),
+    usage_max: Joi.number().integer().min(0).optional(),
     format: Joi.string().lowercase().valid(...Object.values(OUTPUT_FORMATS)).default('json'),
     meta: Joi.boolean().default(false),
     debug: Joi.boolean().default(false),

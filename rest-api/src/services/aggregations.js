@@ -552,10 +552,26 @@ function buildCategorySummaryQuery(dbType, refAttached, file) {
   return { sql, params };
 }
 
+/**
+ * usage_count of every pseudo type in one relation (Object_UUID, Object_Type,
+ * usage_count), solution-wide — the same counts as buildUsageCTE without a file
+ * scope. The search shows it in its usage column, so a built-in, a plug-in
+ * function or a step type reads the same number there as in its own list.
+ */
+function buildPseudoUsageSql() {
+  return USAGE_TYPES.map((t) => {
+    const cte = buildUsageCTE(t, null);
+    const m = /^\s*usage_agg AS \(([\s\S]*)\)\s*$/.exec(cte);
+    if (!m) throw new Error(`buildPseudoUsageSql: unexpected usage CTE shape for ${t}`);
+    return `SELECT Object_UUID, '${t}' AS Object_Type, usage_count FROM (${m[1]}) x_${t}`;
+  }).join('\n      UNION ALL\n      ');
+}
+
 module.exports = {
   PSEUDO_TOKEN_TYPES,
   USAGE_TYPES,
   buildUsageCTE,
+  buildPseudoUsageSql,
   buildCategoryCTE,
   buildFileFilterCTE,
   buildListQuery,

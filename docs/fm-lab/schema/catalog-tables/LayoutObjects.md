@@ -36,11 +36,14 @@ Every object on every layout — all 26 object types, from edit boxes and button
 | `Text_Content` | `VARCHAR` |
 | `Object_XML` | `VARCHAR` |
 | `File_Name` | `VARCHAR` |
+| `Part_Seq` | `BIGINT` |
+| `Part_Kind` | `BIGINT` |
 
 ## Notes
 
 - `Object_Type` is canonicalized to English type names at import (the raw attribute is localized) — the full subtype list is enumerated in [Object Types](../object-catalog/Object%20Types.md).
 - `Object_ID` is unique only within a layout; `Object_UUID` is the global key.
+- **Part of an object.** `Part_Seq` / `Part_Kind` name the [layout part](LayoutParts.md) the object belongs to (join on `File_Name`, `Layout_ID` and `Part_Seq`). The import derives them from the geometry: a root object (`Nesting_Level = 0`) belongs to the part whose band contains its top edge — a top edge exactly on a part boundary belongs to the lower part —, a nested object to the part of its parent. The bounds of nested objects are relative to their parent. `Part_Type` is the canonical type of that part. The P6 check `v_check_layoutobjects_without_part` counts objects without a part (expected 0).
 - `Object_XML` holds the complete raw definition for anything not extracted; field/script/value-list references are already resolved into [ObjectLinks](../object-catalog/ObjectLinks.md) (`displays_field`, `triggers_script`, `uses_valuelist`, `portal_context`, …), including references of button-embedded single steps.
 - Conditional-formatting rules are structured in [LayoutObjectConditions](LayoutObjectConditions.md) and the `{{…}}` symbols of text objects and button labels in [LayoutObjectSymbols](LayoutObjectSymbols.md) — never regex `Object_XML` or `Text_Content` for either.
 - Text, label and title follow exactly one XML path per `Object_Kind` (the raw `@type` is localized, `@kind` is not):

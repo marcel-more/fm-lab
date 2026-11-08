@@ -3,7 +3,7 @@
 -- @params: uuid (optional), name (optional), id (optional), file (optional)
 -- @output_format: report
 -- @author: Marcel
--- @version: 1.2
+-- @version: 1.3
 -- @tags: layouts, objects, data, react, interactive
 -- @note: Ergänzt display_layout_svg.sql, das fertiges SVG-Markup liefert. Dieser Endpunkt
 -- @note: gibt eine Zeile pro Layout-Objekt zurück mit allen Spalten, die das Frontend für
@@ -12,6 +12,9 @@
 -- @note: (LayoutObjectConditions, ScriptTriggers) — das frühere XML-Regex-Flag war durch
 -- @note: die Container-Verankerungs-Falle nachweislich falsch (False-Positives auf
 -- @note: Containern, deren Object_XML die Kind-CF nestet, plus False-Negatives).
+-- @note: v1.3 — part_seq/part_kind: zugeordneter Layout-Bereich (Schema 1.39.0, P4 aus
+-- @note: Position + Eltern-Kette). Über UNION ALL BY NAME eingeblendet → auf älteren
+-- @note: Katalogen NULL; das Frontend leitet den Bereich dann mit derselben Regel ab.
 
 WITH RECURSIVE layout_match AS (
   SELECT L_ID, L_Name, L_UUID, L_TO_Name, File_Name
@@ -44,11 +47,18 @@ layout_objects_raw AS (
     lo.Tooltip_Calculation_Text,
     lo.Label_Calculation_Text,
     lo.Text_Content,
+    lo.Part_Seq,
+    lo.Part_Kind,
     lo.Layout_ID,
     lo.File_Name
-  FROM LayoutObjects lo
-  JOIN layout_match lm ON lo.Layout_ID = lm.L_ID
-    AND lo.File_Name = lm.File_Name
+  FROM (
+    -- Schema-tolerant: Part_Seq/Part_Kind fehlen in Katalogen vor 1.39.0 → NULL.
+    SELECT o.* FROM LayoutObjects o
+    JOIN layout_match lm ON o.Layout_ID = lm.L_ID
+      AND o.File_Name = lm.File_Name
+    UNION ALL BY NAME
+    SELECT CAST(NULL AS BIGINT) AS Part_Seq, CAST(NULL AS BIGINT) AS Part_Kind WHERE false
+  ) lo
 ),
 -- Recursive CTE: convert relative child bounds to absolute layout coordinates
 objects_absolute AS (
@@ -59,7 +69,7 @@ objects_absolute AS (
     Bounds_Left AS Abs_Left,
     Bounds_Bottom AS Abs_Bottom,
     Bounds_Right AS Abs_Right,
-    Parent_Object_ID, Nesting_Level, Z_Order, Part_Type,
+    Parent_Object_ID, Nesting_Level, Z_Order, Part_Type, Part_Seq, Part_Kind,
     Hide_Calculation_Text, Tooltip_Calculation_Text, Label_Calculation_Text,
     Text_Content
   FROM layout_objects_raw
@@ -75,6 +85,7 @@ objects_absolute AS (
     parent.Abs_Top + child.Bounds_Bottom,
     parent.Abs_Left + child.Bounds_Right,
     child.Parent_Object_ID, child.Nesting_Level, child.Z_Order, child.Part_Type,
+    child.Part_Seq, child.Part_Kind,
     child.Hide_Calculation_Text, child.Tooltip_Calculation_Text, child.Label_Calculation_Text,
     child.Text_Content
   FROM layout_objects_raw child
@@ -203,6 +214,8 @@ SELECT
   oa.Z_Order                          AS z_order,
   oa.Parent_Object_ID                 AS parent_object_id,
   oa.Part_Type                        AS part_type,
+  oa.Part_Seq                         AS part_seq,
+  oa.Part_Kind                        AS part_kind,
   NULLIF(oa.Hide_Calculation_Text, '') AS hide_text,
   NULLIF(oa.Tooltip_Calculation_Text, '') AS tooltip_text,
   NULLIF(oa.Label_Calculation_Text, '') AS label_calc_text,

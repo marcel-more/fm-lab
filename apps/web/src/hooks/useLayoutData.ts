@@ -15,6 +15,9 @@ export type LayoutObject = {
   z_order: number | null;
   parent_object_id: number | null;
   part_type: string | null;
+  /** Assigned layout part (catalog schema 1.39.0); null on older catalogs → lib/layoutParts fallback. */
+  part_seq?: number | null;
+  part_kind?: number | null;
   hide_text: string | null;
   tooltip_text: string | null;
   label_calc_text: string | null;
@@ -42,11 +45,21 @@ export type LayoutObject = {
 };
 
 export type LayoutPart = {
+  /** Identity of the part within its layout (several sub-summaries of one kind stay distinct). */
+  part_seq: number | null;
+  /** Catalog UUID `part_<Layout_ID>_<Part_Kind>_<Part_Seq>_<File_Name>` (detail view). */
+  part_uuid: string | null;
   part_type: string;
   part_kind: number;
   part_size: number;
   part_absolute: number;
   object_count: number;
+  part_name?: string | null;
+  /** Break field of a sub-summary (kind 3/5); uuid/file from the breaks_on_field edge. */
+  break_field_name?: string | null;
+  break_field_uuid?: string | null;
+  break_field_file?: string | null;
+  break_to_name?: string | null;
   layout_name: string;
   layout_uuid: string;
   layout_to_name: string | null;

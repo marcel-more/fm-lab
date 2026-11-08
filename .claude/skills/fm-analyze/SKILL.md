@@ -12,7 +12,7 @@ description: >-
   X". Triggers (German): "analysiere Script X", "was ist der Zweck von X", "welche Business-Logik
   steckt hinter X". Also responds to equivalent requests in other languages.
 metadata:
-  version: "0.8.5"
+  version: "0.9.18"
 ---
 
 # FileMaker Object Analysis (Business Logic)
@@ -109,6 +109,11 @@ Depending on Object_Type, fetch the type-specific base data — the shared SQL t
 - **Field**: FieldsForTables (incl. Field_Comment, Calculation_Text, AE_Calc_Text)
 - **Layout**: Layouts + LayoutParts + LayoutObjects (aggregated)
 - **CustomFunction**: CustomFunctionsCatalog + CalcsForCustomFunctions + DDR_Calculations
+- **TableOccurrence**: TableOccurrenceCatalog + relationships [TO1/TO2], usage per category
+  and usage class [TO3/TO4]. Who works with the TO (scripts, layouts, formulas) comes from
+  TO3, not from its ObjectLinks — a `TO::Field` reference links only the field
+  (`docs/agents/query-cookbook.md` § Where-used for Table Occurrences). "Still needed?"
+  questions: offer `/fm-test unused-code` in object scope.
 - **Calculation** (schema 1.22.0): CalculationsCatalog [C1/C2/C3] — one calculation
   INSTANCE (Owner × Calc_Role × Calc_Index). The business context comes from the
   OWNER (owner name/comment, slot role: hide condition vs. validation vs. step

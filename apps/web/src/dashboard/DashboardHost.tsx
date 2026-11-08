@@ -12,6 +12,8 @@ import { registerStickyDashboardParams } from './actions';
 import { TitleBox } from '../components/TitleBox';
 import { FavoriteStar } from './FavoriteStar';
 import { NoDataYet } from '../components/NoDataYet';
+import { ScopeNoticeBar } from './primitives/ScopeNotice';
+import { layoutBindsParam, layoutHasScopeNotice, scopeSupport } from './primitives/_scopeNotice';
 import './dashboard.css';
 
 interface Props {
@@ -247,6 +249,16 @@ export function DashboardHost({ id, params, showManifestTitle, onEnvelopeLoaded 
           // Favorite star, right-aligned — content-area bundles only, system/module pages carry none.
           actions={envelope.nav?.favoritable ? <FavoriteStar id={envelope.manifest.id} /> : undefined}
         />
+      )}
+      {/* Scope hint of content dashboards (Analysis Test deep links carry file /
+          scope_uuids): automatic unless the layout places the ScopeNotice itself.
+          Only the params the dashboard applies; a file the layout shows in its own
+          control is left out. */}
+      {showManifestTitle && !layoutHasScopeNotice(envelope.layout) && (
+        <ScopeNoticeBar options={{
+          ...scopeSupport(envelope.manifest),
+          fileShownByControl: layoutBindsParam(envelope.layout, 'file'),
+        }} />
       )}
       <DashboardRenderer layout={envelope.layout} datasets={datasets} />
     </div>

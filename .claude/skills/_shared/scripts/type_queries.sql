@@ -100,6 +100,28 @@ SELECT * FROM RelationshipCatalog
 WHERE (Left_TO_UUID = '<UUID>' OR Right_TO_UUID = '<UUID>')
   AND File_Name = '<FILE>';
 
+-- TO3 — usage per category (schema >= 1.38.0; on older catalogs the table is
+--   missing — skip TO3/TO4 and say that only the edges were read).
+--   A TO::Field reference links only the FIELD, so the incoming ObjectLinks of
+--   a TO miss formulas, script steps and layout fields; this table has them,
+--   edges included (Is_Edge). Pattern + pitfalls: docs/agents/query-cookbook.md
+--   § Where-used for Table Occurrences.
+SELECT Category, User_Type,
+       count(DISTINCT User_UUID)    AS Users,
+       CAST(sum(Ref_Count) AS BIGINT) AS Refs,
+       bool_or(Is_Edge)             AS Via_Edge
+FROM v_table_occurrence_usage
+WHERE TO_UUID = '<UUID>' AND File_Name = '<FILE>'
+GROUP BY ALL
+ORDER BY Refs DESC;
+
+-- TO4 — usage class (unused · used · relationship_bridge · dead_branch · dead_island;
+--   Low_Confidence = file without DDR info → unused/dead_* unverified)
+SELECT Usage_Class, Reason, Usage_Ref_Count, Relationship_Count, Text_Ref_Count,
+       Dead_Group_Size, Anchor_TO_Name, Low_Confidence
+FROM v_table_occurrence_class
+WHERE TO_UUID = '<UUID>' AND File_Name = '<FILE>';
+
 -- ============================================================ Relationship
 -- R1 — relationship (predicates in Left_*/Right_* columns, operator in Operator)
 SELECT * FROM RelationshipCatalog WHERE Rel_ID = <REL_ID> AND File_Name = '<FILE>';

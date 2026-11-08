@@ -669,7 +669,8 @@ SELECT
         AND ((ol.Link_Subrole = 'auto_enter'         AND f.AE_Calc_Enabled = FALSE)
           OR (ol.Link_Subrole = 'validation'         AND f.Validation_Calc_Enabled = FALSE)
           OR (ol.Link_Subrole = 'validation_message' AND f.Validation_Message_Calc_Enabled = FALSE)
-          OR (ol.Link_Role = 'lookup_source'         AND f.Lookup_Enabled = FALSE)))                 AS dormant_operational_edges;
+          OR (ol.Link_Role IN ('lookup_source', 'lookup_relationship', 'lookup_context')
+                                                     AND f.Lookup_Enabled = FALSE)))                 AS dormant_operational_edges;
 
 -- Tabellenansichts-Spalten (Schema 1.28.0, SaXML 2.3.0.0 / FM 26+): Spalten mit
 -- Feldreferenz, deren Feld-UUID fehlt (externe TO) oder nicht im Katalog liegt →
@@ -1105,6 +1106,22 @@ WHERE Part_Type IS NOT NULL
 GROUP BY Part_Type
 ORDER BY n DESC;
 
+-- LayoutObjects ohne zugeordneten Bereich (Schema 1.39.0). P4 setzt Part_Seq für
+-- Root-Objekte aus der Oberkante im Bereichsband, für Kinder über die Eltern-Kette.
+-- Erwartet 0; Treffer = Root-Objekt oberhalb des ersten / unterhalb des letzten
+-- Bereichs oder ein Kind mit abgerissener Parent_Object_ID-Kette. Kein Datenfehler
+-- des Exports, aber die Sektionsansicht kann das Objekt keinem Bereich zuordnen.
+CREATE OR REPLACE VIEW v_check_layoutobjects_without_part AS
+SELECT
+    lo.File_Name,
+    lo.Layout_ID,
+    COUNT(*)                                         AS n,
+    COUNT(*) FILTER (WHERE lo.Nesting_Level = 0)     AS n_root
+FROM LayoutObjects lo
+WHERE lo.Part_Seq IS NULL
+GROUP BY lo.File_Name, lo.Layout_ID
+ORDER BY n DESC;
+
 -- Numerik-Sentinel-Drift (Wächter zur Sentinel-Normalisierung in P1):
 -- Validation_MaxChars wird bei der Extraktion per NULLIF(…, 4294967295) auf NULL
 -- normalisiert („unbegrenzt" = kein Limit). Der Wächter zählt, was danach noch
@@ -1121,6 +1138,24 @@ SELECT
                || '=' || Validation_MaxChars, ', ')            AS sample
 FROM FieldsForTables
 WHERE Validation_MaxChars > 1000000000;
+
+-- Referenzlisten-Wächter (Konverter 2.43.0): aggregierte ID-/Namenslisten aus
+-- LEFT JOIN LATERAL + list(). Vertrag: [] = keine Referenz (nie NULL, nie ein
+-- NULL-Element), IDs und Namen gleich lang. Ein nacktes list() über den LEFT JOIN
+-- sammelt die NULL-Zeile eines referenzlosen Objekts als [NULL] ein — genau das
+-- fängt diese View. Soll: violation_n = 0 je Regel.
+CREATE OR REPLACE VIEW v_check_reference_lists AS
+SELECT 'ep_privilegeset_list' AS rule, COUNT(*) AS violation_n
+FROM ExtendedPrivilegesCatalog
+WHERE PrivilegeSet_IDs IS NULL OR PrivilegeSet_Names IS NULL
+   OR len(list_filter(PrivilegeSet_IDs, lambda x: x IS NULL)) > 0
+   OR len(PrivilegeSet_IDs) <> len(PrivilegeSet_Names)
+UNION ALL
+SELECT 'menuset_member_list', COUNT(*)
+FROM CustomMenuSetCatalog
+WHERE Member_Menu_IDs IS NULL OR Member_Menu_Names IS NULL
+   OR len(list_filter(Member_Menu_IDs, lambda x: x IS NULL)) > 0
+   OR len(Member_Menu_IDs) <> len(Member_Menu_Names);
 
 -- Owner-exakte Layout-Script-Referenzen (Converter 2.15.0, P2-Ancestor-Guard) —
 -- zwei table-only Kennzahlen für die beiden Regressionsrichtungen des Guards,

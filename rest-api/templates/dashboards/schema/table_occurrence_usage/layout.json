@@ -1,0 +1,599 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "type": "Grid",
+    "props": {
+      "columns": 12,
+      "gap": 16
+    },
+    "children": [
+      {
+        "type": "Card",
+        "id": "summary",
+        "props": {
+          "span": 12,
+          "variant": "hero"
+        },
+        "data": {
+          "dataset": "summary"
+        },
+        "children": [
+          {
+            "type": "KPIStrip",
+            "id": "summary_kpistrip",
+            "props": {
+              "items": [
+                {
+                  "label": "All table occurrences",
+                  "field": "total",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "table_occurrence_usage",
+                      "params": {
+                        "class": "",
+                        "ddr": ""
+                      }
+                    }
+                  }
+                },
+                {
+                  "label": "Used",
+                  "field": "used",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "table_occurrence_usage",
+                      "params": {
+                        "class": "used"
+                      }
+                    }
+                  },
+                  "toggle": true
+                },
+                {
+                  "label": "Rarely used",
+                  "field": "rare",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "table_occurrence_usage",
+                      "params": {
+                        "class": "rare"
+                      }
+                    }
+                  },
+                  "toggle": true
+                },
+                {
+                  "label": "Heavily used",
+                  "field": "heavy",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "table_occurrence_usage",
+                      "params": {
+                        "class": "heavy"
+                      }
+                    }
+                  },
+                  "toggle": true
+                },
+                {
+                  "label": "Intermediate (bridge)",
+                  "field": "bridge",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "table_occurrence_usage",
+                      "params": {
+                        "class": "bridge"
+                      }
+                    }
+                  },
+                  "toggle": true
+                },
+                {
+                  "label": "Dead branches",
+                  "field": "dead_branch",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "table_occurrence_usage",
+                      "params": {
+                        "class": "dead_branch"
+                      }
+                    }
+                  },
+                  "toggle": true
+                },
+                {
+                  "label": "Dead islands",
+                  "field": "dead_island",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "table_occurrence_usage",
+                      "params": {
+                        "class": "dead_island"
+                      }
+                    }
+                  },
+                  "toggle": true
+                },
+                {
+                  "label": "Not used anywhere",
+                  "field": "unused",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "table_occurrence_usage",
+                      "params": {
+                        "class": "unused"
+                      }
+                    }
+                  },
+                  "toggle": true
+                },
+                {
+                  "label": "Without DDR info",
+                  "field": "low_confidence",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "table_occurrence_usage",
+                      "params": {
+                        "ddr": "without"
+                      }
+                    }
+                  },
+                  "toggle": true
+                }
+              ]
+            }
+          },
+          {
+            "type": "Slider",
+            "id": "rare_slider",
+            "props": {
+              "param": "rare_max",
+              "label": "Rarely used",
+              "comparator": "≤",
+              "min": 1,
+              "max": 20,
+              "step": 1,
+              "default": 3,
+              "valueSuffix": " usages"
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "usage_card",
+        "props": {
+          "span": 12,
+          "title": "Table occurrences by usage",
+          "keepChildrenOnEmpty": true
+        },
+        "data": {
+          "dataset": "usage"
+        },
+        "children": [
+          {
+            "type": "Table",
+            "id": "usage_table",
+            "props": {
+              "rowKey": "row_key",
+              "density": "compact",
+              "sortable": true,
+              "searchable": "auto",
+              "searchAutoThreshold": 3,
+              "pageParam": "page",
+              "searchParam": "q",
+              "sortParam": "sort",
+              "clientMode": true,
+              "keepViewOnRowClick": true,
+              "searchPlaceholder": "Search file, table occurrence, base table or class…",
+              "columns": [
+                {
+                  "field": "file_name",
+                  "label": "File"
+                },
+                {
+                  "field": "object_name",
+                  "label": "Table occurrence",
+                  "breakAt": "separators"
+                },
+                {
+                  "field": "base_table",
+                  "label": "Base table",
+                  "breakAt": "separators"
+                },
+                {
+                  "field": "usage_class",
+                  "label": "Class",
+                  "format": "badge",
+                  "valueLabels": {
+                    "used": "used",
+                    "rare": "rarely used",
+                    "heavy": "heavily used",
+                    "bridge_path": "bridge (path)",
+                    "bridge_cascade_delete": "bridge (cascade delete)",
+                    "dead_branch": "dead branch",
+                    "dead_island": "dead island",
+                    "unused": "unused",
+                    "dead_branch_unverified": "dead branch (unverified)",
+                    "dead_island_unverified": "dead island (unverified)",
+                    "unused_unverified": "unused (unverified)"
+                  },
+                  "nowrap": true
+                },
+                {
+                  "field": "usage_refs",
+                  "label": "Usages",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "users",
+                  "label": "Using objects",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "calc_refs",
+                  "label": "Formulas",
+                  "align": "right",
+                  "format": "count"
+                },
+                {
+                  "field": "step_refs",
+                  "label": "Script steps",
+                  "align": "right",
+                  "format": "count"
+                },
+                {
+                  "field": "layout_refs",
+                  "label": "Layouts",
+                  "align": "right",
+                  "format": "count"
+                },
+                {
+                  "field": "relationship_refs",
+                  "label": "Relationships",
+                  "align": "right",
+                  "format": "count"
+                },
+                {
+                  "field": "other_refs",
+                  "label": "Other",
+                  "align": "right",
+                  "format": "count"
+                },
+                {
+                  "field": "anchor_to",
+                  "label": "Dead branch on",
+                  "breakAt": "separators"
+                },
+                {
+                  "field": "low_confidence",
+                  "label": "Without DDR info",
+                  "valueLabels": {
+                    "true": "Yes",
+                    "false": "No"
+                  }
+                }
+              ],
+              "onRowClick": {
+                "action": "openDashboard",
+                "args": {
+                  "id": "table_occurrence_usage",
+                  "params": {
+                    "to_uuid": "{{nav_uuid}}",
+                    "to_file": "{{file_name}}",
+                    "class": "{{_class_param}}"
+                  }
+                }
+              },
+              "empty": {
+                "message": "No table occurrence in this selection."
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "selected_card",
+        "props": {
+          "span": 12,
+          "title": "Selected table occurrence"
+        },
+        "data": {
+          "dataset": "selected"
+        },
+        "visibleWhen": {
+          "dataset": "selected",
+          "field": "nav_uuid",
+          "truthy": true
+        },
+        "children": [
+          {
+            "type": "Table",
+            "id": "selected_table",
+            "props": {
+              "rowKey": "nav_uuid",
+              "density": "comfortable",
+              "columns": [
+                {
+                  "field": "to_name",
+                  "label": "Table occurrence"
+                },
+                {
+                  "field": "file_name",
+                  "label": "File"
+                },
+                {
+                  "field": "base_table",
+                  "label": "Base table"
+                },
+                {
+                  "field": "usage_class",
+                  "label": "Class",
+                  "format": "badge",
+                  "valueLabels": {
+                    "used": "used",
+                    "rare": "rarely used",
+                    "heavy": "heavily used",
+                    "bridge_path": "bridge (path)",
+                    "bridge_cascade_delete": "bridge (cascade delete)",
+                    "dead_branch": "dead branch",
+                    "dead_island": "dead island",
+                    "unused": "unused",
+                    "dead_branch_unverified": "dead branch (unverified)",
+                    "dead_island_unverified": "dead island (unverified)",
+                    "unused_unverified": "unused (unverified)"
+                  },
+                  "nowrap": true
+                },
+                {
+                  "field": "usage_refs",
+                  "label": "Usages",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "users",
+                  "label": "Using objects",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "relationships",
+                  "label": "Relationships",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "used_branches",
+                  "label": "Branches with used TOs",
+                  "align": "right",
+                  "format": "count"
+                },
+                {
+                  "field": "anchor_to",
+                  "label": "Dead branch on"
+                },
+                {
+                  "field": "dead_group_size",
+                  "label": "Dead group size",
+                  "align": "right",
+                  "format": "count"
+                },
+                {
+                  "field": "low_confidence",
+                  "label": "Without DDR info",
+                  "valueLabels": {
+                    "true": "Yes",
+                    "false": "No"
+                  }
+                }
+              ],
+              "onRowClick": {
+                "action": "openObject",
+                "args": {
+                  "uuid": "{{nav_uuid}}",
+                  "type": "TableOccurrence",
+                  "file": "{{file_name}}"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "ddr_warning_card",
+        "props": {
+          "span": 12,
+          "title": "Without DDR info — classification unverified"
+        },
+        "visibleWhen": {
+          "dataset": "selected",
+          "field": "low_confidence",
+          "truthy": true
+        },
+        "children": [
+          {
+            "type": "Markdown",
+            "id": "ddr_warning_md",
+            "props": {
+              "content": "The file of this table occurrence was exported without DDR info. Formula references `Table::Field` are recognized only in the formula text, and evaluation contexts are missing — a usage can stay invisible. A *dead branch*, *dead island* or *unused* class is therefore marked *unverified*; *used* and *bridge* rest on usages that were found. Export the file again with DDR info before deleting anything."
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "dead_group_card",
+        "props": {
+          "span": 12,
+          "title": "Dead group — can be cleaned up together"
+        },
+        "data": {
+          "dataset": "dead_group"
+        },
+        "visibleWhen": {
+          "dataset": "selected",
+          "field": "has_dead_group",
+          "truthy": true
+        },
+        "children": [
+          {
+            "type": "Table",
+            "id": "dead_group_table",
+            "props": {
+              "rowKey": "nav_uuid",
+              "density": "compact",
+              "sortable": true,
+              "searchable": "auto",
+              "searchAutoThreshold": 3,
+              "searchPlaceholder": "Search table occurrence…",
+              "columns": [
+                {
+                  "field": "to_name",
+                  "label": "Table occurrence"
+                },
+                {
+                  "field": "base_table",
+                  "label": "Base table"
+                },
+                {
+                  "field": "relationships",
+                  "label": "Relationships",
+                  "align": "right",
+                  "format": "number"
+                }
+              ],
+              "onRowClick": {
+                "action": "openObject",
+                "args": {
+                  "uuid": "{{nav_uuid}}",
+                  "type": "TableOccurrence",
+                  "file": "{{file_name}}"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "details_card",
+        "props": {
+          "span": 12,
+          "title": "Usages of the selected table occurrence",
+          "keepChildrenOnEmpty": true
+        },
+        "data": {
+          "dataset": "details"
+        },
+        "visibleWhen": {
+          "dataset": "selected",
+          "field": "nav_uuid",
+          "truthy": true
+        },
+        "children": [
+          {
+            "type": "Table",
+            "id": "details_table",
+            "props": {
+              "rowKey": "row_key",
+              "density": "compact",
+              "sortable": true,
+              "searchable": "auto",
+              "searchAutoThreshold": 3,
+              "pageParam": "details_page",
+              "searchParam": "details_q",
+              "sortParam": "details_sort",
+              "clientMode": true,
+              "searchPlaceholder": "Search category, object or layout…",
+              "columns": [
+                {
+                  "field": "category",
+                  "label": "Category",
+                  "format": "badge"
+                },
+                {
+                  "field": "role",
+                  "label": "Role"
+                },
+                {
+                  "field": "user_type",
+                  "label": "Object type"
+                },
+                {
+                  "field": "user_name",
+                  "label": "Using object"
+                },
+                {
+                  "field": "container",
+                  "label": "Layout"
+                },
+                {
+                  "field": "user_file",
+                  "label": "File",
+                  "nowrap": true
+                },
+                {
+                  "field": "refs",
+                  "label": "References",
+                  "align": "right",
+                  "format": "number"
+                }
+              ],
+              "onRowClick": {
+                "action": "openObject",
+                "args": {
+                  "uuid": "{{nav_uuid}}",
+                  "type": "{{nav_type}}",
+                  "file": "{{user_file}}"
+                }
+              },
+              "empty": {
+                "message": "No usage — the table occurrence is not referenced anywhere."
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "notes_card",
+        "props": {
+          "span": 12,
+          "title": "How usage is counted"
+        },
+        "children": [
+          {
+            "type": "Markdown",
+            "id": "notes_md",
+            "props": {
+              "content": "**Where the numbers come from.** Every usage of a table occurrence counts — not only the edges of the object graph, but also every reference `Table::Field` in formulas (fields, scripts, custom functions, layout calculations), script steps and layout fields, plus layout and portal contexts, value lists (source, second field, related values starting from), lookups (source and start TO), break fields of layout parts, table-view columns, record access and the evaluation context of formulas.\n\n**Classes.**\n- *used*: at least one usage besides relationship sides. *rarely used* (at most the slider value) and *heavily used* (top 5 %) are views of it.\n- *bridge (path)*: used only as a relationship side, but it lies on the path between two used table occurrences — typically the join TO of an n:m relationship. Needed, do not delete.\n- *bridge (cascade delete)*: used only through a relationship that deletes related records.\n- *dead branch*: used only as a relationship side, and nothing beyond it is used. *Dead branch on* names the used TO it hangs on; the dead group lists the TOs that can go together.\n- *dead island*: no TO of its relationship group is used.\n- *unused*: no usage and no relationship.\n- *(unverified)*: a dead branch, dead island or unused table occurrence in a file without DDR info — a usage may be invisible there.\n\n**Limits.** Dynamic references (`GetField`, `Evaluate`, names inside SQL strings) are not visible, and neither is access from outside (OData, ODBC/JDBC). Files exported without DDR info have no resolved formula references: there, a `Table::Field` in the formula text counts instead (category *calculation_text*), evaluation contexts are missing. Their table occurrences are flagged *Without DDR info*, and the tile of the same name lists them. A dead branch is a review candidate, not a delete recommendation."
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
