@@ -10,6 +10,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 ---
 
+## [0.9.19] — 2026-11-16
+
+<!-- components:auto --> *Components: schema 1.40.0 · xml-import 5.5.0 (converter 2.45.0) · fm-spec 2.9.0 · plugin-spec 1.2.0*
+
+A security update: the REST API is hardened, its npm packages are refreshed, and the Docker image moves to the Node.js security release of 11 November. Update every installation — especially one that other computers can reach.
+
+- **Upgrading**
+  - **From 0.9.17 or 0.9.18** — run `bash tools/fmlab.sh update` in the fm-lab folder (`--dry-run` only shows what would be saved)
+  - **From 0.9.16 or older** — `git pull`; if it stops and lists files, run `bash -c "$(git show origin/main:tools/update.sh)"` in the fm-lab folder
+  - **Then restart fm-lab** — Docker: `bash tools/fmlab.sh up`; **VS Code Dev Container: run *Rebuild Container*** — a reopen keeps the old Node.js and the old npm packages; native: `bash tools/init.sh`, which installs the updated packages
+  - **Coming from 0.9.17** — this release contains 0.9.18: re-import your solutions once (full rebuild); until then the new dashboards of 0.9.18 ask for it
+- **REST API hardened** — hardening of the parameter substitution and of the API's database connections
+  - **Own dashboards and queries** — templates run without file access: `read_csv`, `read_text`, `glob`, `COPY` and `ATTACH` on other files, and extensions loaded on demand, are no longer available in dashboard SQL; see *SQL Templates → Runtime environment* in the documentation
+- **npm packages refreshed** — Express 5.3, Joi 18.3, Morgan 1.12, React Router 6.30.6 and their dependencies, without a major upgrade; the unused `concurrently` is gone. `npm audit --omit=dev` reports no high or critical finding; npm 11 no longer warns about the install scripts of `esbuild` and `@parcel/watcher` — both are declared as not needed (`allowScripts` in `package.json`), npm 10 ignores the entry
+- **Node.js security release** — the Docker image runs Node.js 26.13.1; `init.sh` checks native installations against the patched versions 22.23.5, 24.22.3 and 26.13.1 and recommends an update below them
+- **New documentation page *Network Access*** — fm-lab is meant for one workstation: who can reach it in each setup, how to work on a server through an SSH tunnel, and why `VITE_DEV_HOST=0.0.0.0` does not belong on a shared network. **With Docker, ports 3003 and 5173 are reachable from the network** — read the page if others share your network
+- **Claude Code finds DuckDB via `.claude/settings.local.json`** — `init.sh` writes the DuckDB path into the local settings file instead of the shipped `.claude/settings.json`, which now stays as released. An existing entry moves over at the next `init.sh` run; future updates are no longer blocked by it
+
+---
+
 ## [0.9.18] — 2026-11-08
 
 <!-- components:auto --> *Components: schema 1.40.0 · xml-import 5.5.0 (converter 2.45.0) · fm-spec 2.9.0 · plugin-spec 1.2.0*
@@ -1061,7 +1081,8 @@ Initial release: XML conversion pipeline, core database structure, and first AI 
 <!-- Link references. compare-ranges span adjacent tagged releases; documentation-only
      versions that were never tagged (e.g. 0.8.7, 0.8.1, 0.8.0, 0.7.5–0.7.7, …) are
      intentionally left unlinked and render as plain text. Add a line here per new tag. -->
-[Unreleased]: https://github.com/marcel-more/fm-lab/compare/v0.9.18...HEAD
+[Unreleased]: https://github.com/marcel-more/fm-lab/compare/v0.9.19...HEAD
+[0.9.19]: https://github.com/marcel-more/fm-lab/compare/v0.9.18...v0.9.19
 [0.9.18]: https://github.com/marcel-more/fm-lab/compare/v0.9.17...v0.9.18
 [0.9.17]: https://github.com/marcel-more/fm-lab/compare/v0.9.16...v0.9.17
 [0.9.16]: https://github.com/marcel-more/fm-lab/compare/v0.9.15...v0.9.16

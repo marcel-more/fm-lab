@@ -7,6 +7,7 @@ const { errorHandler } = require('./middleware/error-handler');
 const logger = require('./middleware/logger');
 const corsMiddleware = require('./middleware/cors');
 const createQueryParser = require('./middleware/query-normalizer');
+const { rejectRepeatedQueryParams } = require('./middleware/query-normalizer');
 const debugSessionMiddleware = require('./middleware/debug-session');
 
 /**
@@ -23,8 +24,9 @@ app.set('query parser', createQueryParser());
 // Middleware
 app.use(corsMiddleware);
 app.use(logger);
+// JSON bodies only — every client (web frontend, lite client, skills) sends
+// JSON; no form-encoded parser in the request path.
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 // Debug-Session: hängt req.debug an + loggt Request-Lifecycle in die korrelierte
 // Zeitachse (nur aktiv bei DEBUG_SESSION=1 oder X-Debug-Session-Header). Nach
@@ -51,8 +53,9 @@ app.use((req, res, next) => {
   }
 });
 
-// API Routes
-app.use('/api', routes);
+// API Routes — a parameter name repeated in the query string is rejected
+// before any route sees it (→ query-normalizer.js).
+app.use('/api', rejectRepeatedQueryParams, routes);
 
 // Lite web client (optional module): server-rendered HTML surface under /lite.
 // The liteweb/ directory may be absent in installations that ship only the

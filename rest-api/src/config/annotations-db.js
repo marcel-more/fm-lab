@@ -30,7 +30,11 @@ const { storageOptions } = require('./duckdb-storage');
  * sind No-ops — der Rest der API läuft unverändert weiter.
  */
 
-const pool = new Map(); // solutionId → slot { solutionId, promise, entry, available }
+const pool = new Map(); // solutionId → slot { solutionId, promise, entry, available, pending, closing }
+
+// Upper bound for draining a sidecar before it is closed: statements still
+// running after that are cut off.
+const DRAIN_TIMEOUT_MS = 60000;
 
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS NodeVisibility (
@@ -120,12 +124,21 @@ async function openEntry(solutionId) {
   return { instance, connection };
 }
 
-/** Slot beschaffen (lazy, in-flight-dedupliziert). Öffnen scheitert weich. */
+/**
+ * Slot beschaffen (lazy, in-flight-dedupliziert), mit Lease — der Aufrufer
+ * gibt ihn mit releaseSlot() zurück. Öffnen scheitert weich. Wird der Sidecar
+ * gerade geschlossen, wartet der Aufruf darauf und öffnet danach frisch: ein
+ * zweites READ_WRITE-Öffnen derselben Datei im selben Prozess scheiterte am Lock.
+ */
 async function acquireSlot(solutionId) {
   if (!environment.annotations.enabled) return null;
   let slot = pool.get(solutionId);
+  while (slot && slot.closing) {
+    await slot.closing;
+    slot = pool.get(solutionId);
+  }
   if (!slot) {
-    slot = { solutionId, promise: null, entry: null, available: false };
+    slot = { solutionId, promise: null, entry: null, available: false, pending: 0, closing: null };
     slot.promise = openEntry(solutionId)
       .then((entry) => {
         slot.entry = entry;
@@ -142,8 +155,32 @@ async function acquireSlot(solutionId) {
       });
     pool.set(solutionId, slot);
   }
-  await slot.promise;
+  slot.pending += 1; // before the await — see database.js acquireSlot()
+  await slot.promise; // never rejects (.catch above)
   return slot;
+}
+
+function releaseSlot(slot) {
+  if (!slot) return;
+  slot.pending -= 1;
+  if (slot.pending === 0 && slot.idleWaiters) {
+    for (const resolve of slot.idleWaiters.splice(0)) resolve(true);
+  }
+}
+
+/** Resolves true once the slot has no lease, false after `timeoutMs`. */
+function waitForIdle(slot, timeoutMs = DRAIN_TIMEOUT_MS) {
+  if (slot.pending <= 0) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    let timer = null;
+    const done = (idle) => { clearTimeout(timer); resolve(idle); };
+    (slot.idleWaiters || (slot.idleWaiters = [])).push(done);
+    timer = setTimeout(() => {
+      slot.idleWaiters = (slot.idleWaiters || []).filter((w) => w !== done);
+      resolve(false);
+    }, timeoutMs);
+    if (timer.unref) timer.unref();
+  });
 }
 
 /** Boot-Pfad: Sidecar der Server-Default-Lösung öffnen (wie bisher initialize()). */
@@ -153,6 +190,7 @@ async function initialize() {
     return null;
   }
   const slot = await acquireSlot(require('./solutions').getActiveSolutionId());
+  releaseSlot(slot);
   return slot && slot.entry ? slot.entry.connection : null;
 }
 
@@ -163,6 +201,7 @@ async function initialize() {
 async function isAvailable(ctx) {
   if (!environment.annotations.enabled) return false;
   const slot = await acquireSlot(ctxSolution(ctx));
+  releaseSlot(slot);
   return !!(slot && slot.available && slot.entry);
 }
 
@@ -188,15 +227,16 @@ function normalizeArgs(ctx, sql, params, fn) {
 async function query(ctxArg, sqlArg, paramsArg = []) {
   const { ctx, sql, params } = normalizeArgs(ctxArg, sqlArg, paramsArg, 'query');
   const slot = await acquireSlot(ctxSolution(ctx));
-  if (!slot || !slot.available || !slot.entry) return [];
   let stmt = null;
   try {
+    if (!slot || !slot.available || !slot.entry) return [];
     stmt = await slot.entry.connection.prepare(sql);
     if (params.length > 0) stmt.bind(params);
     const result = await stmt.run();
     return await result.getRowObjectsJS();
   } finally {
     if (stmt) { try { stmt.destroySync(); } catch { /* freed */ } }
+    releaseSlot(slot);
   }
 }
 
@@ -204,35 +244,52 @@ async function query(ctxArg, sqlArg, paramsArg = []) {
 async function run(ctxArg, sqlArg, paramsArg = []) {
   const { ctx, sql, params } = normalizeArgs(ctxArg, sqlArg, paramsArg, 'run');
   const slot = await acquireSlot(ctxSolution(ctx));
-  if (!slot || !slot.available || !slot.entry) throw new Error('Annotations sidecar not available');
   let stmt = null;
   try {
+    if (!slot || !slot.available || !slot.entry) throw new Error('Annotations sidecar not available');
     stmt = await slot.entry.connection.prepare(sql);
     if (params.length > 0) stmt.bind(params);
     await stmt.run();
   } finally {
     if (stmt) { try { stmt.destroySync(); } catch { /* freed */ } }
+    releaseSlot(slot);
   }
 }
 
 /**
  * Sidecar GENAU EINER Lösung schließen — gerufen von der Pool-Eviction/dem
  * gezielten Reload in config/database.js und vor Delete/Rename einer Lösung.
+ * Laufende Statements dürfen zu Ende laufen (höchstens DRAIN_TIMEOUT_MS); so
+ * lange bleibt der Slot im Pool und neue Anfragen warten (acquireSlot).
+ * `onlyIfIdle` (LRU-Eviction des Katalogs): ein Sidecar mit laufendem
+ * Statement bleibt offen, bis die Lösung das nächste Mal evictet wird.
  */
-async function closeSolution(solutionId) {
+async function closeSolution(solutionId, { onlyIfIdle = false } = {}) {
   const slot = pool.get(solutionId);
   if (!slot) return false;
-  pool.delete(solutionId);
-  try {
-    const entry = await slot.promise;
-    if (entry) {
-      entry.connection.disconnectSync();
-      entry.instance.closeSync();
-      console.log(`Annotations sidecar closed (solution: ${solutionId})`);
-    }
-  } catch (err) {
-    console.warn(`Annotations sidecar close error (solution: ${solutionId}): ${err.message}`);
+  if (slot.closing) {
+    await slot.closing;
+    return true;
   }
+  if (onlyIfIdle && slot.pending > 0) return false;
+  slot.closing = (async () => {
+    if (!(await waitForIdle(slot))) {
+      console.warn(`Annotations sidecar closed with ${slot.pending} running statement(s) after ${DRAIN_TIMEOUT_MS / 1000}s (solution: ${solutionId})`);
+    }
+    try {
+      const entry = await slot.promise;
+      if (entry) {
+        entry.connection.disconnectSync();
+        entry.instance.closeSync();
+        console.log(`Annotations sidecar closed (solution: ${solutionId})`);
+      }
+    } catch (err) {
+      console.warn(`Annotations sidecar close error (solution: ${solutionId}): ${err.message}`);
+    } finally {
+      if (pool.get(solutionId) === slot) pool.delete(solutionId);
+    }
+  })();
+  await slot.closing;
   return true;
 }
 

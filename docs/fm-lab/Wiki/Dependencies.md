@@ -107,7 +107,7 @@ The tested reference setup (checked by `tools/init.sh` at first run). *Required*
 | DuckDB CLI | any — supported from 1.5.6, below that `init.sh` warns | 2.0.x — between 1.5.6 and 2.0 `init.sh` shows an update hint with the standard installer command |
 | webbed extension | loadable | 2.13.0 |
 | DuckDB of the REST API (`@duckdb/node-api`) | bundled | 2.0.0 — reads catalogs of every DuckDB CLI from 1.0 on |
-| Node.js | 22 | the Node.js of the Docker image (26.13.0) — on a supported line below its major (22.x, 24.x) `init.sh` shows a hint; in any case a supported release line at its latest security release: 22.x ≥ 22.23.4, 24.x ≥ 24.22.1, 26.x ≥ 26.12.1 (security release of 2026-10-21) |
+| Node.js | 22 | the Node.js of the Docker image (26.13.1) — on a supported line below its major (22.x, 24.x) `init.sh` shows a hint; in any case a supported release line at its latest security release: 22.x ≥ 22.23.5, 24.x ≥ 24.22.3, 26.x ≥ 26.13.1 (security release of 2026-11-11) |
 | npm | 10 | — |
 | Python 3 | — | optional (code generation, Leiden clustering) |
 

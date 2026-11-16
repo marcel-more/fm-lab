@@ -18,7 +18,10 @@ const { storageOptions } = require('./duckdb-storage');
  *
  * Pool-Slot: { solutionId, promise, entry, pending, lastUsed }.
  * `promise` dedupliziert parallele Erst-Zugriffe (in-flight-Factory);
- * `pending` schützt Slots mit laufenden Queries vor der Eviction.
+ * `pending` zählt die Leases: acquireSlot() erhöht ihn SYNCHRON, bevor es auf
+ * die Factory wartet, releaseSlot() senkt ihn. Ein Slot mit Lease ist für die
+ * LRU-Eviction tabu — auch während seine Factory noch läuft und zwischen
+ * Bereitschaft und erster Query.
  */
 const pool = new Map(); // solutionId → slot
 let reloading = false;
@@ -108,15 +111,60 @@ async function createEntry(solutionId) {
   await require('./change-author-overlay').install(entry);
   await attachReferenceDb(entry);
   await attachPluginSpecDb(entry);
+  await restrictFileAccess(entry);
   return entry;
 }
 
 /**
- * Slot beschaffen (lazy, in-flight-dedupliziert) und auf Bereitschaft warten.
+ * Last step of the pool factory: the instance may no longer reach files or
+ * the network on its own, nor load or install extensions on demand.
+ * Databases attached above stay readable; afterwards
+ * only the file named in `allowed_paths` can be read (the MBS component
+ * exceptions CSV, see services/aggregations.js), no further ATTACH, COPY,
+ * INSTALL or read_* on any other path. The settings are instance-wide (every
+ * connection of this instance) and cannot be reverted at runtime.
+ *
+ * `lock_configuration` freezes every other setting; `threads` stays
+ * changeable because graph.service lowers it around the overview query.
+ * The spill directory (`temp_directory`) is unaffected by the restriction.
+ *
+ * DUCKDB_RESTRICT_FILE_ACCESS=0 skips this step (diagnosis only — e.g. to
+ * check whether a template fails because it reads a file not listed here).
+ * Any failure is fatal for the instance: a pool entry is never handed out
+ * half-restricted.
+ */
+async function restrictFileAccess(entry) {
+  if (process.env.DUCKDB_RESTRICT_FILE_ACCESS === '0') {
+    console.warn('  - file access restriction DISABLED (DUCKDB_RESTRICT_FILE_ACCESS=0)');
+    return;
+  }
+  const lit = (s) => `'${String(s).replace(/'/g, "''")}'`;
+  const allowedPaths = [require('../services/aggregations').MBS_CSV_PATH];
+  const statements = [
+    // No extension is loaded or installed on demand: what the API needs (json,
+    // icu, parquet, core_functions) is statically linked into the binding.
+    'SET autoload_known_extensions = false',
+    'SET autoinstall_known_extensions = false',
+    'SET allow_community_extensions = false',
+    `SET allowed_paths = [${allowedPaths.map(lit).join(', ')}]`,
+    'SET enable_external_access = false',
+    "SET allowed_configs = ['threads']",
+    'SET lock_configuration = true',
+  ];
+  for (const sql of statements) {
+    await (await entry.connection.prepare(sql)).run();
+  }
+  console.log(`  - file access restricted (allowed paths: ${allowedPaths.length}, extension autoload off, configuration locked)`);
+}
+
+/**
+ * Slot beschaffen (lazy, in-flight-dedupliziert), mit Lease, und auf
+ * Bereitschaft warten. Der Aufrufer MUSS releaseSlot(slot) aufrufen (finally).
  * Nach dem Anlegen eines NEUEN Slots wird der LRU-Überhang evictet.
  */
 async function acquireSlot(solutionId) {
   let slot = pool.get(solutionId);
+  let created = false;
   if (!slot) {
     slot = { solutionId, promise: null, entry: null, pending: 0, lastUsed: Date.now() };
     slot.promise = createEntry(solutionId)
@@ -131,11 +179,51 @@ async function acquireSlot(solutionId) {
         throw err;
       });
     pool.set(solutionId, slot);
-    evictOverflow(solutionId);
+    created = true;
   }
+  // Lease before the first await: otherwise a parallel request for another
+  // solution could evict this slot while its factory runs or before the
+  // caller's query starts — the query then hits a closed connection.
+  slot.pending += 1;
   slot.lastUsed = Date.now();
-  await slot.promise;
+  if (created) evictOverflow(solutionId);
+  try {
+    await slot.promise;
+  } catch (err) {
+    slot.pending -= 1;
+    throw err;
+  }
   return slot;
+}
+
+/** Lease aus acquireSlot() zurückgeben; holt eine aufgeschobene Eviction nach. */
+function releaseSlot(slot) {
+  slot.pending -= 1;
+  slot.lastUsed = Date.now();
+  if (slot.pending > 0) return;
+  if (slot.idleWaiters) {
+    for (const resolve of slot.idleWaiters.splice(0)) resolve(true);
+  }
+  if (pool.size > environment.duckdb.poolMax) evictOverflow(null);
+}
+
+// Upper bound for draining a slot before an explicit close (reload, delete,
+// rename): queries still running after that are cut off as before.
+const DRAIN_TIMEOUT_MS = 60000;
+
+/** Resolves true once the slot has no lease, false after `timeoutMs`. */
+function waitForIdle(slot, timeoutMs = DRAIN_TIMEOUT_MS) {
+  if (slot.pending <= 0) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    let timer = null;
+    const done = (idle) => { clearTimeout(timer); resolve(idle); };
+    (slot.idleWaiters || (slot.idleWaiters = [])).push(done);
+    timer = setTimeout(() => {
+      slot.idleWaiters = (slot.idleWaiters || []).filter((w) => w !== done);
+      resolve(false);
+    }, timeoutMs);
+    if (timer.unref) timer.unref();
+  });
 }
 
 /** Slot-Ressourcen schließen (best-effort; wartet eine laufende Factory ab). */
@@ -166,13 +254,14 @@ function evictOverflow(keepId) {
       if (!victim || slot.lastUsed < victim.lastUsed) { victimId = id; victim = slot; }
     }
     if (!victim) {
-      console.warn(`[db] pool over capacity (${pool.size} > ${environment.duckdb.poolMax}) but all entries busy — eviction deferred`);
+      console.warn(`[db] pool over capacity (${pool.size} > ${environment.duckdb.poolMax}) but all entries busy — eviction deferred until a lease is released`);
       return;
     }
     pool.delete(victimId);
     console.log(`[db] pool evict (LRU): ${victimId}`);
     closeSlot(victim); // async, nicht awaited — Queries laufen dort keine mehr
-    require('./annotations-db').closeSolution(victimId);
+    // A sidecar statement of that solution may still run — then it stays open.
+    require('./annotations-db').closeSolution(victimId, { onlyIfIdle: true });
   }
 }
 
@@ -180,6 +269,7 @@ function evictOverflow(keepId) {
 async function initialize() {
   try {
     const slot = await acquireSlot(solutions.getActiveSolutionId());
+    releaseSlot(slot);
     return slot.entry.connection;
   } catch (err) {
     // Storage-Mismatch ist kein Startabbruch: die API läuft weiter, damit das
@@ -474,11 +564,20 @@ function classifyPluginSpecMissing(err) {
   return e;
 }
 
-/** Pool-Eintrag einer Lösung schließen und entfernen (No-op, wenn keiner existiert). */
+/**
+ * Pool-Eintrag einer Lösung entfernen und schließen (No-op, wenn keiner existiert).
+ * Der Eintrag verlässt den Pool sofort — neue Anfragen öffnen frisch, also nach
+ * einem Import-Sync die neue Kopie (der Sync tauscht die Datei per rename aus,
+ * eine offene Instanz liest die alte weiter). Geschlossen wird erst, wenn die
+ * laufenden Leases zurückgegeben sind (höchstens DRAIN_TIMEOUT_MS).
+ */
 async function evictSolution(solutionId) {
   const slot = pool.get(solutionId);
   if (!slot) return false;
   pool.delete(solutionId);
+  if (!(await waitForIdle(slot))) {
+    console.warn(`[db] closing ${solutionId} with ${slot.pending} running quer${slot.pending === 1 ? 'y' : 'ies'} after ${DRAIN_TIMEOUT_MS / 1000}s`);
+  }
   await closeSlot(slot);
   return true;
 }
@@ -506,14 +605,18 @@ async function reload(solutionId) {
     }
 
     const slot = await acquireSlot(id);
-    const result = await executeQuery({ solution: id, requested: null }, 'SELECT COUNT(*) AS c FROM duckdb_tables()');
-    const tableCount = result.rows[0]?.c;
-    return {
-      status: 'reloaded',
-      solution: id,
-      tables: typeof tableCount === 'bigint' ? Number(tableCount) : tableCount,
-      path: slot.entry.dbPath,
-    };
+    try {
+      const result = await executeQuery({ solution: id, requested: null }, 'SELECT COUNT(*) AS c FROM duckdb_tables()');
+      const tableCount = result.rows[0]?.c;
+      return {
+        status: 'reloaded',
+        solution: id,
+        tables: typeof tableCount === 'bigint' ? Number(tableCount) : tableCount,
+        path: slot.entry.dbPath,
+      };
+    } finally {
+      releaseSlot(slot);
+    }
   } finally {
     reloading = false;
   }
@@ -572,8 +675,6 @@ async function executeQuery(ctx, sql, params = []) {
   const slot = await acquireSlot(solution);
 
   const startTime = Date.now();
-  slot.pending += 1;
-
   let stmt = null;
   try {
     stmt = await slot.entry.connection.prepare(sql);
@@ -605,8 +706,7 @@ async function executeQuery(ctx, sql, params = []) {
     const drift = require('../utils/schema-drift').classifySchemaDrift({ solution }, err);
     throw drift || err;
   } finally {
-    slot.pending -= 1;
-    slot.lastUsed = Date.now();
+    releaseSlot(slot);
     // Prepared Statement explizit freigeben. @duckdb/node-api hält die native
     // DuckDB-Ressource sonst bis zum GC — unter dem konservativen max_memory
     // akkumulieren scan-schwere Queries (z.B. /api/graph/subgraph) sonst bis
@@ -731,12 +831,10 @@ async function refreshChangeAuthorOverlay(ctx) {
   const { solution } = normalizeContext(ctx, 'refreshChangeAuthorOverlay');
   if (!pool.has(solution)) return 'skipped';
   const slot = await acquireSlot(solution);
-  slot.pending += 1;
   try {
     return await require('./change-author-overlay').install(slot.entry);
   } finally {
-    slot.pending -= 1;
-    slot.lastUsed = Date.now();
+    releaseSlot(slot);
   }
 }
 

@@ -155,6 +155,14 @@ Constraints for dashboard SQL (REST API layer):
   prefix on every column, no `SELECT *` / `t.*` over a join) — see B2.
 - The API DB runs in `READ_ONLY` mode with tight memory — avoid multi-evaluating
   expensive views (materialize or pre-aggregate; see `ClusterEdgesBaseMat` precedent).
+- ⚠️ **No file access, no extension loading on the API connection:** `read_csv`,
+  `read_json`, `read_text`, `glob`, `COPY`, `ATTACH`, `LOAD`/`INSTALL` fail with a
+  `Permission Error` (only `ref`, `plugref` and the MBS exceptions CSV are reachable).
+  Built in: `json`, `icu`, `parquet` — **not** `webbed`, so no `xml_extract_text`
+  in dashboard SQL. A query that works in the CLI can still fail in the API.
+- **Parameters are scalars only** (string, number, boolean, null); arrays/objects and
+  repeated query parameters answer 400. Multi-value filters travel as one
+  comma-separated string and are split with `string_split`.
 - Bundle IDs must be flat-unique across all dashboard folders.
 - Locale files: every bundle ships per-language locale JSONs (key parity across
   languages); localized labels come from the bundle, never hard-coded in SQL.

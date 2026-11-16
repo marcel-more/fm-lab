@@ -118,6 +118,15 @@ detail view's search (`sq` param), etc. See `references/primitives.md` §Actions
   `SET VARIABLE x = '…';` sets them (see `references/validation.md`).
 - Every `getvariable('p')` the SQL reads MUST be declared in `manifest.params`
   (type `string` / `number` / `boolean` — never `integer`/`int`/`float`/`bool`).
+- A parameter value is always one scalar (string, number, boolean, null). The
+  API rejects arrays and objects with 400 and a repeated query parameter
+  (`?type=a&type=b`) as well — a multi-value filter is ONE comma-separated
+  string, split in SQL with `string_split` (pattern below, `scope_uuids`).
+- The API connection reads no files and loads no extensions: `read_csv`,
+  `read_json`, `read_text`, `glob`, `COPY`, `ATTACH`, `LOAD`/`INSTALL` fail
+  with a `Permission Error`. Built in: `json`, `icu`, `parquet`; **no**
+  `webbed` (`xml_extract_text`) — match `*_XML` with `LIKE`/`regexp_*` or use
+  the resolved catalog tables. A CLI probe may load more than the API can run.
 - Per-dataset default values can additionally be set in
   `manifest.datasets[].params` (e.g. `{ "days": "all" }`); URL params override them.
 - **A param value arrives in three shapes — handle all three:**

@@ -76,8 +76,9 @@ apps/*/.env.production
 
 # Local Claude settings — .claude/settings.json is COMMITTED on purpose: it is the
 # bundle's default permission seed (kept in sync from publish-assets/.claude-settings.json
-# by the publisher; the devcontainer relies on it, its seed copy is fallback only).
-# Only user-local overrides stay ignored.
+# by the publisher; the devcontainer relies on it, its seed copy is fallback only) and
+# stays as released. User-local settings live in .claude/settings.local.json: the DuckDB
+# path that tools/init.sh writes (env.PATH) and the approvals Claude Code saves.
 .claude/settings.local.json
 .claude/worktrees/
 

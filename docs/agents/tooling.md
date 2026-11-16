@@ -46,8 +46,9 @@ nothing. The fm-lab shell tools and the REST API pin `DUCKDB_AGENT_MODE=0` thems
 
 If `which duckdb` fails (some native setups do not inherit the user's shell PATH), the fix is
 **PATH, not an absolute-path prefix**: `tools/init.sh` resolves the binary once and writes its
-directory into `.claude/settings.json → env.PATH`, so Claude Code always finds `duckdb` and the
-bare form keeps working. Re-run `init.sh` if the entry is missing. Only as a genuine last
+directory into `.claude/settings.local.json → env.PATH` (local, untracked — it takes
+precedence over the shipped `.claude/settings.json`, which stays unchanged), so Claude Code always
+finds `duckdb` and the bare form keeps working. Re-run `init.sh` if the entry is missing. Only as a genuine last
 resort call an absolute path directly (still no subshell, no `$DB`), and then stick to the two
 pre-approved locations `/usr/local/bin/duckdb` or `/opt/homebrew/bin/duckdb` — a home-installer
 path like `~/.duckdb/cli/latest/duckdb …` is **not** allow-listed and will prompt.

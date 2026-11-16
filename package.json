@@ -1,6 +1,6 @@
 {
   "name": "fm-lab",
-  "version": "0.9.18",
+  "version": "0.9.19",
   "description": "FM-Lab - Open Source framework for agentic FileMaker development",
   "private": true,
   "workspaces": [
@@ -28,12 +28,15 @@
   "author": "Marcel Moré",
   "license": "MIT",
   "devDependencies": {
-    "concurrently": "^8.2.2",
     "graphology": "^0.26.0",
     "graphology-communities-louvain": "^2.0.2"
   },
   "engines": {
     "node": ">=22.13.0",
     "npm": ">=10.0.0"
+  },
+  "allowScripts": {
+    "esbuild": false,
+    "@parcel/watcher": false
   }
 }

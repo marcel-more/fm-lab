@@ -35,7 +35,7 @@ curl -X POST http://localhost:3003/api/query \
   -d '{"template": "unused_scripts", "params": {"file": "Contacts"}, "format": "markdown"}'
 ```
 
-**Response (json):** the standard envelope with `data` as an array of result rows. Errors: `404 TEMPLATE_NOT_FOUND` (also for a system template — those answer only `/report`), `500 TEMPLATE_ERROR` (template failed during execution), `409 SCHEMA_DRIFT` (catalog older than the template expects — re-import the XML).
+**Response (json):** the standard envelope with `data` as an array of result rows. Errors: `400 VALIDATION_ERROR` (a parameter value of an unsupported type, a repeated query parameter — see [Template parameter notes](#template-parameter-notes)), `404 TEMPLATE_NOT_FOUND` (also for a system template — those answer only `/report`), `500 TEMPLATE_ERROR` (template failed during execution), `409 SCHEMA_DRIFT` (catalog older than the template expects — re-import the XML).
 
 A single-file dashboard answers here and at `/api/dashboards/<name>/data` with the same rows; paged ones take `page`, `q`, `sort`/`dir` and `page_size` (see [Server paging](../../templates/Single-file%20Dashboards.md#server-paging-sorting-and-search)).
 
@@ -56,6 +56,8 @@ Enumerate the installed templates with their metadata (name, description, expect
 ## Template parameter notes
 
 - Parameters are substituted by a named-placeholder preprocessor — numbers belong in the JSON unquoted, strings quoted.
+- A parameter value is a single scalar: string, finite number, boolean or `null`. Arrays and objects (also inside a JSON-encoded `params`) are rejected with `400 VALIDATION_ERROR`; `details.parameter` and `details.type` name the parameter and the rejected type. Pass a list as one delimited string (`"a,b,c"`) and split it in the template, e.g. with `string_split(getvariable('ids'), ',')`.
+- Each parameter appears at most once per query string — `?file=a&file=b` (also across spellings, `?File=a&file=b`) is rejected with `400 VALIDATION_ERROR` (see [REST API Conventions](../REST%20API%20Conventions.md#common-query-parameters)).
 - Templates are locale-independent by convention (they match on IDs such as `Step_ID`, never on localized display names).
 
 See also: [REST API Output Formats](../REST%20API%20Output%20Formats.md) (mermaid rendering of graph-shaped query results), [REST API Conventions](../REST%20API%20Conventions.md).

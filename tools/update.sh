@@ -21,6 +21,9 @@
 #
 # Release-specific migrations (run before saving):
 #   CLAUDE.md with a pinned `language: <code>` → .fmlab/user.local.json agent_language
+#   .claude/settings.json whose only change is env.PATH (written by init.sh up to
+#   v0.9.18) → env.PATH moves to .claude/settings.local.json, the file is restored
+#   instead of saved (needs node; without it the file is saved like any other)
 #
 # Options:  --dry-run   show what would be saved and why, change nothing
 #           --no-fetch  use the release fetched earlier (offline)
@@ -169,6 +172,31 @@ if grep -Fxq "$(printf 'edited\tCLAUDE.md')" "$TMP/collisions"; then
     [ "$PINNED_LANGUAGE" = "auto" ] && PINNED_LANGUAGE=""
 fi
 
+# .claude/settings.json edited only by an older init.sh (env.PATH): the path moves to
+# the local settings file instead of a backup. The comparison ignores key order and
+# drops env.PATH and an empty env on both sides; anything else counts as an own edit.
+SETTINGS_PATH=""
+if grep -Fxq "$(printf 'edited\t.claude/settings.json')" "$TMP/collisions" && command -v node >/dev/null 2>&1 \
+    && git show "$OLD:.claude/settings.json" > "$TMP/settings.shipped.json" 2>/dev/null; then
+    SETTINGS_PATH="$(node -e '
+        const fs = require("fs"); const [own, shipped] = process.argv.slice(1);
+        const strip = (o) => { const c = JSON.parse(JSON.stringify(o || {}));
+            if (c.env && typeof c.env === "object") { delete c.env.PATH; if (!Object.keys(c.env).length) delete c.env; }
+            return c; };
+        const canon = (v) => Array.isArray(v) ? "[" + v.map(canon).join(",") + "]"
+            : v && typeof v === "object" ? "{" + Object.keys(v).sort().map((k) => JSON.stringify(k) + ":" + canon(v[k])).join(",") + "}"
+            : JSON.stringify(v);
+        const a = JSON.parse(fs.readFileSync(own, "utf8")); const b = JSON.parse(fs.readFileSync(shipped, "utf8"));
+        const p = a.env && a.env.PATH;
+        if (p && p !== (b.env && b.env.PATH) && canon(strip(a)) === canon(strip(b))) process.stdout.write(p);
+    ' .claude/settings.json "$TMP/settings.shipped.json" 2>/dev/null || true)"
+fi
+if [ -n "$SETTINGS_PATH" ]; then
+    grep -Fxv "$(printf 'edited\t.claude/settings.json')" "$TMP/collisions" > "$TMP/collisions.rest" || true
+    cat "$TMP/collisions.rest" > "$TMP/collisions"
+    COUNT="$(grep -c . "$TMP/collisions" || true)"
+fi
+
 describe() {  # $1 = reason
     case "$1" in
         edited)    echo "changed here, the update brings a new version" ;;
@@ -187,6 +215,7 @@ else
     done < "$TMP/collisions"
     [ -n "$PINNED_LANGUAGE" ] && echo "  Your language setting '$PINNED_LANGUAGE' from CLAUDE.md moves to .fmlab/user.local.json."
 fi
+[ -n "$SETTINGS_PATH" ] && echo "  The DuckDB path in .claude/settings.json moves to .claude/settings.local.json; the file returns to its shipped version."
 
 if [ "$DRY_RUN" = "1" ]; then
     echo ""
@@ -217,6 +246,18 @@ set_agent_language() {  # $1 = language code → .fmlab/user.local.json (agent_l
     fi
 }
 
+move_settings_path() {  # $1 = env.PATH value → .claude/settings.local.json, then restore settings.json
+    local f=".claude/settings.local.json"
+    node -e '
+        const fs = require("fs"); const [f, p] = process.argv.slice(1);
+        let d = {};
+        if (fs.existsSync(f) && fs.readFileSync(f, "utf8").trim()) d = JSON.parse(fs.readFileSync(f, "utf8"));
+        d.env = d.env && typeof d.env === "object" ? d.env : {};
+        if (!d.env.PATH) d.env.PATH = p;
+        fs.writeFileSync(f, JSON.stringify(d, null, 2) + "\n");' "$f" "$1" \
+        && git checkout -q "$OLD" -- .claude/settings.json
+}
+
 # Shipped unit an edited file belongs to (empty when none): the nearest folder with
 # manifest.json below rest-api/templates/dashboards/ or with test.json below
 # rest-api/templates/tests/; a .sql file outside a bundle is its own unit. The old
@@ -240,6 +281,16 @@ unit_of() {
         rest-api/templates/dashboards/*.sql) echo "$p" ;;
     esac
 }
+
+if [ -n "$SETTINGS_PATH" ] && ! move_settings_path "$SETTINGS_PATH"; then
+    # The local settings file could not be written (e.g. invalid JSON): the file is
+    # saved like any other edited file instead, so the update still goes through.
+    warn "Could not move the DuckDB path to .claude/settings.local.json — saving .claude/settings.json instead."
+    printf 'edited\t.claude/settings.json\n' >> "$TMP/collisions"
+    sort -u -o "$TMP/collisions" "$TMP/collisions"
+    COUNT="$(grep -c . "$TMP/collisions" || true)"
+    SETTINGS_PATH=""
+fi
 
 BACKUP=""
 if [ "$COUNT" != "0" ]; then
@@ -312,6 +363,7 @@ if [ -n "$BACKUP" ]; then
     echo "  Edited dashboards and tests among them come back as own versions under Custom at the next start."
 fi
 [ -n "$PINNED_LANGUAGE" ] && echo "  Language for the AI agent: '$PINNED_LANGUAGE' (change with: bash tools/fmlab.sh language <code>)."
+[ -n "$SETTINGS_PATH" ] && echo "  DuckDB path for Claude Code: now in .claude/settings.local.json."
 
 # Pathspec instead of `printf | grep -q`: under pipefail grep's early exit makes printf
 # fail with SIGPIPE on a long file list, which hid this hint (seen with 2,800 files).

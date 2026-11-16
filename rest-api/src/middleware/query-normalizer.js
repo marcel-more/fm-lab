@@ -1,4 +1,5 @@
 const querystring = require('querystring');
+const { createError } = require('./error-handler');
 
 /**
  * Query Parameter Name Normalizer
@@ -46,5 +47,32 @@ function createQueryParser() {
   };
 }
 
+/**
+ * Middleware: rejects a query string that names the same parameter more than
+ * once (`?file=a&file=b`, also across spellings like `?File=a&file=b`).
+ *
+ * `querystring.parse` turns a repeated name into an array. No endpoint takes
+ * a list that way — lists travel as one delimited string — so a repeated name
+ * is answered with 400 instead of picking one of the values silently.
+ */
+function rejectRepeatedQueryParams(req, res, next) {
+  const raw = typeof req.url === 'string' ? req.url.split('?')[1] : undefined;
+  if (!raw) return next();
+  const seen = new Set();
+  for (const [key, value] of Object.entries(querystring.parse(raw))) {
+    const name = key.toLowerCase();
+    if (Array.isArray(value) || seen.has(name)) {
+      return next(createError(
+        'VALIDATION_ERROR',
+        `Query parameter '${name}' must not be given more than once`,
+        { parameter: name }
+      ));
+    }
+    seen.add(name);
+  }
+  return next();
+}
+
 module.exports = createQueryParser;
 module.exports.createQueryParser = createQueryParser;
+module.exports.rejectRepeatedQueryParams = rejectRepeatedQueryParams;

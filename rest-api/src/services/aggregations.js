@@ -568,6 +568,7 @@ function buildPseudoUsageSql() {
 }
 
 module.exports = {
+  MBS_CSV_PATH,
   PSEUDO_TOKEN_TYPES,
   USAGE_TYPES,
   buildUsageCTE,

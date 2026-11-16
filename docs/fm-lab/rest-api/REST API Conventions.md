@@ -40,6 +40,8 @@ Most read endpoints accept these parameters (validated centrally; unknown parame
 
 Boolean parameters accept `true`/`false`. Enum-valued parameters are case-insensitive.
 
+Parameter **names** are case-insensitive as well (`objectType` and `objecttype` are the same parameter). Each name may appear only once per query string: a repeated name — `?file=a&file=b`, also in different spellings — answers `400 VALIDATION_ERROR` with `details.parameter`. Lists travel as one comma-separated value (e.g. `types=Script,Layout`).
+
 ## Solution scoping (X-Solution)
 
 A workspace manages one or more imported solutions. Every request is served from a per-solution read copy of the catalog database:
@@ -73,7 +75,7 @@ Errors use the same envelope with `success: false`:
 
 | Code | HTTP | Meaning |
 |---|---|---|
-| `VALIDATION_ERROR` | 400 | Invalid or missing request parameters (`details.errors` lists field-level messages) |
+| `VALIDATION_ERROR` | 400 | Invalid or missing request parameters (`details.errors` lists field-level messages; a single rejected parameter is named in `details.parameter`) |
 | `SOLUTION_NOT_FOUND` | 404 | Unknown solution id in `X-Solution`, `?solution=` or a solutions endpoint |
 | `OBJECT_NOT_FOUND` | 404 | No catalog object matches the given UUID/identifier |
 | `AMBIGUOUS_UUID` | 409 | UUID exists in multiple files — retry with `file=<File_Name>` |

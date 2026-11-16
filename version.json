@@ -1,18 +1,18 @@
 {
   "manifest_schema": "1.0",
-  "version": "0.9.18",
-  "generated_at": "2026-11-08T17:56:13.164Z",
-  "source_commit": "90f0b02e",
+  "version": "0.9.19",
+  "generated_at": "2026-11-16T09:52:17.326Z",
+  "source_commit": "d112cb69",
   "components": {
     "rest_api": {
       "scheme": "A",
-      "version": "0.9.18",
+      "version": "0.9.19",
       "source": "rest-api/package.json",
       "on_change": "restart_api"
     },
     "web": {
       "scheme": "A",
-      "version": "0.9.18",
+      "version": "0.9.19",
       "source": "apps/web/package.json",
       "on_change": "rebuild_web"
     },
@@ -24,7 +24,7 @@
     },
     "claude_md": {
       "scheme": "A",
-      "version": "0.9.18",
+      "version": "0.9.19",
       "source": "CLAUDE.md",
       "on_change": "copy_file"
     },
@@ -138,7 +138,7 @@
     },
     {
       "name": "create-custom-dashboard",
-      "version": "0.9.18"
+      "version": "0.9.19"
     },
     {
       "name": "create-custom-test",

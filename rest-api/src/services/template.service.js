@@ -268,8 +268,13 @@ async function loadTemplate(templateName, templateDir) {
 function interpolateTemplate(templateContent, params = {}) {
   let sql = templateContent;
 
-  // Escape single quotes in string parameters
-  const escapeParam = (value) => {
+  // Render a parameter value as a SQL literal. Only scalar types have a safe
+  // literal form: strings are quoted, finite numbers and bigints are emitted as
+  // numeric literals (negative ones parenthesised, so a preceding `-` can never
+  // form a `--` comment), booleans and null map to their keywords. Every other
+  // type (arrays, objects, NaN, Infinity, functions, symbols, …) is rejected —
+  // lists reach a template as a delimited string and are split in SQL.
+  const escapeParam = (value, name) => {
     if (value === null || value === undefined) {
       return 'NULL';
     }
@@ -279,7 +284,18 @@ function interpolateTemplate(templateContent, params = {}) {
     if (typeof value === 'boolean') {
       return value ? 'TRUE' : 'FALSE';
     }
-    return String(value);
+    if ((typeof value === 'number' && Number.isFinite(value)) || typeof value === 'bigint') {
+      const literal = String(value);
+      return literal.startsWith('-') ? `(${literal})` : literal;
+    }
+    const kind = Array.isArray(value) ? 'array'
+      : typeof value === 'number' ? 'non-finite number'
+        : typeof value;
+    throw createError(
+      'VALIDATION_ERROR',
+      `Parameter '${name}' has an unsupported type (${kind}); expected a string, number, boolean or null`,
+      { parameter: name, type: kind }
+    );
   };
 
   // Substitution order matters: the getvariable() pass — the one used by the
@@ -294,7 +310,7 @@ function interpolateTemplate(templateContent, params = {}) {
   // 1. Replace named parameters :var_name (e.g. the `file` dashboard's `:file`)
   sql = sql.replace(/:(\w+)/g, (match, varName) => {
     if (varName in params) {
-      return escapeParam(params[varName]);
+      return escapeParam(params[varName], varName);
     }
     return 'NULL';
   });
@@ -304,7 +320,7 @@ function interpolateTemplate(templateContent, params = {}) {
     const index = parseInt(position, 10) - 1;
     const paramsArray = Object.values(params);
     if (index >= 0 && index < paramsArray.length) {
-      return escapeParam(paramsArray[index]);
+      return escapeParam(paramsArray[index], `$${position}`);
     }
     return 'NULL';
   });
@@ -312,7 +328,7 @@ function interpolateTemplate(templateContent, params = {}) {
   // 3. Replace DuckDB-style getvariable('var_name') — LAST (see note above).
   sql = sql.replace(/getvariable\('([^']+)'\)/g, (match, varName) => {
     if (varName in params) {
-      return escapeParam(params[varName]);
+      return escapeParam(params[varName], varName);
     }
     // Keep NULL for missing parameters
     return 'NULL';

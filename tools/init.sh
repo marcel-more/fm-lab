@@ -101,9 +101,9 @@ version_cmp() {
 # Node.js security floor per supported release line: the version of the latest
 # security release on each line. Update on every Node.js security release —
 # release lines missing here are end-of-life (no more security fixes).
-# Source: https://nodejs.org/en/blog/vulnerability/october-2026-security-releases
-NODE_SECURITY_RELEASE="2026-10-21"
-NODE_SECURITY_FLOOR="22.23.4 24.22.1 26.12.1"
+# Source: https://nodejs.org/en/blog/vulnerability/november-2026-security-releases
+NODE_SECURITY_RELEASE="2026-11-11"
+NODE_SECURITY_FLOOR="22.23.5 24.22.3 26.13.1"
 
 # Warn (recommendation only — never aborts) when Node.js is below the security
 # floor of its release line, or on a line that no longer receives security fixes.
@@ -171,7 +171,8 @@ check_node_recommended() {
     *" $maj."*) ;;
     *) return 0 ;;
   esac
-  info "Node.js $installed is supported; recommended is Node.js $rec_maj (the version of the Docker image, $rec)."
+  # ⚠ like the summary line (summary_warn below) — a ✓ here contradicted it.
+  warn "Node.js $installed is supported; recommended is Node.js $rec_maj (the version of the Docker image, $rec)."
   echo  "    → https://nodejs.org/en/download   (init continues; this is a recommendation)"
   summary_warn "Node.js version   v$installed supported, $rec_maj.x recommended (see above)"
 }
@@ -417,7 +418,7 @@ if command -v node &>/dev/null; then
   NODE_VER=$(node --version)
   NODE_MAJOR=$(major_of "$NODE_VER")
   if [ -z "$NODE_MAJOR" ]; then
-    error "Node.js reported an unreadable version: '$NODE_VER' (expected e.g. v22.23.4)."
+    error "Node.js reported an unreadable version: '$NODE_VER' (expected e.g. v22.23.5)."
     diagnose_tool_path node 22
     ok=false
   elif [ "$NODE_MAJOR" -ge 22 ]; then
@@ -547,46 +548,125 @@ else
   summary_add "Claude settings   already present (skipped)"
 fi
 
-# ─── DuckDB path → .claude/settings.json ─────────────────────
+# ─── DuckDB path → .claude/settings.local.json ───────────────
 # VS Code / Claude Code inherits a restricted PATH and may not find DuckDB.
 # We write the resolved binary directory into env.PATH so Claude Code can
 # always locate duckdb without trying to install it. The resolved directory goes
 # first, and every other DuckDB-installer directory (~/.duckdb/cli/<version>,
 # ~/.duckdb/cli/latest) is dropped — otherwise each init run with another version
 # stacked one more entry and an old version folder could shadow the current one.
+#
+# The path goes into the LOCAL settings file (untracked, project-local settings
+# take precedence over .claude/settings.json). The shipped .claude/settings.json
+# stays as released, so an update that changes it is never blocked by a local
+# edit. Migration: earlier versions wrote env.PATH into .claude/settings.json —
+# if that is the ONLY difference to the shipped file, the path moves to the
+# local file and .claude/settings.json is restored. Other own changes stay
+# untouched (with a hint).
 
-if [ -n "$DUCKDB_DIR" ] && [ -f "$SETTINGS_FILE" ]; then
+LOCAL_SETTINGS_FILE="$PROJECT_ROOT/.claude/settings.local.json"
+if [ -n "$DUCKDB_DIR" ] && [ -d "$PROJECT_ROOT/.claude" ]; then
   export DUCKDB_DIR PROJECT_ROOT
   path_result=$(node - <<'NODEEOF'
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const settingsPath = process.env.PROJECT_ROOT + '/.claude/settings.json';
-const duckdbDir   = process.env.DUCKDB_DIR;
-const settings    = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-settings.env      = settings.env || {};
-const existingPath = settings.env.PATH || '';
-// Keep the rest of an explicit PATH; without one fall back to common system dirs
-// so other tools still work.
-const base = (existingPath || '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin').split(':').filter(Boolean);
+const { execFileSync } = require('child_process');
+const root = process.env.PROJECT_ROOT;
+const sharedPath = path.join(root, '.claude', 'settings.json');
+const localPath  = path.join(root, '.claude', 'settings.local.json');
+const duckdbDir  = process.env.DUCKDB_DIR;
+const out = [];
+const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
+// Canonical form for the comparison: sorted keys, env.PATH and an empty env dropped.
+const withoutPath = (obj) => {
+  const copy = JSON.parse(JSON.stringify(obj || {}));
+  if (copy.env && typeof copy.env === 'object') {
+    delete copy.env.PATH;
+    if (Object.keys(copy.env).length === 0) delete copy.env;
+  }
+  return copy;
+};
+const canon = (v) => (Array.isArray(v) ? `[${v.map(canon).join(',')}]`
+  : v && typeof v === 'object' ? `{${Object.keys(v).sort().map((k) => `${JSON.stringify(k)}:${canon(v[k])}`).join(',')}}`
+    : JSON.stringify(v));
+
+let shared = null;
+try { shared = readJson(sharedPath); } catch { /* missing or unreadable: no migration, no fallback */ }
+
+// Migration: env.PATH in an otherwise unchanged .claude/settings.json.
+let migratedPath = '';
+let shipped = null;
+try {
+  shipped = JSON.parse(execFileSync('git', ['-C', root, 'show', 'HEAD:.claude/settings.json'],
+    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
+} catch { /* no git checkout, or the file is not tracked */ }
+if (shared && shipped && canon(shared) !== canon(shipped)) {
+  const ownPath = shared.env && shared.env.PATH;
+  const shippedPath = shipped.env && shipped.env.PATH;
+  if (canon(withoutPath(shared)) === canon(withoutPath(shipped)) && ownPath && ownPath !== shippedPath) {
+    migratedPath = ownPath;
+    out.push('migrate');
+  } else {
+    out.push('shared-edited');
+  }
+}
+
+// env.PATH in the local settings file (created when missing, merged otherwise).
+let local = {};
+if (fs.existsSync(localPath)) {
+  try {
+    local = readJson(localPath);
+  } catch {
+    // Never restore settings.json here: its env.PATH would be lost.
+    process.stdout.write(out.filter((t) => t !== 'migrate').concat('local-invalid').join(' '));
+    process.exit(0);
+  }
+}
+local.env = local.env && typeof local.env === 'object' ? local.env : {};
+const existingPath = local.env.PATH || '';
+// Keep the rest of an explicit PATH; without one start from the migrated or the
+// shipped value, else from common system dirs so other tools still work.
+const seed = existingPath || migratedPath || (shared && shared.env && shared.env.PATH)
+  || '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin';
 const installerRoot = path.join(os.homedir(), '.duckdb', 'cli') + path.sep;
-const rest = base.filter((p) => p !== duckdbDir && !p.startsWith(installerRoot));
+const rest = seed.split(':').filter(Boolean).filter((p) => p !== duckdbDir && !p.startsWith(installerRoot));
 const next = [duckdbDir, ...rest].join(':');
 if (next !== existingPath) {
-  settings.env.PATH = next;
-  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
-  process.stdout.write('changed');
+  local.env.PATH = next;
+  fs.writeFileSync(localPath, JSON.stringify(local, null, 2) + '\n');
+  out.push('changed');
 } else {
-  process.stdout.write('unchanged');
+  out.push('unchanged');
 }
+process.stdout.write(out.join(' '));
 NODEEOF
 )
-  if [ "$path_result" = "changed" ]; then
-    info "DuckDB path written to .claude/settings.json"
-    summary_add "Claude Code PATH  $DUCKDB_DIR set first in .claude/settings.json"
-  else
-    info "DuckDB path already set in .claude/settings.json"
-  fi
+  case " $path_result " in
+    *" local-invalid "*)
+      warn ".claude/settings.local.json is not valid JSON — DuckDB path not written; fix or remove the file and run init.sh again"
+      summary_warn "Claude Code PATH  .claude/settings.local.json unreadable (skipped)"
+      ;;
+    *" changed "*)
+      info "DuckDB path written to .claude/settings.local.json"
+      summary_add "Claude Code PATH  $DUCKDB_DIR set first in .claude/settings.local.json"
+      ;;
+    *)
+      info "DuckDB path already set in .claude/settings.local.json"
+      ;;
+  esac
+  case " $path_result " in
+    *" migrate "*)
+      if git -C "$PROJECT_ROOT" checkout -q -- .claude/settings.json 2>/dev/null; then
+        info "DuckDB path moved from .claude/settings.json — the file is back to its shipped version"
+        summary_add "Claude settings   env.PATH moved to settings.local.json, settings.json restored"
+      fi
+      ;;
+    *" shared-edited "*)
+      warn ".claude/settings.json has own changes — left as it is. Own settings belong in .claude/settings.local.json; otherwise a future update has to set the file aside first"
+      summary_warn "Claude settings   .claude/settings.json edited locally (left untouched)"
+      ;;
+  esac
 fi
 
 # ─── Logs directory ───────────────────────────────────────────

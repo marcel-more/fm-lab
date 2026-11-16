@@ -16,6 +16,7 @@
 ## Using FM-Lab
 
 - [Installation](Wiki/Installation.md)
+- [Network Access](Wiki/Network%20Access.md)
 - [Quickstart](Wiki/Quickstart.md)
 - First steps
 - What to do next

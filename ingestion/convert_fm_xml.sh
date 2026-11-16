@@ -689,6 +689,10 @@ TURBO_FUSE_AWK="$ENGINE_ROOT/engine/turbo_phaseS_fuse.awk"
 # work) preferred, gawk/awk fallback. Override via FM_AWK_BIN. Byte transparency
 # is enforced via LC_ALL=C at the call site (mawk is byte-transparent).
 AWK_BIN="${FM_AWK_BIN:-$(command -v mawk || command -v gawk || command -v awk)}"
+# true when AWK_BIN mishandles NUL bytes in its input (set by the self-probe below,
+# e.g. the BSD awk of macOS): the turbo pass then gets its input through
+# `tr -d '\000'` first. FM_AWK_NUL_PRESTRIP=1 forces it (test hook).
+AWK_NUL_PRESTRIP=false; [ "${FM_AWK_NUL_PRESTRIP:-}" = "1" ] && AWK_NUL_PRESTRIP=true
 
 # A-B9: macOS/BSD date does not know %N (returns the literal 'N' → all durations
 # lose the sub-seconds or carry '…N' remnants). One-off capability probe;
@@ -1643,9 +1647,10 @@ fi
 # detect it. This probe pushes reference bytes through the REAL fuse pass and
 # byte-compares (od) against the tr reference chain from preprocess_file.
 # Divergence = hard abort with remediation; escape hatch FM_SKIP_AWK_PROBE=1.
-# NUL input is probed separately as a WARNING only: input-NUL record handling of
-# some awks is unverified terrain, and no real-world failure is on record — a
-# hard abort there could ground platforms whose files never contain NUL.
+# NUL input is probed separately: some awks (the BSD awk of macOS) cut a line at
+# a NUL byte. Instead of aborting or warning on every run, the turbo pass then
+# strips NUL with tr before the awk (AWK_NUL_PRESTRIP) — the tr reference chain
+# deletes NUL as well, so the output stays identical.
 if $TURBO_MODE && [ "${FM_SKIP_AWK_PROBE:-}" != "1" ]; then
     # Template form so BSD mktemp honors TMPDIR (bare `mktemp -d` on macOS always
     # goes via _CS_DARWIN_USER_TEMP_DIR to /var/folders/…). Guard explicitly:
@@ -1682,9 +1687,13 @@ if $TURBO_MODE && [ "${FM_SKIP_AWK_PROBE:-}" != "1" ]; then
     fi
     _probe_nul='V\000W\003X\n'
     if [ "$(_probe_fuse "$_probe_nul")" != "$(_probe_ref "$_probe_nul")" ]; then
-        echo "WARNING: AWK self-probe — '$AWK_BIN' diverges from the tr reference on NUL input"
-        echo "         (files containing 0x00 may lose bytes on the turbo path). Please report"
-        echo "         this platform/awk combination. mawk/gawk handle NUL input correctly."
+        AWK_NUL_PRESTRIP=true
+        # Verify the remedy: the probe with NUL stripped beforehand must match the reference.
+        if [ "$(_probe_fuse 'VW\003X\n')" != "$(_probe_ref "$_probe_nul")" ]; then
+            echo "WARNING: AWK self-probe — '$AWK_BIN' diverges from the tr reference on NUL input,"
+            echo "         even with NUL stripped beforehand (files containing 0x00 may lose bytes on"
+            echo "         the turbo path). Please report this platform/awk combination."
+        fi
     fi
     rm -rf "$_probe_dir"
 fi

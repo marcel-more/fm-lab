@@ -1301,10 +1301,17 @@ _turbo_split_one_file() {
     # the bash preprocess_file gating (WS_SENTINEL_ON). 0 = webbed preserves whitespace natively →
     # CR is kept (parser normalizes to LF). Default 1 (sentinel ON, conservative).
     local _ws_sentinel=1; [ "${WS_SENTINEL_ON:-true}" = "false" ] && _ws_sentinel=0
-    NCHUNKS=$(LC_ALL=C "$AWK_BIN" -v outdir="$cdir" -v subchunk="$SUBCHUNK" -v recmap="$EFFECTIVE_RECMAP" \
-                  -v separate="$SPLIT_SEPARATE" -v nest="$NEST_MAP" -v ws_sentinel="$_ws_sentinel" \
-                  -v chunkmap="$cdir/chunkmap.tsv" -v counts="$cdir/counts.tsv" -v rules="$_rules" \
-                  -f "$KATANA_COMMON_AWK" -f "$TURBO_FUSE_AWK" < "$UTF8" 2>>"$out")
+    local _fuse_args=(-v outdir="$cdir" -v subchunk="$SUBCHUNK" -v recmap="$EFFECTIVE_RECMAP"
+                      -v separate="$SPLIT_SEPARATE" -v nest="$NEST_MAP" -v ws_sentinel="$_ws_sentinel"
+                      -v chunkmap="$cdir/chunkmap.tsv" -v counts="$cdir/counts.tsv" -v rules="$_rules"
+                      -f "$KATANA_COMMON_AWK" -f "$TURBO_FUSE_AWK")
+    if ${AWK_NUL_PRESTRIP:-false}; then
+        # This awk cuts lines at NUL (self-probe) — strip NUL first, as the tr reference does.
+        echo "  NUL pre-strip (tr) before the fused pass ($AWK_BIN)" >>"$out"
+        NCHUNKS=$(LC_ALL=C tr -d '\000' < "$UTF8" | LC_ALL=C "$AWK_BIN" "${_fuse_args[@]}" 2>>"$out")
+    else
+        NCHUNKS=$(LC_ALL=C "$AWK_BIN" "${_fuse_args[@]}" < "$UTF8" 2>>"$out")
+    fi
     [ -n "$_t5_on" ] && echo "@T5 ${idx} fuse_end $(now_epoch)" >>"$out"
     if [ -z "$NCHUNKS" ] || [ ! -f "$cdir/chunk_000_main.xml" ]; then
         echo "  ERROR: XML split failed" >>"$out"; $_UTF8_IS_SRC || rm -f "$UTF8"; return 3

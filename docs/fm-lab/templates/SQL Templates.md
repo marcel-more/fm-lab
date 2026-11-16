@@ -76,15 +76,38 @@ substitution styles are supported and may be mixed:
 | Named | `:file_name` | older dashboard datasets, the file view |
 | Positional | `$1`, `$2` | short, order-based calls |
 
-Values are escaped server-side (single quotes doubled, `NULL` for missing
-params, `TRUE`/`FALSE` for booleans), so a template stays injection-safe. A
-missing named/positional parameter resolves to `NULL` — the common
+Values become SQL literals server-side: strings are quoted (single quotes
+doubled), finite numbers are inserted as numbers, booleans as `TRUE`/`FALSE`,
+`null` as `NULL`. Any other value — an array, an object, `NaN`, `Infinity` — is
+rejected with `400 VALIDATION_ERROR` before the template runs. A list therefore
+reaches a template as one delimited string and is split in SQL, e.g.
+`list_contains(string_split(getvariable('ids'), ','), Object_UUID)`. A missing
+named/positional parameter resolves to `NULL` — the common
 `getvariable('x') IS NULL OR col = getvariable('x')` idiom turns that into an
 "all rows" fallback.
 
 > **`:param` caveat.** In dashboard datasets every bare `:word` with no matching
 > parameter is replaced by `NULL`. Watch out for stray colons (a `::CAST`, a
 > `localhost:3003`) — they can be mis-read as parameters.
+
+## Runtime environment
+
+The REST API runs templates on a read-only connection to the solution's catalog,
+with the reference databases attached as `ref` ([fm-spec](../Wiki/fm-spec.md)) and `plugref`
+([plugin-spec](../schema/plugin-spec.md)). Beyond these, the connection has no file or network access:
+
+- `read_csv`, `read_json`, `read_text`, `read_parquet`, `glob`, `COPY` and
+  `ATTACH` on any other path fail with a `Permission Error`;
+- extensions are neither installed nor loaded on demand — `json`, `icu`,
+  `parquet` and the core functions are built in, everything else (e.g.
+  `webbed`) is unavailable to templates;
+- DuckDB settings are locked — apart from the thread count, which the API
+  manages itself, a `SET` fails.
+
+Data a template needs belongs in the catalog or in a reference database. For
+diagnosis only, `DUCKDB_RESTRICT_FILE_ACCESS=0` in `rest-api/.env` starts the
+API without these limits — useful to tell whether a template fails because it
+reads a file.
 
 ## Example: standard questions
 
