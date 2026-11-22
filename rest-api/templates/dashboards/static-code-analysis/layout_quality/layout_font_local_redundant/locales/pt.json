@@ -1,0 +1,20 @@
+{
+  "manifest": {
+    "title": "Fonte local igual à herdada",
+    "description": "Regra de qualidade de layouts — um objeto define localmente uma fonte que receberia de qualquer forma do estilo ou do tema. O FileMaker grava essa configuração ao aplicar negrito a uma fonte com variante negrito própria (a família é salva com o nome PostScript do negrito). Hoje não muda nada, mas fixa a fonte: uma troca de tema posterior não alcança mais o objeto.",
+    "messages.redundant": "O objeto já herda a fonte local {font}"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Ocorrências",
+    "summary_kpi.props.items[1].label": "Layouts afetados",
+    "findings_card.props.title": "Fonte local igual à herdada",
+    "findings_table.props.searchPlaceholder": "Buscar arquivo, layout, objeto ou fonte…",
+    "findings_table.props.empty.message": "Nenhum objeto repete localmente a fonte herdada.",
+    "findings_table.props.columns[0].label": "Arquivo",
+    "findings_table.props.columns[1].label": "Layout",
+    "findings_table.props.columns[2].label": "Tipo de objeto",
+    "findings_table.props.columns[3].label": "Objeto",
+    "findings_table.props.columns[4].label": "Fonte",
+    "findings_table.props.columns[5].label": "Nome PostScript"
+  }
+}

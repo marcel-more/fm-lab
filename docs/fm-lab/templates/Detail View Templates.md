@@ -26,8 +26,17 @@ by the view they serve:
 - `layout-view/display_layout_triggers.sql` — script triggers attached to the
   layout, each with the trigger's catalog UUID for the jump to its detail view.
 - `layout-view/display_layout_meta.sql` — layout-level metadata (view options, …).
+- `layout-view/display_layout_fonts.sql` — the font uses of the layout's objects
+  (base font, formatted text runs, chart text areas) and their applied styles, one
+  row per use or style. Font, size and face are written like in the font
+  dashboards; a font left to the file default has the key `#default`. Needs
+  catalog schema 1.45.0 — an older catalog answers `SCHEMA_DRIFT`.
 - `object-detail/object_change_meta.sql` — the last change stamp shown in an
   object's detail header.
+- `theme-view/display_theme_style_layouts.sql` — the layouts that carry one style
+  of a theme, with the number of objects each, most objects first. The theme
+  detail view loads it when a style row opens, so its own response holds one row
+  per style, never one per style and layout. Needs catalog schema 1.45.0.
 
 ## How resolution works
 

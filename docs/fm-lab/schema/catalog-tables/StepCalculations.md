@@ -25,7 +25,7 @@ One row per **positioned calculation** of a script step, with its slot context. 
 
 ## Notes
 
-- **`Slot`** is the parent element of the calculation wrapper (`Name`, `height`, `URL`, `Title`, `value`, `repetition`, …); when the wrapper sits directly under a `<Parameter>`, the slot reads `Parameter:<type>`.
+- **`Slot`** is the parent element of the calculation wrapper (`Name`, `height`, `URL`, `Title`, `value`, `repetition`, …); when the wrapper sits directly under a `<Parameter>`, the slot reads `Parameter:<type>`. `SQL` is the *calculated SQL text* of Execute SQL; it has no position (`Calc_Position` empty). The plain *SQL text* input of that step is sent to the ODBC source as typed and is not a calculation, so it has no row.
 - **`Calc_Position`** is the `@position` attribute. It is **not step-unique** — FileMaker restarts numbering in some parameter containers (Data-File steps); uniqueness needs `Slot` + `Slot_Seq` on top.
 - **`Slot_Seq`** is the 1-based ordinal *within one slot parent* (e.g. the argument list of Perform JavaScript in Web Viewer — several calculations under a single `<Parameter type="Parameter">`).
 - Plain-text layer, no hash column — the rows exist with and without DDR-Info.

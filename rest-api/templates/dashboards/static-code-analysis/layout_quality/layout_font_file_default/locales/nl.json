@@ -1,0 +1,20 @@
+{
+  "manifest": {
+    "title": "Lettertype overgelaten aan de bestandsstandaard",
+    "description": "Lay-outkwaliteitsregel — tekstobjecten van een lay-out tonen de standaard van het bestand, omdat noch het object, noch de stijl, noch het thema een lettertype noemt (Klassiek en Minimalistisch noemen er geen). Dat lettertype staat niet in de XML-export en verschilt per bestand: hetzelfde thema toont in het ene bestand Helvetica Neue en in het andere Arial. Eén bevinding per lay-out.",
+    "messages.file_default": "{count} van {total} tekstobjecten tonen de standaard van het bestand — het thema noemt geen lettertype"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Bevindingen",
+    "summary_kpi.props.items[1].label": "Objecten met bestandsstandaard",
+    "summary_kpi.props.items[2].label": "Betrokken bestanden",
+    "findings_card.props.title": "Lettertype overgelaten aan de bestandsstandaard",
+    "findings_table.props.searchPlaceholder": "Zoek bestand, lay-out of thema…",
+    "findings_table.props.empty.message": "Geen lay-out laat het lettertype over aan de bestandsstandaard.",
+    "findings_table.props.columns[0].label": "Bestand",
+    "findings_table.props.columns[1].label": "Lay-out",
+    "findings_table.props.columns[2].label": "Thema",
+    "findings_table.props.columns[3].label": "Objecten met bestandsstandaard",
+    "findings_table.props.columns[4].label": "Tekstobjecten"
+  }
+}

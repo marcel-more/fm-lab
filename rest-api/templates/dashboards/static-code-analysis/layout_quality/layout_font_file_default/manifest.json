@@ -1,0 +1,92 @@
+{
+  "id": "layout_font_file_default",
+  "version": "1.0.0",
+  "title": "Font left to the file default",
+  "description": "Layout-quality rule — text objects of a layout show the default font of the file because neither the object, its style nor the theme names a font (Classic and Minimalist declare none). That font is not part of the XML export and differs between files: the same theme shows Helvetica Neue in one file and Arial in another. One finding per layout.",
+  "author": "fm-lab rules",
+  "icon": "type",
+  "category": "layout_quality",
+  "tags": [
+    "rule",
+    "layout_quality",
+    "fonts"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "info",
+    "category": "layout_quality",
+    "rationale": "A font nobody chose is a font nobody controls: it depends on how the file was created, and two layouts on the same theme can look different in two files.",
+    "remediation": "Move the layout to a theme that names its fonts, or set the font in a named style; check one object per file in FileMaker to see which default it uses today.",
+    "meta": {
+      "name": "Font left to the file default",
+      "author": "fm-lab rules",
+      "source": "fm-lab",
+      "url": null,
+      "description": "Layout-quality rule — text objects of a layout show the default font of the file because neither the object, its style nor the theme names a font (Classic and Minimalist declare none).",
+      "created": "2026-11-21",
+      "references": [
+        {
+          "project": "fm-lab",
+          "rule": "Font and style analysis (schema 1.44.0)",
+          "url": null
+        }
+      ]
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Layout"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Font left to the file default"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  },
+  "messages": {
+    "file_default": "{count} of {total} text objects show the default font of the file — the theme names no font"
+  }
+}

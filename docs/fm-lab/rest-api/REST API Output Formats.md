@@ -4,7 +4,7 @@ Most read endpoints accept a `format` query parameter that controls how results 
 
 **Envelope rule:** `json` and `tokens` are structured formats — they are wrapped in the standard `{ success, data, meta }` envelope and served as `application/json`. Every other format returns the rendered payload **directly** (no envelope) with its own content type; when `meta=true` or `debug=true` is set, the metadata is appended as a trailing comment (`<!-- … -->` in HTML/Markdown, `# …` in text formats).
 
-**Validation:** a format outside the enum is rejected with `400 VALIDATION_ERROR` before the endpoint runs. A *valid* format applied to data it cannot render either degrades gracefully (the text formats) or fails (`mermaid` on non-graph data, `tokens` outside its two endpoints).
+**Validation:** a format outside the enum is rejected with `400 VALIDATION_ERROR` before the endpoint runs. A *valid* format applied to data it cannot render either degrades gracefully (the text formats) or fails (`mermaid`, `mermaid-raw` and `svg` on data without a diagram shape answer `422 DIAGRAM_ERROR`; `tokens` outside its two endpoints).
 
 | Format        | Content type       | Best for                                                        |
 | ------------- | ------------------ | --------------------------------------------------------------- |
@@ -18,6 +18,7 @@ Most read endpoints accept a `format` query parameter that controls how results 
 | `content`     | `text/plain`       | Prose output of content templates                               |
 | `mermaid`     | `text/html`        | Rendered dependency diagram                                     |
 | `mermaid-raw` | `text/plain`       | Mermaid source for further processing                           |
+| `svg`         | `image/svg+xml`    | Diagram as a standalone SVG file, drawn on the server           |
 | `tokens`      | `application/json` | Editor-style token rendering (`/get-details`, `/get-calc` only) |
 
 ---
@@ -93,23 +94,31 @@ Steps: 12 · References: 3
 This routine imports the daily customer feed …
 ```
 
-## mermaid · mermaid-raw
+## mermaid · mermaid-raw · svg
 
 Diagram rendering with two auto-detected input modes:
 
-1. **Graph mode** — result rows carry `source_uuid` and `target_uuid` (plus optional name/label columns): rendered as a `graph TD` flowchart with one node per unique object and labeled edges. `direction=TD|LR|BT|RL` overrides the layout, `theme=default|dark|forest|neutral` the color scheme, `title` the heading.
-2. **Content mode** — rows carry a `content` column with ready-made Mermaid source: concatenated as-is.
+1. **Graph mode** — result rows carry `source_uuid` and `target_uuid` (any case), plus optional columns: `source_name`/`target_name` (box text), `source_type`/`target_type` (object type → border colour), `source_file`/`target_file` (keeps objects with the same UUID in different files apart) and `edge_label` or `edge_kind` (edge text). Rendered as a `flowchart` with one node per unique object; nodes are numbered `n0, n1, …` in a stable order (by name), so the same result always yields the same source. `direction=TD|LR|BT|RL` sets the layout (default: the template's `mermaid_direction`, else `TD` on `/query` and `/report`, `LR` elsewhere), `title` the heading. Above 500 nodes or 200 000 characters the diagram is cut and a `%% truncated: …` comment line says how much is shown.
+2. **Content mode** — rows carry a `content` column with ready-made Mermaid source: the lines are joined unchanged (also for content templates).
 
-`mermaid` wraps the diagram in a self-contained themed HTML page (Mermaid.js loaded from CDN); `mermaid-raw` returns only the diagram source:
+Names are data: the graph mode escapes them with Mermaid entity codes (`#quot;` `#lt;` `#gt;` `#amp;` `#96;` `#35;` `#124;`, line breaks as `<br/>`), so a quote, bracket or pipe in a name can neither break the diagram nor inject anything.
+
+- `mermaid` — a self-contained HTML page; the diagram is drawn in the browser with [pele](https://github.com/obsidianmd/pele), which the API serves itself (`GET /api/assets/pele.js`, no CDN). Links, images and HTML in diagram text are off; the source sits HTML-escaped in the page. `theme=dark` forces the dark colours, `default` follows the system setting, `forest`/`neutral` are light. A source pele cannot draw shows the error with its line below the source text.
+- `mermaid-raw` — only the diagram source:
 
 ```
-graph TD
-  ABC_123["Import Data"]
-  DEF_456["Validate Order"]
-  ABC_123 -->|calls| DEF_456
+flowchart TD
+  classDef k_Script stroke:#0ea5e9,stroke-width:2px
+  n0["Import Data"]:::k_Script
+  n1["Validate Order"]:::k_Script
+  n0 -->|"calls_script"| n1
 ```
 
-Only meaningful for edge-shaped results (`/references`, graph-shaped `/query` templates) or content templates — other data fails with an error.
+- `svg` — the diagram drawn on the server with the same renderer: a standalone SVG file with XML header and a white background, light colours. A source pele rejects answers `422 DIAGRAM_ERROR` with `details.reason` (`syntax`, …), `line` and `column`.
+
+With `meta=true`/`debug=true` the trailing comment is a `%%` line in `mermaid-raw` and an XML comment in `mermaid` and `svg`.
+
+Only meaningful for edge-shaped `/query`/`/report` templates or content templates with Mermaid source — other data answers `422 DIAGRAM_ERROR` (`details.reason`: `empty` or `shape`). The rows of [/references](endpoints/References%20API.md) carry no `source_uuid`/`target_uuid` and therefore cannot be drawn.
 
 ## tokens
 
@@ -141,10 +150,10 @@ Other kinds follow the same pattern: `customfunction` (parameters + token stream
 
 ## A note on SVG and visual output
 
-There is no dedicated `svg` format. Visual output takes three distinct routes, and the distinction matters when choosing an endpoint:
+Visual output takes three distinct routes, and the distinction matters when choosing an endpoint:
 
 1. **Tabular rendering** (`html`, `markdown`, `raw`) — generic formatters that render any result rows as a table. Data-shape-agnostic.
-2. **Graph rendering** (`mermaid`, `mermaid-raw`) — for *edge-shaped* data (`source_uuid`/`target_uuid` rows from [References API](endpoints/References%20API.md) or graph-shaped `/query` templates). The API emits Mermaid source (or an HTML page that renders it); the actual vector image is produced by Mermaid.js on the client. The relationship diagram ([GET /api/relationship-graph/](endpoints/Graph%20API.md#get-apirelationship-graphfilename)) likewise ships structured JSON geometry for the client to draw.
+2. **Graph rendering** (`mermaid`, `mermaid-raw`, `svg`) — for *edge-shaped* data (`source_uuid`/`target_uuid` rows from graph-shaped `/query` templates). The API emits Mermaid source, an HTML page that draws it in the browser, or the finished SVG drawn on the server; both use pele. The relationship diagram ([GET /api/relationship-graph/](endpoints/Graph%20API.md#get-apirelationship-graphfilename)) likewise ships structured JSON geometry for the client to draw.
 3. **Layout rendering (wireframe)** — for *geometry-shaped* data (`LayoutObjects` bounds). Both variants are production paths, serving different client types:
    - **Structured data + client-side drawing** — for interactive clients: the layout data templates (via [/query](endpoints/Query%20and%20Report%20API.md)) return one JSON row per layout object with absolute coordinates, part assignment, nesting and colors; the client draws the wireframe itself and owns hover, tooltips, cross-navigation and filtering. This is how the FM-Lab web frontend renders its layout view.
    - **Server-generated SVG** — for lightweight clients: the Layout detail template of [GET /api/get-details](endpoints/Objects%20API.md#get-apiget-details) *is* a content template that assembles the complete `<svg>` document row-wise (parts as bands, objects as color-coded rectangles with tooltips and labels, nesting resolved recursively). `GET /api/get-details?uuid=<layout>&format=content` returns the ready-to-use SVG file (served as `text/plain`; save as `.svg`, embed in HTML, or inline as a `data:image/svg+xml` URI). With the default `format=json` the same markup arrives line-wise as `content` rows — join them with newlines to reconstruct the document.

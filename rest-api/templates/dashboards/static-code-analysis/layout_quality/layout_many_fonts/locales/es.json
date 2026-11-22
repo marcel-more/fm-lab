@@ -1,0 +1,21 @@
+{
+  "manifest": {
+    "title": "Formato con muchas fuentes",
+    "description": "Regla de calidad de formatos: los objetos de texto de un formato muestran más fuentes que el umbral (3 por defecto). Cuenta cada fuente: la fuente base de cada objeto, las partes de texto con fuente propia y las áreas de texto de los gráficos; la predeterminada del archivo (el tema no nombra fuente) no cuenta como fuente. Muchas fuentes en un formato suelen indicar estilo objeto por objeto en lugar de mediante el tema.",
+    "messages.many": "El formato muestra {count} fuentes: {fonts}"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Hallazgos",
+    "summary_kpi.props.items[1].label": "Archivos afectados",
+    "threshold_slider.props.label": "Más fuentes que",
+    "threshold_slider.props.valueSuffix": " fuentes",
+    "findings_card.props.title": "Formato con muchas fuentes",
+    "findings_table.props.searchPlaceholder": "Buscar archivo, formato o fuente…",
+    "findings_table.props.empty.message": "Ningún formato con más fuentes que el umbral.",
+    "findings_table.props.columns[0].label": "Archivo",
+    "findings_table.props.columns[1].label": "Formato",
+    "findings_table.props.columns[2].label": "Fuentes",
+    "findings_table.props.columns[3].label": "Fuentes con nombre",
+    "findings_table.props.columns[4].label": "Objetos con la predeterminada del archivo"
+  }
+}

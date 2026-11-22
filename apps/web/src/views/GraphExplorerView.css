@@ -12,6 +12,10 @@
   height: 100vh;
   width: 100%;
   background: var(--color-bg-canvas);
+  /* Nichts aus dem Explorer darf die Seite scrollbar machen: eine ein- und
+     ausblendende Seiten-Scrollleiste (Safari, „Rollbalken immer zeigen“)
+     ändert die Canvas-Breite und speist so eine Resize-Schleife. */
+  overflow: hidden;
 }
 
 .graph-explorer-stats {
@@ -401,6 +405,7 @@ input[type="range"]#explorer-depth {
   display: flex;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
   /* The dark canvas background lives here so the hull overlay can sit *between*
      it and the (transparent) cytoscape layers. */
   background: var(--color-bg-canvas);
@@ -410,15 +415,21 @@ input[type="range"]#explorer-depth {
 .explorer-hull-canvas {
   position: absolute;
   inset: 0;
+  /* <canvas> ist ein ersetztes Element: inset allein dehnt es nicht, ohne
+     explizite Größe gilt die Pixelgröße des Backing Stores (bis 2× dpr). */
+  width: 100%;
+  height: 100%;
   z-index: 0;
   pointer-events: none;
 }
 
+/* Absolut im Host: die Größe kommt allein aus dem Flex-Layout des Hosts, nie
+   aus dem Inhalt. Mit `height: 100%` als Flex-Kind löste Safari die Höhe am
+   Canvas auf, das cytoscape in cy.resize() setzt — Rückkopplung mit dem
+   ResizeObserver (Flackern, „ResizeObserver loop …“), sichtbar im Trace. */
 .explorer-graph-canvas {
-  flex: 1;
-  width: 100%;
-  height: 100%;
-  position: relative;
+  position: absolute;
+  inset: 0;
   z-index: 1;
   background: transparent;
   user-select: none;
@@ -1084,4 +1095,695 @@ input[type="range"]#explorer-depth {
 }
 .explorer-typelist-items li.is-excluded .explorer-typelist-exclude {
   color: #e8a33d;
+}
+
+/* ── Datenfluss-Trace (mode=data) ────────────────────────────── */
+.explorer-data-expanded {
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+.explorer-data-sublabel {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+.explorer-data-notes {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+.explorer-data-notes li.is-warning,
+.explorer-data-hint.is-warning {
+  color: var(--color-warning-fg);
+}
+.explorer-data-candidates {
+  list-style: none;
+  margin: 0.3rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.explorer-data-candidates li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.35rem;
+  border: 1px dashed #e8a33d;
+  border-radius: 6px;
+  font-size: 0.78rem;
+}
+.explorer-data-candidate-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.explorer-data-candidate-actions {
+  display: flex;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+.explorer-data-candidate-actions button {
+  padding: 0 0.4rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 4px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-size: 0.78rem;
+}
+.explorer-data-candidate-actions button:hover:not(:disabled) {
+  border-color: var(--color-accent);
+}
+.explorer-data-error {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  color: var(--color-error-fg, #d93025);
+  overflow-wrap: anywhere;
+}
+.explorer-data-error pre {
+  margin: 0.25rem 0 0;
+  white-space: pre-wrap;
+  font-size: 0.72rem;
+}
+.explorer-data-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+/* Wege-Liste (rechter Slot) */
+.explorer-data-panel {
+  container-type: inline-size;
+  gap: 0.75rem;
+}
+.explorer-data-section h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.explorer-data-counts {
+  font-weight: 400;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+.explorer-data-ways {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.explorer-data-ways .explorer-data-ways {
+  margin-top: 0.4rem;
+}
+.explorer-data-way {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-surface);
+  min-width: 0;
+}
+.explorer-data-way.is-selected {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 1px #f59e0b;
+}
+.explorer-data-way-head {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  padding: 0.3rem 0.45rem;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+}
+.explorer-data-way-head:hover {
+  background: var(--color-hover-bg);
+}
+.explorer-data-way-no {
+  font-weight: 600;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+.explorer-data-badge {
+  font-size: 0.68rem;
+  padding: 0 0.35rem;
+  border-radius: 8px;
+  background: var(--color-bg-canvas);
+  color: var(--color-text-secondary);
+  font-style: normal;
+  white-space: nowrap;
+}
+.explorer-data-badge.is-approx {
+  color: var(--color-warning-fg);
+}
+.explorer-data-way-body {
+  padding: 0.15rem 0.45rem 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.explorer-data-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  min-width: 0;
+}
+.explorer-data-row-label {
+  flex: 0 0 4.5rem;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  padding-top: 0.2rem;
+}
+.explorer-data-row-items {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.explorer-data-node {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.1rem 0.25rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+}
+.explorer-data-node:hover {
+  background: var(--color-hover-bg);
+}
+.explorer-data-node.is-missing {
+  cursor: default;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+.explorer-data-node-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.explorer-data-more {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  padding-left: 0.3rem;
+}
+.explorer-data-entries {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+.explorer-data-entry {
+  display: contents;
+}
+.explorer-data-entry-chip {
+  font-size: 0.72rem;
+  padding: 0.05rem 0.45rem;
+  border: 1px solid #ec4899;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.explorer-data-entry-chip.is-open {
+  background: var(--color-hover-bg);
+}
+.explorer-data-entry-list {
+  flex-basis: 100%;
+  list-style: none;
+  margin: 0.15rem 0 0.25rem;
+  padding: 0 0 0 0.6rem;
+  border-left: 2px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.explorer-data-way-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.15rem;
+}
+.explorer-data-way-actions button {
+  font-size: 0.72rem;
+  padding: 0.1rem 0.5rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 4px;
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+.explorer-data-way-actions button:hover:not(:disabled) {
+  border-color: var(--color-accent);
+}
+.explorer-data-way-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.explorer-data-usage {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.explorer-data-usage-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.35rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: 0.8rem;
+  text-align: left;
+  cursor: pointer;
+}
+.explorer-data-usage-head:hover {
+  background: var(--color-hover-bg);
+}
+.explorer-data-usage-kind {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Ablauf-Trace: Wege-Liste (Tabs, Aufrufbaum, Kennzeichen, Wirkung) */
+.explorer-flow-tabs {
+  flex-shrink: 0;
+  margin: 0 0 0.5rem;
+}
+.explorer-flow-tabs .explorer-segment {
+  white-space: nowrap;
+}
+/* Suche in der Wege-Liste: Vorfahren eines Treffers nur als Kontext (Kopf) */
+.explorer-flow-search {
+  flex-shrink: 0;
+  margin: 0 0 0.4rem;
+}
+.explorer-data-way.is-context > .explorer-data-way-head {
+  opacity: 0.6;
+}
+.explorer-data-way.is-context > .explorer-data-way-body {
+  display: none;
+}
+.explorer-flow-target {
+  flex: 1 1 8rem;
+  min-width: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.explorer-flow-tree-toggle {
+  margin-left: auto;
+  padding: 0 0.4rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  background: var(--color-bg-elevated);
+  color: var(--color-text-secondary);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.explorer-flow-tree-toggle.is-open,
+.explorer-flow-tree-toggle:hover {
+  border-color: var(--color-accent);
+  color: var(--color-text-primary);
+}
+.explorer-flow-guard {
+  display: block;
+  padding-left: 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.explorer-flow-chain {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.explorer-flow-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+}
+.explorer-flow-flag {
+  font-size: 0.68rem;
+  padding: 0 0.4rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+.explorer-flow-flag.is-warn {
+  border-color: var(--color-warning-fg);
+  color: var(--color-warning-fg);
+}
+.explorer-flow-effects {
+  max-width: 100%;
+  padding: 0.1rem 0.25rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: 0.72rem;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.explorer-flow-effects:hover,
+.explorer-flow-effects.is-open {
+  background: var(--color-hover-bg);
+}
+.explorer-flow-effect-role {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+}
+.explorer-flow-group + .explorer-flow-group {
+  margin-top: 0.35rem;
+}
+.explorer-flow-group > .explorer-data-ways {
+  margin-top: 0.3rem;
+}
+.explorer-data-entry-chip.is-boundary {
+  border-color: var(--color-border-strong);
+  color: var(--color-text-secondary);
+}
+.explorer-data-entry-chip:disabled {
+  cursor: default;
+}
+/* Inspect-Panel: Aufrufstellen einer Nachbar-Kante, je mit Sprung zum Schritt */
+.explorer-inspect-callsites {
+  list-style: none;
+  margin: 0 0 0.3rem 1.6rem;
+  padding: 0 0 0 0.4rem;
+  border-left: 2px solid var(--color-border);
+}
+.explorer-inspect-callsite {
+  display: block;
+  width: 100%;
+  padding: 0.05rem 0.25rem;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.explorer-inspect-callsite:hover:not(:disabled) {
+  background: var(--color-hover-bg);
+  color: var(--color-text-primary);
+}
+
+/* Wege-Liste zugeklappt — Pill oben rechts im Canvas */
+.graph-explorer-ways-pill {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 12px;
+  font-size: 0.78rem;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  z-index: 10;
+}
+
+/* Mermaid-Einzelweg — Overlay über dem Canvas (pele-Variablen auf Theme-Tokens) */
+.explorer-data-diagram {
+  --pele-bg: var(--color-bg-elevated);
+  --pele-fg: var(--color-text-primary);
+  --pele-muted: var(--color-text-secondary);
+  --pele-line: var(--color-text-secondary);
+  --pele-surface: var(--color-bg-surface);
+  --pele-surface-alt: var(--color-bg-surface-2);
+  --pele-border: var(--color-border-strong);
+  --pele-accent: var(--color-accent);
+  --pele-font-mono: var(--font-mono);
+  --pele-radius: 4px;
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  /* feste Höhe: das SVG liegt per Pan & Zoom absolut in der Box; per
+     Anfasser verstellbar (Inline-Style, Default 60 %) */
+  height: 60%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem 0.75rem;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  z-index: 20;
+  min-width: 0;
+}
+.explorer-data-diagram-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.explorer-data-diagram-head h3 {
+  flex: 1;
+  margin: 0;
+  min-width: 0;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Bühne des Diagramms: Bezugsrahmen für die Bedienleiste rechts oben. */
+.explorer-data-diagram-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.explorer-data-diagram-box {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  /* Pan & Zoom (lib/mermaid/panZoom): Rad zoomt, Ziehen verschiebt */
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+.explorer-data-diagram-box.is-panning {
+  cursor: grabbing;
+}
+.explorer-data-diagram-box.is-panning .explorer-data-diagram-node {
+  cursor: grabbing;
+}
+.explorer-data-diagram-ctl {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.explorer-data-diagram-fs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--pele-border);
+  border-radius: var(--pele-radius, 4px);
+  background: var(--pele-bg);
+  color: var(--pele-fg);
+  line-height: 0;
+}
+.explorer-data-diagram-fs button {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: calc(var(--pele-radius, 4px) - 1px);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.explorer-data-diagram-fs button:hover {
+  background: var(--color-hover-bg);
+}
+.explorer-data-diagram-fs button:focus-visible {
+  outline: 2px solid var(--color-accent);
+}
+/* Höhen-Anfasser an der Oberkante — Gegenstück zu .explorer-resizer, quer. */
+.explorer-data-diagram-resizer {
+  position: absolute;
+  top: -5px;
+  left: 0;
+  right: 0;
+  height: 10px;
+  cursor: row-resize;
+  z-index: 1;
+  touch-action: none;
+}
+.explorer-data-diagram-resizer::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 34px;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--color-border-strong);
+  opacity: 0.45;
+  transition: opacity 0.15s ease, background 0.15s ease, width 0.15s ease;
+}
+.explorer-data-diagram-resizer:hover::before,
+.explorer-data-diagram-resizer:active::before {
+  opacity: 0.85;
+  width: 52px;
+  background: var(--color-accent, var(--color-border-strong));
+}
+/* Vollbild: das Overlay füllt das Browserfenster */
+.explorer-data-diagram.is-fullscreen {
+  position: fixed;
+  inset: 0;
+  height: auto;
+  border-radius: 0;
+  border: none;
+  z-index: 1000;
+}
+.explorer-data-diagram-node {
+  cursor: pointer;
+}
+.explorer-data-diagram-node:focus-visible {
+  outline: 2px solid var(--color-accent);
+}
+
+/* Lösungsprofil — Dialog mit Sammelbestätigung */
+.explorer-data-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 5vh 1rem;
+  z-index: 1000;
+}
+.explorer-data-dialog {
+  width: min(720px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+}
+.explorer-data-candidate-list {
+  list-style: none;
+  margin: 0.35rem 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  max-height: 16rem;
+  overflow-y: auto;
+}
+.explorer-data-candidate-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  min-width: 0;
+}
+.explorer-data-candidate-list label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+.explorer-data-candidate-name {
+  overflow-wrap: anywhere;
+}
+.explorer-data-candidate-sample {
+  flex-basis: 100%;
+  padding-left: 1.6rem;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Schmale Fenster (≤ 900 px): Seitenpanels kappen, der Canvas behält Platz;
+   keine Überbreite (Abnahme 700 px). */
+@media (max-width: 900px) {
+  .explorer-filter-panel { max-width: 36vw; padding: 0.75rem; }
+  .explorer-inspect-panel { max-width: 44vw; padding: 0.75rem; }
+}
+
+/* Schritt-Anker einer lokalen Startvariable */
+.explorer-data-anchor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.5rem;
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+}
+.explorer-data-anchor .explorer-data-sublabel {
+  margin-top: 0;
+}
+.explorer-data-anchor-text {
+  flex-basis: 100%;
+  overflow-wrap: anywhere;
+  color: var(--color-text-primary);
 }

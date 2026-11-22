@@ -38,15 +38,37 @@ start?", "escalating calls", "does this recurse?", symptom entries like
    a call.)
 2. **Walk the chain** with a recursive CTE carrying a path array for cycle
    detection (no extension, no `CYCLE` clause needed).
-3. **The edge has no step anchor.** `ObjectLinks` cannot tell you which step
-   calls, nor whether the call sits inside a loop or under a condition.
+3. **The edge has no step anchor — the step views have.** `ObjectLinks`
+   cannot tell you which step calls, nor whether the call sits inside a loop
+   or under a condition, nor whether the calling step is disabled.
    `Link_Subrole` only classifies the call: on `calls_script` NULL = ordinary
    Perform Script, `on_server` / `on_server_callback` = PSoS (Step_ID 164 /
    210), `MBS:FM.RunScript` = plugin-mediated; on `triggers_script` the trigger
    event (e.g. `OnObjectSave`) or the UI action `button_action` /
-   `menu_action`; `trigger_script` has none. For execution context use the
-   **step-based second path**: `v_script_block_tree WHERE Step_ID IN (1, 164,
-   210)` (loop/If depth per call site), callee resolved separately.
+   `menu_action`; `trigger_script` has none. For the call site and its
+   context take the **step-exact path**:
+   - `v_script_step_links` with `Link_Role = 'calls_script'` — one row per
+     calling step with the resolved callee (`Step_UUID`, `Step_Index`,
+     `Step_ID`, `Is_Enabled`, `Target_UUID` / `Target_File`, same subroles as
+     the edge). Join steps on `(Step_UUID, File_Name)`.
+   - `v_step_guards` — the enclosing If / Else If / Else branch of that step
+     (`Guard_Kind` `if` · `elseif` · `else`; the innermost one has the highest
+     `Guard_Level`, 1 = outermost; condition text via
+     `Guard_Calculation_UUID` → `CalculationsCatalog.Formula_Text`; `else` has
+     none) and every enclosing loop (`Guard_Kind = 'loop'`). Since converter
+     2.51.3 the view covers every enabled call and `Go to Layout` step, so the
+     step that fires a trigger cascade carries its condition too.
+   - `v_script_block_tree` — loop/If depth per step, and the call steps
+     **without** a static callee (`Step_ID IN (1, 164, 210)` without a
+     `calls_script` row = call by name or unresolved).
+
+   Canonical query: `query-cookbook.md` § *Call sites with their condition*.
+   For whole chains the **flow trace** does this already: `/fm-trace` (ways
+   table in the terminal) or `GET /api/graph/trace?mode=flow` — call sites per
+   edge (`edges[].callSites[]` with condition, loop, server, parameter,
+   result readers, `unreachable` after *Exit Script*), one way per reached
+   script and per entry, disabled steps left out. Prefer it over hand-built
+   recursion when the REST API runs.
 4. Step 164/210 marks a **server boundary** — the callee subtree runs
    server-side (relevant for the `platform-context` pattern).
 
@@ -78,8 +100,10 @@ WITH RECURSIVE chain AS (
 )
 SELECT * FROM chain;
 
--- Call sites with execution context (loop/If depth)
-SELECT File_Name, Script_Name, Step_Index + 1 AS step_no, Step_ID,
+-- Call steps of a script with execution context (loop/If depth) — also the
+-- calls without a static callee; the callee and the condition per call site:
+-- query-cookbook.md § Call sites with their condition
+SELECT File_Name, Script_Name, Step_Index + 1 AS step_no, Step_ID, Is_Enabled,
        loop_depth_before, if_depth_before
 FROM v_script_block_tree
 WHERE Step_ID IN (1, 164, 210)  -- Perform Script / PSoS / PSoS-with-callback
@@ -88,7 +112,13 @@ WHERE Step_ID IN (1, 164, 210)  -- Perform Script / PSoS / PSoS-with-callback
 
 **Traps:**
 - Following only `calls_script` misses layout/object triggers (entry role split).
-- Deriving call context from the edge — impossible, the edge is context-free.
+- Deriving call context from the edge — impossible, the edge is context-free;
+  use `v_script_step_links` + `v_step_guards`.
+- Counting calls from **disabled** steps: `ObjectLinks` keeps them (in a large
+  solution a few hundred script → script edges exist only through disabled
+  steps). Filter `v_script_step_links.Is_Enabled`.
+- Reading "under If" as "conditional at runtime": the catalog shows the
+  condition, it does not evaluate it (`control-flow-reachability`, item 4).
 - Unbounded recursion: always guard with a depth cap and the path array.
 - `Step_Name` is localized — match call steps via `Step_ID` only.
 

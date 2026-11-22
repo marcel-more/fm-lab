@@ -212,6 +212,130 @@ export DUCKDB_AGENT_MODE=0
 # on the next --changed-only run, a full re-conversion is triggered. Bump it as soon
 # as the CONVERSION RESULT can change (new columns, changed
 # extraction/normalization) — independent of the header or @SCHEMA_VERSION.
+#   2.54.0 — Named theme styles and theme header (@SCHEMA_VERSION 1.46.0, master
+#           rebuild): P1 ThemeCatalog reads the <Theme> attributes Group,
+#           baseName, baseVersion, version, locale, platform (raw) and
+#           defaultTheme (Is_Default BOOLEAN). New P3 table ThemeNamedStyles
+#           (A.14b): every style of /Theme/Metadata/namedstyles with class,
+#           Inspector name (entities decoded by the XML parser) and custom flag,
+#           unused styles included. New P6 view v_check_theme_named_styles
+#           (duplicate class WARN, unnamed rule class / name without rule INFO).
+#   2.53.0 — Style usage of layout objects (@SCHEMA_VERSION 1.45.0, master
+#           rebuild): new analysis view v_layout_object_style (plain view) — one
+#           row per layout object of every type with layout, resolved theme,
+#           applied style (NULL = none), custom-style flag and Style_Rule_Missing
+#           (same definition as v_check_layout_styles / v_layout_object_font).
+#   2.52.0 — Fonts and styles of layout objects (@SCHEMA_VERSION 1.44.0, master
+#           rebuild): four new P3 tables (A.14–A.17). ThemeStyleRules splits the
+#           theme CSS into one row per declaration with the selector parsed into
+#           part/type token, style class, state and element (empty style rules
+#           kept as one NULL row). LayoutObjectStyles holds the own LocalCSS of
+#           every object, depth-anchored (/LayoutObject/LocalCSS), with style
+#           name/display/type and the font properties of self:normal .self.
+#           LayoutObjectFontRuns holds rich-text runs (own CharacterStyle only)
+#           and the fixed font of every chart text area. LayoutObjectCssType maps
+#           object types to CSS type and group tokens (verified by a FileMaker
+#           probe). New P6 view v_check_layout_styles (duplicate style rows WARN,
+#           unparsed selectors and styles without a theme rule INFO). New analysis
+#           view v_layout_object_font (materialized): effective font family, size,
+#           weight and style of every text-bearing object with the source of each
+#           value (local → style → part → type → group → file default).
+#   2.51.3 — Dataflow views: v_step_guards also covers every enabled flow step
+#           (calls_script, navigates_to_layout, navigates_to_to from
+#           v_script_step_links), not only steps with dataflow edges — the flow
+#           trace needs the condition of a call and of a Go to Layout (cascade
+#           trigger without a formula). script_runs_step and the guard control
+#           edges stay on the dataflow steps, so v_dataflow_edges is unchanged.
+#           No schema change.
+#   2.51.2 — Dataflow views: a local-variable reader reached only by its own step
+#           through a loop (Set Variable [ $x ; $x & … ] without an earlier setter)
+#           gets the edge local_uninitialized instead of no edge (check view
+#           var_missing_n); a Let setter in the same step still initializes.
+#   2.51.1 — Dataflow views corrected after the edge comparison with the Datenspur:
+#           the List slot is a control slot only for script name (1, 164, 210),
+#           record/row number (16, 99) and URL (146) — the replacement formula of
+#           Replace Field Contents (91) is a value again (field reads data, writer no
+#           longer "constant"); custom-function resolution per file (cloned files share
+#           CF UUIDs); new entry edge entry_auto_enter (pseudo node AutoEnter) for
+#           auto-enter options without formula; check view column foreign_var_n.
+#           No schema change.
+#   2.51.0 — Dataflow views (@SCHEMA_VERSION 1.43.0, master rebuild): new phase
+#           create_dataflow_views.sql right after the analysis views builds
+#           v_dataflow_edges, v_step_guards and v_check_dataflow_edges (postcheck
+#           postcheck_dataflow_edges). Always built (the former
+#           switch --no-dataflow / "dataflow": "off" is gone, never released);
+#           non-fatal — a failed phase drops its tables and records an error
+#           finding.
+#   2.50.1 — Regex fallback for files without DDR info (P3 A.7, blocks 7a-7d and the
+#           Let text path 7g-3) joined XMLMetadata on Filename (with ".fmp12")
+#           instead of File_Name and never produced a row. Fixed; string literals
+#           and comments are stripped before the variable search, a variable counts
+#           once per context (like the DDR path), and the value formula of Set
+#           Variable is no longer skipped (the SQL text input of Execute SQL is, as
+#           in A.7f). Changes the variable usages and edges of
+#           DDR-less files only. No schema change.
+#   2.50.0 — Variables per step: v_script_step_links carries sets_variable /
+#           reads_variable rows from VariableUsages (Via parameter = target variable
+#           of the step, calculation = inside a formula; Calculation_UUID via the
+#           formula hash); v_check_script_step_links checks the variable edges too.
+#           P3 (A.7g) records a $/$$ variable assigned in a Let header
+#           (`Let ( [ $x = … ] ; … )`, `Let ( $x = … ; … )`) as Usage_Type 'set',
+#           Source 'let_assign' (script steps and custom functions; without DDR info
+#           from the step's formula text) and drops a read that stems only from the
+#           assignment position. No schema change.
+#   2.49.2 — CalculationSqlRefs: FROM/JOIN rows of a formula reference (GetTableName
+#           ( TO::Field ) and name wrappers) carry Raw_Name = 'TO::Field' like the
+#           column rows instead of the table occurrence name alone — the field
+#           only supplies the table name and must stay recognisable as such.
+#           v_calculation_links (2a) ScriptStep → Field takes the target file from
+#           the script's reads_field edge: cloned files share field UUIDs, and the
+#           UUID-only join produced one row per clone (clone corpus: 697 phantom
+#           step rows, also in v_script_step_links). No schema change.
+#   2.49.1 — Button single-step anchors resolve through the (anchor, hash) pair of
+#           the button's own XML instead of the innermost object holding the step
+#           UUID: copied buttons share the step UUID with diverging formulas, and
+#           containers carry their children's XML (clone corpus: 15 instances were
+#           attached to the wrong button). No schema change.
+#   2.49.0 — Execute SQL (step 117): the "SQL text" input (<SQL index="0">) is sent
+#           to the ODBC source verbatim and is no calculation — P3 drops the formula
+#           references, plug-in usages and variable usages FileMaker's chunk list
+#           suggests for it; CalculationsCatalog gives the slot the role
+#           step_sql_text; CalculationSqlRefs skips it. The "calculated SQL text"
+#           (<SQL index="1">) gets a StepCalculations row (slot SQL, no position),
+#           so its formula has Formula_Text and exists without DDR info. No schema
+#           change.
+#   2.48.0 — CalculationSqlRefs records every dynamic part of an SQL statement
+#           (variable or expression as column name, value or leading part) as a
+#           row with Resolution = dynamic and the expression as Raw_Name; dynamic
+#           table names carry their expression too. CalculationsCatalog resolves
+#           the formulas of a button's single step (anchored at the embedded
+#           step's UUID) to the button object (role button_action) instead of
+#           leaving them unresolved. No schema change.
+#   2.47.0 — SQL references in formulas (@SCHEMA_VERSION 1.42.0, master rebuild):
+#           P4 builds CalculationSqlRefs — one row per reference of an ExecuteSQL /
+#           ExecuteSQLe statement (clause, select-list position, parameter position,
+#           target TO / field / system table, resolution reference | name |
+#           dynamic). Source per calculation: DDR chunks, falling back to the
+#           formula text when FileMaker dropped chunks (comment after the call) or
+#           the file has no DDR info; Let variables of the same formula are
+#           expanded. Field NAMES in the SQL text get reads_field links (new link
+#           block 30b, mirrored in v_calculation_links); TOs of FROM/JOIN count as
+#           usage category sql in v_table_occurrence_usage. v_sql_field_usage is
+#           derived from the new table; the solution-specific sql_name_wrappers
+#           table is gone.
+#   2.46.0 — script edges per step (@SCHEMA_VERSION 1.41.0, master rebuild): the
+#           analysis phase builds v_script_step_links (the script's links projected
+#           onto the step: role as in ObjectLinks, target, source parameter or step
+#           formula) — answers "which step sets field F" without regex on the step
+#           XML. P4: link role per step PARAMETER for steps with source AND
+#           target fields (AI steps 213/216/218/220/222/240, Print PDF 242, Append
+#           PDF 244; new tables ScriptStepParamRoleMap, StepFieldParamRoles) — their
+#           field links become sets_field / reads_field / finds_in_field instead of
+#           references_field. P3: new table ImportStepSources (source per
+#           Import Records step: kind, path list, formula, XSL, resolved FileMaker
+#           file of the solution). Post-check after the analysis views:
+#           v_check_script_step_links (WARN when a step-derived Script edge has no
+#           step row; MBS FM.RunScript calls from formulas count as explained).
 #   2.45.0 — object usage (@SCHEMA_VERSION 1.40.0, master rebuild): the
 #           analysis phase builds v_object_usage (usage counts, markers and usage
 #           class per Field, Script, Layout, CustomFunction, ValueList, BaseTable,
@@ -644,7 +768,7 @@ export DUCKDB_AGENT_MODE=0
 #           duplicates (same UUID, distinct object ids) separately from FileMaker's
 #           double serialization; the catmerge a2 dup report is persisted into the
 #           new MergeAbsorptions table (best-effort, s. convert_turbo.sh).
-CONVERTER_VERSION="2.45.0"
+CONVERTER_VERSION="2.54.0"
 PROJECT_ROOT="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || (cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd))"
 # Engine root: the ingestion/ directory this script lives in. ALL engine-internal
 # assets (sql/, engine/, lib/, fixtures/, version_check.json, gen_streamify_sql.sh)
@@ -675,6 +799,7 @@ P2_TEMPLATE="$ENGINE_ROOT/sql/convert_xml_02_resolve.sql"
 VALIDATE_TEMPLATE="$ENGINE_ROOT/sql/convert_xml_06_validate.sql"
 # Analysis views (static code analysis): batch-wide, table-only phase after P6.
 ANALYSIS_VIEWS_TEMPLATE="$ENGINE_ROOT/sql/create_analysis_views.sql"
+DATAFLOW_VIEWS_TEMPLATE="$ENGINE_ROOT/sql/create_dataflow_views.sql"
 # awk splitter for --split: moves the heavy top-level branches
 # (StepsForScripts, DDR_INFO) into their own chunks to lower the
 # Phase-1 peak memory. P2–P5 run unchanged, batch-wide.
@@ -2237,6 +2362,106 @@ postcheck_calc_anchors() {
             add_finding resolution info "Calc anchors unresolved: $unres of $total ($pct%)" "Expected partial-corpus remainder; if the rate rises, check anchor resolution"
         fi
     fi
+    return 0
+}
+
+# Completeness of v_script_step_links — like postcheck_calc_anchors it runs after the
+# analysis-views build. Every Script edge that stems from a step must have a step row
+# with the same target and role; the only known gap (script calls via MBS FM.RunScript
+# from formulas) is counted as explained and not reported.
+postcheck_script_step_links() {
+    [ -f "$DB_FILE" ] || return 0
+    local view_exists
+    view_exists=$(pp_num "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'v_check_script_step_links'")
+    [ "$view_exists" -gt 0 ] || return 0
+    CHECKS_RUN=$((CHECKS_RUN + 1))
+    local unexplained detail
+    unexplained=$(pp_num "SELECT unexplained_n FROM v_check_script_step_links")
+    if [ "$unexplained" -gt 0 ]; then
+        detail=$(pp_query "SELECT detail FROM v_check_script_step_links")
+        add_finding resolution warn "Script edges without a step row: $unexplained ($detail)" "Check v_script_step_links against the P4 link blocks (roles/targets drifted apart)"
+    fi
+    local surplus
+    surplus=$(pp_num "SELECT surplus_n FROM v_check_script_step_links")
+    if [ "$surplus" -gt 0 ]; then
+        detail=$(pp_query "SELECT surplus_detail FROM v_check_script_step_links")
+        add_finding resolution warn "Step rows without a script edge: $surplus ($detail)" "Check the target-file resolution of v_calculation_links / v_script_step_links (cloned files share UUIDs)"
+    fi
+    return 0
+}
+
+# Consistency of CalculationSqlRefs (ExecuteSQL references, schema 1.42.0) — runs after
+# the analysis-views build like postcheck_script_step_links. WARN when an SQL formula
+# has no row, a chunk reference lacks its calculation link, or a name link is doubled;
+# INFO with the number of broken references (names/references without a target).
+postcheck_calculation_sql_refs() {
+    [ -f "$DB_FILE" ] || return 0
+    local view_exists
+    view_exists=$(pp_num "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'v_check_calculation_sql_refs'")
+    [ "$view_exists" -gt 0 ] || return 0
+    CHECKS_RUN=$((CHECKS_RUN + 1))
+    local missing ref_no_edge dup unresolved rows names
+    missing=$(pp_num "SELECT missing_n FROM v_check_calculation_sql_refs")
+    ref_no_edge=$(pp_num "SELECT ref_no_edge_n FROM v_check_calculation_sql_refs")
+    dup=$(pp_num "SELECT dup_edge_n FROM v_check_calculation_sql_refs")
+    unresolved=$(pp_num "SELECT unresolved_n FROM v_check_calculation_sql_refs")
+    rows=$(pp_num "SELECT rows_n FROM v_check_calculation_sql_refs")
+    names=$(pp_num "SELECT name_field_n FROM v_check_calculation_sql_refs")
+    if [ "$missing" -gt 0 ] || [ "$ref_no_edge" -gt 0 ] || [ "$dup" -gt 0 ]; then
+        add_finding resolution warn "SQL references inconsistent: $missing SQL formula(s) without rows, $ref_no_edge reference(s) without calculation link, $dup doubled name link(s)" "Check the CalculationSqlRefs block and link block 30b in convert_xml_04_catalog.sql"
+    fi
+    if [ "$rows" -gt 0 ]; then
+        add_finding resolution info "SQL references: $rows row(s), $names field name(s) from SQL text linked, $unresolved name(s)/reference(s) without target" "Broken names (missing TO or field) — see CalculationSqlRefs WHERE Target_Type IS NULL"
+    fi
+    return 0
+}
+
+# run_dataflow_views — batch-wide, table-only phase right after the analysis views
+# (needs v_script_step_links). Always runs: v_dataflow_edges and v_step_guards are
+# core catalog tables from schema 1.43.0 on (data trace, flow trace, tests). Non-fatal
+# like the analysis views: a failure must not block the finished catalogs. A failed
+# run drops the dataflow tables — the phase fills v_dataflow_edges over many
+# statements, and a half-built table must not pass for a complete one — and records
+# an ERROR finding; the REST API then answers DATAFLOW_NOT_BUILT (re-import).
+run_dataflow_views() {
+    [ -f "$DATAFLOW_VIEWS_TEMPLATE" ] || return 0
+    $QUIET_MODE || echo "Building dataflow views..."
+    local _t0 _t1
+    _t0=$(date +%s.%N 2>/dev/null || date +%s)
+    run_pipeline_step "Dataflow Views" "$DATAFLOW_VIEWS_TEMPLATE" >/dev/null 2>&1
+    _t1=$(date +%s.%N 2>/dev/null || date +%s)
+    if $PIPELINE_STEP_OK; then
+        $QUIET_MODE || echo "✓ Dataflow views built ($(awk -v a="$_t0" -v b="$_t1" 'BEGIN{printf "%.1f", b-a}')s)"
+        postcheck_dataflow_edges
+    else
+        echo "DROP VIEW IF EXISTS v_check_dataflow_edges; DROP TABLE IF EXISTS v_dataflow_edges; DROP TABLE IF EXISTS v_step_guards;" \
+            | duckdb_cli "$DB_FILE" >/dev/null 2>&1
+        CHECKS_RUN=$((CHECKS_RUN + 1))
+        add_finding resolution error "Dataflow views failed — v_dataflow_edges / v_step_guards not built (data trace and flow trace unavailable for this solution)" "Re-import the solution; if it fails again, run ingestion/sql/create_dataflow_views.sql against the catalog to see the error"
+    fi
+    return 0
+}
+
+# Completeness of v_dataflow_edges (dataflow views phase): every writing step row and
+# every variable row of v_script_step_links has its edge, no edge end points to a
+# missing catalog object, no doubled rows. INFO with the edge count.
+postcheck_dataflow_edges() {
+    [ -f "$DB_FILE" ] || return 0
+    local view_exists
+    view_exists=$(pp_num "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'v_check_dataflow_edges'")
+    [ "$view_exists" -gt 0 ] || return 0
+    CHECKS_RUN=$((CHECKS_RUN + 1))
+    local edges wm vm unk dup fvn
+    edges=$(pp_num "SELECT edges_n FROM v_check_dataflow_edges")
+    wm=$(pp_num "SELECT writes_missing_n FROM v_check_dataflow_edges")
+    vm=$(pp_num "SELECT var_missing_n FROM v_check_dataflow_edges")
+    unk=$(pp_num "SELECT unknown_node_n FROM v_check_dataflow_edges")
+    dup=$(pp_num "SELECT dup_n FROM v_check_dataflow_edges")
+    fvn=$(pp_num "SELECT foreign_var_n FROM v_check_dataflow_edges")
+    if [ "$wm" -gt 0 ] || [ "$vm" -gt 0 ] || [ "$unk" -gt 0 ] || [ "$dup" -gt 0 ] || [ "$fvn" -gt 0 ]; then
+        add_finding resolution warn "Dataflow edges incomplete: $wm write(s) and $vm variable usage(s) without edge, $unk unknown node(s), $dup doubled row(s), $fvn global variable(s) of another file" "Check create_dataflow_views.sql against v_script_step_links (v_check_dataflow_edges)"
+    fi
+    add_finding resolution info "Dataflow edges: $edges row(s)" "v_dataflow_edges / v_step_guards"
     return 0
 }
 
@@ -4425,6 +4650,44 @@ postprocess_db() {
         add_finding consistency info "$cf_nofk CF rule(s) with DDRREF hash but no Calculation_UUID FK (empty chunk lists excluded)" "No CalculationsCatalog instance carries this rule's anchor — check v_check_calc_owner_hash and the uncovered_anchor_n count of v_check_calculations"
     fi
 
+    # Font/style derivation (schema 1.44.0): one LayoutObjectStyles row per
+    # object (depth anchoring + dedup, expected 0 duplicates), every theme
+    # selector parsed (expected 0), styles without a rule in the layout's
+    # theme (informational).
+    CHECKS_RUN=$((CHECKS_RUN + 1))
+    local ls_dup ls_unparsed ls_norule
+    ls_dup=$(pp_num "SELECT dup_object_style_n FROM v_check_layout_styles")
+    ls_unparsed=$(pp_num "SELECT unparsed_selector_n FROM v_check_layout_styles")
+    ls_norule=$(pp_num "SELECT style_without_rule_n FROM v_check_layout_styles")
+    if [ "$ls_dup" -gt 0 ]; then
+        add_finding consistency warn "$ls_dup layout object(s) with more than one LayoutObjectStyles row" "Depth anchoring or dedup of /LayoutObject/LocalCSS drifted — check LayoutObjectStyles in convert_xml_03_details.sql (A.15)"
+    fi
+    if [ "$ls_unparsed" -gt 0 ]; then
+        add_finding consistency info "$ls_unparsed theme CSS rule(s) with a selector outside the known grammar (Type_Token NULL)" "New selector form — extend the selector pattern of ThemeStyleRules in convert_xml_03_details.sql (A.14)"
+    fi
+    if [ "$ls_norule" -gt 0 ]; then
+        add_finding consistency info "$ls_norule layout object(s) with a style name their layout's theme has no rule for" "Usually a style name left behind by a theme change — the font cascade falls through to the type rule"
+    fi
+
+    # Named theme styles (schema 1.46.0): one ThemeNamedStyles row per class and
+    # theme (expected 0 duplicates); theme rule classes without a namedstyles
+    # entry other than the known navigation_button and namedstyles entries
+    # without a rule (both expected 0, informational).
+    CHECKS_RUN=$((CHECKS_RUN + 1))
+    local ns_dup ns_unnamed ns_norule
+    ns_dup=$(pp_num "SELECT dup_class_n FROM v_check_theme_named_styles")
+    ns_unnamed=$(pp_num "SELECT rule_class_unnamed_n FROM v_check_theme_named_styles")
+    ns_norule=$(pp_num "SELECT named_without_rule_n FROM v_check_theme_named_styles")
+    if [ "$ns_dup" -gt 0 ]; then
+        add_finding consistency warn "$ns_dup style class(es) listed more than once in a theme's namedstyles" "Check ThemeNamedStyles in convert_xml_03_details.sql (A.14b) against the theme's <Metadata><namedstyles> block"
+    fi
+    if [ "$ns_unnamed" -gt 0 ]; then
+        add_finding consistency info "$ns_unnamed theme style class(es) with a CSS rule but no namedstyles entry (navigation_button excluded)" "New built-in class without an Inspector name — the theme's style list does not show it"
+    fi
+    if [ "$ns_norule" -gt 0 ]; then
+        add_finding consistency info "$ns_norule namedstyles entr(y/ies) without a CSS rule in the theme" "The style list shows these styles without an object type (no Type_Token in ThemeStyleRules)"
+    fi
+
     # Owner-exact layout script refs (converter 2.15.0, P2 ancestor guard):
     # both regression directions of the guard, expected 0 each — a deficit
     # means own trigger refs were over-filtered, container excess means
@@ -5541,6 +5804,10 @@ if [[ "$MODE" == "batch" ]]; then
             && { $QUIET_MODE || echo "✓ Analysis views built"; } \
             || echo "✗ WARNING: Analysis views failed (run --batch first?)"
         postcheck_calc_anchors   # needs v_calc_anchors (only comes into being here)
+        postcheck_script_step_links   # needs v_script_step_links (same phase)
+        postcheck_calculation_sql_refs   # needs v_check_calculation_sql_refs (same phase)
+        # Dataflow views — own phase after the analysis views (needs v_script_step_links)
+        run_dataflow_views
         $QUIET_MODE || echo ""
     fi
 
@@ -5879,6 +6146,9 @@ elif [[ "$MODE" == "single" ]]; then
             if $PIPELINE_STEP_OK; then echo "✓ Analysis views built"
             else echo "✗ WARNING: Analysis views failed"; fi
             postcheck_calc_anchors
+            postcheck_script_step_links
+            postcheck_calculation_sql_refs
+            run_dataflow_views
         fi
 
         # Manifest row + catalogs_built marker — only when the full chain (P1–P5)

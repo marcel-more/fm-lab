@@ -260,3 +260,39 @@ export function buildLayoutPath(
   const qs = params.toString();
   return qs ? `/layout/${layoutUuid}?${qs}` : `/layout/${layoutUuid}`;
 }
+
+/**
+ * Path of a server-resolved open target (data-trace nodes): the detail view of
+ * `uuid` with the sub-object `ref` highlighted (layout object in its layout,
+ * menu command in its menu), the step anchor `step` (script view) or the
+ * variable selection `var`; `type: 'File'` opens the file view.
+ */
+export function buildOpenTargetPath(open: {
+  type: string; uuid: string; file: string | null; ref?: string; step?: string; var?: string;
+}): string {
+  if (open.type === 'File' && open.file) return `/file/${encodeURIComponent(open.file)}`;
+  return buildObjectPath(open.uuid, open.ref ?? null, open.file, { step: open.step, var: open.var });
+}
+
+/**
+ * Deep link into the Graph Explorer's data trace of a field or variable (`mode=data`):
+ * `dir=up` = origin of the value, `dir=down` = usage. Defaults stay out of the
+ * URL (parity with the /fm-trace skill).
+ */
+export function buildDataTracePath(
+  fieldUuid: string,
+  file: string | null | undefined,
+  dir: 'up' | 'down',
+  anchor?: { step: string; role: 'read' | 'set' } | null,
+): string {
+  const q = new URLSearchParams({ trace: fieldUuid });
+  if (file) q.set('trace_file', file);
+  q.set('tmode', 'data');
+  if (dir === 'down') q.set('tdir', 'down');
+  // Schritt-Anker einer lokalen Variable
+  if (anchor) {
+    q.set('tstep', anchor.step);
+    q.set('trole', anchor.role);
+  }
+  return `/graph?${q.toString()}`;
+}

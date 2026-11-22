@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "이름을 하드코딩한 ExecuteSQL",
+    "description": "모범 사례 규칙 — ExecuteSQL 문이 필드 참조(GetFieldName 또는 이름 래퍼)로 이름을 만드는 대신 테이블 어커런스나 필드를 SQL 문자열 안의 일반 텍스트로 지정합니다. 참조는 지금은 동작하지만 FileMaker가 추적하지 않습니다. 테이블 어커런스나 필드의 이름을 바꾸면 경고 없이 쿼리가 깨지고 ExecuteSQL은 ?를 반환합니다."
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "검출 수",
+    "summary_kpi.props.items[1].label": "영향받는 파일",
+    "summary_kpi.props.items[2].label": "이름으로 지정된 필드",
+    "summary_kpi.props.items[3].label": "이름으로 지정된 테이블 어커런스",
+    "findings_card.props.title": "이름을 하드코딩한 ExecuteSQL",
+    "findings_table.props.searchPlaceholder": "파일, 객체 또는 이름 검색…",
+    "findings_table.props.empty.message": "ExecuteSQL에서 하드코딩된 이름을 찾지 못했습니다.",
+    "findings_table.props.columns[0].label": "파일",
+    "findings_table.props.columns[1].label": "객체",
+    "findings_table.props.columns[2].label": "유형",
+    "findings_table.props.columns[3].label": "단계",
+    "findings_table.props.columns[4].label": "함수",
+    "findings_table.props.columns[5].label": "절",
+    "findings_table.props.columns[6].label": "SQL 내 이름",
+    "findings_table.props.columns[7].label": "대상"
+  }
+}

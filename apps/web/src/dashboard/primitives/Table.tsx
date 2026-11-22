@@ -21,6 +21,7 @@ import { loadTableState, saveTableState, type TableViewState } from './_tableSta
 import { dispatchAction } from '../actions';
 import { isActionActive } from '../actionState';
 import { useSelection } from '../selectionContext';
+import { defaultSelection } from '../_selectionBinding';
 import type { ActionSpec } from '../actions';
 import { useXmlConvertFileStates, type XmlConvertFileState } from './useXmlConvertFileStates';
 
@@ -97,6 +98,10 @@ interface ChipFilterSpec {
   // `_chip_facets` ({value: count} over the result before the chip). Works in
   // client and server mode alike; `groups` apply to client chips only.
   param?: string;
+  // Chip order: `count` (default — most rows first, ties alphabetical),
+  // `label` (alphabetical) or `rows` (order of first appearance in the rows,
+  // e.g. levels of a list sorted by level; groups first).
+  order?: 'count' | 'label' | 'rows';
 }
 
 interface ChipOption {
@@ -124,6 +129,13 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
   const rowKey = (props.rowKey as string) ?? undefined;
   const density = (props.density as string) ?? 'comfortable';
   const onRowClick = props.onRowClick as ActionSpec | undefined;
+  // `rowAction` (opt-in): a SECOND click target per row — an arrow button in an
+  // extra column at the right end (same look as AutoTable's `@row_action`),
+  // e.g. "Show in layout" next to a row click that opens the object itself.
+  // `rowActionLabel` is the button's tooltip / aria-label (locale-overridable).
+  const rowAction = props.rowAction as ActionSpec | undefined;
+  const rowActionTitle = (props.rowActionLabel as string | undefined)
+    ?? (t('detail:autoTable.rowAction') as string);
   const empty = props.empty as { message?: string } | undefined;
   // Selection lens (see selectionContext): `selectField` makes this table the
   // SOURCE — a row click toggles its value on the named channel; `highlightField`
@@ -133,7 +145,13 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
   const selectionKey = props.selectionKey as string | undefined;
   const selectField = props.selectField as string | undefined;
   const highlightField = props.highlightField as string | undefined;
-  const { selection, toggle } = useSelection();
+  // Master-detail (see _selectionBinding.ts): `selectionDefault: "first"` puts
+  // the first row on the channel whenever it is empty or its value is not in the
+  // rows (e.g. after a filter change); `selectionToggle: false` keeps a second
+  // click on the selected row from clearing the channel.
+  const selectionDefault = props.selectionDefault as string | undefined;
+  const selectionToggle = props.selectionToggle !== false;
+  const { selection, toggle, select } = useSelection();
   const selectedValue = selectionKey ? (selection[selectionKey] ?? null) : null;
   // Server-side paging (opt-in via `pageParam`): the SQL sorts and pages, and
   // reports the window in convention columns of its rows — `_row_total` (rows
@@ -272,6 +290,12 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
   const rows = dataset?.data ?? [];
   const [searchParams, setSearchParams] = useSearchParams();
 
+  useEffect(() => {
+    if (selectionDefault !== 'first' || !selectionKey || !selectField) return;
+    const next = defaultSelection(rows as Record<string, unknown>[], selectField, selectedValue);
+    if (next !== null) select(selectionKey, next);
+  }, [rows, selectionDefault, selectionKey, selectField, selectedValue, select]);
+
   const firstRow = rows[0] as Record<string, unknown> | undefined;
   const rowTotal = toCount(firstRow?._row_total);
   const paged = !!pageParam && rowTotal != null;
@@ -356,8 +380,12 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
       singleChips.push({ id: chipValue, label: chipValue, count: null, values: [chipValue] });
     }
 
-    // 4) Sortierung: alle Chips gemeinsam nach Count (desc), bei Tie alphabetisch.
-    return [...groupChips, ...singleChips].sort(
+    // 4) Sortierung: nach `order` — Count (desc, bei Tie alphabetisch; Standard),
+    // alphabetisch oder in der Reihenfolge der Zeilen (Map-Einfügereihenfolge).
+    const all = [...groupChips, ...singleChips];
+    if (chipFilter.order === 'rows') return all;
+    if (chipFilter.order === 'label') return all.sort((a, b) => a.label.localeCompare(b.label, lang));
+    return all.sort(
       (a, b) => (b.count ?? 0) - (a.count ?? 0) || a.label.localeCompare(b.label, lang),
     );
   }, [rows, chipFilter, lang, chipsActive, facets, chipParam, chipValue]);
@@ -627,7 +655,11 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
   };
 
   const handleRowClick = (row: Record<string, unknown>) => {
-    if (selectable) toggle(selectionKey as string, String(row[selectField as string] ?? ''));
+    if (selectable) {
+      const value = String(row[selectField as string] ?? '');
+      if (selectionToggle) toggle(selectionKey as string, value);
+      else select(selectionKey as string, value);
+    }
     if (!onRowClick) return;
     const spec = keepViewOnRowClick
       ? withListView(onRowClick, listView(), dashboardIdFromPath(window.location.pathname))
@@ -821,6 +853,7 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
                 </th>
               );
             })}
+            {rowAction && <th className="dash-autotable__th--rowaction" aria-label={rowActionTitle} />}
           </tr>
         </thead>
         <tbody>
@@ -996,6 +1029,24 @@ export function Table({ node, dataset, navigate }: PrimitiveProps) {
                     </td>
                   );
                 })}
+                {rowAction && (
+                  <td className="dash-autotable__rowaction-cell">
+                    <button
+                      type="button"
+                      className="dash-autotable__rowaction"
+                      title={rowActionTitle}
+                      aria-label={rowActionTitle}
+                      onClick={e => {
+                        // The row click (primary target) must not fire as well.
+                        e.stopPropagation();
+                        dispatchAction(rowAction, row, { navigate });
+                      }}
+                      onKeyDown={e => e.stopPropagation()}
+                    >
+                      →
+                    </button>
+                  </td>
+                )}
               </tr>
             );
           })}

@@ -1,0 +1,20 @@
+{
+  "manifest": {
+    "title": "Typsnitt lämnat åt filens standard",
+    "description": "Layoutkvalitetsregel — textobjekt i en layout visar filens standardtypsnitt eftersom varken objektet, dess stil eller temat anger något typsnitt (Klassisk och Minimalistisk anger inget). Det typsnittet finns inte i XML-exporten och skiljer sig mellan filer: samma tema visar Helvetica Neue i en fil och Arial i en annan. En träff per layout.",
+    "messages.file_default": "{count} av {total} textobjekt visar filens standardtypsnitt — temat anger inget typsnitt"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Träffar",
+    "summary_kpi.props.items[1].label": "Objekt med filens standard",
+    "summary_kpi.props.items[2].label": "Berörda filer",
+    "findings_card.props.title": "Typsnitt lämnat åt filens standard",
+    "findings_table.props.searchPlaceholder": "Sök fil, layout eller tema…",
+    "findings_table.props.empty.message": "Ingen layout lämnar typsnittet åt filens standard.",
+    "findings_table.props.columns[0].label": "Fil",
+    "findings_table.props.columns[1].label": "Layout",
+    "findings_table.props.columns[2].label": "Tema",
+    "findings_table.props.columns[3].label": "Objekt med filens standard",
+    "findings_table.props.columns[4].label": "Textobjekt"
+  }
+}

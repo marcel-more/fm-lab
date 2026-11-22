@@ -394,5 +394,25 @@
     "clear": "Hele oplossing tonen",
     "clearTitle": "Bereik verwijderen en de hele oplossing tonen",
     "hint": "Aantallen en lijsten tonen alleen dit bereik"
+  },
+  "mermaid": {
+    "error": "Het diagram kon niet worden getekend",
+    "tooLarge": "Het diagram is te groot om te tekenen",
+    "position": "regel {{line}}, kolom {{column}}"
+  },
+  "ask": {
+    "title": "Kiezen",
+    "cancel": "Annuleren",
+    "needsSelection": "Selecteer eerst een rij",
+    "notForChoice": "Niet beschikbaar met deze keuze."
+  },
+  "download": {
+    "empty": "Niets om te exporteren.",
+    "noDataset": "De gegevens '{{detail}}' zijn niet geladen op deze pagina.",
+    "noSelection": "Selecteer eerst een rij.",
+    "tooLarge": "Het bestand is te groot om te downloaden (meer dan 20 MB).",
+    "svgOneRow": "Een SVG bevat precies één diagram – kies eerst één item.",
+    "renderFailed": "Het diagram kon niet worden getekend: {{detail}}",
+    "diagramError": "Diagram kan niet worden getekend: {{detail}}"
   }
 }

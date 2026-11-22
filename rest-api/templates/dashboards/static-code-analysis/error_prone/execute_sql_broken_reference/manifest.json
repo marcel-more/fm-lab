@@ -1,0 +1,87 @@
+{
+  "id": "execute_sql_broken_reference",
+  "version": "1.0.0",
+  "title": "ExecuteSQL reference without target",
+  "description": "Error-prone rule — a table or field named in an ExecuteSQL statement that does not exist in the solution: the FROM/JOIN name matches no table occurrence of the file, a column matches no field of its table, or a formula reference inside the SQL points to a deleted field (<Field Missing>). FileMaker reports no error for this: ExecuteSQL simply returns ? and the calling logic works with an empty or wrong value.",
+  "author": "fm-lab rules",
+  "icon": "unlink",
+  "category": "error_prone",
+  "tags": [
+    "rule",
+    "error_prone",
+    "sql"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "warning",
+    "category": "error_prone",
+    "rationale": "Names inside the SQL text are invisible to FileMaker's own reference tracking. Renaming or deleting a table occurrence or field breaks the query silently — ExecuteSQL returns ?, and the error only surfaces as missing data at runtime.",
+    "remediation": "Restore or rename the table occurrence / field the query names, or build the names with GetFieldName / a name wrapper so that FileMaker tracks them.",
+    "meta": {
+      "name": "ExecuteSQL reference without target",
+      "author": "fm-lab rules",
+      "source": "fm-lab",
+      "url": null,
+      "description": "Error-prone rule — a table or field named in an ExecuteSQL statement that does not exist in the solution: the FROM/JOIN name matches no table occurrence of the file, a column matches no field of its table, or a formula reference inside the SQL points to a deleted field (<Field Missing>). FileMaker reports no error for this: ExecuteSQL simply returns ? and the calling logic works with an empty or wrong value.",
+      "created": "2026-11-17",
+      "references": [],
+      "calibration": "Built on CalculationSqlRefs (schema 1.42.0). System tables (FileMaker_Tables, FileMaker_Fields, FileMaker_BaseTables, FileMaker_BaseTableFields) are never findings. Names whose table cannot be determined (dynamic table name, ambiguous qualifier) are marked Low_Confidence and excluded — only references that are certainly broken are reported."
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Script",
+      "Field",
+      "CustomFunction",
+      "LayoutObject"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — ExecuteSQL reference without target"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

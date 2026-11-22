@@ -1,6 +1,10 @@
 import { API_BASE } from '../config/apiBase';
 import type { NavigateFunction } from 'react-router-dom';
+import i18n from 'i18next';
 import { substituteDeep } from './tokens';
+import { prepareDownload } from './exportPrepare';
+import type { DownloadArgs, DownloadResult } from './_downloadFile';
+import { showToast } from '../lib/toastStore';
 
 /**
  * Dashboard Click-Action-Whitelist.
@@ -16,7 +20,8 @@ export type ActionName =
   | 'applyFilter'
   | 'runQuery'
   | 'openUrl'
-  | 'copyToClipboard';
+  | 'copyToClipboard'
+  | 'downloadFile';
 
 export interface ActionSpec {
   action: string;
@@ -24,11 +29,40 @@ export interface ActionSpec {
   args?: Record<string, unknown>;
   /** Alternative: Args als "k=v&k2=v2"-String (z.B. aus DB-Spalten). */
   argsString?: string;
+  /**
+   * Ask first: a small dialog offers the options; the chosen one merges its
+   * `args` into the action's args. Cancel = no action.
+   */
+  ask?: AskSpec;
 }
+
+export type { AskChoice, AskChoiceOption, AskOption, AskSpec } from './_askChoice';
+import { askOptionUsable, mergeAskArgs } from './_askChoice';
+import type { AskOption, AskSpec } from './_askChoice';
+export { askOptionUsable, mergeAskArgs };
 
 export interface ActionContext {
   navigate: NavigateFunction;
+  /** Loaded datasets of the dashboard (downloadFile). */
+  datasets?: Record<string, { data?: Record<string, unknown>[] } | undefined>;
+  /** Selection channels of the dashboard (downloadFile, ask.requiresSelection). */
+  selection?: Record<string, string | null>;
 }
+
+/**
+ * Shows the `ask` dialog; registered by the dashboard renderer
+ * (ActionAskHost). Resolves to the chosen option, or null on cancel.
+ */
+/** Resolves to the chosen option with the args of the chosen radio entry merged in. */
+type AskHandler = (ask: AskSpec, selection: Record<string, string | null>) => Promise<AskOption | null>;
+let askHandler: AskHandler | null = null;
+
+export function registerAskHandler(handler: AskHandler | null): void {
+  askHandler = handler;
+}
+
+/** Actions whose args keep their {{tokens}}: they are filled per row later. */
+const DEFERRED_TOKEN_ACTIONS = new Set(['downloadFile']);
 
 function parseArgsString(str: string): Record<string, string> {
   const out: Record<string, string> = {};
@@ -71,7 +105,9 @@ export function resolveAction(
 
   let args: Record<string, unknown> = {};
   if (spec.args) {
-    args = (substituteDeep(spec.args, row) as Record<string, unknown>) || {};
+    args = DEFERRED_TOKEN_ACTIONS.has(resolvedAction)
+      ? { ...spec.args }
+      : (substituteDeep(spec.args, row) as Record<string, unknown>) || {};
   }
   if (spec.argsString) {
     const stringResolved = (substituteDeep(spec.argsString, row) as string) || '';
@@ -121,6 +157,23 @@ export function dispatchAction(
   row: Record<string, unknown> | undefined,
   ctx: ActionContext
 ): void {
+  if (spec?.ask && spec.ask.options?.length) {
+    const { ask, ...rest } = spec;
+    const selection = ctx.selection ?? {};
+    const run = (option: AskOption | null) => {
+      if (!option) return;
+      dispatchAction({ ...rest, args: { ...(rest.args ?? {}), ...(option.args ?? {}) } }, row, ctx);
+    };
+    if (askHandler) {
+      void askHandler(ask, selection).then(run);
+    } else {
+      // No dialog host (primitive outside a dashboard): first radio entry, first usable option.
+      const choice = ask.choice?.options?.[0];
+      const option = ask.options.find((o) => askOptionUsable(o, choice, selection));
+      run(option ? { ...option, args: mergeAskArgs(option, choice) } : null);
+    }
+    return;
+  }
   const resolved = resolveAction(spec, row);
   if (!resolved) return;
   const { action, args } = resolved;
@@ -328,7 +381,38 @@ export function dispatchAction(
       });
       return;
     }
+    case 'downloadFile': {
+      // Async because `| svg` tokens are drawn first (exportPrepare.ts).
+      void prepareDownload(args as DownloadArgs, ctx.datasets ?? {}, ctx.selection ?? {})
+        .then(saveDownload)
+        .catch((err) => {
+          console.warn('[dashboard] downloadFile failed', err);
+          showToast({ message: i18n.t('dashboard:download.renderFailed', { detail: String(err?.message ?? err) }), tone: 'error' });
+        });
+      return;
+    }
     default:
       console.warn(`[dashboard] unknown action: ${action}`);
   }
+}
+
+/** Hands a built export to the browser as a download, or explains why not. */
+function saveDownload(result: DownloadResult): void {
+  if (!result.ok) {
+    showToast({
+      message: i18n.t(`dashboard:download.${result.reason}`, { detail: result.detail ?? '' }),
+      tone: result.reason === 'empty' ? 'info' : 'error',
+    });
+    return;
+  }
+  const blob = new Blob([result.content], { type: `${result.mime};charset=utf-8` });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = result.filename;
+  link.rel = 'noopener';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

@@ -8,6 +8,12 @@ Two scope notes: this history covers the **solution catalog** (`db/fm_catalog.du
 
 | Schema version | fm-lab version | Date |
 |---|---|---|
+| [1.46.0](#1460) | 0.9.20 | 2026-11-22 |
+| [1.45.0](#1450) | 0.9.20 | 2026-11-22 |
+| [1.44.0](#1440) | 0.9.20 | 2026-11-21 |
+| [1.43.0](#1430) | 0.9.20 | 2026-11-18 |
+| [1.42.0](#1420) | 0.9.20 | 2026-11-17 |
+| [1.41.0](#1410) | 0.9.20 | 2026-11-17 |
 | [1.40.0](#1400) | 0.9.18 | 2026-11-08 |
 | [1.39.0](#1390) | 0.9.18 | 2026-11-07 |
 | [1.38.0](#1380) | 0.9.18 | 2026-11-05 |
@@ -56,6 +62,204 @@ Two scope notes: this history covers the **solution catalog** (`db/fm_catalog.du
 | [1.0.0](#100) | — | 2026-05-13 |
 
 ## Changes by version
+
+### 1.46.0
+
+Styles and header of themes (converter 2.54.0). Schema 1.45.0 shows only the
+styles that objects use. The new table [ThemeNamedStyles](catalog-tables/ThemeNamedStyles.md) lists every named
+style of a theme with its Inspector name, also the unused ones, and marks the
+custom styles (`FM-<UUID>`). It is read once at import from the theme's
+`<Metadata><namedstyles>` block; character references of older exports
+(`Wei&#xDF;`) are decoded.
+
+[ThemeCatalog](catalog-tables/ThemeCatalog.md) gains seven columns from the `<Theme>` attributes: group (custom
+or built-in family), base theme and its version, theme version, language,
+platform code and whether the theme is the file's default for new layouts.
+
+Unused custom styles of a theme are now a query: named styles of
+[ThemeNamedStyles](catalog-tables/ThemeNamedStyles.md) without a row in `v_layout_object_style` of the same file.
+
+### 1.45.0
+
+Style usage of layout objects (converter 2.53.0). Schema 1.44.0 records the
+style of an object only as part of its local CSS. The new analysis view
+`v_layout_object_style` lists every layout object once — also shapes, lines,
+graphics and groups, and also objects without a style — together with its
+layout, the layout's theme, the applied style (class and Inspector name), whether
+it is a custom style, and whether the theme still has a rule for it.
+
+Which styles a theme or a layout uses is a grouping of this view. The catalog
+does not import the full style list of a theme, so a style no object uses does
+not appear.
+
+### 1.44.0
+
+Fonts and styles of layout objects (converter 2.52.0). Until now the catalog
+kept styles only as raw XML: which style an object uses, what it sets locally
+and what the theme defines were readable only by parsing CSS by hand. Four new
+tables hold this once per import:
+
+- [ThemeStyleRules](catalog-tables/ThemeStyleRules.md) — the CSS of every theme, one row per declaration, with
+  the selector split into layout part, object type, style, state and element.
+  A custom style without any deviation stays visible as one empty row.
+- [LayoutObjectStyles](catalog-tables/LayoutObjectStyles.md) — the own local CSS of every layout object: applied
+  style (name, Inspector name, FileMaker 26 style type), the raw rule set and
+  the local font family, size, weight and style. Read only at the object
+  itself, so a group or portal never reports the CSS of its contents.
+- [LayoutObjectFontRuns](catalog-tables/LayoutObjectFontRuns.md) — fonts stored as XML: formatted parts of a text
+  and the font of every chart text area.
+- [LayoutObjectCssType](catalog-tables/LayoutObjectCssType.md) — which theme rule name belongs to which object type,
+  checked in FileMaker 22 and 26.
+
+On top, the analysis view `v_layout_object_font` resolves the effective font
+of every object that shows text: family, size, weight and style, each with
+where it comes from — set locally, by the applied style, by a layout-part rule,
+by the object type's default or by the general field rule. A family set
+locally that equals the inherited one is marked as such, since FileMaker
+writes it as a side effect of *bold*. Formatted text parts and fonts of
+conditional formatting are listed next to the base font.
+
+A FileMaker probe confirmed the rules behind the tables: a style holds only its
+deviations from the type default; the type rule comes before the general field
+rule; a field inside a portal inherits nothing from the portal; a format applied
+to a whole text is stored as local CSS, not as a run. Themes without any font
+declaration (Classic, Minimalist) leave the font to a default of the file that
+the export does not contain — the catalog does not name a font for these objects.
+
+The check view `v_check_layout_styles` joins the import quality gate. It warns
+on duplicate style rows and reports theme selectors of an unknown form and
+objects whose style no longer exists in their layout's theme.
+
+What this means for existing installations:
+
+- The first import after the update is a full rebuild (schema version change);
+  clustering is rebuilt with it. For a single-file import, run a batch import
+  first.
+- The new tables add a few seconds to the import of a large solution and
+  about 20 MB to its catalog.
+- The dashboard *Fonts per layout* (area Layouts) reads the view: fonts per layout, objects with font, size and source, file default as its own group.
+
+### 1.43.0
+
+Value flow (converter 2.51.0). Until now the catalog answered *which* objects
+use a field; it could not say where the field's **value** comes from or where
+it goes. The new analysis table `v_dataflow_edges` holds every directed value
+relation between fields, script steps, variables, script parameters and
+results, field formulas and entries: a step writes a field, a step formula
+reads it (directly or in `ExecuteSQL`), a step sets a variable and another
+step reads it, `Perform Script` passes a parameter, `Exit Script` returns a
+result to the calling step, a calculation, lookup or auto-enter fills a
+field, a user types into a field on a layout, an import fills it. Besides
+value flow (`Flow_Class` `data`) it records what only steers a step
+(conditions, SQL filters, repetition numbers — `control`), how a flow starts
+(buttons, script triggers, menu commands, manual input, import, auto-enter —
+`entry`) and where a value ends (display, sort, export, find, relationship,
+value list — `sink`).
+
+Local variables connect only where a setter can actually reach the reader:
+a later setter in the same block overwrites, loops reach backwards, a reader
+without any reaching setter is marked *not initialized*. A script result is
+paired with the call step it answers. Reads inside called custom functions
+count as well, marked approximate. Targets that only exist at runtime — the
+active field, *Set Field By Name* — become explicit placeholder nodes instead
+of being dropped. Every relation carries its precision (`exact`, `approx`,
+`dynamic`), and writes carry what they write (`value`, `constant`, `reset`
+for an empty value, `input`, `import`).
+
+The second new table `v_step_guards` lists, per step, its own branch of every
+enclosing If chain and every enclosing loop — the condition a write or a call
+sits under, without reconstructing the control flow by hand (since converter
+2.51.3 also for script calls and navigation steps). The check view
+`v_check_dataflow_edges` joins the import quality gate.
+
+Both tables are the basis of the step-exact
+[flow trace](../Wiki/Graph%20Explorer%20Trace%20Mode.md) and of the experimental
+[data trace](../Wiki/Graph%20Explorer%20Data%20Trace.md) of fields and variables. Already with converter 2.50.0 (schema 1.42.0),
+`v_script_step_links` carries one row per variable a step sets or reads, and
+assignments in the head of a `Let` count as setters.
+
+What this means for existing installations:
+
+- The first import after the update is a full rebuild (schema version change);
+  clustering is rebuilt with it. For a single-file import, run a batch import
+  first.
+- The data-flow phase adds a few seconds to the import of a large solution
+  (about half a million relations). It is always built; if it fails, the
+  import still completes, the failure is reported, and the traces ask for a
+  re-import.
+- Catalogs older than 1.43.0 have no step-exact trace: the Graph Explorer
+  hides *Trace* until the solution is re-imported.
+- Files exported without *Include details for analysis tools* carry no formula
+  references: fields read in formulas, script parameters and results are
+  missing there, and ways through such files can end early.
+
+### 1.42.0
+
+SQL references in formulas (converter 2.47.0). `ExecuteSQL` takes its query as
+text, so table and field names inside it used to be invisible to the catalog.
+The new table [CalculationSqlRefs](catalog-tables/CalculationSqlRefs.md) holds every reference of an `ExecuteSQL` /
+`ExecuteSQLe` statement: clause (`select`, `from`, `join`, `on`, `where`,
+`group`, `having`, `order`, `parameter`), position in the select list or the
+argument list, and the resolved target — a table occurrence, a field, a system
+table, or none. A reference is either a formula reference wrapped in a name
+function (`GetFieldName ( TO::Field )` or a custom function doing the same), a
+plain name in the SQL text, or dynamic. Name functions are recognised by their
+position in the statement: in `FROM`/`JOIN` they stand for the table
+occurrence, elsewhere for the field — no list of function names is needed. When
+the SQL text sits in a Let variable of the same formula, the variable is
+resolved.
+
+Field names written as plain text in the SQL now count as usage: they get a
+`reads_field` link like any other formula reference, so such fields no longer
+appear unused. Table occurrences in `FROM`/`JOIN` count as usage of the table
+occurrence (category `sql`). Names that point to nothing — a renamed table
+occurrence, a deleted field — stay in the table without a target; the new
+Analysis Test *SQL Reference Integrity* lists them together with all plain-text
+names, the places a rename breaks silently. The former helper table
+`sql_name_wrappers`, a fixed list of wrapper names of one solution, is gone.
+
+What this means for existing installations:
+
+- The first import after the update is a full rebuild (schema version change)
+  and takes correspondingly longer; clustering is rebuilt with it. For a
+  single-file import, run a batch import first.
+- Fields and table occurrences that are only named in SQL text leave the
+  unused-code findings.
+- Not covered: the MBS SQL functions and SQL text assembled in another script
+  step.
+
+### 1.41.0
+
+Script links per step (converter 2.46.0). The new analysis table
+`v_script_step_links` holds the links of a script per **step**: which step sets
+or reads a field, calls a script, goes to a layout, sorts by a value list or
+installs a menu set, with the same link roles as the object links and the
+source — the step's own options (`Via = 'parameter'`) or one of its formulas
+(`Via = 'calculation'`). Questions like *"which step writes this field?"* no
+longer need a search in the step XML. Not included: variables (step-exact in
+[VariableUsages](catalog-tables/VariableUsages.md)) and script calls from formulas via
+`MBS("FM.RunScript")`. A new import check warns when a link from a step has no
+row in the table.
+
+Steps that read one field and write another — the AI steps *Fine-Tune Model*,
+*Insert Embedding in Found Set*, *Perform Semantic Find*, *Generate Response
+from Model*, *Configure Regression Model*, *Insert Image Captions in Found
+Set*, plus *Print PDF* and *Append PDF* — now get the link role of each option
+(`sets_field`, `reads_field`, `finds_in_field`) instead of the neutral
+`references_field`. The roles come from the curated table
+`ScriptStepParamRoleMap`; `StepFieldParamRoles` holds the result.
+
+The new table [ImportStepSources](catalog-tables/ImportStepSources.md) holds the source of every *Import Records*
+step: kind, path list or formula, the stylesheet of an XML import, and for a
+FileMaker source the file of the solution it reads from.
+
+What this means for existing installations:
+
+- The first import after the update is a full rebuild (schema version change)
+  and takes correspondingly longer; clustering is rebuilt with it. For a
+  single-file import, run a batch import first.
+- Where-used results of the eight steps above change: their field links move
+  from `references_field` to the role of the option.
 
 ### 1.40.0
 

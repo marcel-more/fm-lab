@@ -1,0 +1,18 @@
+{
+  "title": "Fonts",
+  "icon": "type",
+  "description": "Which fonts the layouts show and where they come from — from the fonts down to the layouts and their objects, with filters for file, theme, font, size and source.",
+  "order": 1,
+  "locales": {
+    "de": "Schriften",
+    "es": "Fuentes",
+    "fr": "Polices",
+    "it": "Font",
+    "ja": "フォント",
+    "ko": "글꼴",
+    "nl": "Lettertypen",
+    "pt": "Fontes",
+    "sv": "Typsnitt",
+    "zh-Hans": "字体"
+  }
+}

@@ -10,6 +10,33 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 ---
 
+## [0.9.20] — 2026-11-22
+
+<!-- components:auto --> *Components: schema 1.46.0 · xml-import 5.5.0 (converter 2.54.0) · fm-spec 2.10.0 · plugin-spec 1.3.0*
+
+fm-lab now reads scripts step by step: the trace shows every call with its condition and lists the ways in both directions, and a new, experimental data trace follows the value of a field or variable. Dashboards can draw diagrams and export them, layouts show their fonts and styles, themes get a detail view, and SQL from template files may only query.
+
+- **Upgrading**
+  - **Update** — `bash tools/fmlab.sh update`, then restart: Docker `bash tools/fmlab.sh up`; **VS Code Dev Container: run *Rebuild Container*** (new npm package, changed container definition); native `bash tools/init.sh`
+  - **Re-import your solutions** — the new analyses need a catalog built by this release; the first import is a full rebuild. Until then the affected views ask for it
+- **Trace step by step** — the flow trace of a script or layout reads the script steps: call sites with their condition, disabled steps left out, a ways list in both directions (*Reached from* / *Calls*), every way as a diagram, *Follow source*; in the terminal via `fm-trace`. See *Graph Explorer Trace Mode*
+- **Data trace (experimental)** — where the value of a field or variable comes from and where it flows to, as ways and diagrams, with a solution profile against noise. One *Trace* button opens the right trace for scripts, layouts, fields and variables. See *Graph Explorer Data Trace*
+- **Fonts, styles and themes**
+  - **Fonts and styles on layouts** — three font dashboards (rubric Layouts), the Analysis Test *Layout Fonts*, a font and style filter in the layout wireframe, the applied style in the layout object detail view
+  - **Theme detail view** — properties, layouts and named styles with their usage, unused ones included
+- **New analyses**
+  - **Dashboard *Indirections*** (rubric Modularization) — objects addressed by a computed name or text, invisible to where-used and the unused-code rules
+  - **Analysis Test *SQL Reference Integrity*** — broken and rename-fragile references in `ExecuteSQL`
+- **Catalog extensions** — new tables and analysis views in the catalog for the links of every script step, `ExecuteSQL` references, data flow, effective fonts, applied styles and theme styles (`v_script_step_links`, `CalculationSqlRefs`, `v_dataflow_edges`, `v_layout_object_font`, `v_layout_object_style`, `ThemeNamedStyles`, …), for own queries and AI agents alike; see *Schema* in the documentation. **Changed:** AI and PDF steps link their fields with more precise roles, fields named as plain text in SQL count as used
+- **Dashboard building blocks** — diagrams (Mermaid), master-detail, export as Markdown, HTML, SVG or CSV, Markdown columns, text input, collapsible cards, shared SQL via `--#include`, system parameters; see the `create-custom-dashboard` skill. A dashboard on an outdated catalog says so instead of showing an error
+- **REST API diagrams** — drawn by the API itself instead of a CDN, new format `svg`. **Changed:** the Mermaid output of the graph mode (`flowchart`, node ids, escaping)
+- **Hardening** — SQL from template files may only query (one query statement per file, otherwise `400 VALIDATION_ERROR` — check your own dashboards and queries), HTML in dashboards is sanitized, dashboard queries have a time limit (`FMLAB_QUERY_TIMEOUT_MS`), AI agent queries in the dev container have resource limits
+- **Script generation** — `fm-generate-script` catches four more causes of scripts that break on paste: line breaks in formulas, typographic quotes, incomplete PDF page settings, unknown or renamed `Get` selectors
+- **MBS plug-in map on MBS 16.5** — new and deprecated functions; functions removed from the MBS documentation stay in the map
+- **Fixes** — reference resolution in the catalog, display in the Graph Explorer (Safari)
+
+---
+
 ## [0.9.19] — 2026-11-16
 
 <!-- components:auto --> *Components: schema 1.40.0 · xml-import 5.5.0 (converter 2.45.0) · fm-spec 2.9.0 · plugin-spec 1.2.0*
@@ -1081,7 +1108,8 @@ Initial release: XML conversion pipeline, core database structure, and first AI 
 <!-- Link references. compare-ranges span adjacent tagged releases; documentation-only
      versions that were never tagged (e.g. 0.8.7, 0.8.1, 0.8.0, 0.7.5–0.7.7, …) are
      intentionally left unlinked and render as plain text. Add a line here per new tag. -->
-[Unreleased]: https://github.com/marcel-more/fm-lab/compare/v0.9.19...HEAD
+[Unreleased]: https://github.com/marcel-more/fm-lab/compare/v0.9.20...HEAD
+[0.9.20]: https://github.com/marcel-more/fm-lab/compare/v0.9.19...v0.9.20
 [0.9.19]: https://github.com/marcel-more/fm-lab/compare/v0.9.18...v0.9.19
 [0.9.18]: https://github.com/marcel-more/fm-lab/compare/v0.9.17...v0.9.18
 [0.9.17]: https://github.com/marcel-more/fm-lab/compare/v0.9.16...v0.9.17

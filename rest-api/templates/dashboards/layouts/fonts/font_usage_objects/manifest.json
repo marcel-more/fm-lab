@@ -1,0 +1,173 @@
+{
+  "id": "font_usage_objects",
+  "version": "1.0.0",
+  "title": "Fonts per object",
+  "description": "Every font use on the layouts: the base font of an object, a formatted part of a text, a chart text area — with font, size, face, source and style. Filters for file, theme, layout, font, size, source, face and object type, plus a search. By default the objects whose font is left to the default of the file stay out (the theme names none, so the export holds no font name for them); the source chips show them on request. A click opens the layout object; the arrow opens the layout with the object marked.",
+  "author": "fm-lab",
+  "icon": "type",
+  "tags": [
+    "layouts",
+    "fonts",
+    "themes",
+    "styling",
+    "inventory"
+  ],
+  "entry": "layout.json",
+  "analysis": {
+    "objectTypes": [
+      "Layout",
+      "LayoutObject"
+    ],
+    "outputTypes": [
+      "count",
+      "inventory-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "summary": "native",
+        "objects": "native",
+        "file_options": "native",
+        "theme_options": "native",
+        "layout_options": "native",
+        "font_options": "native",
+        "size_options": "native"
+      }
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "objects",
+      "source": "bundle:data/objects.sql",
+      "pageSize": 100,
+      "pageParam": "objects_page",
+      "sortParam": "objects_sort"
+    },
+    {
+      "id": "file_options",
+      "source": "bundle:data/options.sql",
+      "params": { "dim": "file" }
+    },
+    {
+      "id": "theme_options",
+      "source": "bundle:data/options.sql",
+      "params": { "dim": "theme" }
+    },
+    {
+      "id": "layout_options",
+      "source": "bundle:data/options.sql",
+      "params": { "dim": "layout" }
+    },
+    {
+      "id": "font_options",
+      "source": "bundle:data/options.sql",
+      "params": { "dim": "font" }
+    },
+    {
+      "id": "size_options",
+      "source": "bundle:data/options.sql",
+      "params": { "dim": "size" }
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "File filter: file names, comma-separated (the app-level file filter is one of them); empty = all files."
+    },
+    {
+      "name": "scope_uuids",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Analysis-Test scope: comma-separated layout or layout-object UUIDs."
+    },
+    {
+      "name": "search",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Search term, matched per font use (font, layout, object, field, theme, style, file, type, size, face, source, run/area)."
+    },
+    {
+      "name": "theme",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Theme filter: theme names separated by '|'; empty = all themes."
+    },
+    {
+      "name": "layout_uuid",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Layout filter (UUID) — set by the layout select or by a row click in 'Fonts per layout'."
+    },
+    {
+      "name": "layout_file",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "File of the selected layout (tells cloned layouts apart); the layout select drops it."
+    },
+    {
+      "name": "font",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Font filter: normalised font keys (lower case) separated by '|'; empty = all fonts."
+    },
+    {
+      "name": "size",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Size filter: sizes such as 12pt separated by '|'; empty = all sizes."
+    },
+    {
+      "name": "face",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Face chip: normal, bold, italic, bold italic; empty = all."
+    },
+    {
+      "name": "source",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Source chip: empty = uses with a named font (all but the file default), 'all', or one of local, local_redundant, style, theme, rich_text, chart, default."
+    },
+    {
+      "name": "otype",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Object-type chip: text, field, dropdown, popup, checkbox, radio, calendar, button, tab, chart; empty = all."
+    },
+    {
+      "name": "objects_sort",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Sort column of the object list (server sort)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

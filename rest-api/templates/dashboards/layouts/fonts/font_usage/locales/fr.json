@@ -1,0 +1,35 @@
+{
+  "manifest": {
+    "title": "Vue d'ensemble des polices",
+    "description": "Quelles polices les modèles affichent : une ligne par police avec ses utilisations, objets, modèles, fichiers, tailles et son origine — définie sur l'objet, par un style ou par le thème. Les objets dont la police est laissée à la valeur par défaut du fichier (le thème n'en nomme aucune : Classique, Minimaliste) forment une ligne à part. Un clic sur une police ouvre les modèles qui l'affichent ; fichier, thème, taille et recherche sont conservés."
+  },
+  "layout": {
+    "summary_kpistrip.props.items[0].label": "Polices",
+    "summary_kpistrip.props.items[1].label": "Utilisations avec nom de police",
+    "summary_kpistrip.props.items[2].label": "Modèles avec nom de police",
+    "summary_kpistrip.props.items[3].label": "Fichiers avec nom de police",
+    "summary_kpistrip.props.items[4].label": "Objets sans police nommée",
+    "search_input.props.placeholder": "Rechercher police, modèle, objet ou rubrique…",
+    "file_select.props.label": "Fichier",
+    "file_select.props.emptyOptionLabel": "Tous les fichiers",
+    "theme_select.props.label": "Thème",
+    "theme_select.props.emptyOptionLabel": "Tous les thèmes",
+    "size_select.props.label": "Taille",
+    "size_select.props.emptyOptionLabel": "Toutes les tailles",
+    "fonts_card.props.title": "Polices",
+    "fonts_table.props.columns[0].label": "Police",
+    "fonts_table.props.columns[0].valueLabels.#default": "Par défaut du fichier (police absente de l'export)",
+    "fonts_table.props.columns[1].label": "Utilisations",
+    "fonts_table.props.columns[2].label": "Objets",
+    "fonts_table.props.columns[3].label": "Modèles",
+    "fonts_table.props.columns[4].label": "Fichiers",
+    "fonts_table.props.columns[5].label": "Tailles",
+    "fonts_table.props.columns[6].label": "Définie localement",
+    "fonts_table.props.columns[7].label": "D'un style",
+    "fonts_table.props.columns[8].label": "Du thème",
+    "fonts_table.props.columns[9].label": "Texte enrichi et graphiques",
+    "fonts_table.props.empty.message": "Aucune utilisation de police dans cette sélection.",
+    "notes_card.props.title": "D'où vient une police",
+    "notes_md.props.content": "**Origine de la police de base.** FileMaker prend la première valeur définie :\n- *locale* — définie sur l'objet lui-même.\n- *locale, identique à l'héritée* — définie sur l'objet, mais c'est la police qu'il recevrait de toute façon. FileMaker l'écrit quand *gras* est appliqué à une police qui a sa propre variante grasse ; ce n'est pas un choix délibéré.\n- *style* — le style appliqué à l'objet. Un style ne contient que ce qu'il change ; le reste vient du thème.\n- *thème* — la valeur par défaut du thème pour le type d'objet, la partie du modèle ou toutes les rubriques.\n- *par défaut du fichier* — le thème ne nomme aucune police (Classique, Minimaliste). FileMaker utilise alors une valeur par défaut du fichier que l'export XML ne contient pas : le même thème affiche Helvetica Neue dans un fichier et Arial dans un autre. La liste ne nomme donc aucune police pour ces objets ; vérifiez un objet par fichier dans FileMaker.\n\n**Autres utilisations.** *Texte enrichi* est une partie d'un texte mise en forme avec le curseur ; elle s'ajoute à la police de base de l'objet, le reste du texte la conserve. *Graphique* est la police d'une zone de texte d'un graphique (titre, légende, axes, étiquettes de données) ; les titres de séries sont omis, ils gardent la police du thème.\n\n**Comptage.** *Polices* regroupe les graphies d'une police (`arial`, `Arial`). La valeur par défaut du fichier n'est pas une police : elle ne compte ni dans le nombre de polices ni pour *beaucoup de polices*. *Incertain* : la valeur vient d'une règle de partie du modèle (priorité non vérifiée), ou le style appliqué n'existe plus dans le thème.\n\n**Limites.** Les polices de la mise en forme conditionnelle ne sont pas listées. Un nom de police n'indique pas si la police est installée sur les clients."
+  }
+}

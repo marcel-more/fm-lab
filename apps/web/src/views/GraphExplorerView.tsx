@@ -9,7 +9,10 @@ import {
   type GraphExplorerHandle,
   type GraphExplorerStats,
   type TraceParamsProp,
+  type DataTraceParamsProp,
 } from '../components/GraphExplorer';
+import type { DataTraceControlValues } from '../components/ExplorerDataTracePanel';
+import { DATA_TRACE_DEFAULTS, DATA_TRACE_FIELD_LEVELS_MAX } from '../hooks/useDataTrace';
 import type { TraceControlValues } from '../components/ExplorerTracePanel';
 import type { SubgraphDirection } from '../hooks/useSubgraph';
 import { TRACE_DEFAULTS, type TraceEntryKey } from '../hooks/useTrace';
@@ -46,14 +49,32 @@ function clampTraceBudget(raw: string | null, fallback: number, max: number): nu
   return Math.min(max, Math.max(0, Math.round(n)));
 }
 
+/** Offenes Diagramm (`way`): Weg-Nummer ≥ 0 (0 = Übersicht); sonst keins. */
+function parseWayNo(raw: string | null): number | null {
+  if (raw === null || raw === '') return null;
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 0 ? n : null;
+}
+
 const TRACE_ENTRIES: TraceEntryKey[] = ['script', 'layout_runtime', 'layout_inbound', 'layout_full'];
 
 function parseTraceEntry(raw: string | null): TraceEntryKey | null {
   return TRACE_ENTRIES.includes(raw as TraceEntryKey) ? (raw as TraceEntryKey) : null;
 }
 
-/** Alle Trace-Deep-Link-Params — gemeinsam gelöscht beim Moduswechsel. */
-const TRACE_PARAM_KEYS = ['trace', 'trace_file', 'entry', 'up', 'down', 'tdepth', 'vars', 'buttons', 'itrig', 'expup', 'exclude'] as const;
+/**
+ * Alle Trace-Deep-Link-Params — gemeinsam gelöscht beim Moduswechsel.
+ * Ablauf-Trace: dis (deaktivierte Schritte) · wdir (Tab „Ruft auf" = down;
+ * Default „Erreicht über" wie „Herkunft" im Datenfluss) · way (offenes
+ * Diagramm, 0 = Übersicht, je Richtung).
+ * Datenfluss-Trace (`tmode=data`): tdir · flevels · ctl · sinks · reset ·
+ * profile · expand (Weg-IDs „Quelle verfolgen").
+ */
+const TRACE_PARAM_KEYS = [
+  'trace', 'trace_file', 'entry', 'up', 'down', 'tdepth', 'vars', 'buttons', 'itrig', 'expup', 'exclude',
+  'tmode', 'tdir', 'flevels', 'ctl', 'sinks', 'reset', 'profile', 'expand', 'tstep', 'trole',
+  'dis', 'wdir', 'way',
+] as const;
 const nullPatch = (keys: readonly string[]) => Object.fromEntries(keys.map((k) => [k, null]));
 
 export function GraphExplorerView() {
@@ -76,7 +97,27 @@ export function GraphExplorerView() {
   // unten). Deep-Link-Kurzformen up/down/tdepth/vars/buttons/expup ↔ API-Params
   // (Übersetzung in useTrace, Muster wie dir ↔ direction).
   const traceStart = searchParams.get('trace');
-  const trace: TraceParamsProp | null = traceStart
+  const dataMode = searchParams.get('tmode') === 'data';
+  const excludeList = (searchParams.get('exclude') ?? '').split(',').filter((s) => s !== '');
+  // Datenfluss-Trace ab einem Feld (`tmode=data`) — eigener Param-Satz.
+  const dataTrace: DataTraceParamsProp | null = traceStart && dataMode
+    ? {
+        start: traceStart,
+        startFile: searchParams.get('trace_file'),
+        dir: searchParams.get('tdir') === 'down' ? 'down' : 'up',
+        fieldLevels: clampTraceBudget(searchParams.get('flevels'), DATA_TRACE_DEFAULTS.fieldLevels, DATA_TRACE_FIELD_LEVELS_MAX) || 1,
+        includeControl: searchParams.get('ctl') === '1',
+        includeSinks: searchParams.get('sinks') !== '0',
+        includeReset: searchParams.get('reset') === '1',
+        profile: searchParams.get('profile') !== 'off',
+        expandWay: (searchParams.get('expand') ?? '').split(',').filter((s) => s !== ''),
+        exclude: excludeList,
+        // Schritt-Anker einer lokalen Startvariable
+        startStep: searchParams.get('tstep'),
+        startRole: searchParams.get('trole') === 'set' ? 'set' : searchParams.get('tstep') ? 'read' : null,
+      }
+    : null;
+  const trace: TraceParamsProp | null = traceStart && !dataMode
     ? {
         start: traceStart,
         startFile: searchParams.get('trace_file'),
@@ -88,8 +129,13 @@ export function GraphExplorerView() {
         includeLocalVars: searchParams.get('vars') === '1',
         includeButtons: searchParams.get('buttons') === '1',
         includeInteractionTriggers: searchParams.get('itrig') === '1',
+        includeDisabled: searchParams.get('dis') === '1',
         // Boundary-Ausschlüsse (Composite-IDs, kommasepariert).
-        exclude: (searchParams.get('exclude') ?? '').split(',').filter((s) => s !== ''),
+        exclude: excludeList,
+        wayDir: searchParams.get('wdir') === 'down' ? 'down' : 'up',
+        // „Quelle verfolgen" aufwärts — Weg-IDs, wie im Datenfluss-Modus `expand`.
+        expandWay: (searchParams.get('expand') ?? '').split(',').filter((s) => s !== ''),
+        way: parseWayNo(searchParams.get('way')),
       }
     : null;
 
@@ -141,8 +187,26 @@ export function GraphExplorerView() {
   // Budgets/Schalter/Preset patchen; Default-Werte verschwinden aus der URL
   // (kurze, deterministische Deep-Links — Parität zum Skill /fm-trace).
   const handleTraceParamsChange = useCallback(
-    (patch: Partial<TraceControlValues> & { entry?: TraceEntryKey; exclude?: string[] }) => {
+    (patch: Partial<TraceControlValues> & {
+      entry?: TraceEntryKey; exclude?: string[]; wayDir?: 'up' | 'down'; way?: number | null; expandWay?: string[];
+    }) => {
       const urlPatch: Record<string, string | null> = {};
+      // Weg-Nummern gelten je Parametersatz und Richtung — jede andere Änderung
+      // schließt ein offenes Diagramm. „Quelle verfolgen" hängt neue Wege hinten
+      // an, die vorhandenen Nummern bleiben.
+      const onlyView = Object.keys(patch).every((k) => k === 'wayDir' || k === 'way' || k === 'expandWay');
+      if (patch.expandWay !== undefined) {
+        urlPatch.expand = patch.expandWay.length > 0 ? patch.expandWay.join(',') : null;
+        // Zurücksetzen entfernt die angehängten Wege — ein offenes Diagramm kann darauf zeigen.
+        if (patch.expandWay.length === 0 && patch.way === undefined) urlPatch.way = null;
+      }
+      if (!onlyView) urlPatch.way = null;
+      if (patch.wayDir !== undefined) {
+        urlPatch.wdir = patch.wayDir === 'down' ? 'down' : null;
+        if (patch.way === undefined) urlPatch.way = null;
+      }
+      if (patch.way !== undefined) urlPatch.way = patch.way === null ? null : String(patch.way);
+      if (patch.includeDisabled !== undefined) urlPatch.dis = patch.includeDisabled ? '1' : null;
       if (patch.entry !== undefined) urlPatch.entry = patch.entry;
       if (patch.exclude !== undefined) {
         urlPatch.exclude = patch.exclude.length > 0 ? patch.exclude.join(',') : null;
@@ -164,6 +228,56 @@ export function GraphExplorerView() {
     },
     [patchParams],
   );
+  // Datenfluss-Trace ab einem Feld/einer Variable öffnen (Inspect-Aktion „Trace").
+  const handleOpenDataTrace = useCallback(
+    (uuid: string, file: string | null | undefined, dir: 'up' | 'down') =>
+      patchParams({
+        ...nullPatch(TRACE_PARAM_KEYS),
+        trace: uuid,
+        trace_file: file ?? null,
+        tmode: 'data',
+        tdir: dir === 'down' ? 'down' : null,
+        focus: null,
+        focus_file: null,
+        depth: null,
+        dir: null,
+      }),
+    [patchParams],
+  );
+
+  // Datenfluss-Parameter patchen; Defaults verschwinden aus der URL. Ein
+  // Richtungswechsel verwirft „Quelle verfolgen" (Weg-IDs gelten je Richtung).
+  const handleDataTraceParamsChange = useCallback(
+    (patch: Partial<DataTraceControlValues> & { expandWay?: string[]; exclude?: string[]; clearAnchor?: boolean }) => {
+      const urlPatch: Record<string, string | null> = {};
+      if (patch.dir !== undefined) {
+        urlPatch.tdir = patch.dir === 'down' ? 'down' : null;
+        urlPatch.expand = null;
+        // Verwendung ab einem reinen Leser gibt es nicht — Anker dann aufheben.
+        if (patch.dir === 'down' && searchParams.get('tstep') && searchParams.get('trole') !== 'set') {
+          urlPatch.tstep = null;
+          urlPatch.trole = null;
+        }
+      }
+      if (patch.clearAnchor) {
+        urlPatch.tstep = null;
+        urlPatch.trole = null;
+        urlPatch.expand = null;
+      }
+      if (patch.fieldLevels !== undefined) {
+        urlPatch.flevels = patch.fieldLevels === DATA_TRACE_DEFAULTS.fieldLevels ? null : String(patch.fieldLevels);
+      }
+      if (patch.includeControl !== undefined) urlPatch.ctl = patch.includeControl ? '1' : null;
+      if (patch.includeSinks !== undefined) urlPatch.sinks = patch.includeSinks ? null : '0';
+      if (patch.includeReset !== undefined) urlPatch.reset = patch.includeReset ? '1' : null;
+      if (patch.profile !== undefined) urlPatch.profile = patch.profile ? null : 'off';
+      if (patch.expandWay !== undefined) urlPatch.expand = patch.expandWay.length > 0 ? patch.expandWay.join(',') : null;
+      if (patch.exclude !== undefined) urlPatch.exclude = patch.exclude.length > 0 ? patch.exclude.join(',') : null;
+      patchParams(urlPatch);
+    },
+    [patchParams, searchParams],
+  );
+
   const handleOpenDetails = useCallback(
     (uuid: string, file?: string | null) => navigate(buildObjectPath(uuid, null, file ?? null)),
     [navigate],
@@ -229,7 +343,7 @@ export function GraphExplorerView() {
 
       <GraphExplorer
         ref={engineRef}
-        focus={trace ? null : focus}
+        focus={trace || dataTrace ? null : focus}
         focusFile={focusFile}
         depth={depth}
         direction={direction}
@@ -244,6 +358,9 @@ export function GraphExplorerView() {
         trace={trace}
         onTraceParamsChange={handleTraceParamsChange}
         onOpenTrace={handleOpenTrace}
+        dataTrace={dataTrace}
+        onDataTraceParamsChange={handleDataTraceParamsChange}
+        onOpenDataTrace={handleOpenDataTrace}
       />
     </div>
   );

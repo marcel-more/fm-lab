@@ -11,7 +11,7 @@ description: >-
   Dashboard für X", "neues Dashboard", "baue ein Dashboard das X zeigt", "erstelle eine eigene
   Query für X". Also responds to equivalent requests in other languages.
 metadata:
-  version: "0.9.19"
+  version: "0.9.20"
 ---
 
 # Create a custom dashboard

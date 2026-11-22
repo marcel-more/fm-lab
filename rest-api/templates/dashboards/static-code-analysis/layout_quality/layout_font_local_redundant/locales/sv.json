@@ -1,0 +1,20 @@
+{
+  "manifest": {
+    "title": "Lokalt typsnitt samma som ärvt",
+    "description": "Layoutkvalitetsregel — ett objekt anger lokalt ett typsnitt som det ändå skulle få från sin stil eller sitt tema. FileMaker skriver en sådan inställning när fet används på ett typsnitt med en egen fet variant (familjen sparas med den feta variantens PostScript-namn). I dag ändrar den inget, men den låser typsnittet: ett senare temabyte når inte längre objektet.",
+    "messages.redundant": "Objektet ärver det lokala typsnittet {font} ändå"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Träffar",
+    "summary_kpi.props.items[1].label": "Berörda layouter",
+    "findings_card.props.title": "Lokalt typsnitt samma som ärvt",
+    "findings_table.props.searchPlaceholder": "Sök fil, layout, objekt eller typsnitt…",
+    "findings_table.props.empty.message": "Inget objekt upprepar sitt ärvda typsnitt lokalt.",
+    "findings_table.props.columns[0].label": "Fil",
+    "findings_table.props.columns[1].label": "Layout",
+    "findings_table.props.columns[2].label": "Objekttyp",
+    "findings_table.props.columns[3].label": "Objekt",
+    "findings_table.props.columns[4].label": "Typsnitt",
+    "findings_table.props.columns[5].label": "PostScript-namn"
+  }
+}

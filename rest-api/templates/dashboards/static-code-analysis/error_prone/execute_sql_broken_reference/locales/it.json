@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "Riferimento ExecuteSQL senza destinazione",
+    "description": "Regola soggetta a errori — una tabella o un campo nominato in un'istruzione ExecuteSQL che non esiste nella soluzione: il nome in FROM/JOIN non corrisponde ad alcuna ricorrenza di tabella del file, una colonna ad alcun campo della sua tabella, oppure un riferimento di formula nell'SQL punta a un campo eliminato (<Field Missing>). FileMaker non segnala alcun errore: ExecuteSQL restituisce semplicemente ? e la logica chiamante lavora con un valore vuoto o errato."
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Risultati",
+    "summary_kpi.props.items[1].label": "File interessati",
+    "summary_kpi.props.items[2].label": "Riferimenti SQL nell'ambito",
+    "summary_kpi.props.items[3].label": "Non verificabili (dinamici)",
+    "findings_card.props.title": "Riferimento ExecuteSQL senza destinazione",
+    "findings_table.props.searchPlaceholder": "Cerca file, oggetto o nome…",
+    "findings_table.props.empty.message": "Nessun riferimento ExecuteSQL senza destinazione trovato.",
+    "findings_table.props.columns[0].label": "File",
+    "findings_table.props.columns[1].label": "Oggetto",
+    "findings_table.props.columns[2].label": "Tipo",
+    "findings_table.props.columns[3].label": "Passo",
+    "findings_table.props.columns[4].label": "Funzione",
+    "findings_table.props.columns[5].label": "Clausola",
+    "findings_table.props.columns[6].label": "Nome nell'SQL",
+    "findings_table.props.columns[7].label": "Difetto"
+  }
+}

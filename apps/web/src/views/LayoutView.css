@@ -309,6 +309,73 @@
   color: var(--color-accent-hover);
 }
 
+/* Font and style row of the details stage (LayoutFontFilter): starts on its own
+   line; the actions (Groups / reset) stay at its right end. */
+.layout-type-filter-break {
+  flex-basis: 100%;
+  height: 0;
+}
+
+.layout-font-filter {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.9rem;
+}
+
+.layout-font-select.dash-select {
+  padding: 0;
+  gap: 0.35rem;
+}
+
+.layout-font-select .dash-select__label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  letter-spacing: 0.05em;
+}
+
+.layout-font-select .dash-select__control {
+  font-size: 0.72rem;
+  padding: 0.1rem 0.5rem;
+  max-width: 200px;
+}
+
+.layout-font-filter-note {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.layout-font-filter-note--unavailable,
+.layout-font-filter-note--error {
+  color: var(--color-warning-fg);
+}
+
+/* Short pills of active font/style filters in the groups stage. */
+.layout-font-pills {
+  border-right: none;
+}
+
+.layout-font-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.05rem;
+}
+
+.layout-font-pill-clear {
+  padding: 0 0.2rem;
+  font-size: 0.85rem;
+  line-height: 1;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.layout-font-pill-clear:hover {
+  color: var(--color-text-primary);
+}
+
 /* ============= Canvas ============= */
 
 .layout-canvas {
@@ -378,6 +445,11 @@
 
 .layout-tooltip-muted {
   color: var(--color-text-muted);
+}
+
+.layout-tooltip-warn {
+  color: var(--color-warning-fg);
+  cursor: help;
 }
 
 /* ============= Embedded Layout im DetailView ============= */
@@ -642,4 +714,19 @@
 .fm-lo-compat-badge--partial {
   background: var(--color-warning-bg, rgba(255, 193, 7, 0.18));
   color: var(--color-warning-text, #8a6d00);
+}
+
+/* Style row of the layout object properties panel (LayoutObjectDetail). */
+.layoutobject-style-badge {
+  margin-left: 0.4rem;
+  padding: 0 0.3rem;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 4px;
+}
+
+.layoutobject-style-warn {
+  color: var(--color-warning-fg);
+  cursor: help;
 }

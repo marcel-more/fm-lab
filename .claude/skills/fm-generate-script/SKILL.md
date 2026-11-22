@@ -9,7 +9,7 @@ description: >-
   fmxmlsnippet". Triggers (German): "erstelle ein FileMaker-Script", "generiere ein Script fuer
   X", "baue ein Script-Snippet". Also responds to equivalent requests in other languages.
 metadata:
-  version: "0.9.12"
+  version: "0.9.20"
 ---
 
 # fm-generate-script — reference-driven FileMaker script generation
@@ -48,13 +48,21 @@ Write the draft to a `.fmscript` file (scratchpad or `output/codegen/`).
 Rules (fm-spec `script-text-notation.md` v0.2, condensed):
 
 - One step per line, step name first — any of the 11 locales works, it is
-  canonicalized by lookup. Multi-line calculations are fine.
+  canonicalized by lookup. Multi-line calculations are fine — the emitter
+  writes their line breaks as CR, the only line break FileMaker keeps in a
+  formula (gate G112).
 - One bracket group: `Step Name [ param ; Label: value ; ... ]`.
 - Fields `TO::Field`, layouts `"Name" (TO)`, scripts `"Name"`,
   variables `$x` / `$$x`. Comments `# text`, disabled steps `// ` prefix.
 - **Calculations use canonical EN function names** (`Get`, not `Hole`) —
   see the conventions block in `codegen-registry.md`. The lint warns on
   localized names (L007).
+- **Get selectors come from the reference, never from memory.** Look a
+  selector up (`filemaker-function-reference`) before you write it: older
+  forum posts and snippets carry names Claris has renamed since
+  (`Get ( LastExternalErrorDetail )` is `Get ( LastErrorDetail )` since
+  FileMaker 19.6.1). The lint stops an unknown selector (L013) and names the
+  replacement for a renamed one (L014).
 - References to objects the script itself creates or that must be created
   first: `{{NEW:Field:TO::Name}}` — they surface in the report as
   "create before paste".
@@ -74,6 +82,14 @@ Rules (fm-spec `script-text-notation.md` v0.2, condensed):
   `<Field>$var</Field>` with FileMaker's `<Text/>` marker in front, an
   unset target emits neither (paired 22.0.6). Never write a field name into
   a variable slot by hand: pasted as text it would become a variable.
+- **Quotes inside text constants are always escaped** — `\"` for a straight
+  quote, `\„ \“ \”` for typographic ones: `"Über \„Label anfordern\“
+  anzeigen."`. FileMaker reads `„ “ ” ‟` as text-constant delimiters, so an
+  unescaped one ends the constant early and FileMaker comments the formula
+  out on paste;
+  the delimiter of a constant is always the straight `"`. `‘ ’ ‚ « »` are no
+  delimiters and need no mask. The lint (L012) and the gate (G111) stop
+  every unescaped one.
 - **Text values** that carry `;`, `[`, `]`, `//` or `/*` (find criteria
   such as `// *:*:*`) are written in double quotes — `text: "// *:*:*"` —
   and unwrapped on parse; unquoted, `//` reads as a calculation comment and
@@ -141,7 +157,9 @@ Always include, in this order:
 2. The resolution report: resolved refs (real IDs), new objects to create
    before paste, assumptions.
 3. Gate protocol summary — each failed/skipped check by name; never claim
-   "validated" when a check was skipped. Report `warning` checks explicitly,
+   "validated" when a check was skipped. The layer of a check says when
+   FileMaker would have revealed the defect (1 paste, 2 save, 3 runtime —
+   `references/paste-semantics.md` §Gate layers); only the status decides. Report `warning` checks explicitly,
    they are findings the user has to act on:
    - `G109-doc-only` — enum values documented by Claris but not
      roundtrip-verified; never present them as verified.
@@ -183,6 +201,23 @@ Always include, in this order:
      FileMaker writes the title there on paste (`step_mirror_elements`).
      Runs on the IR (`--resolved`); `skipped` without it. Presence-only —
      value fidelity stays with G109/G110.
+   - `G111-calc-quotes` (fail class) — a calculation of the snippet carries
+     an unescaped typographic double quote (`„ “ ” ‟`) inside a text constant.
+     FileMaker reads it as a text-constant delimiter: the formula turns
+     invalid and FileMaker comments it out on paste (the step stays, its
+     value is empty — paste probe FileMaker 26.0.3). Same check as lint L012,
+     run on the finished XML so hand-authored or edited snippets are covered
+     too. A typographic quote used as the delimiter itself (`“abc”`) passes:
+     FileMaker accepts any pairing of `" “ ” „` and stores a straight quote.
+     Fix: escape inside a constant (`\„`), use a straight `"` as delimiter.
+   - `G112-calc-line-breaks` (fail/warning class) — a calculation of the
+     snippet carries an LF. FileMaker keeps a formula's line breaks as CR
+     and ignores an LF on paste: the formula arrives on one line (warning).
+     Inside a text constant the text loses its line break, and an LF that
+     ends a `//` comment lets the comment run over the rest of the formula
+     (fail). The emitter writes CR, so only a hand-edited or foreign snippet
+     trips it; checked on the raw text, because an XML parser turns every CR
+     into LF.
    - `G307-value-form` (fail class) — the VALUE FORM of every target slot,
      judged on the emitted snippet alone, no IR (the parsed step structure)
      needed (fm_spec 2.2.0 `step_options.slot_kind`): bare text
@@ -191,6 +226,13 @@ Always include, in this order:
      word), a variable in a field-only slot. With `--resolved` one more
      cross-check: a resolved field reference must have reached the XML as
      `table`/`id`/`name` attributes.
+   - `G309-pdf-page-settings` (warning class) — a `Save Records as PDF` step
+     with `Restore` on whose `Pages` lacks `NumberFrom` or lacks both
+     `AllPages="True"` and a `PageRange`. The snippet pastes and saves, the
+     step fails with error 5 when it runs (runtime probe FileMaker 26.0.3).
+     The generator never emits that form; the check covers hand-built,
+     edited and older snippets. Fix: `Number pages from: 1` plus
+     `all_pages: On` or a page range — or drop `Restore`.
 
 **Known FM bugs — direction matters.** The registry warns on the READ side:
 `fmgen decompile` attaches a `note` (never an `issue`) to steps with a
@@ -233,7 +275,9 @@ Transaction` inside an If block, an `Open Transaction` without its
 from` / `Password` flags need their target, source or password calculation
   (`Save print options to: <field>` next to the bare flag); `Append PDF` /
   `Open PDF` `From: Target` need `Source: …`; `Close PDF` `Save to: Target`
-  needs `Target: …`. The couplings are reference rows
+  needs `Target: …`; `Save Records as PDF` `all_pages: Off` needs a page
+  range (with `Restore` FileMaker fails the step with error 5, without it
+  the setting names no pages). The couplings are reference rows
   (`step_option_implications`, kind `requires_option`, fm_spec 2.1.0) — the
   message names the missing option and the label to add.
 - **Mirrored values and options FileMaker discards (fm_spec 2.6.0):** two
@@ -254,7 +298,40 @@ from` / `Password` flags need their target, source or password calculation
   the dialog defaults of older drafts (`allow_screen_reader: On`,
   `control_printing: High Resolution`, `view_show: Pages Panel and Page`, …)
   are explicit options.
+- **Stored PDF options need complete page settings (fm_spec 2.9.1/2.9.2):**
+  with `Restore` ("Specify options") on, `Save Records as PDF` runs only when
+  `Pages` carries `NumberFrom` **and** either `AllPages="True"` or a
+  `PageRange`; every other form pastes and saves, then fails with error 5,
+  and confirming the options dialog with OK does not heal it (it shows the
+  start number empty). Without `Restore` FileMaker ignores the stored
+  options and every form runs. Runtime probe FileMaker 26.0.3, 13 variants.
+  The reference rows (kind `option_present`) fill in what the dialog would:
+  `Restore` implies `all_pages: On` and `Number pages from: 1`, a page range
+  implies `all_pages: Off`, `all_pages`/`page_range_from` imply
+  `Number pages from: 1`. An explicit value always wins, and the canonical
+  text shows what was added (`Save Records as PDF [ Restore ; $p ]` reads
+  back as `… ; all_pages: On ; … ; Number pages from: 1`). The zero state
+  above (no `Restore`) stays untouched. `Create PDF` is not affected — it
+  runs without `NumberFrom`; it carries the numbering as template default 1
+  only because the dialog writes it, so the canonical text omits it.
 - **Lint — error-code literal (L011, fm_spec ≥ 2.8.0):** a numeric literal compared with `Get ( LastError )` is checked against the reference's error-code table (`error_codes`, spans — `5123` lies in `5000-5499`): a code the table does not list is a **warning** (a typo, a plug-in code or a custom code outside `5000-5499` — the branch can never match a FileMaker error), a code only the web publishing engine / REST API returns is an **info**. No gate, no emission change; on a reference without the table the rule skips with one note.
+- **Lint — typographic quotes (L012):** an unescaped `„` (U+201E), `“` (U+201C), `”` (U+201D) or `‟` (U+201F) in a calculation option is an **error** at the draft line of the character (inside a multi-line calculation the line inside it). Inside a `"…"` constant FileMaker ends the constant there and comments the formula out on paste — the message carries the corrected constant (`"Über \„Label anfordern\“ anzeigen."`); outside one it is a typographic delimiter (`“abc”`) — FileMaker accepts that, but the lint, the resolver and the gate read only `"` and would judge its content as code, so write a straight `"`. When the open constant runs on over a line that reads like a step, the finding says the following step(s) were probably swallowed (a closing `”` instead of `"` merges two steps; the segmenter stays quiet there, because a genuine multi-line text may contain anything). `‘ ’ ‚ « »` are no delimiters (paste probe and corpus) and never reported; calc comments and `#` comment steps are prose and exempt. No auto-correction: whether a mask or a straight `"` was meant is the author's call. The fmgen tokenizers stay on `"` — L012 reports exactly where FileMaker's reading departs from theirs.
+- **Lint — Get selectors and renamed names (L013/L014):** every `Get ( X )`
+  (also `Hole ( X )`, `Obtenir ( X )`) is checked against the selectors the
+  reference knows in any language, case- and spacing-tolerant: an unknown
+  selector is an **error** (L013, with a close match when there is one) — a
+  typo or an invented selector evaluates to an error in FileMaker. A name
+  Claris has renamed (`function_renames`, fm_spec 2.10.0) gets the
+  replacement (L014): `Get ( LastExternalErrorDetail )` → `Get (
+  LastErrorDetail )`, renamed in FileMaker 19.6.1, German `Hole (
+  LetzteExterneFehlerNrDetail )` likewise. L014 is an **error** where the
+  reference records that FileMaker rejects the old name on paste
+  (`legacy_accepted` false): FileMaker 26.0.3 logs error 1215 in the import
+  log and comments the formula out, while the other steps paste without a
+  word (paste probe, both rows of 140). Where the paste behaviour is
+  untested or the old name is still parsed, L014 is a **warning** — data
+  only, no code change. The lint does not know the target version; G303b
+  judges the name against it.
 - **Lint — value form of a target slot (L010):** a target slot has a form it
   accepts, and writing the other one loses data without FileMaker saying so.
   `Generate Response from Model` `Save Message History To` takes a **variable**
@@ -317,7 +394,13 @@ LayoutNameByCalc`, a flag-style boolean in a non-default OFF state as
   retired by it (`SetPersistentData`/`FindPersistentData` against a 26
   target — FileMaker 26 writes `<function missing>`;
   `functions.removed_in_version`, fm_spec 2.2.0; on an older reference the
-  retired direction stands down and the message says so).
+  retired direction stands down and the message says so). Since fm_spec
+  2.10.0 it also judges renamed NAMES (`function_renames`, three-part
+  version compare): the current name on a target older than the rename
+  fails (`Get ( LastErrorDetail )` in a 19.6.0 file), the legacy name on a
+  target at or past it fails where the reference records that FileMaker
+  rejects it on paste (`Get ( LastExternalErrorDetail )`, paste probe
+  26.0.3) and warns where that is untested.
 - **Read residues** (documented, never silent): the FM-generated
   `SaXML/JSONOptions` default formula of `Save a Copy as XML`, `PlatformData`
   of `Print PDF`, a `<Text/>` marker next to a field target, the Step-level
@@ -375,7 +458,9 @@ ActionScript / FMUpgradeTool), not part of this skill yet.
 ## References
 
 - `references/paste-semantics.md` — silent-failure and save-invalid catalog,
-  delivery/verification recipes (sources incl. andykear spec, CC BY 4.0).
+  the gate layers (what layer 1/2/3 mean, status values, full check catalog,
+  how to place a new check), delivery/verification recipes (sources incl.
+  andykear spec, CC BY 4.0).
 - `references/mbs-guidelines.md` — when (not) to use MBS, object lifecycle,
   path conversion.
 - `references/worked-example.md` — full pipeline walkthrough with artifacts.

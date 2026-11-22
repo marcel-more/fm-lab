@@ -322,6 +322,21 @@ function renderMarkdown(md, { setId, pagePath } = {}) {
 }
 
 /**
+ * Markdown from dashboard data (a dataset column, see markdown-columns.js) to
+ * sanitized HTML: GFM like the docs (tables, inline HTML such as <details>,
+ * heading anchors), but without the docs extras — no wiki-link syntax, no link
+ * rewriting onto a doc set. The browser sanitizes again (HtmlContent).
+ */
+function renderMarkdownFragment(md) {
+  if (!md) return '';
+  if (!marked) {
+    throw new Error('docs-content: marked not initialized — call await initMarked() at startup');
+  }
+  usedSlugs.clear();
+  return sanitizeHtml(marked.parse(String(md)));
+}
+
+/**
  * Pass an HTML payload through the same pipeline (sanitize + rewrite). Used
  * for adapters whose `getEntry` already returns HTML (MBS). Für MBS werden
  * zusätzlich die `data-plugin-fn`/`data-plugin-component`-Anker in echte
@@ -356,6 +371,7 @@ function processEntry(entry, { setId, pagePath } = {}) {
 module.exports = {
   initMarked,
   renderMarkdown,
+  renderMarkdownFragment,
   renderHtml,
   sanitizeHtml,
   rewriteLinks,

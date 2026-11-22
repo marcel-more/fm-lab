@@ -394,5 +394,25 @@
     "clear": "Visa hela lösningen",
     "clearTitle": "Ta bort omfånget och visa hela lösningen",
     "hint": "Siffror och listor visar bara detta omfång"
+  },
+  "mermaid": {
+    "error": "Diagrammet kunde inte ritas",
+    "tooLarge": "Diagrammet är för stort för att ritas",
+    "position": "rad {{line}}, kolumn {{column}}"
+  },
+  "ask": {
+    "title": "Välj",
+    "cancel": "Avbryt",
+    "needsSelection": "Välj först en rad",
+    "notForChoice": "Inte tillgängligt med det här valet."
+  },
+  "download": {
+    "empty": "Inget att exportera.",
+    "noDataset": "Data ”{{detail}}” är inte inlästa på den här sidan.",
+    "noSelection": "Välj först en rad.",
+    "tooLarge": "Filen är för stor för att laddas ned (över 20 MB).",
+    "svgOneRow": "En SVG innehåller exakt ett diagram – välj först en post.",
+    "renderFailed": "Diagrammet kunde inte ritas: {{detail}}",
+    "diagramError": "Diagrammet kan inte ritas: {{detail}}"
   }
 }

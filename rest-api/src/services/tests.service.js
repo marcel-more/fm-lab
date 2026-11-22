@@ -233,7 +233,8 @@ async function resolveMember(member) {
       const m = /^bundle:(.+)$/.exec(String(spec.source));
       if (!m) continue;
       try {
-        sqlByDataset[spec.id] = await fs.readFile(path.join(bundle.dir, path.normalize(m[1])), 'utf-8');
+        // Composed SQL: the scope checks (M5) must see included fragments.
+        sqlByDataset[spec.id] = await dashboardService.loadBundleSql(bundle, m[1]);
       } catch {
         sqlByDataset[spec.id] = null;
       }

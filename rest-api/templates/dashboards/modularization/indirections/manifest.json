@@ -1,0 +1,110 @@
+{
+  "id": "indirections",
+  "version": "1.0.0",
+  "title": "Indirections",
+  "description": "Where the solution addresses objects through a computed name, number or text instead of a fixed reference: Perform Script by name, Go to Layout by calculation, Set Field By Name, Go to Object by name, Evaluate, GetField, ExecuteSQL with names in the SQL text or a statement built at run time, design functions with object names. Such references carry no edge in the object graph — where-used, renaming, the unused-object rules and the module clustering cannot see them. Literals are resolved against the catalog: a fixed reference would be possible, or the target is missing.",
+  "author": "fm-lab",
+  "icon": "shuffle",
+  "tags": [
+    "template",
+    "modularization",
+    "indirection",
+    "dependencies"
+  ],
+  "entry": "layout.json",
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "by_mechanism",
+      "source": "bundle:data/by_mechanism.sql"
+    },
+    {
+      "id": "carriers",
+      "source": "bundle:data/carriers.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 400,
+      "pageParam": "page",
+      "searchParam": "q",
+      "sortParam": "sort"
+    }
+  ],
+  "analysis": {
+    "objectTypes": [
+      "Script",
+      "CustomFunction",
+      "Field",
+      "LayoutObject"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "total",
+      "type": "number",
+      "name": "indirection_count",
+      "meaning": "Number of indirect references (without introspection and window names)"
+    }
+  },
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "kind",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Target type: script, layout, field, table, sql, layout_object, value_list, formula, introspection, window. 'all' (or empty) shows every type except introspection and window."
+    },
+    {
+      "name": "resolution",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Resolution class: dynamic, literal_resolved, literal_unresolved, literal_external, empty, no_target. 'all' (or empty) lifts the filter."
+    },
+    {
+      "name": "mechanism",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Restricts the lists to one mechanism (M01 … M70, see the mechanism table)."
+    },
+    {
+      "name": "disabled",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Disabled script steps and formula slots: 'hide' (default) or 'include'."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

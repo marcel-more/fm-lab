@@ -90,14 +90,54 @@ named/positional parameter resolves to `NULL` — the common
 > parameter is replaced by `NULL`. Watch out for stray colons (a `::CAST`, a
 > `localhost:3003`) — they can be mis-read as parameters.
 
+### System parameters
+
+The server sets four parameters itself. Read them like any other; they need no
+declaration, and a request cannot override them (query parameters starting
+with `fmlab_` are ignored):
+
+| Variable | Value |
+|---|---|
+| `getvariable('fmlab_solution')` | id of the solution the request works on |
+| `getvariable('fmlab_lang')` | UI language of the request (`en`, `de`, …) |
+| `getvariable('fmlab_today')` | today's date, `YYYY-MM-DD` (server time) |
+| `getvariable('fmlab_version')` | fm-lab version |
+
+### Shared SQL in dashboard bundles
+
+In the SQL files of a dashboard bundle, a line `--#include <relative path>` is
+replaced by the content of that file — for CTEs that several datasets of the
+same bundle share. The path is relative to the including file and stays inside
+the bundle folder (fragments typically live in `data/shared/`). A fragment is
+part of one statement: its final `;` is dropped, any other `;` is answered with
+`400 VALIDATION_ERROR` naming file and line. Includes nest up to five levels;
+cycles are refused. Single-file dashboards and query templates have no
+includes.
+
 ## Runtime environment
 
 The REST API runs templates on a read-only connection to the solution's catalog,
 with the reference databases attached as `ref` ([fm-spec](../Wiki/fm-spec.md)) and `plugref`
 ([plugin-spec](../schema/plugin-spec.md)). Beyond these, the connection has no file or network access:
 
-- `read_csv`, `read_json`, `read_text`, `read_parquet`, `glob`, `COPY` and
-  `ATTACH` on any other path fail with a `Permission Error`;
+- a template file holds **one query**: a single statement of type `SELECT`
+  (including `WITH`, `FROM`-first, `DESCRIBE`, `SUMMARIZE`, `SHOW`), a
+  standalone `PIVOT`, or an `EXPLAIN` of such a query. Anything else — `COPY`,
+  `EXPORT`, `ATTACH`, `DETACH`, `SET` / `SET VARIABLE` / `USE`, `CREATE` (also
+  `TEMP`), `INSERT`, `LOAD`, `CHECKPOINT`, transactions — is answered with
+  `400 VALIDATION_ERROR` ("statement type … is not allowed") and never runs.
+  Several statements in one file — usually a `;` that ends the query early —
+  are answered with `400 VALIDATION_ERROR` ("one statement per file"); a
+  single trailing `;` is fine. The same holds for single-file dashboards and
+  dashboard datasets;
+- a query from a file runs at most **2 minutes** (`DUCKDB_FILE_QUERY_TIMEOUT_MS`,
+  with Docker `FMLAB_QUERY_TIMEOUT_MS` in `.env`; `0` = no limit); a longer one
+  is stopped and answered with `504 QUERY_TIMEOUT` ("Query stopped after … s").
+  It runs on a connection of its own, so other queries of the same solution are
+  not held up meanwhile. Data spilled to disk is capped as well
+  (`DUCKDB_MAX_TEMP`: 50 GB in the Docker setups, 20 GB otherwise);
+- `read_csv`, `read_json`, `read_text`, `read_parquet`, `glob` and `ATTACH`
+  on any other path fail with a `Permission Error`;
 - extensions are neither installed nor loaded on demand — `json`, `icu`,
   `parquet` and the core functions are built in, everything else (e.g.
   `webbed`) is unavailable to templates;

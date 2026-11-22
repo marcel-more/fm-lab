@@ -1,35 +1,43 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useLayoutEffect, useRef } from 'react';
 import type { PrimitiveProps } from '../types';
 import { API_BASE } from '../../config/apiBase';
+import { sanitizeToFragment } from './_htmlSanitize';
 import '../../docs/DocsEntryView.css';
 
 /**
- * HtmlContent — rendert serverseitig sanitisiertes HTML (z.B. eine über die
- * docs-content-Pipeline gerenderte Doc-Seite) aus einem Feld der gebundenen
- * Row. Verwendet die `.docs-content`-Typografie der DocsEntryView.
+ * HtmlContent — renders HTML from a field of the bound row (a docs page from
+ * the docs-content pipeline, or HTML built by dashboard SQL) with the
+ * `.docs-content` typography of the DocsEntryView.
  *
  * Props:
- *   - field: Row-Feld mit dem HTML-String (default: "content_html")
+ *   - field: row field holding the HTML string (default: "content_html")
  *
- * Link-Handling wie in der DocsEntryView: App-interne Pfade (`/docs/...`)
- * navigieren per SPA-Router; externe Protokolle, `/api/`-Assets und
- * In-Document-Anchors behalten das Browser-Default-Verhalten.
+ * Security: EVERY string is sanitized on the client before it reaches the DOM
+ * (allow-list of HTML and SVG elements, attributes, URL schemes and a few CSS
+ * properties — see ./_htmlSanitize.ts). The sanitized tree is appended
+ * directly, never serialized and re-parsed. Dashboard SQL carries data from the
+ * FileMaker solution, so a server-side sanitizer cannot be assumed.
  *
- * Sicherheit: Der Inhalt MUSS aus der serverseitigen Sanitize-Pipeline
- * stammen (rest-api/src/services/docs-content.js) — dieses Primitive
- * sanitisiert nicht selbst.
+ * Link handling as in the DocsEntryView: app-internal paths (`/docs/...`)
+ * navigate through the SPA router; external protocols, `/api/` assets and
+ * in-document anchors keep the browser default.
  */
 export function HtmlContent({ node, row, navigate }: PrimitiveProps) {
   const props = node.props ?? {};
   const field = (props.field as string) ?? 'content_html';
   const raw = row ? String(row[field] ?? '') : '';
+  const boxRef = useRef<HTMLDivElement>(null);
 
-  // Backend rendert content_html mit absoluten /api/... Pfaden. Im Vite-Dev-
-  // Setup hängt /api am falschen Port → mit API_BASE prefixen (Produktiv-
-  // Setup: API_BASE ist leer, Ersetzung ist ein No-op).
-  const html = useMemo(() => {
-    if (!raw) return '';
-    return API_BASE ? raw.replace(/="\/api\//g, `="${API_BASE}/api/`) : raw;
+  // The backend renders content_html with absolute /api/... paths. In the Vite
+  // dev setup /api lives on another port → prefix with API_BASE (production:
+  // API_BASE is empty, the rewrite is a no-op).
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    if (!box) return;
+    const rewriteUrl = API_BASE
+      ? (url: string) => (url.startsWith('/api/') ? `${API_BASE}${url}` : url)
+      : undefined;
+    box.replaceChildren(sanitizeToFragment(raw, document, { rewriteUrl }));
   }, [raw]);
 
   const handleClick = useCallback(
@@ -47,15 +55,7 @@ export function HtmlContent({ node, row, navigate }: PrimitiveProps) {
     [navigate],
   );
 
-  if (!html) return null;
+  if (!raw) return null;
 
-  return (
-    <div
-      className="docs-content"
-      onClick={handleClick}
-      // Inhalt ist serverseitig sanitized (siehe rest-api/src/services/docs-content.js).
-      // eslint-disable-next-line react/no-danger
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
-  );
+  return <div ref={boxRef} className="docs-content" onClick={handleClick} />;
 }

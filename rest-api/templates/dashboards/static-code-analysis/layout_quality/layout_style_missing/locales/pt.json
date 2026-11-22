@@ -1,0 +1,21 @@
+{
+  "manifest": {
+    "title": "Estilo ausente do tema",
+    "description": "Regra de qualidade de layouts — um objeto nomeia um estilo que o tema do seu layout não contém: nenhuma regra do tema traz o estilo, em nenhum estado. Geralmente um estilo personalizado excluído do tema, ou um estilo que não veio junto quando o layout passou para outro tema. O Inspetor ainda mostra o nome do estilo, mas o tema não tem regra para ele.",
+    "messages.missing": "O estilo {style} não existe no tema {theme}"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Ocorrências",
+    "summary_kpi.props.items[1].label": "Estilos ausentes",
+    "summary_kpi.props.items[2].label": "Layouts afetados",
+    "findings_card.props.title": "Estilo ausente do tema",
+    "findings_table.props.searchPlaceholder": "Buscar arquivo, layout, objeto, estilo ou tema…",
+    "findings_table.props.empty.message": "Todo estilo aplicado existe no seu tema.",
+    "findings_table.props.columns[0].label": "Arquivo",
+    "findings_table.props.columns[1].label": "Layout",
+    "findings_table.props.columns[2].label": "Tipo de objeto",
+    "findings_table.props.columns[3].label": "Objeto",
+    "findings_table.props.columns[4].label": "Estilo",
+    "findings_table.props.columns[5].label": "Tema"
+  }
+}

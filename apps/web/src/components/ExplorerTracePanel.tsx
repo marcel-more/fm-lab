@@ -1,5 +1,6 @@
+import { NoDdrNotice } from './NoDdrNotice';
 import { useTranslation } from 'react-i18next';
-import type { TraceEntry, TraceEntryKey, TraceExcludedItem, TraceSuggestion } from '../hooks/useTrace';
+import type { FlowTraceStats, TraceEntry, TraceEntryKey, TraceExcludedItem, TraceSuggestion } from '../hooks/useTrace';
 
 /**
  * Trace mode controls + entry chooser.
@@ -24,6 +25,8 @@ export interface TraceControlValues {
   includeButtons: boolean;
   /** Interaktions-Events (Keystroke & Co.) in die Kaskade aufnehmen. */
   includeInteractionTriggers: boolean;
+  /** Deaktivierte Schritte mitverfolgen (SD6, `dis=1`). */
+  includeDisabled: boolean;
 }
 
 interface ExplorerTracePanelProps {
@@ -36,6 +39,13 @@ interface ExplorerTracePanelProps {
   excluded: TraceExcludedItem[];
   /** Server-Vorschläge (Score-absteigend, bereits Ausgeschlossene gefiltert). */
   suggestions: TraceSuggestion[];
+  /** Kennzahlen des Ablauf-Trace (deaktiviert, bedingt, dynamisch); null solange geladen wird. */
+  stats?: FlowTraceStats | null;
+  /** Berührte Dateien ohne DDR-Info (Formelbezüge fehlen dort). */
+  noDdrFiles?: string[] | null;
+  /** „Quelle verfolgen" aufwärts: Zahl der aufgeklappten Wege und Zurücksetzen. */
+  expandedWays?: number;
+  onResetExpansion?: () => void;
   onChange: (patch: Partial<TraceControlValues>) => void;
   onEntryChange: (entry: TraceEntryKey) => void;
   /** Einzelnen Ausschluss aufheben (Chip-Klick). */
@@ -64,6 +74,8 @@ const LEGEND: { key: string; marker: React.CSSProperties }[] = [
   { key: 'owner', marker: { border: '1.5px dashed var(--color-text-secondary, #888)', opacity: 0.6 } },
   { key: 'excluded', marker: { border: '2px dashed #e8a33d', opacity: 0.6 } },
   { key: 'induced', marker: { borderTop: '2px dotted var(--color-text-secondary, #888)', borderRadius: 0, height: 0, marginTop: 6 } },
+  { key: 'conditional', marker: { borderTop: '2px dashed var(--color-text-secondary, #888)', borderRadius: 0, height: 0, marginTop: 6 } },
+  { key: 'dynamicCall', marker: { background: '#ef4444', border: '1.5px solid #b91c1c', borderRadius: 0, transform: 'rotate(45deg) scale(0.75)' } },
 ];
 
 function BudgetStepper(props: {
@@ -96,12 +108,23 @@ function BudgetStepper(props: {
 }
 
 export function ExplorerTracePanel(props: ExplorerTracePanelProps) {
-  const { values, entry, entries, excluded, suggestions, onChange, onEntryChange, onRemoveExclude, onClearExcludes, onApplySuggestion, onApplyAllSuggestions, onExitTrace } = props;
+  const { values, entry, entries, excluded, suggestions, stats = null, noDdrFiles = null, expandedWays = 0, onResetExpansion, onChange, onEntryChange, onRemoveExclude, onClearExcludes, onApplySuggestion, onApplyAllSuggestions, onExitTrace } = props;
   const { t } = useTranslation(['explorer']);
 
   // Layout-Starts: Preset-Umschalter (Zähler je Preset); Script-Starts haben nur
   // das triviale Preset → kein Umschalter.
   const switchable = (entries ?? []).filter((e) => e.entry !== 'script');
+
+  // Kennzahlen: ausgelassene deaktivierte Schritte (bzw. mitverfolgte mit
+  // dis=1), bedingte, dynamische und unaufgelöste Aufrufe — nur Werte > 0.
+  const notes = stats
+    ? ([
+        [values.includeDisabled ? 'disabledIncluded' : 'disabledSteps', stats.disabledSteps ?? 0],
+        ['conditionalCalls', stats.conditionalCalls ?? 0],
+        ['dynamicCalls', stats.dynamicCalls ?? 0],
+        ['unresolvedCalls', stats.unresolvedCalls ?? 0],
+      ] as const).filter(([, n]) => n > 0)
+    : [];
 
   return (
     <>
@@ -120,6 +143,8 @@ export function ExplorerTracePanel(props: ExplorerTracePanelProps) {
         </div>
         <p className="explorer-trace-explainer">{t('trace.explainer')}</p>
       </div>
+
+      <NoDdrNotice files={noDdrFiles} />
 
       {switchable.length > 1 && (
         <div className="explorer-filter-section">
@@ -212,8 +237,48 @@ export function ExplorerTracePanel(props: ExplorerTracePanelProps) {
             />
             {t('trace.expandUp')}
           </label>
+          <label title={t('trace.flow.includeDisabledHint') as string}>
+            <input
+              type="checkbox"
+              checked={values.includeDisabled}
+              onChange={(e) => onChange({ includeDisabled: e.target.checked })}
+            />
+            {t('trace.flow.includeDisabled')}
+          </label>
         </div>
       </div>
+
+      {expandedWays > 0 && (
+        <div className="explorer-filter-section">
+          <div className="explorer-filter-label-row">
+            <span className="explorer-filter-label">{t('trace.flow.followSource')}</span>
+            {onResetExpansion && (
+              <button
+                type="button"
+                className="explorer-focus-details"
+                onClick={onResetExpansion}
+                title={t('trace.flow.resetExpansionHint') as string}
+              >
+                {t('trace.flow.resetExpansion')}
+              </button>
+            )}
+          </div>
+          <p className="explorer-trace-explainer">{t('trace.flow.expandedWays', { count: expandedWays })}</p>
+        </div>
+      )}
+
+      {stats && notes.length > 0 && (
+        <div className="explorer-filter-section">
+          <span className="explorer-filter-label">{t('trace.flow.figures')}</span>
+          <ul className="explorer-data-notes">
+            {notes.map(([k, n]) => (
+              <li key={k} title={t(`trace.flow.stat.${k}Hint`, { defaultValue: '' }) as string}>
+                {t(`trace.flow.stat.${k}`, { count: n })}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {excluded.length > 0 && (
         <div className="explorer-filter-section">

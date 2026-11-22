@@ -23,6 +23,15 @@ const datasetSpec = Joi.object({
   searchParam: Joi.string().pattern(/^[a-z][a-z0-9_]*$/).optional(),
   sortParam: Joi.string().pattern(/^[a-z][a-z0-9_]*$/).optional(),
   sortColumns: Joi.array().items(Joi.string().pattern(/^[a-z][a-z0-9_]*$/)).optional(),
+  // Columns rendered on the server (markdown-columns.js): column → format; adds
+  // `<column>_html` to every row. Object form `{ format, keepSource: false }`
+  // drops the Markdown column once it is rendered (display-only columns).
+  render: Joi.object().pattern(/^[A-Za-z_][A-Za-z0-9_]*$/, Joi.alternatives().try(
+    Joi.string().valid('markdown'),
+    Joi.object({ format: Joi.string().valid('markdown').required(), keepSource: Joi.boolean().optional() }),
+  )).optional(),
+  // Row cap for `render` (default 500, at most 2000).
+  renderMaxRows: Joi.number().integer().min(1).max(2000).optional(),
 });
 
 const manifestSchema = Joi.object({
@@ -31,6 +40,11 @@ const manifestSchema = Joi.object({
   title: Joi.string().min(1).required(),
   description: Joi.string().allow('').optional(),
   author: Joi.string().optional(),
+  // Optional author line shown as the footer of the dashboard's title box
+  // ("Author: <byline>"), e.g. design credit and license. Localizable via the
+  // "manifest.byline" override in locales/<lang>.json. `author` itself stays
+  // an internal provenance tag and is not displayed.
+  byline: Joi.string().allow('').optional(),
   icon: Joi.string().optional(),
   category: Joi.string().optional(),
   tags: Joi.array().items(Joi.string()).default([]),
@@ -91,15 +105,34 @@ const manifestSchema = Joi.object({
   analysis: testsSchemas.analysis.optional(),
 }).unknown(true);
 
-// Declarative visibility guard on a node: reads the first row of a dataset and
-// shows the node only when the condition holds (absent = always visible). Mirrors
-// the frontend VisibleWhen type (apps/web/src/api/dashboardApi.ts).
-const visibleWhenSchema = Joi.object({
-  dataset: Joi.string().min(1).required(),
-  field: Joi.string().min(1).required(),
+// Declarative visibility guard on a node (absent = always visible): either the
+// first row of a dataset (`dataset` + `field`) or the value of a selection
+// channel (`selection`, see apps/web/src/dashboard/selectionContext.tsx) must
+// meet the condition. Mirrors the frontend VisibleWhen type
+// (apps/web/src/api/dashboardApi.ts).
+const visibleWhenCondition = {
   equals: Joi.any().optional(),
   notEquals: Joi.any().optional(),
   truthy: Joi.boolean().optional(),
+};
+const visibleWhenSchema = Joi.alternatives().try(
+  Joi.object({
+    dataset: Joi.string().min(1).required(),
+    field: Joi.string().min(1).required(),
+    ...visibleWhenCondition,
+  }),
+  Joi.object({
+    selection: Joi.string().min(1).required(),
+    ...visibleWhenCondition,
+  }),
+);
+
+// Master-detail binding: the node shows the row of `dataset` whose `key` column
+// equals the value of selection channel `channel`; without a selection the
+// first row (`fallback: "first"`, default) or none (`"none"`).
+const dataSelectionSchema = Joi.object({
+  channel: Joi.string().min(1).required(),
+  key: Joi.string().min(1).required(),
 });
 
 // Layout: Baumstruktur mit type/props/children/data — rekursiv
@@ -110,6 +143,8 @@ const layoutNodeSchema = Joi.object({
   props: Joi.object().unknown(true).default({}),
   data: Joi.object({
     dataset: Joi.string().optional(),
+    selection: dataSelectionSchema.optional(),
+    fallback: Joi.string().valid('first', 'none').optional(),
   }).unknown(true).optional(),
   visibleWhen: visibleWhenSchema.optional(),
   children: Joi.array().items(Joi.link('#node')).optional(),

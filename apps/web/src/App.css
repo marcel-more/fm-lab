@@ -1003,6 +1003,19 @@ mark.search-hit {
   color: var(--color-text-muted);
 }
 
+/* Optional footer line (dashboard author line, manifest `byline`). */
+.title-box__footer {
+  margin-top: 0.6rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.title-box__footer-label {
+  font-weight: 600;
+}
+
 /* --- StartHeader (Ebene 1+2): nur Startseite --- */
 .start-header {
   flex: 0 0 auto;

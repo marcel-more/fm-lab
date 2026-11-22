@@ -1,0 +1,21 @@
+{
+  "manifest": {
+    "title": "主题中缺失的样式",
+    "description": "布局质量规则——对象指定了其布局主题中不存在的样式：主题中没有任何规则（在任何状态下）带有该样式。通常是从主题中删除的自定义样式，或是布局切换到其他主题时没有一起带过来的样式。检查器仍显示样式名称，但主题中没有对应规则。",
+    "messages.missing": "样式 {style} 在主题 {theme} 中不存在"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "发现项",
+    "summary_kpi.props.items[1].label": "缺失的样式",
+    "summary_kpi.props.items[2].label": "受影响的布局",
+    "findings_card.props.title": "主题中缺失的样式",
+    "findings_table.props.searchPlaceholder": "搜索文件、布局、对象、样式或主题…",
+    "findings_table.props.empty.message": "所有已应用的样式都存在于其主题中。",
+    "findings_table.props.columns[0].label": "文件",
+    "findings_table.props.columns[1].label": "布局",
+    "findings_table.props.columns[2].label": "对象类型",
+    "findings_table.props.columns[3].label": "对象",
+    "findings_table.props.columns[4].label": "样式",
+    "findings_table.props.columns[5].label": "主题"
+  }
+}

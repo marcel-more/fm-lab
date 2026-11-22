@@ -43,6 +43,16 @@ const environment = {
     // Überschreitung spillt DuckDB auf DUCKDB_TEMP_DIR statt zu crashen.
     maxMemory: process.env.DUCKDB_MAX_MEMORY || '8GB',
     threads: parseInt(process.env.DUCKDB_THREADS) || 4,
+    // Upper bound of the spill directory per instance (max_temp_directory_size).
+    // DuckDB's own default is 90 % of the free disk space — one runaway query
+    // could fill the disk.
+    maxTemp: process.env.DUCKDB_MAX_TEMP || '20GB',
+    // Wall-clock limit for SQL from files (templates, dashboard datasets): the
+    // query is interrupted after this many ms and answered with 504
+    // QUERY_TIMEOUT. 0 = no limit. Internal service SQL is not affected.
+    fileQueryTimeoutMs: Number.isFinite(parseInt(process.env.DUCKDB_FILE_QUERY_TIMEOUT_MS))
+      ? Math.max(0, parseInt(process.env.DUCKDB_FILE_QUERY_TIMEOUT_MS))
+      : 120000,
     // LRU-Connection-Pool (eine READ_ONLY-Instanz je Lösung).
     // RAM ist die harte Grenze: poolMax × maxMemory (+ RW-Sidecars) muss in den
     // Host-RAM passen — bei mehr gleichzeitigen Lösungen maxMemory senken.

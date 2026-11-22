@@ -110,6 +110,7 @@ The agent stack also grants an **opt-in egress firewall** (allowlist: npm, GitHu
 ```bash
 FMLAB_MEM_LIMIT=8g      # RAM cap (raise for large solutions)
 FMLAB_DUCKDB_THREADS=4  # thread cap (raise on hosts with more cores)
+FMLAB_QUERY_TIMEOUT_MS=120000  # time limit of one dashboard query (0 = none)
 ```
 
 **Access from other computers:** fm-lab is meant for one workstation — the REST API has no sign-in. With Docker both ports are reachable from the network; on a server, use an SSH tunnel. See [Network Access](Network%20Access.md).

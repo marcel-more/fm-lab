@@ -1,0 +1,21 @@
+{
+  "manifest": {
+    "title": "字体较多的布局",
+    "description": "布局质量规则——布局中的文本对象显示的字体多于阈值（默认 3）。每种字体都计入：每个对象的基础字体、带有自身字体的格式化文本片段以及图表的文本区域；文件默认值（主题未指定字体）不算作字体。一个布局上字体很多，通常说明是逐个对象设置格式，而不是通过主题。",
+    "messages.many": "布局显示 {count} 种字体：{fonts}"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "发现项",
+    "summary_kpi.props.items[1].label": "受影响的文件",
+    "threshold_slider.props.label": "字体多于",
+    "threshold_slider.props.valueSuffix": " 种字体",
+    "findings_card.props.title": "字体较多的布局",
+    "findings_table.props.searchPlaceholder": "搜索文件、布局或字体…",
+    "findings_table.props.empty.message": "没有字体多于阈值的布局。",
+    "findings_table.props.columns[0].label": "文件",
+    "findings_table.props.columns[1].label": "布局",
+    "findings_table.props.columns[2].label": "字体数",
+    "findings_table.props.columns[3].label": "已命名字体",
+    "findings_table.props.columns[4].label": "使用文件默认值的对象"
+  }
+}

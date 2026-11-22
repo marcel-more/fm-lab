@@ -44,6 +44,16 @@ need both of the first two), but DuckDB 1.x rejects `.maxbytes`/`.maxcellwidth` 
 nothing. The fm-lab shell tools and the REST API pin `DUCKDB_AGENT_MODE=0` themselves; DuckDB
 1.x has no agent mode.
 
+**Resource guard in the dev container:** there `duckdb` resolves to `tools/agent-bin/duckdb`
+first (remoteEnv PATH). It fences every **read-only** call of an agent session: 6 GB memory, 4
+threads, 10 GB spill in `$DUCKDB_TEMP_DIR/agent`, 600 s wall clock (`FMLAB_AGENT_DUCKDB_MEMORY`,
+`_THREADS`, `_MAX_TEMP`, `_TIMEOUT` adjust; `FMLAB_DUCKDB_NO_FENCE=1` switches it off).
+Writing calls (imports, clustering) and calls outside an agent session pass unchanged. A
+query stopped by the guard ends with exit code 124 and a `duckdb (agent guard): stopped …`
+line — treat that as "this query is too expensive", narrow it, do not just raise the limits.
+Scripts that set their own `PATH` bypass the guard and must set the limits themselves (`SET
+memory_limit …; SET threads …; SET max_temp_directory_size …` plus a timeout).
+
 If `which duckdb` fails (some native setups do not inherit the user's shell PATH), the fix is
 **PATH, not an absolute-path prefix**: `tools/init.sh` resolves the binary once and writes its
 directory into `.claude/settings.local.json → env.PATH` (local, untracked — it takes

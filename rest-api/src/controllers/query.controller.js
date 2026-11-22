@@ -2,6 +2,9 @@ const templateService = require('../services/template.service');
 const formatters = require('../formatters');
 const { sendFormatted } = require('../utils/response-builder');
 
+/** Formats drawn by the mermaid formatter (graph or content mode). */
+const DIAGRAM_FORMATS = new Set(['mermaid', 'mermaid-raw', 'svg']);
+
 /**
  * Query Controller
  * Handles requests for template-based endpoints (/query, /report)
@@ -58,10 +61,12 @@ async function executeQuery(req, res, next) {
       'query' // query areas
     );
 
-    // For content templates, always use content formatter (except for json)
-    // Content is already pre-formatted, so other formatters would add unwanted structure
+    // For content templates, always use content formatter (except for json and
+    // the diagram formats) — content is already pre-formatted, so other formatters
+    // would add unwanted structure. The diagram formats read the `content` column
+    // themselves (content mode) and must never pass it raw into an HTML page.
     let effectiveFormat = format;
-    if (result.meta.template_type === 'content' && format !== 'json') {
+    if (result.meta.template_type === 'content' && format !== 'json' && !DIAGRAM_FORMATS.has(format)) {
       effectiveFormat = 'content';
     }
 
@@ -77,20 +82,9 @@ async function executeQuery(req, res, next) {
     };
 
     // Format data (with options)
-    const formattedData = formatters.format(result.data, effectiveFormat, formatterOptions);
+    const formattedData = await formatters.format(result.data, effectiveFormat, formatterOptions);
 
-    // Special handling for Mermaid formats (direct output without JSON wrapper)
-    if (format === 'mermaid' || format === 'mermaid-raw') {
-      const contentType = format === 'mermaid'
-        ? 'text/html; charset=utf-8'
-        : 'text/plain; charset=utf-8';
-
-      res.setHeader('Content-Type', contentType);
-      res.send(formattedData);
-      return;
-    }
-
-    // Send formatted response for other formats
+    // Send formatted response (diagram formats included: no JSON envelope)
     sendFormatted(
       res,
       formattedData,
@@ -154,10 +148,12 @@ async function executeReport(req, res, next) {
       'report' // system area
     );
 
-    // For content templates, always use content formatter (except for json)
-    // Content is already pre-formatted, so other formatters would add unwanted structure
+    // For content templates, always use content formatter (except for json and
+    // the diagram formats) — content is already pre-formatted, so other formatters
+    // would add unwanted structure. The diagram formats read the `content` column
+    // themselves (content mode) and must never pass it raw into an HTML page.
     let effectiveFormat = format;
-    if (result.meta.template_type === 'content' && format !== 'json') {
+    if (result.meta.template_type === 'content' && format !== 'json' && !DIAGRAM_FORMATS.has(format)) {
       effectiveFormat = 'content';
     }
 
@@ -173,20 +169,9 @@ async function executeReport(req, res, next) {
     };
 
     // Format data (with options)
-    const formattedData = formatters.format(result.data, effectiveFormat, formatterOptions);
+    const formattedData = await formatters.format(result.data, effectiveFormat, formatterOptions);
 
-    // Special handling for Mermaid formats (direct output without JSON wrapper)
-    if (format === 'mermaid' || format === 'mermaid-raw') {
-      const contentType = format === 'mermaid'
-        ? 'text/html; charset=utf-8'
-        : 'text/plain; charset=utf-8';
-
-      res.setHeader('Content-Type', contentType);
-      res.send(formattedData);
-      return;
-    }
-
-    // Send formatted response for other formats
+    // Send formatted response (diagram formats included: no JSON envelope)
     sendFormatted(
       res,
       formattedData,

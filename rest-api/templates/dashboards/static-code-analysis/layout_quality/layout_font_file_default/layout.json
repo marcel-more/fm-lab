@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "type": "Grid",
+    "props": {
+      "columns": 12,
+      "gap": 16
+    },
+    "children": [
+      {
+        "type": "Card",
+        "id": "summary_card",
+        "props": {
+          "span": 12,
+          "variant": "hero"
+        },
+        "data": {
+          "dataset": "summary"
+        },
+        "children": [
+          {
+            "type": "KPIStrip",
+            "id": "summary_kpi",
+            "props": {
+              "items": [
+                {
+                  "label": "Findings",
+                  "field": "finding_count",
+                  "format": "number"
+                },
+                {
+                  "label": "Objects with file default",
+                  "field": "default_objects",
+                  "format": "number"
+                },
+                {
+                  "label": "Affected files",
+                  "field": "affected_files",
+                  "format": "number"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "findings_card",
+        "props": {
+          "span": 12,
+          "title": "Font left to the file default",
+          "keepChildrenOnEmpty": true
+        },
+        "data": {
+          "dataset": "findings"
+        },
+        "children": [
+          {
+            "type": "Table",
+            "id": "findings_table",
+            "props": {
+              "rowKey": "row_key",
+              "density": "comfortable",
+              "sortable": true,
+              "searchable": true,
+              "pageParam": "page",
+              "searchParam": "q",
+              "sortParam": "sort",
+              "clientMode": true,
+              "searchPlaceholder": "Search file, layout or theme…",
+              "columns": [
+                {
+                  "field": "file_name",
+                  "label": "File"
+                },
+                {
+                  "field": "layout_name",
+                  "label": "Layout",
+                  "breakAt": "separators"
+                },
+                {
+                  "field": "theme",
+                  "label": "Theme"
+                },
+                {
+                  "field": "default_objects",
+                  "label": "Objects with file default",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "text_objects",
+                  "label": "Text objects",
+                  "align": "right",
+                  "format": "number"
+                }
+              ],
+              "onRowClick": {
+                "action": "openObject",
+                "args": {
+                  "uuid": "{{nav_uuid}}",
+                  "type": "Layout",
+                  "file": "{{file_name}}",
+                  "ref_src": "layout_font_file_default",
+                  "ref_msgid": "file_default",
+                  "ref_arg_count": "{{default_objects}}",
+                  "ref_arg_total": "{{text_objects}}"
+                }
+              },
+              "empty": {
+                "message": "No layout leaves its font to the file default."
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

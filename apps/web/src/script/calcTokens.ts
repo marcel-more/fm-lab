@@ -137,6 +137,17 @@ export interface LayoutObjectContext {
   bounds?: { top: number; left: number; bottom: number; right: number } | null;
   /** Parent-LayoutObject (null auf Ebene 0) — Gegenrichtung der Kind-Sektion. */
   parent?: { uuid: string; type: string | null; name: string | null } | null;
+  /**
+   * Applied style (catalog schema 1.44.0+); absent on older catalogs. `name`
+   * null = no style. `ruleMissing`/`theme` need schema 1.45.0 (null before).
+   */
+  style?: {
+    name: string | null;
+    display: string | null;
+    isCustom: boolean;
+    ruleMissing: boolean | null;
+    theme: string | null;
+  } | null;
 }
 
 /** Script-Trigger eines Kind-Objekts (Trigger-Spalte der Kind-Tabelle). */

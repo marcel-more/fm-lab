@@ -1,0 +1,92 @@
+{
+  "id": "layout_style_missing",
+  "version": "1.0.0",
+  "title": "Style missing from the theme",
+  "description": "Layout-quality rule — an object names a style that its layout's theme does not contain: no rule of the theme carries the style, in any state. Typically a custom style deleted from the theme, or a style that did not come along when the layout moved to another theme. The Inspector still shows the style name, but the theme holds no rule for it.",
+  "author": "fm-lab rules",
+  "icon": "palette",
+  "category": "layout_quality",
+  "tags": [
+    "rule",
+    "layout_quality",
+    "fonts"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "warning",
+    "category": "layout_quality",
+    "rationale": "A style name without a rule is a dead reference: whatever the style once set is no longer defined in the theme, and the object no longer follows any change to a style of that name.",
+    "remediation": "Apply an existing style of the theme to the object, or recreate the missing style in the theme.",
+    "meta": {
+      "name": "Style missing from the theme",
+      "author": "fm-lab rules",
+      "source": "fm-lab",
+      "url": null,
+      "description": "Layout-quality rule — an object names a style that its layout's theme does not contain: no rule of the theme carries the style, in any state.",
+      "created": "2026-11-21",
+      "references": [
+        {
+          "project": "fm-lab",
+          "rule": "Font and style analysis (schema 1.44.0)",
+          "url": null
+        }
+      ]
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Layout"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Style missing from the theme"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  },
+  "messages": {
+    "missing": "Style {style} does not exist in the theme {theme}"
+  }
+}

@@ -1,6 +1,6 @@
 {
   "name": "@fm-lab/web",
-  "version": "0.9.19",
+  "version": "0.9.20",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -23,6 +23,7 @@
     "cytoscape-fcose": "^2.2.0",
     "i18next": "^23.16.8",
     "i18next-browser-languagedetector": "^7.2.2",
+    "pele": "~1.13.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-i18next": "^14.1.3",

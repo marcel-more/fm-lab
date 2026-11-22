@@ -130,6 +130,7 @@ const OUTPUT_FORMATS = {
   CONTENT: "content",
   MERMAID: "mermaid", // HTML-Wrapper mit Mermaid.js
   MERMAID_RAW: "mermaid-raw", // Nur Mermaid-Code
+  SVG: "svg", // Diagramm als SVG, serverseitig mit pele gezeichnet
   TOKENS: "tokens", // Strukturierte Token-Sequenz für Editor-Integration
 };
 
@@ -162,6 +163,9 @@ const ERROR_CODES = {
   FILE_NOT_FOUND: { code: "FILE_NOT_FOUND", status: 404 },
   IMPORT_ERROR: { code: "IMPORT_ERROR", status: 500 },
   INTERNAL_ERROR: { code: "INTERNAL_ERROR", status: 500 },
+  // SQL from a file (template, dashboard dataset) ran longer than
+  // DUCKDB_FILE_QUERY_TIMEOUT_MS and was interrupted.
+  QUERY_TIMEOUT: { code: "QUERY_TIMEOUT", status: 504 },
   REF_NOT_ATTACHED: { code: "REF_NOT_ATTACHED", status: 503 },
   REF_STEP_NOT_FOUND: { code: "REF_STEP_NOT_FOUND", status: 404 },
   REF_FUNCTION_NOT_FOUND: { code: "REF_FUNCTION_NOT_FOUND", status: 404 },
@@ -179,11 +183,28 @@ const ERROR_CODES = {
   // details tragen die verfuegbaren Presets mit Zaehlern (statt leerem Graph).
   TRACE_UNSUPPORTED_START: { code: "TRACE_UNSUPPORTED_START", status: 422 },
   TRACE_EMPTY_ENTRY: { code: "TRACE_EMPTY_ENTRY", status: 422 },
+  // Datenfluss-Trace (mode=data): der Katalog hat das aktuelle Schema, aber keine
+  // Datenfluss-Tabellen — die (nicht abschaltbare) Phase ist beim Import
+  // gescheitert. Ältere Kataloge melden SCHEMA_DRIFT.
+  DATAFLOW_NOT_BUILT: { code: "DATAFLOW_NOT_BUILT", status: 422 },
+  // Datenfluss-Trace mit Schritt-Anker (start_step): der Schritt liest bzw.
+  // setzt die Startvariable nicht in der verlangten Rolle (z. B. Verwendung ab
+  // einem reinen Lese-Schritt); details nennen die Rollen des Schritts.
+  TRACE_STEP_ROLE: { code: "TRACE_STEP_ROLE", status: 422 },
   // Favorites: the bundle exists but lives in an area that cannot be
   // favorited (system/module pages) — 422, not 404.
   NOT_FAVORITABLE: { code: "NOT_FAVORITABLE", status: 422 },
   // Template cleanup (dashboards, tests): a second run of the same routine while one is still moving.
   CLEANUP_RUNNING: { code: "CLEANUP_RUNNING", status: 409 },
+  // Mermaid formats (mermaid, mermaid-raw, svg): the result has no diagram shape
+  // (no rows, no source_uuid/target_uuid, no content column) or pele rejects the
+  // source (details: reason, line, column). 422: the request is valid, the data
+  // cannot be drawn.
+  DIAGRAM_ERROR: { code: "DIAGRAM_ERROR", status: 422 },
+  // Lösungsprofil des Datenfluss-Trace (state/dataflow_profile.json) ist kein
+  // gültiges JSON oder verletzt das Schema — 409: behebbarer Zustand der Lösung,
+  // Datei korrigieren oder löschen.
+  PROFILE_INVALID: { code: "PROFILE_INVALID", status: 409 },
 };
 
 /**
@@ -258,6 +279,15 @@ const MERMAID_DIRECTIONS = {
 };
 
 /**
+ * Mermaid limits: source length (same bound as the web client's renderer,
+ * apps/web/src/lib/mermaid/renderMermaid.ts) and node count
+ * of a server-built flowchart. Above either the builder cuts the diagram and
+ * writes a `%% truncated` comment.
+ */
+const MERMAID_SOURCE_LIMIT = 200000;
+const MERMAID_NODE_LIMIT = 500;
+
+/**
  * Detail Template Map
  * Maps Object_Type (PascalCase) to the SQL template name in templates/queries/system/object-details/
  * Used by /get-details endpoint to dispatch to type-specific detail views
@@ -310,6 +340,8 @@ module.exports = {
   OUTPUT_FORMATS,
   MERMAID_THEMES,
   MERMAID_DIRECTIONS,
+  MERMAID_SOURCE_LIMIT,
+  MERMAID_NODE_LIMIT,
   ERROR_CODES,
   DEFAULTS,
   HTTP_STATUS,

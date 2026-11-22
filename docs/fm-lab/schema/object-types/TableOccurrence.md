@@ -56,7 +56,7 @@ Occurrences sit at the hub of the context model: they point down to their base t
 
 ### Usage through fields
 
-Most uses of an occurrence never reach it as a link: a `Table::Field` reference in a formula, a script step or a field on a layout links to the **field**, not to the occurrence. The links above therefore show only part of the picture. The analysis table `v_table_occurrence_usage` collects every usage of an occurrence — the links, plus field references in formulas, script steps, layout fields, table-view columns, sub-summary break fields, record-access formulas of privilege sets and the evaluation context of field formulas — one row per occurrence, using object, category and role. `v_table_occurrence_class` derives one usage class per occurrence from it and from the relationship graph:
+Most uses of an occurrence never reach it as a link: a `Table::Field` reference in a formula, a script step or a field on a layout links to the **field**, not to the occurrence. The links above therefore show only part of the picture. The analysis table `v_table_occurrence_usage` collects every usage of an occurrence — the links, plus field references in formulas, script steps, layout fields, table-view columns, sub-summary break fields, record-access formulas of privilege sets, the evaluation context of field formulas and the tables of `ExecuteSQL` statements (category `sql`, also when the occurrence is only named in the SQL text — see [CalculationSqlRefs](../catalog-tables/CalculationSqlRefs.md)) — one row per occurrence, using object, category and role. `v_table_occurrence_class` derives one usage class per occurrence from it and from the relationship graph:
 
 | `Usage_Class` | Meaning |
 |---|---|
@@ -66,7 +66,7 @@ Most uses of an occurrence never reach it as a link: a `Table::Field` reference 
 | `dead_island` | Part of a relationship group in which no occurrence is used |
 | `unused` | No usage and no relationship |
 
-Formula references need DDR info in the export. In files without it the formula text is searched for `Table::` instead (category `calculation_text`); such files carry `Low_Confidence = true`, and their `unused`/`dead_*` classes are unverified. Dynamic references (`GetField`, `Evaluate`, names inside `ExecuteSQL` strings) stay invisible.
+Formula references need DDR info in the export. In files without it the formula text is searched for `Table::` instead (category `calculation_text`); such files carry `Low_Confidence = true`, and their `unused`/`dead_*` classes are unverified. Dynamic references (`GetField`, `Evaluate`, SQL text assembled in another script step) stay invisible.
 
 The usage feeds the general usage number of fm-lab ([Usage and References](../Usage%20and%20References.md)) and shows up in four places: the detail view of the occurrence (usage class and counts per category, see [Detail view](#detail-view)), the references tab of the occurrence in the web frontend (role `uses_table_occurrence`, grouped by category), the dashboard *Table Occurrence Usage* (rubric Schema) and the rule *Unused Table Occurrence* ([SCA Unused Code](../../sca/SCA%20Unused%20Code.md)). Both tables exist since schema 1.38.0; older catalogs need a re-import.
 

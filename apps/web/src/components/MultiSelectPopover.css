@@ -1,0 +1,160 @@
+/* Select controls of the dashboards and the layout canvas.
+ * .dash-select*  native single select (dashboard primitive Select) and the
+ *                multi-select popover (components/MultiSelectPopover.tsx).
+ * Moved out of dashboard/dashboard.css so pages without DashboardHost (the
+ * layout canvas) get the same control. Imported by MultiSelectPopover, which
+ * the dashboard primitive Select imports as well. */
+.dash-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 8px 0;
+}
+.dash-select__label {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+.dash-select__control {
+  font-family: inherit;
+  font-size: 0.82rem;
+  color: var(--color-text-primary);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+/* A native single select grows to its longest option; long captions (e.g.
+ * "File › Layout") would push the filter row apart. Same cap as the multi
+ * trigger — the open list still shows the full captions. */
+select.dash-select__control {
+  max-width: 260px;
+  text-overflow: ellipsis;
+}
+.dash-select__control:hover,
+.dash-select__control:focus {
+  border-color: var(--color-accent);
+  outline: none;
+}
+/* Multi-select: trigger button (+ × to clear) and a checkbox popover. The
+ * popover is portalled into document.body and positioned via inline style
+ * (top/left), so it escapes the Card's overflow:hidden. */
+.dash-select__group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.dash-select__trigger {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.dash-select__trigger::after {
+  content: ' ▾';
+  color: var(--color-text-muted);
+}
+.dash-select__trigger--active {
+  border-color: var(--color-accent);
+}
+.dash-select__reset {
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.dash-select__reset:hover,
+.dash-select__reset:focus-visible {
+  color: var(--color-text-primary);
+  background: var(--color-hover-bg);
+  outline: none;
+}
+.dash-select__popover {
+  position: fixed;
+  z-index: 1000;
+  min-width: 220px;
+  max-width: min(420px, calc(100vw - 16px));
+  max-height: min(420px, calc(100vh - 16px));
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+}
+.dash-select__options {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dash-select__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+.dash-select__option:hover {
+  background: var(--color-hover-bg);
+}
+.dash-select__clear {
+  align-self: flex-start;
+  margin-bottom: 4px;
+  font-family: inherit;
+  font-size: 0.78rem;
+  color: var(--color-accent);
+  background: none;
+  border: none;
+  padding: 3px 6px;
+  cursor: pointer;
+}
+.dash-select__clear:disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+}
+/* Entry details of the popover: marker, warning and facet count; an entry with
+ * dividerAfter sets the special entries on top off from the rest. */
+.dash-select__option-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dash-select__option-badge {
+  flex: none;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+.dash-select__option-warning {
+  flex: none;
+  color: var(--color-warning-fg);
+}
+.dash-select__option-count {
+  flex: none;
+  margin-left: 8px;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.dash-select__option--divider {
+  margin-bottom: 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  border-radius: 4px 4px 0 0;
+}

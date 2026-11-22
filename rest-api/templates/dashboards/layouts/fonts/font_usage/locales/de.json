@@ -1,0 +1,35 @@
+{
+  "manifest": {
+    "title": "Schriften-Übersicht",
+    "description": "Welche Schriften die Layouts zeigen: eine Zeile je Schrift mit Verwendungen, Objekten, Layouts, Dateien, Größen und Herkunft — am Objekt gesetzt, aus einem Stil oder aus dem Design. Objekte, deren Schrift dem Standard der Datei überlassen ist (das Design nennt keine: Klassisch, Minimalistisch), bilden eine eigene Zeile. Ein Klick auf eine Schrift öffnet die Layouts, die sie zeigen; Datei, Design, Größe und Suche werden übernommen."
+  },
+  "layout": {
+    "summary_kpistrip.props.items[0].label": "Schriften",
+    "summary_kpistrip.props.items[1].label": "Verwendungen mit Schriftname",
+    "summary_kpistrip.props.items[2].label": "Layouts mit Schriftname",
+    "summary_kpistrip.props.items[3].label": "Dateien mit Schriftname",
+    "summary_kpistrip.props.items[4].label": "Objekte ohne benannte Schrift",
+    "search_input.props.placeholder": "Schrift, Layout, Objekt oder Feld suchen…",
+    "file_select.props.label": "Datei",
+    "file_select.props.emptyOptionLabel": "Alle Dateien",
+    "theme_select.props.label": "Design",
+    "theme_select.props.emptyOptionLabel": "Alle Designs",
+    "size_select.props.label": "Größe",
+    "size_select.props.emptyOptionLabel": "Alle Größen",
+    "fonts_card.props.title": "Schriften",
+    "fonts_table.props.columns[0].label": "Schrift",
+    "fonts_table.props.columns[0].valueLabels.#default": "Datei-Standard (Schrift nicht im Export)",
+    "fonts_table.props.columns[1].label": "Verwendungen",
+    "fonts_table.props.columns[2].label": "Objekte",
+    "fonts_table.props.columns[3].label": "Layouts",
+    "fonts_table.props.columns[4].label": "Dateien",
+    "fonts_table.props.columns[5].label": "Größen",
+    "fonts_table.props.columns[6].label": "Lokal gesetzt",
+    "fonts_table.props.columns[7].label": "Aus einem Stil",
+    "fonts_table.props.columns[8].label": "Aus dem Design",
+    "fonts_table.props.columns[9].label": "Rich-Text und Diagramme",
+    "fonts_table.props.empty.message": "Keine Schriftverwendung in dieser Auswahl.",
+    "notes_card.props.title": "Woher eine Schrift kommt",
+    "notes_md.props.content": "**Herkunft der Grundschrift.** FileMaker nimmt den ersten gesetzten Wert:\n- *lokal* — am Objekt selbst gesetzt.\n- *lokal, wie geerbt* — am Objekt gesetzt, aber dieselbe Schrift, die es ohnehin bekäme. FileMaker schreibt sie, wenn *fett* auf eine Schrift mit eigenem Fett-Schnitt angewendet wird; keine bewusste Wahl.\n- *Stil* — der Stil am Objekt. Ein Stil hält nur, was er ändert; alles andere kommt aus dem Design.\n- *Design* — die Vorgabe des Designs für den Objekttyp, den Layoutbereich oder alle Felder.\n- *Datei-Standard* — das Design nennt gar keine Schrift (Klassisch, Minimalistisch). FileMaker nimmt dann einen Standard der Datei, den der XML-Export nicht enthält — dasselbe Design zeigt in einer Datei Helvetica Neue, in einer anderen Arial. Die Liste nennt für diese Objekte deshalb keine Schrift; prüfe je Datei ein Objekt in FileMaker.\n\n**Weitere Schriftverwendungen.** *Rich-Text* ist ein mit dem Textcursor formatierter Teil eines Textes; er kommt zur Grundschrift des Objekts hinzu, der Rest des Textes behält sie. *Diagramm* ist die Schrift eines Diagrammbereichs (Titel, Legende, Achsen, Datenbeschriftung); Reihentitel fehlen, sie behalten die Design-Schrift.\n\n**Zählung.** *Schriften* fasst Schreibweisen einer Schrift zusammen (`arial`, `Arial`). Der Datei-Standard ist keine Schrift: Er zählt weder in der Schriftzahl noch bei *viele Schriften*. *Unsicher*: Der Wert stammt aus einer Regel des Layoutbereichs (Rang nicht geprüft), oder der angewandte Stil existiert im Design nicht mehr.\n\n**Grenzen.** Schriften der bedingten Formatierung sind nicht gelistet. Ein Schriftname sagt nichts darüber, ob die Schrift auf den Clients installiert ist."
+  }
+}

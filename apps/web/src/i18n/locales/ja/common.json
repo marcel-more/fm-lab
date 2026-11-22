@@ -72,7 +72,8 @@
   "dashboard": {
     "loading": "ダッシュボードを読み込み中…",
     "loadError": "読み込みに失敗しました: {{message}}",
-    "noData": "データがありません。"
+    "noData": "データがありません。",
+    "bylineLabel": "作成者:"
   },
   "solutionPicker": {
     "label": "ソリューション",

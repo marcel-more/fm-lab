@@ -203,6 +203,10 @@ async function installOverlay(connection, aliasRows = []) {
 async function install(entry) {
   const rows = await loadAliasRows(entry.solutionId);
   const mode = await installOverlay(entry.connection, rows);
+  // Connections for file SQL (config/database.js) install the same overlay from
+  // these rows; a new version retires the ones prepared before.
+  entry.aliasRows = rows;
+  entry.overlayVersion = (entry.overlayVersion || 0) + 1;
   if (mode === 'view') {
     console.log(`  - change author overlay: v_change_meta_authors (${rows.length} alias row(s))`);
   } else if (mode === 'stub') {

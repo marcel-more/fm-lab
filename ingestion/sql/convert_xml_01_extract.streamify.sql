@@ -38,8 +38,68 @@
 --   keinen Hash-Drift mehr, und eine Engine-Änderung meldet ihn unter beiden.
 --   gen_streamify_sql.sh übernimmt die Zeile unverändert.
 
--- @SCHEMA_VERSION 1.40.0
--- @SCHEMA_VERSION_DATE 2026-11-08
+-- @SCHEMA_VERSION 1.46.0
+-- @SCHEMA_VERSION_DATE 2026-11-22
+-- @SCHEMA_CHANGELOG 1.46.0: Stile und Kopf der Designs (Konverter 2.54.0): ThemeCatalog +7
+--   Spalten aus den <Theme>-Attributen (Theme_Group, Base_Name, Base_Version, Theme_Version,
+--   Theme_Locale, Theme_Platform roh; Is_Default BOOLEAN aus @defaultTheme). Neue P3-Tabelle
+--   ThemeNamedStyles — eine Zeile je Stil aus <Metadata><namedstyles> (Style_Seq,
+--   Style_Class, Style_Display = Inspector-Name, Entities über den XML-Parser dekodiert,
+--   Is_Custom = FM-<UUID>), auch unbenutzte Stile. Prüfsicht v_check_theme_named_styles.
+--   Neue Spalten und Tabelle → MINOR-Bump.
+-- @SCHEMA_CHANGELOG 1.45.0: Stil-Nutzung der Layout-Objekte (Konverter 2.53.0): neue
+--   Analysesicht v_layout_object_style (create_analysis_views.sql, einfache View) — eine
+--   Zeile je Layout-Objekt aller Typen mit Layout, Design (Theme_UUID/_Name/_Display),
+--   angewandtem Stil (Style_Name/_Display; NULL = kein Stil), Style_Is_Custom (FM-<UUID>)
+--   und Style_Rule_Missing (gleiche Definition wie v_check_layout_styles). Nutzung eines
+--   Stils = Gruppierung der View. Neue Sicht → MINOR-Bump.
+-- @SCHEMA_CHANGELOG 1.44.0: Schriften und Stile der Layout-Objekte (Konverter 2.52.0): vier
+--   neue P3-Tabellen. ThemeStyleRules — Theme-CSS je Deklaration (Selektor zerlegt in
+--   Part_Token, Type_Token, Style_Class, State, Element; Property/Value; leere Stil-Regel
+--   = eine Zeile mit NULL-Deklaration). LayoutObjectStyles — eigenes LocalCSS je Objekt,
+--   tiefenverankert (Style_Name/_Display/_Type, Local_CSS roh, Local_Font_Family/_Size/
+--   _Weight/_Style der Regel self:normal .self). LayoutObjectFontRuns — Rich-Text-Läufe
+--   (Run_Start/_End/_Text, FontReference, FontStyle size/face/mask) und Diagramm-Schriften
+--   je Textbereich. LayoutObjectCssType — kuratierte Zuordnung Objekttyp → CSS-Typ-Token
+--   und Gruppen-Token (in FileMaker geprüft). Prüfsicht v_check_layout_styles. Analysesicht
+--   v_layout_object_font (create_analysis_views.sql, materialisiert): effektive Schrift je
+--   Text zeigendem Objekt mit Herkunft je Eigenschaft (local/local_redundant/style/
+--   part_theme/theme/group/default), Font_Key, Rich-Text- und CF-Schriften,
+--   Low_Confidence. Neue Tabellen → MINOR-Bump.
+-- @SCHEMA_CHANGELOG 1.43.0: Datenfluss-Kanten (Konverter 2.51.0): neue Phase
+--   create_dataflow_views.sql direkt nach den Analysis Views (abschaltbar: --no-dataflow
+--   bzw. "dataflow": "off" in solution.json oder .fmlab/settings.json). Neue Tabellen
+--   v_dataflow_edges (eine Zeile je Datenfluss-, Kontroll-, Einstiegs- oder Senken-
+--   Beziehung zwischen typisierten Knoten: Feld, Schritt, Variable, Scriptparameter/
+--   -ergebnis, Feldformel, Script, Einstieg; Flow_Class/Flow_Kind, Precision exact/
+--   approx/dynamic, Writer_Kind value/constant/reset/input/import; lokale Variablen
+--   als Setzer → Leser nach Setzer-Erreichbarkeit; Parameter/Ergebnis und Feldlesen
+--   transitiv über Custom Functions) und v_step_guards (eigener Zweig jeder
+--   umschließenden If-Kette und jede umschließende Schleife je Schritt mit
+--   Datenkanten); Prüfsicht v_check_dataflow_edges. Neue Tabellen → MINOR-Bump.
+-- @SCHEMA_CHANGELOG 1.42.0: SQL-Referenzen in Formeln (Konverter 2.47.0): neue Tabelle
+--   CalculationSqlRefs (P4) — eine Zeile je Bezug einer ExecuteSQL-/ExecuteSQLe-
+--   Anweisung: Klausel (select/from/join/on/where/group/having/order/parameter),
+--   Column_Pos, Arg_Pos, Alias, Ziel (Field, TableOccurrence, SystemTable oder NULL =
+--   ungelöst), Resolution (reference = Formel-Referenz, name = Name im SQL-Text,
+--   dynamic = kein Katalogziel), Raw_Name, Low_Confidence, Let_Var, Parse_Source.
+--   Feldnamen im SQL-Text erzeugen reads_field-Kanten (Link-Block 30b, Spiegel in
+--   v_calculation_links); TOs aus FROM/JOIN zählen in v_table_occurrence_usage
+--   (Kategorie sql). v_sql_field_usage leitet sich aus der neuen Tabelle ab, die
+--   Tabelle sql_name_wrappers entfällt. Neue Tabelle → MINOR-Bump (Master-Rebuild).
+-- @SCHEMA_CHANGELOG 1.41.0: Script-Kanten je Schritt (Konverter 2.46.0): neue Analysis
+--   View v_script_step_links — eine Zeile je Referenz eines Script-Schritts mit Rolle
+--   wie ObjectLinks (Felder über ScriptStepRoleMap, calls_script, navigates_to_layout,
+--   navigates_to_to, sorts_by_valuelist, installs_menuset, data_source), Ziel und
+--   Quelle (Via = parameter aus XMLStepReferences, calculation aus den Schritt-Formeln
+--   über v_calculation_links); Target_File aus der Kante selbst, In_Graph für
+--   Referenzen ohne Katalog-Ziel. Schritt-Schlüssel (Step_UUID, File_Name). P4: Rolle
+--   je Step-PARAMETER für Steps mit Quelle UND Ziel (KI-Steps 213/216/218/220/222/240,
+--   Print PDF 242, Append PDF 244) — neue Tabellen ScriptStepParamRoleMap (kuratiert)
+--   und StepFieldParamRoles; deren Feld-Kanten werden sets_field / reads_field /
+--   finds_in_field statt references_field. P3: neue Tabelle ImportStepSources
+--   (Quelle je Import-Schritt: Art, Pfadliste, Formel, XSL, aufgelöste FileMaker-
+--   Datei der Lösung). Neue Tabellen und View → MINOR-Bump (Master-Rebuild).
 -- @SCHEMA_CHANGELOG 1.40.0: Objekt-Nutzung (Konverter 2.45.0): neue Analysis View
 --   v_object_usage — eine Zeile je Field, Script, Layout, CustomFunction, ValueList,
 --   BaseTable, ExternalDataSource, PrivilegeSet, TableOccurrence und Relationship mit
@@ -6729,6 +6789,14 @@ CREATE TABLE IF NOT EXISTS ThemeCatalog (
     Theme_ID BIGINT,
     Theme_Name VARCHAR,
     Theme_Display VARCHAR,   -- <Theme @Display>: lokalisierter Anzeigename (z.B. „Apex Blau")
+    -- Kopf-Attribute (Schema 1.46.0), roh aus <Theme>:
+    Theme_Group VARCHAR,     -- @Group: 'Custom' = eigenes Design, sonst lokalisierte Designfamilie („Apex Blau", „Klassisch")
+    Base_Name VARCHAR,       -- @baseName: internes Basisdesign (nur eigene Designs)
+    Base_Version VARCHAR,    -- @baseVersion (nur eigene Designs)
+    Theme_Version VARCHAR,   -- @version
+    Theme_Locale VARCHAR,    -- @locale: Sprache der eingebauten Stilnamen (de, en, …)
+    Theme_Platform VARCHAR,  -- @platform: Code roh (1, 2, 3; Bedeutung undokumentiert)
+    Is_Default BOOLEAN,      -- @defaultTheme='True': Standarddesign neuer Layouts der Datei
     Theme_UUID VARCHAR,
     Theme_XML VARCHAR,
     -- Änderungs-Metadaten (Attribute am <UUID>-Element), roh — Semantik wie ExternalDataSourceCatalog
@@ -6754,6 +6822,13 @@ SELECT
     xml_extract_text(theme_xml, '/Theme/@id')[1]::BIGINT as Theme_ID,
     xml_unescape(xml_extract_text(theme_xml, '/Theme/@name')[1]) as Theme_Name,
     xml_unescape(xml_extract_text(theme_xml, '/Theme/@Display')[1]) as Theme_Display,
+    NULLIF(xml_unescape(xml_extract_text(theme_xml, '/Theme/@Group')[1]), '') as Theme_Group,
+    NULLIF(xml_extract_text(theme_xml, '/Theme/@baseName')[1], '') as Base_Name,
+    NULLIF(xml_extract_text(theme_xml, '/Theme/@baseVersion')[1], '') as Base_Version,
+    NULLIF(xml_extract_text(theme_xml, '/Theme/@version')[1], '') as Theme_Version,
+    NULLIF(xml_extract_text(theme_xml, '/Theme/@locale')[1], '') as Theme_Locale,
+    NULLIF(xml_extract_text(theme_xml, '/Theme/@platform')[1], '') as Theme_Platform,
+    coalesce(xml_extract_text(theme_xml, '/Theme/@defaultTheme')[1] = 'True', false) as Is_Default,
     xml_extract_text(theme_xml, '/Theme/UUID/text()')[1] as Theme_UUID,
 
     -- Vollständige Theme-Struktur als JSON (enthält CSS-Regelsätze).
@@ -6774,6 +6849,13 @@ ON CONFLICT (Theme_UUID, File_Name) DO UPDATE SET
     Theme_ID = EXCLUDED.Theme_ID,
     Theme_Name = EXCLUDED.Theme_Name,
     Theme_Display = EXCLUDED.Theme_Display,
+    Theme_Group = EXCLUDED.Theme_Group,
+    Base_Name = EXCLUDED.Base_Name,
+    Base_Version = EXCLUDED.Base_Version,
+    Theme_Version = EXCLUDED.Theme_Version,
+    Theme_Locale = EXCLUDED.Theme_Locale,
+    Theme_Platform = EXCLUDED.Theme_Platform,
+    Is_Default = EXCLUDED.Is_Default,
     Theme_XML = EXCLUDED.Theme_XML,
     Modified_At = EXCLUDED.Modified_At,
     Modified_By = EXCLUDED.Modified_By,

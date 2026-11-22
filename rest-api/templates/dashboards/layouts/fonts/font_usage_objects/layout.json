@@ -1,0 +1,484 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "type": "Grid",
+    "props": {
+      "columns": 12,
+      "gap": 16
+    },
+    "children": [
+      {
+        "type": "Card",
+        "id": "summary",
+        "props": {
+          "span": 12,
+          "variant": "hero"
+        },
+        "data": {
+          "dataset": "summary"
+        },
+        "children": [
+          {
+            "type": "KPIStrip",
+            "id": "summary_kpistrip",
+            "props": {
+              "items": [
+                {
+                  "label": "Font uses",
+                  "field": "uses",
+                  "format": "number"
+                },
+                {
+                  "label": "Objects",
+                  "field": "objects",
+                  "format": "number"
+                },
+                {
+                  "label": "Layouts",
+                  "field": "layouts",
+                  "format": "number"
+                },
+                {
+                  "label": "Uncertain",
+                  "field": "uncertain",
+                  "format": "number"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "filter_card",
+        "props": {
+          "span": 12
+        },
+        "data": {
+          "dataset": "summary"
+        },
+        "children": [
+          {
+            "type": "Row",
+            "id": "filter_row",
+            "props": {
+              "gap": 12,
+              "align": "center"
+            },
+            "children": [
+              {
+                "type": "TextInput",
+                "id": "search_input",
+                "props": {
+                  "param": "search",
+                  "placeholder": "Search font, layout, object or field…",
+                  "width": 30,
+                  "resetParams": [
+                    "objects_page"
+                  ]
+                }
+              },
+              {
+                "type": "Select",
+                "id": "file_select",
+                "data": {
+                  "dataset": "file_options"
+                },
+                "props": {
+                  "param": "file",
+                  "label": "File",
+                  "emptyOptionLabel": "All files",
+                  "multiple": true,
+                  "resetParams": [
+                    "objects_page"
+                  ]
+                }
+              },
+              {
+                "type": "Select",
+                "id": "theme_select",
+                "data": {
+                  "dataset": "theme_options"
+                },
+                "props": {
+                  "param": "theme",
+                  "label": "Theme",
+                  "emptyOptionLabel": "All themes",
+                  "multiple": true,
+                  "separator": "|",
+                  "resetParams": [
+                    "objects_page"
+                  ]
+                }
+              },
+              {
+                "type": "Select",
+                "id": "layout_select",
+                "data": {
+                  "dataset": "layout_options"
+                },
+                "props": {
+                  "param": "layout_uuid",
+                  "label": "Layout",
+                  "emptyOptionLabel": "All layouts",
+                  "resetParams": [
+                    "layout_file",
+                    "objects_page"
+                  ]
+                }
+              },
+              {
+                "type": "Select",
+                "id": "font_select",
+                "data": {
+                  "dataset": "font_options"
+                },
+                "props": {
+                  "param": "font",
+                  "label": "Font",
+                  "emptyOptionLabel": "All fonts",
+                  "multiple": true,
+                  "separator": "|",
+                  "resetParams": [
+                    "objects_page"
+                  ]
+                }
+              },
+              {
+                "type": "Select",
+                "id": "size_select",
+                "data": {
+                  "dataset": "size_options"
+                },
+                "props": {
+                  "param": "size",
+                  "label": "Size",
+                  "emptyOptionLabel": "All sizes",
+                  "multiple": true,
+                  "separator": "|",
+                  "resetParams": [
+                    "objects_page"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "FilterChips",
+            "id": "source_chips",
+            "props": {
+              "param": "source",
+              "default": "",
+              "resetParams": [
+                "objects_page"
+              ],
+              "options": [
+                {
+                  "value": "",
+                  "label": "With a font name",
+                  "countField": "chip_src_named"
+                },
+                {
+                  "value": "local",
+                  "label": "Local",
+                  "countField": "chip_src_local"
+                },
+                {
+                  "value": "local_redundant",
+                  "label": "Local, same as inherited",
+                  "countField": "chip_src_local_redundant"
+                },
+                {
+                  "value": "style",
+                  "label": "Style",
+                  "countField": "chip_src_style"
+                },
+                {
+                  "value": "theme",
+                  "label": "Theme",
+                  "countField": "chip_src_theme"
+                },
+                {
+                  "value": "rich_text",
+                  "label": "Rich text",
+                  "countField": "chip_src_rich_text"
+                },
+                {
+                  "value": "chart",
+                  "label": "Chart",
+                  "countField": "chip_src_chart"
+                },
+                {
+                  "value": "default",
+                  "label": "File default",
+                  "countField": "chip_src_default"
+                },
+                {
+                  "value": "all",
+                  "label": "All sources",
+                  "countField": "chip_src_all"
+                }
+              ]
+            }
+          },
+          {
+            "type": "FilterChips",
+            "id": "face_chips",
+            "props": {
+              "param": "face",
+              "default": "",
+              "resetParams": [
+                "objects_page"
+              ],
+              "options": [
+                {
+                  "value": "",
+                  "label": "All faces",
+                  "countField": "chip_face_all"
+                },
+                {
+                  "value": "normal",
+                  "label": "Regular",
+                  "countField": "chip_face_normal"
+                },
+                {
+                  "value": "bold",
+                  "label": "Bold",
+                  "countField": "chip_face_bold"
+                },
+                {
+                  "value": "italic",
+                  "label": "Italic",
+                  "countField": "chip_face_italic"
+                },
+                {
+                  "value": "bold italic",
+                  "label": "Bold italic",
+                  "countField": "chip_face_bold_italic"
+                }
+              ]
+            }
+          },
+          {
+            "type": "FilterChips",
+            "id": "otype_chips",
+            "props": {
+              "param": "otype",
+              "default": "",
+              "resetParams": [
+                "objects_page"
+              ],
+              "options": [
+                {
+                  "value": "",
+                  "label": "All",
+                  "countField": "chip_all"
+                },
+                {
+                  "value": "text",
+                  "label": "Text",
+                  "countField": "chip_text"
+                },
+                {
+                  "value": "field",
+                  "label": "Field",
+                  "countField": "chip_field"
+                },
+                {
+                  "value": "dropdown",
+                  "label": "Drop-down list",
+                  "countField": "chip_dropdown"
+                },
+                {
+                  "value": "popup",
+                  "label": "Pop-up menu",
+                  "countField": "chip_popup"
+                },
+                {
+                  "value": "checkbox",
+                  "label": "Checkbox set",
+                  "countField": "chip_checkbox"
+                },
+                {
+                  "value": "radio",
+                  "label": "Radio buttons",
+                  "countField": "chip_radio"
+                },
+                {
+                  "value": "calendar",
+                  "label": "Calendar",
+                  "countField": "chip_calendar"
+                },
+                {
+                  "value": "button",
+                  "label": "Button",
+                  "countField": "chip_button"
+                },
+                {
+                  "value": "tab",
+                  "label": "Tab control",
+                  "countField": "chip_tab"
+                },
+                {
+                  "value": "chart",
+                  "label": "Chart",
+                  "countField": "chip_chart"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "objects_card",
+        "props": {
+          "span": 12,
+          "title": "Objects and their fonts",
+          "keepChildrenOnEmpty": true
+        },
+        "data": {
+          "dataset": "objects"
+        },
+        "children": [
+          {
+            "type": "Table",
+            "id": "objects_table",
+            "props": {
+              "rowKey": "row_key",
+              "density": "compact",
+              "sortable": true,
+              "searchable": false,
+              "pageParam": "objects_page",
+              "sortParam": "objects_sort",
+              "columns": [
+                {
+                  "field": "file_name",
+                  "label": "File",
+                  "breakAt": "separators"
+                },
+                {
+                  "field": "layout_name",
+                  "label": "Layout",
+                  "breakAt": "separators"
+                },
+                {
+                  "field": "object_type",
+                  "label": "Type",
+                  "nowrap": true
+                },
+                {
+                  "field": "object",
+                  "label": "Object",
+                  "breakAt": "separators"
+                },
+                {
+                  "field": "font",
+                  "label": "Font",
+                  "valueLabels": {
+                    "#default": "— file default"
+                  }
+                },
+                {
+                  "field": "size",
+                  "label": "Size",
+                  "nowrap": true
+                },
+                {
+                  "field": "face",
+                  "label": "Face",
+                  "nowrap": true,
+                  "valueLabels": {
+                    "normal": "regular",
+                    "bold": "bold",
+                    "italic": "italic",
+                    "bold italic": "bold italic"
+                  }
+                },
+                {
+                  "field": "source",
+                  "label": "Source",
+                  "format": "badge",
+                  "nowrap": true,
+                  "valueLabels": {
+                    "local": "local",
+                    "local_redundant": "local, same as inherited",
+                    "style": "style",
+                    "theme": "theme",
+                    "default": "file default",
+                    "rich_text": "rich text",
+                    "chart": "chart"
+                  }
+                },
+                {
+                  "field": "style",
+                  "label": "Style"
+                },
+                {
+                  "field": "detail",
+                  "label": "Run / area",
+                  "valueLabels": {
+                    "title": "chart title",
+                    "legend": "legend",
+                    "x_axis_title": "x-axis title",
+                    "x_axis_label": "x-axis labels",
+                    "y_axis_title": "y-axis title",
+                    "y_axis_label": "y-axis labels",
+                    "data_label": "data labels"
+                  }
+                },
+                {
+                  "field": "low_confidence",
+                  "label": "Uncertain",
+                  "valueLabels": {
+                    "true": "yes",
+                    "false": ""
+                  }
+                }
+              ],
+              "onRowClick": {
+                "action": "openObject",
+                "args": {
+                  "uuid": "{{nav_uuid}}",
+                  "ref": "{{_layout_uuid}}",
+                  "file": "{{file_name}}"
+                }
+              },
+              "rowAction": {
+                "action": "openObject",
+                "args": {
+                  "uuid": "{{_layout_uuid}}",
+                  "type": "Layout",
+                  "file": "{{file_name}}",
+                  "ref": "{{nav_uuid}}"
+                }
+              },
+              "rowActionLabel": "Show in layout",
+              "empty": {
+                "message": "No font use in this selection."
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "notes_card",
+        "props": {
+          "span": 12,
+          "title": "Where a font comes from",
+          "collapsible": true
+        },
+        "children": [
+          {
+            "type": "Markdown",
+            "id": "notes_md",
+            "props": {
+              "content": "**Source of the base font.** FileMaker takes the first value that is set:\n- *local* — set on the object itself.\n- *local, same as inherited* — set on the object, but the same font it would get anyway. FileMaker writes it when *bold* is applied to a font with its own bold face; it is no deliberate choice.\n- *style* — the style applied to the object. A style holds only what it changes; everything else comes from the theme.\n- *theme* — the theme's default for the object type, for the layout part or for all fields.\n- *file default* — the theme names no font at all (Classic, Minimalist). FileMaker then uses a default of the file, which the XML export does not contain — the same theme shows Helvetica Neue in one file and Arial in another. The list therefore names no font for these objects; check one object per file in FileMaker.\n\n**Further font uses.** *Rich text* is a part of a text formatted with the text cursor; it adds to the base font of the object, the rest of the text keeps it. *Chart* is the font of a chart text area (title, legend, axes, data labels); series titles are left out, they keep the theme font.\n\n**Counting.** *Fonts* groups spellings of one font (`arial`, `Arial`). The file default is no font: it counts in neither the number of fonts nor *many fonts*. *Uncertain*: the value comes from a layout-part rule (rank not verified), or the applied style no longer exists in the theme.\n\n**Limits.** Fonts of conditional formatting are not listed. A font name says nothing about whether the font is installed on the clients."
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

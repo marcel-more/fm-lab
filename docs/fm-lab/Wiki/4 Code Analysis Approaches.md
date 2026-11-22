@@ -31,7 +31,9 @@ A FileMaker solution is a network — scripts calling scripts, layouts touching 
 
 Extensive filter options and overlay information help you drill down into the nodes and their meaning. On-the-fly result lists and search filters allow for a specific handover into the interactive exploration mode.
 
-Complementary to the neighborhood view, the Explorer's **trace mode** follows a single flow instead of every edge: the call chain up and down from a start script or layout, the objects those scripts actually touch, and the script triggers of layouts the flow enters. The result is a much smaller, denser graph that answers "what does this process touch?" rather than "what is nearby?".
+Complementary to the neighborhood view, the Explorer's **trace mode** follows a single flow instead of every edge: the call chain up and down from a start script or layout, the objects those scripts actually touch, and the script triggers of layouts the flow enters. The result is a much smaller, denser graph that answers "what does this process touch?" rather than "what is nearby?". The trace works step by step: every call shows the step it comes from and the condition it sits under, and a list of **ways** next to the graph answers both "how is this script reached?" and "what happens when it runs?" — each way also as a diagram ([Graph Explorer Trace Mode](Graph%20Explorer%20Trace%20Mode.md)).
+
+For a field or variable, the same mode follows the **value** instead of the process: where its content comes from (write sites, entries, source fields) and where it flows to (readers, fields written from it, display, export, sort). This data trace is experimental — on large solutions it needs a solution profile to separate the relevant ways from noise ([Graph Explorer Data Trace](Graph%20Explorer%20Data%20Trace.md)).
 
 Agents benefit from the same pre-computed clusters: they can read the underlying architecture and overlay it with semantic signals to explain the solution's business goals.
 

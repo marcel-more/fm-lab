@@ -72,7 +72,8 @@
   "dashboard": {
     "loading": "Dashboard wordt geladen…",
     "loadError": "Laden mislukt: {{message}}",
-    "noData": "Geen gegevens beschikbaar."
+    "noData": "Geen gegevens beschikbaar.",
+    "bylineLabel": "Auteur:"
   },
   "solutionPicker": {
     "label": "Oplossing",

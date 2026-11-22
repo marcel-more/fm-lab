@@ -1,0 +1,277 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "type": "Grid",
+    "props": {
+      "columns": 12,
+      "gap": 16
+    },
+    "children": [
+      {
+        "type": "Card",
+        "id": "summary",
+        "props": {
+          "span": 12,
+          "variant": "hero"
+        },
+        "data": {
+          "dataset": "summary"
+        },
+        "children": [
+          {
+            "type": "KPIStrip",
+            "id": "summary_kpistrip",
+            "props": {
+              "items": [
+                {
+                  "label": "Fonts",
+                  "field": "fonts",
+                  "format": "number"
+                },
+                {
+                  "label": "Uses with a font name",
+                  "field": "named_uses",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "font_usage_objects",
+                      "search": "{{_carry_search}}",
+                      "file": "{{_carry_file}}",
+                      "theme": "{{_carry_theme}}",
+                      "size": "{{_carry_size}}"
+                    }
+                  }
+                },
+                {
+                  "label": "Layouts with a font name",
+                  "field": "named_layouts",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "font_usage_layouts",
+                      "search": "{{_carry_search}}",
+                      "file": "{{_carry_file}}",
+                      "theme": "{{_carry_theme}}",
+                      "size": "{{_carry_size}}"
+                    }
+                  }
+                },
+                {
+                  "label": "Files with a font name",
+                  "field": "named_files",
+                  "format": "number"
+                },
+                {
+                  "label": "Objects without a named font",
+                  "field": "default_objects",
+                  "format": "number",
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "font_usage_layouts",
+                      "source": "default",
+                      "search": "{{_carry_search}}",
+                      "file": "{{_carry_file}}",
+                      "theme": "{{_carry_theme}}",
+                      "size": "{{_carry_size}}"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "filter_card",
+        "props": {
+          "span": 12
+        },
+        "children": [
+          {
+            "type": "Row",
+            "id": "filter_row",
+            "props": {
+              "gap": 12,
+              "align": "center"
+            },
+            "children": [
+              {
+                "type": "TextInput",
+                "id": "search_input",
+                "props": {
+                  "param": "search",
+                  "placeholder": "Search font, layout, object or field…",
+                  "width": 30
+                }
+              },
+              {
+                "type": "Select",
+                "id": "file_select",
+                "data": {
+                  "dataset": "file_options"
+                },
+                "props": {
+                  "param": "file",
+                  "label": "File",
+                  "emptyOptionLabel": "All files",
+                  "multiple": true
+                }
+              },
+              {
+                "type": "Select",
+                "id": "theme_select",
+                "data": {
+                  "dataset": "theme_options"
+                },
+                "props": {
+                  "param": "theme",
+                  "label": "Theme",
+                  "emptyOptionLabel": "All themes",
+                  "multiple": true,
+                  "separator": "|"
+                }
+              },
+              {
+                "type": "Select",
+                "id": "size_select",
+                "data": {
+                  "dataset": "size_options"
+                },
+                "props": {
+                  "param": "size",
+                  "label": "Size",
+                  "emptyOptionLabel": "All sizes",
+                  "multiple": true,
+                  "separator": "|"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "fonts_card",
+        "props": {
+          "span": 12,
+          "title": "Fonts",
+          "keepChildrenOnEmpty": true
+        },
+        "data": {
+          "dataset": "fonts"
+        },
+        "children": [
+          {
+            "type": "Table",
+            "id": "fonts_table",
+            "props": {
+              "rowKey": "_font",
+              "density": "compact",
+              "sortable": true,
+              "searchable": false,
+              "columns": [
+                {
+                  "field": "font",
+                  "label": "Font",
+                  "valueLabels": {
+                    "#default": "File default (font not in the export)"
+                  }
+                },
+                {
+                  "field": "uses",
+                  "label": "Uses",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "objects",
+                  "label": "Objects",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "layouts",
+                  "label": "Layouts",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "files",
+                  "label": "Files",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "sizes",
+                  "label": "Sizes",
+                  "nowrap": true
+                },
+                {
+                  "field": "local_uses",
+                  "label": "Set locally",
+                  "align": "right",
+                  "format": "count"
+                },
+                {
+                  "field": "style_uses",
+                  "label": "From a style",
+                  "align": "right",
+                  "format": "count"
+                },
+                {
+                  "field": "theme_uses",
+                  "label": "From the theme",
+                  "align": "right",
+                  "format": "count"
+                },
+                {
+                  "field": "run_uses",
+                  "label": "Rich text and charts",
+                  "align": "right",
+                  "format": "count"
+                }
+              ],
+              "onRowClick": {
+                "action": "openDashboard",
+                "args": {
+                  "id": "font_usage_layouts",
+                  "font": "{{_font}}",
+                  "source": "{{_source}}",
+                  "search": "{{_carry_search}}",
+                  "file": "{{_carry_file}}",
+                  "theme": "{{_carry_theme}}",
+                  "size": "{{_carry_size}}"
+                }
+              },
+              "empty": {
+                "message": "No font use in this selection."
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "notes_card",
+        "props": {
+          "span": 12,
+          "title": "Where a font comes from",
+          "collapsible": true
+        },
+        "children": [
+          {
+            "type": "Markdown",
+            "id": "notes_md",
+            "props": {
+              "content": "**Source of the base font.** FileMaker takes the first value that is set:\n- *local* — set on the object itself.\n- *local, same as inherited* — set on the object, but the same font it would get anyway. FileMaker writes it when *bold* is applied to a font with its own bold face; it is no deliberate choice.\n- *style* — the style applied to the object. A style holds only what it changes; everything else comes from the theme.\n- *theme* — the theme's default for the object type, for the layout part or for all fields.\n- *file default* — the theme names no font at all (Classic, Minimalist). FileMaker then uses a default of the file, which the XML export does not contain — the same theme shows Helvetica Neue in one file and Arial in another. The list therefore names no font for these objects; check one object per file in FileMaker.\n\n**Further font uses.** *Rich text* is a part of a text formatted with the text cursor; it adds to the base font of the object, the rest of the text keeps it. *Chart* is the font of a chart text area (title, legend, axes, data labels); series titles are left out, they keep the theme font.\n\n**Counting.** *Fonts* groups spellings of one font (`arial`, `Arial`). The file default is no font: it counts in neither the number of fonts nor *many fonts*. *Uncertain*: the value comes from a layout-part rule (rank not verified), or the applied style no longer exists in the theme.\n\n**Limits.** Fonts of conditional formatting are not listed. A font name says nothing about whether the font is installed on the clients."
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

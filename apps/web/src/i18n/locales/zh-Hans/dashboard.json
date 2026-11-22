@@ -393,5 +393,25 @@
     "clear": "显示整个解决方案",
     "clearTitle": "移除范围并显示整个解决方案",
     "hint": "数字和列表仅显示此范围"
+  },
+  "mermaid": {
+    "error": "无法绘制该图",
+    "tooLarge": "该图太大，无法绘制",
+    "position": "第 {{line}} 行，第 {{column}} 列"
+  },
+  "ask": {
+    "title": "选择",
+    "cancel": "取消",
+    "needsSelection": "请先选择一行",
+    "notForChoice": "此选项下不可用。"
+  },
+  "download": {
+    "empty": "没有可导出的内容。",
+    "noDataset": "此页面未加载数据“{{detail}}”。",
+    "noSelection": "请先选择一行。",
+    "tooLarge": "文件太大，无法下载（超过 20 MB）。",
+    "svgOneRow": "一个 SVG 只包含一张图——请先选择一个条目。",
+    "renderFailed": "无法绘制该图：{{detail}}",
+    "diagramError": "无法绘制图：{{detail}}"
   }
 }

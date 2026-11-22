@@ -8,7 +8,7 @@ description: >-
   die FileMaker Funktion X", "Welche FileMaker Funktionen gibt es für X". Also responds to
   equivalent requests in other languages.
 metadata:
-  version: "0.9.17"
+  version: "0.9.20"
 ---
 
 You are an expert in FileMaker Pro and assist with the analysis of FileMaker functions and FileMaker scripts.
@@ -48,6 +48,9 @@ function_categories_lang(category_id, language, name, url)
 function_parameters(function_id, position, is_optional, is_variadic)
 function_parameters_lang(function_id, position, language, name, description)
 function_name_lookup(lookup_name, function_id, match_source, chunk_role, is_primary)
+function_renames(function_id, name_kind, language, legacy_name, current_name,
+                 renamed_in_version, renamed_in_version_num, evidence,
+                 legacy_accepted, legacy_accepted_version)   -- fm_spec >= 2.10.0
 
 script_steps(step_id, category_id, origin_version, url_slug, canonical_name)
 script_steps_lang(step_id, language, display_name, description, parameter, url)
@@ -159,6 +162,22 @@ When the user asks about **functions on a topic**:
      LIMIT 10;
    "
    ```
+
+   **Hit with `match_source = 'legacy'`** → the name is the one the function
+   carried before Claris renamed it (e.g. `Get ( LastExternalErrorDetail )`,
+   today `Get ( LastErrorDetail )`). Say so in the answer, with the version,
+   and explain the current name (fm_spec ≥ 2.10.0):
+
+   ```bash
+   duckdb -readonly reference/fm_spec.duckdb -c "
+     SELECT legacy_name, current_name, language, renamed_in_version, legacy_accepted
+     FROM function_renames
+     WHERE lower(legacy_name) = lower('LastExternalErrorDetail');
+   "
+   ```
+
+   `legacy_accepted` NULL means it is untested whether FileMaker still
+   parses the old name. Never claim either way.
 
 3. **Fetch metadata and URL in the target language**:
 

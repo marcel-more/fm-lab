@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import type { PrimitiveProps } from '../types';
+import { MultiSelectPopover } from '../../components/MultiSelectPopover';
+import { parseSelection } from '../../lib/multiSelect';
 
 /**
  * Server-side filter dropdown. Like FilterChips, but a `<select>` — scales to
@@ -78,7 +77,6 @@ function SingleSelect({ node, dataset }: PrimitiveProps) {
 }
 
 function MultiSelect({ node, dataset }: PrimitiveProps) {
-  const { t } = useTranslation(['common', 'dashboard']);
   const props = node.props ?? {};
   const param = props.param as string | undefined;
   const fallback = (props.default as string) ?? '';
@@ -89,77 +87,17 @@ function MultiSelect({ node, dataset }: PrimitiveProps) {
   const separator = (props.separator as string) || ',';
   const resetParams = (props.resetParams as string[] | undefined) ?? [];
   const [searchParams, setSearchParams] = useSearchParams();
-  const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const popoverRef = useRef<HTMLDivElement>(null);
-
-  // The popover lives in a portal on document.body with fixed coordinates, so
-  // the card's overflow:hidden cannot clip it (same approach as the docset
-  // install popover). Left-aligned under the trigger; flipped above when it
-  // would leave the viewport; clamped horizontally. Second pass after mount
-  // with the real height.
-  const updatePos = useCallback(() => {
-    const el = triggerRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const popHeight = popoverRef.current?.getBoundingClientRect().height ?? 320;
-    const popWidth = popoverRef.current?.getBoundingClientRect().width ?? 240;
-    const margin = 8;
-    let top = rect.bottom + 4;
-    if (top + popHeight + margin > window.innerHeight) {
-      const above = rect.top - popHeight - 4;
-      top = above >= margin ? above : Math.max(margin, window.innerHeight - popHeight - margin);
-    }
-    const left = Math.max(margin, Math.min(rect.left, window.innerWidth - popWidth - margin));
-    setPos(prev => (prev && Math.abs(prev.top - top) < 1 && Math.abs(prev.left - left) < 1 ? prev : { top, left }));
-  }, []);
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    updatePos();
-    const raf = requestAnimationFrame(() => updatePos());
-    return () => cancelAnimationFrame(raf);
-  }, [open, updatePos]);
-
-  // Close on a click outside trigger and popover or on Escape; follow scrolling.
-  useEffect(() => {
-    if (!open) return;
-    const onPointer = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (triggerRef.current?.contains(target) || popoverRef.current?.contains(target)) return;
-      setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    const onReposition = () => updatePos();
-    document.addEventListener('mousedown', onPointer);
-    document.addEventListener('keydown', onKey);
-    window.addEventListener('scroll', onReposition, true);
-    window.addEventListener('resize', onReposition);
-    return () => {
-      document.removeEventListener('mousedown', onPointer);
-      document.removeEventListener('keydown', onKey);
-      window.removeEventListener('scroll', onReposition, true);
-      window.removeEventListener('resize', onReposition);
-    };
-  }, [open, updatePos]);
 
   if (!param) return null;
 
+  // Adapter: dataset rows → options, URL param ↔ selection. Popover, order of
+  // the written values and Escape handling live in MultiSelectPopover.
   const rows = (dataset?.data as Array<Record<string, unknown>>) ?? [];
   const options = rows.map(r => ({ value: String(r[valueField]), label: String(r[labelField]) }));
-  const raw = searchParams.get(param) ?? fallback;
-  const selected = raw.split(separator).filter(v => v !== '');
-  const selectedSet = new Set(selected);
+  const selected = parseSelection(searchParams.get(param) ?? fallback, separator);
 
-  const write = (values: string[]) => {
-    // Option order first, then values from the URL the options do not list
-    // (a deep link must not lose them silently).
-    const known = options.map(o => o.value).filter(v => values.includes(v));
-    const unknown = values.filter(v => !options.some(o => o.value === v));
-    const value = [...known, ...unknown].join(separator);
+  const onChange = (values: string[]) => {
+    const value = values.join(separator);
     setSearchParams(prev => {
       const n = new URLSearchParams(prev);
       // Keep the URL canonical: drop the param when empty or at its default.
@@ -170,71 +108,13 @@ function MultiSelect({ node, dataset }: PrimitiveProps) {
     }, { replace: true });
   };
 
-  const toggle = (value: string) =>
-    write(selectedSet.has(value) ? selected.filter(v => v !== value) : [...selected, value]);
-
-  const labelOf = (value: string) => options.find(o => o.value === value)?.label ?? value;
-  const summary = selected.length === 0
-    ? (emptyOptionLabel ?? (t('common:all') as string))
-    : selected.length <= 2
-      ? selected.map(labelOf).join(', ')
-      : (t('dashboard:select.selectedCount', { count: selected.length }) as string);
-  const clearLabel = t('dashboard:select.clear') as string;
-
   return (
-    <div className="dash-select dash-select--multi">
-      {caption && <span className="dash-select__label">{caption}</span>}
-      <span className="dash-select__group">
-        <button
-          ref={triggerRef}
-          type="button"
-          className={`dash-select__control dash-select__trigger${selected.length > 0 ? ' dash-select__trigger--active' : ''}`}
-          aria-haspopup="true"
-          aria-expanded={open}
-          title={selected.length > 2 ? selected.map(labelOf).join(', ') : undefined}
-          onClick={() => setOpen(o => !o)}
-        >
-          {summary}
-        </button>
-        {selected.length > 0 && (
-          <button
-            type="button"
-            className="dash-select__reset"
-            aria-label={clearLabel}
-            title={clearLabel}
-            onClick={() => write([])}
-          >
-            ×
-          </button>
-        )}
-      </span>
-      {open && createPortal(
-        <div
-          ref={popoverRef}
-          className="dash-select__popover"
-          role="group"
-          aria-label={caption ?? emptyOptionLabel}
-          style={{ position: 'fixed', top: pos?.top ?? -9999, left: pos?.left ?? -9999 }}
-        >
-          <button
-            type="button"
-            className="dash-select__clear"
-            disabled={selected.length === 0}
-            onClick={() => write([])}
-          >
-            {clearLabel}
-          </button>
-          <div className="dash-select__options">
-            {options.map(o => (
-              <label key={o.value} className="dash-select__option">
-                <input type="checkbox" checked={selectedSet.has(o.value)} onChange={() => toggle(o.value)} />
-                <span>{o.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>,
-        document.body,
-      )}
-    </div>
+    <MultiSelectPopover
+      options={options}
+      selected={selected}
+      onChange={onChange}
+      caption={caption}
+      emptyLabel={emptyOptionLabel}
+    />
   );
 }

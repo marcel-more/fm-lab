@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "名前をハードコードした ExecuteSQL",
+    "description": "ベストプラクティスルール — ExecuteSQL 文が、フィールド参照（GetFieldName や名前ラッパー）から名前を組み立てる代わりに、テーブルオカレンスやフィールドを SQL 文字列内のプレーンテキストとして指定しています。参照は現在は動作しますが、FileMaker はこれを追跡しません。テーブルオカレンスやフィールドの名前を変更すると、警告なしにクエリが壊れ、ExecuteSQL は ? を返します。"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "検出数",
+    "summary_kpi.props.items[1].label": "対象ファイル数",
+    "summary_kpi.props.items[2].label": "名前指定されたフィールド",
+    "summary_kpi.props.items[3].label": "名前指定されたテーブルオカレンス",
+    "findings_card.props.title": "名前をハードコードした ExecuteSQL",
+    "findings_table.props.searchPlaceholder": "ファイル、オブジェクト、名前を検索…",
+    "findings_table.props.empty.message": "ExecuteSQL 内にハードコードされた名前は見つかりませんでした。",
+    "findings_table.props.columns[0].label": "ファイル",
+    "findings_table.props.columns[1].label": "オブジェクト",
+    "findings_table.props.columns[2].label": "種類",
+    "findings_table.props.columns[3].label": "ステップ",
+    "findings_table.props.columns[4].label": "関数",
+    "findings_table.props.columns[5].label": "句",
+    "findings_table.props.columns[6].label": "SQL 内の名前",
+    "findings_table.props.columns[7].label": "対象"
+  }
+}

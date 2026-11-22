@@ -9,8 +9,10 @@ import {
 import { useTranslation } from 'react-i18next';
 import cytoscape from 'cytoscape';
 import type { GraphNode, GraphEdge } from '../hooks/useSubgraph';
+import type { CallSite } from '../hooks/useTrace';
+import { callSiteText } from '../lib/traceWays';
 import { subgraphToElements } from '../hooks/useSubgraph';
-import { getCommunityColor, readGraphThemeTokens } from '../lib/graphColors';
+import { getCommunityColor, readGraphThemeTokens, DATA_FLOW_ROLE_COLORS } from '../lib/graphColors';
 import { resolveCssColor } from '../lib/activityColors';
 import { useTheme } from '../hooks/useTheme';
 import { useTriggerEventFormat } from '../lib/triggerEvents';
@@ -69,6 +71,8 @@ export interface ExplorerGraphHandle {
   /** Transiente Vorschau-Hervorhebung (Hover über die Typ-Liste). Eigene Klasse,
    *  damit eine aktive Klick-Auswahl (.selected) nicht überschrieben wird. */
   previewNode: (id: string | null) => void;
+  /** Datenfluss-Trace: Pfad eines Wegs hervorheben (Knoten-IDs), null = aufheben. */
+  highlightPath: (nodeIds: string[] | null) => void;
 }
 
 /**
@@ -231,7 +235,6 @@ function buildExplorerStylesheet(): cytoscape.StylesheetStyle[] {
       'background-color': 'data(color)',
       'border-width': 1.5,
       'border-color': 'data(color)',
-      'cursor': 'pointer',
     } as unknown as cytoscape.Css.Node,
   },
   // High-degree nodes carry a permanent label.
@@ -265,7 +268,6 @@ function buildExplorerStylesheet(): cytoscape.StylesheetStyle[] {
       'text-outline-color': g.nodeOutline,
       'padding': '18px',
       'z-index': 0,
-      'cursor': 'grab',
     } as unknown as cytoscape.Css.Node,
   },
   // Über das Datei-Dropdown gewählte Datei: die zugehörige Box bekommt einen transluzenten
@@ -340,6 +342,19 @@ function buildExplorerStylesheet(): cytoscape.StylesheetStyle[] {
       'border-style': 'dashed',
     } as unknown as cytoscape.Css.Node,
   },
+  // Ablauf-Trace: Aufrufschritt ohne statisches Ziel (SD14) — roter Rhombus
+  // am aufrufenden Script, beschriftet mit Schritt bzw. Namensformel.
+  {
+    selector: 'node[type = "DynamicCall"]',
+    style: {
+      'shape': 'diamond',
+      'background-color': '#ef4444',
+      'border-width': 2,
+      'border-color': '#b91c1c',
+      'label': 'data(label)',
+      'font-size': '10px',
+    } as unknown as cytoscape.Css.Node,
+  },
   // Boundary-Knoten (Exclude-Liste): sichtbar, aber nicht expandiert.
   // Steht NACH den traceRole-Regeln (Ausschluss übermalt die Rolle), aber vor
   // hub/focus/hover/selected, damit deren State-Ringe weiterhin gewinnen.
@@ -351,6 +366,27 @@ function buildExplorerStylesheet(): cytoscape.StylesheetStyle[] {
       'border-style': 'dashed',
       'border-color': '#e8a33d',
     } as unknown as cytoscape.Css.Node,
+  },
+  // ── Datenfluss-Trace (mode=data, Knoten) — Randfarbe je flowRole, dieselben
+  // Töne wie die Mermaid-Wege des Servers (graph-trace-mermaid ROLE_COLORS) und
+  // die Legende im Panel (DATA_FLOW_ROLE_COLORS). Knoten im Wertfluss tragen ihr
+  // Label (Schritte als „Script #14 Set Field"); Blätter bleiben dezent.
+  ...Object.entries(DATA_FLOW_ROLE_COLORS).map(([role, color]) => ({
+    selector: `node[flowRole = "${role}"]`,
+    style: { 'border-width': 2.5, 'border-color': color } as unknown as cytoscape.Css.Node,
+  })),
+  {
+    selector: 'node[flowRole = "field"], node[flowRole = "step"], node[flowRole = "variable"], node[flowRole = "param"], node[flowRole = "result"], node[flowRole = "calc"]',
+    style: { 'label': 'data(label)', 'font-size': '10px' } as unknown as cytoscape.Css.Node,
+  },
+  {
+    selector: 'node[?flowLeaf]',
+    style: { 'opacity': 0.75, 'border-style': 'dashed' } as unknown as cytoscape.Css.Node,
+  },
+  // Haltepunkt des Lösungsprofils: sichtbar, aber nicht expandiert (wie Boundary).
+  {
+    selector: 'node[?profileStop]',
+    style: { 'border-style': 'dashed', 'border-width': 2.5, 'border-color': '#e8a33d', 'opacity': 0.6 } as unknown as cytoscape.Css.Node,
   },
   // Hub node — bright accent border (no longer a diamond; all nodes are circles).
   {
@@ -489,6 +525,29 @@ function buildExplorerStylesheet(): cytoscape.StylesheetStyle[] {
       'opacity': 0.45,
     } as unknown as cytoscape.Css.Edge,
   },
+  // ── Datenfluss-Trace (Kanten) — Klasse data/control/entry/sink; Ablaufkanten
+  // (Script führt Schritt aus, Schritt ruft Script) und Steuerung gepunktet,
+  // Einstiege rosa, Senken blass; ungenaue Kanten (approx) gestrichelt.
+  {
+    selector: 'edge[flowClass = "data"]',
+    style: { 'width': 2, 'line-color': '#22c55e', 'target-arrow-color': '#22c55e' } as unknown as cytoscape.Css.Edge,
+  },
+  {
+    selector: 'edge[flowClass = "entry"]',
+    style: { 'line-color': '#ec4899', 'target-arrow-color': '#ec4899' } as unknown as cytoscape.Css.Edge,
+  },
+  {
+    selector: 'edge[flowClass = "control"], edge[role = "script_runs_step"], edge[role = "step_calls_script"]',
+    style: { 'line-style': 'dotted', 'line-color': '#64748b', 'target-arrow-color': '#64748b' } as unknown as cytoscape.Css.Edge,
+  },
+  {
+    selector: 'edge[flowClass = "sink"]',
+    style: { 'line-style': 'dotted', 'opacity': 0.5 } as unknown as cytoscape.Css.Edge,
+  },
+  {
+    selector: 'edge[flowClass = "data"][precision = "approx"]',
+    style: { 'line-style': 'dashed' } as unknown as cytoscape.Css.Edge,
+  },
   // Cross-file links — orange dashed, slightly heavier.
   {
     selector: 'edge[?isCrossFile]',
@@ -498,6 +557,17 @@ function buildExplorerStylesheet(): cytoscape.StylesheetStyle[] {
       'target-arrow-color': '#ffb74d',
       'line-style': 'dashed',
     } as unknown as cytoscape.Css.Edge,
+  },
+  // Ablauf-Trace: alle Aufrufstellen der Kante bedingt (If / Else If / Else) —
+  // gestrichelt mit langem Strich (Cross-File bleibt am Orange erkennbar);
+  // Aufruf ohne Schritt-Anker (approx, MBS) bzw. dynamisch gepunktet.
+  {
+    selector: 'edge[?traceConditional]',
+    style: { 'line-style': 'dashed', 'line-dash-pattern': [9, 5] } as unknown as cytoscape.Css.Edge,
+  },
+  {
+    selector: 'edge[traceKind = "chain"][precision = "approx"], edge[traceKind = "chain"][precision = "dynamic"]',
+    style: { 'line-style': 'dotted' } as unknown as cytoscape.Css.Edge,
   },
   // Chain-Kanten (calls_script im Trace) — breit betont; steht NACH der
   // Cross-File-Regel, damit die Breite auch dort greift (Farbe bleibt orange).
@@ -515,6 +585,25 @@ function buildExplorerStylesheet(): cytoscape.StylesheetStyle[] {
   {
     selector: '.faded',
     style: { 'opacity': 0.12 } as unknown as cytoscape.Css.Node,
+  },
+  // Gewählter Weg des Datenfluss-Trace: Pfad betont, Rest zurückgenommen.
+  {
+    selector: '.way-faded',
+    style: { 'opacity': 0.15 } as unknown as cytoscape.Css.Node,
+  },
+  {
+    selector: 'node.way-path',
+    style: { 'label': 'data(label)', 'z-index': 20 } as unknown as cytoscape.Css.Node,
+  },
+  {
+    selector: 'edge.way-path',
+    style: { 'width': 3.5, 'line-color': '#f59e0b', 'target-arrow-color': '#f59e0b', 'z-index': 20 } as unknown as cytoscape.Css.Edge,
+  },
+  // Hover-Vorschau (Liste/Diagramm) bleibt voll sichtbar, auch neben einem
+  // gewählten Weg — muss nach `.way-faded` stehen.
+  {
+    selector: 'node.list-preview',
+    style: { 'opacity': 1 } as unknown as cytoscape.Css.Node,
   },
   // Type exclusion + name filter "hide" mode — removed from layout + render,
   // positions kept.
@@ -964,6 +1053,17 @@ function runLayout(
   }
 }
 
+const CALL_SITES_SHOWN = 8;
+
+/** Tooltip lines of the call sites of a flow-trace edge (header + one line per site). */
+function callSiteLines(sites: CallSite[], tt: (k: string, o?: Record<string, unknown>) => string): string[] {
+  if (sites.length === 0) return [];
+  const words = { unreachable: tt('trace.flow.flags.unreachable'), disabled: tt('trace.flow.disabled') };
+  const lines = sites.slice(0, CALL_SITES_SHOWN).map((c) => callSiteText(c, words));
+  if (sites.length > CALL_SITES_SHOWN) lines.push(tt('trace.flow.moreCallSites', { count: sites.length - CALL_SITES_SHOWN }));
+  return [tt('trace.flow.callSites', { count: sites.length }), ...lines];
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -1124,6 +1224,20 @@ export const ExplorerGraph = forwardRef<ExplorerGraphHandle, ExplorerGraphProps>
         cy.nodes().removeClass('selected');
         if (uuid) cy.getElementById(uuid).addClass('selected');
       },
+      highlightPath: (nodeIds) => {
+        const cy = cyRef.current;
+        if (!cy) return;
+        cy.batch(() => {
+          cy.elements().removeClass('way-path way-faded');
+          if (!nodeIds || nodeIds.length === 0) return;
+          const ids = new Set(nodeIds);
+          const real = cy.nodes().not('.focus-halo').not(`.${FILE_GROUP_CLASS}`).not(`.${PREVIEW_HALO_CLASS}`);
+          real.forEach((n) => { n.addClass(ids.has(n.id()) ? 'way-path' : 'way-faded'); });
+          cy.edges().forEach((e) => {
+            e.addClass(ids.has(e.source().id()) && ids.has(e.target().id()) ? 'way-path' : 'way-faded');
+          });
+        });
+      },
       previewNode: (id) => {
         const cy = cyRef.current;
         if (!cy) return;
@@ -1175,6 +1289,7 @@ export const ExplorerGraph = forwardRef<ExplorerGraphHandle, ExplorerGraphProps>
     useEffect(() => {
       let disposed = false;
       let resizeObserver: ResizeObserver | null = null;
+      let resizeRaf = 0;
 
       const hideTooltip = () => {
         if (tooltipRef.current) tooltipRef.current.hidden = true;
@@ -1284,7 +1399,10 @@ export const ExplorerGraph = forwardRef<ExplorerGraphHandle, ExplorerGraphProps>
           const role = edge.data('role') as string | undefined;
           if (!role) return;
           const subroles = (edge.data('subroles') as string[] | null) ?? [];
-          const lines = edgeTipRef.current(role, subroles);
+          const lines = [
+            ...edgeTipRef.current(role, subroles),
+            ...callSiteLines((edge.data('callSites') as CallSite[] | undefined) ?? [], (k, o) => tRef.current(k, o) as string),
+          ];
           if (lines.length === 0) return;
           tip.innerHTML = lines
             .map((l, i) => (i === 0 ? `<strong>${escapeHtml(l)}</strong>` : escapeHtml(l)))
@@ -1319,9 +1437,25 @@ export const ExplorerGraph = forwardRef<ExplorerGraphHandle, ExplorerGraphProps>
         // inspect panel opens/closes the canvas width changes, and without a
         // resize() cy.fit() would compute against stale dimensions → the graph
         // lands off-screen ("disappears" until a hover forces a redraw).
+        // Nur auf echte Größenänderungen reagieren und cy.resize() im nächsten
+        // Frame ausführen, nicht im Callback selbst — sonst kann eine
+        // Rückkopplung (Safari) als „ResizeObserver loop“ endlos laufen.
         if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
-          resizeObserver = new ResizeObserver(() => {
-            cyRef.current?.resize();
+          let lastW = -1;
+          let lastH = -1;
+          resizeObserver = new ResizeObserver((entries) => {
+            const box = entries[0]?.contentRect;
+            if (!box) return;
+            const w = Math.round(box.width);
+            const h = Math.round(box.height);
+            if (w === lastW && h === lastH) return;
+            lastW = w;
+            lastH = h;
+            if (resizeRaf) cancelAnimationFrame(resizeRaf);
+            resizeRaf = requestAnimationFrame(() => {
+              resizeRaf = 0;
+              cyRef.current?.resize();
+            });
           });
           resizeObserver.observe(containerRef.current);
         }
@@ -1332,6 +1466,7 @@ export const ExplorerGraph = forwardRef<ExplorerGraphHandle, ExplorerGraphProps>
       return () => {
         disposed = true;
         resizeObserver?.disconnect();
+        if (resizeRaf) cancelAnimationFrame(resizeRaf);
         if (hullRafRef.current) { cancelAnimationFrame(hullRafRef.current); hullRafRef.current = 0; }
         if (offscreenRef.current) { offscreenRef.current.width = 0; offscreenRef.current.height = 0; offscreenRef.current = null; }
         cyRef.current?.destroy();
@@ -1364,7 +1499,10 @@ export const ExplorerGraph = forwardRef<ExplorerGraphHandle, ExplorerGraphProps>
       // Composite-ID. Ohne Fokus-Knoten (leerer Graph) gibt es keinen Datensatz.
       const focusNode = data?.nodes.find((n) => n.isFocus) ?? null;
       const isTraceData = data?.nodes.some((n) => n.traceRole !== undefined) ?? false;
-      const datasetKey = data && focusNode ? `${isTraceData ? 'trace' : 'subgraph'}:${focusNode.id}` : null;
+      const isDataTrace = data?.nodes.some((n) => n.flowRole !== undefined) ?? false;
+      const datasetKey = data && focusNode
+        ? `${isDataTrace ? 'data' : isTraceData ? 'trace' : 'subgraph'}:${focusNode.id}`
+        : null;
       const sameDataset =
         datasetKey !== null && datasetKey === datasetKeyRef.current && selectRealNodes(cy).length > 0;
       datasetKeyRef.current = datasetKey;

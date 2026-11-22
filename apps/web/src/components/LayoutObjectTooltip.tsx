@@ -3,12 +3,21 @@ import { useTranslation } from 'react-i18next';
 import type { LayoutObject } from '../hooks/useLayoutData';
 import { FIELD_NAV_TYPES, SCRIPT_NAV_TYPES } from '../lib/layoutObjectNav';
 import { useTriggerEventFormat } from '../lib/triggerEvents';
+import { FONT_DEFAULT, type FontUse, type ObjectStyle } from '../lib/layoutFonts';
 
 type Props = {
   object: LayoutObject;
   x: number;
   y: number;
+  /** Font uses of the object (base font, rich-text runs, chart areas); null = none or not loaded. */
+  fontUses?: FontUse[] | null;
+  /** Applied style; null = none or not loaded. */
+  fontStyle?: ObjectStyle | null;
+  /** Font data loaded — only then the font and style rows show. */
+  fontsReady?: boolean;
 };
+
+const FACE_KEYS: Record<string, string> = { bold: 'bold', italic: 'italic', 'bold italic': 'boldItalic' };
 
 const CURSOR_OFFSET_X = 14;
 const CURSOR_OFFSET_Y = 18;
@@ -45,7 +54,7 @@ function resolveTargetLine(o: LayoutObject): { typeKey: string; name: string; ex
  * Keine Formeln, keine Links — Details liefert die LayoutObject-Detailansicht
  * per Primärklick.
  */
-export function LayoutObjectTooltip({ object, x, y }: Props) {
+export function LayoutObjectTooltip({ object, x, y, fontUses, fontStyle, fontsReady = false }: Props) {
   const { t } = useTranslation(['detail', 'types']);
   const fmtEvent = useTriggerEventFormat();
   const ref = useRef<HTMLDivElement>(null);
@@ -99,6 +108,28 @@ export function LayoutObjectTooltip({ object, x, y }: Props) {
     .filter(Boolean)
     .map(role => `${t(`detail:calculationDetail.roles.${role}`, { defaultValue: role })} ✓`);
 
+  // Font row: base font with size, face and source; rich-text runs and chart
+  // areas with their own font as additions. File default is named as such —
+  // the export does not contain the font.
+  const fontName = (u: FontUse) => (u.font === FONT_DEFAULT
+    ? t('detail:layoutCanvas.tooltip.fileDefault')
+    : (u.fontDisplay ?? u.font)) as string;
+  const faceName = (face: string) => (FACE_KEYS[face]
+    ? t(`detail:layoutFontFilter.faces.${FACE_KEYS[face]}`) as string
+    : null);
+  const uses = fontsReady ? (fontUses ?? []) : [];
+  const baseUse = uses.find(u => u.kind === 'base') ?? null;
+  const runFonts = [...new Set(uses.filter(u => u.kind === 'rich_text').map(fontName))];
+  const runCount = uses.filter(u => u.kind === 'rich_text').length;
+  const chartFonts = [...new Set(uses.filter(u => u.kind === 'chart').map(fontName))];
+  const baseText = baseUse
+    ? [fontName(baseUse), baseUse.size, faceName(baseUse.face)].filter(Boolean).join(' ')
+    : null;
+  const sourceText = baseUse?.familySource
+    ? t(`detail:layoutCanvas.tooltip.sources.${baseUse.familySource}`, { defaultValue: baseUse.familySource }) as string
+    : null;
+  const style = fontsReady ? fontStyle : null;
+
   return (
     <div
       ref={ref}
@@ -133,6 +164,45 @@ export function LayoutObjectTooltip({ object, x, y }: Props) {
         <div className="layout-tooltip-row">
           <span className="layout-tooltip-key">{t('detail:layoutCanvas.tooltip.logic', { defaultValue: 'Logic' })}</span>
           <span className="layout-tooltip-val">{logicParts.join(' · ')}</span>
+        </div>
+      )}
+      {(baseText || runCount > 0 || chartFonts.length > 0) && (
+        <div className="layout-tooltip-row">
+          <span className="layout-tooltip-key">{t('detail:layoutCanvas.tooltip.font')}</span>
+          <span className="layout-tooltip-val">
+            {baseText}
+            {sourceText && (
+              <span className="layout-tooltip-muted"> · {t('detail:layoutCanvas.tooltip.source')}: {sourceText}</span>
+            )}
+            {baseUse?.lowConfidence && (
+              <span className="layout-tooltip-warn" title={t('detail:layoutCanvas.tooltip.lowConfidence') as string}> ⚠</span>
+            )}
+            {runCount > 0 && (
+              <span className="layout-tooltip-muted">
+                {baseText ? ' ' : ''}({t('detail:layoutCanvas.tooltip.richRuns', { count: runCount, fonts: runFonts.join(', ') })})
+              </span>
+            )}
+            {chartFonts.length > 0 && (
+              <span>
+                {baseText || runCount > 0 ? ' · ' : ''}
+                {t('detail:layoutCanvas.tooltip.chartFonts', { fonts: chartFonts.join(', ') })}
+              </span>
+            )}
+          </span>
+        </div>
+      )}
+      {style && (
+        <div className="layout-tooltip-row">
+          <span className="layout-tooltip-key">{t('detail:layoutCanvas.tooltip.style')}</span>
+          <span className="layout-tooltip-val">
+            {style.display || style.name}
+            {style.isCustom && (
+              <span className="layout-tooltip-muted"> · {t('detail:layoutFontFilter.customStyle')}</span>
+            )}
+            {style.ruleMissing && (
+              <span className="layout-tooltip-warn" title={t('detail:layoutFontFilter.styleMissing') as string}> ⚠</span>
+            )}
+          </span>
         </div>
       )}
       {slotParts.length > 0 && (

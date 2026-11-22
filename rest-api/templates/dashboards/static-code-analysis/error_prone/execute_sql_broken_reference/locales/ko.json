@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "대상이 없는 ExecuteSQL 참조",
+    "description": "오류 유발 규칙 — ExecuteSQL 문에서 이름으로 지정한 테이블이나 필드가 솔루션에 존재하지 않습니다: FROM/JOIN의 이름이 파일의 어떤 테이블 어커런스와도 일치하지 않거나, 열이 해당 테이블의 어떤 필드와도 일치하지 않거나, SQL 안의 계산식 참조가 삭제된 필드(<Field Missing>)를 가리킵니다. FileMaker는 오류를 보고하지 않습니다. ExecuteSQL은 ?를 반환하고 호출하는 로직은 비어 있거나 잘못된 값으로 계속 동작합니다."
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "검출 수",
+    "summary_kpi.props.items[1].label": "영향받는 파일",
+    "summary_kpi.props.items[2].label": "범위 내 SQL 참조",
+    "summary_kpi.props.items[3].label": "검증 불가(동적)",
+    "findings_card.props.title": "대상이 없는 ExecuteSQL 참조",
+    "findings_table.props.searchPlaceholder": "파일, 객체 또는 이름 검색…",
+    "findings_table.props.empty.message": "대상이 없는 ExecuteSQL 참조를 찾지 못했습니다.",
+    "findings_table.props.columns[0].label": "파일",
+    "findings_table.props.columns[1].label": "객체",
+    "findings_table.props.columns[2].label": "유형",
+    "findings_table.props.columns[3].label": "단계",
+    "findings_table.props.columns[4].label": "함수",
+    "findings_table.props.columns[5].label": "절",
+    "findings_table.props.columns[6].label": "SQL 내 이름",
+    "findings_table.props.columns[7].label": "결함"
+  }
+}

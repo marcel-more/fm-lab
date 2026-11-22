@@ -1,0 +1,20 @@
+{
+  "manifest": {
+    "title": "字体交由文件默认值",
+    "description": "布局质量规则——由于对象、其样式和主题都未指定字体（经典和极简不指定），布局中的文本对象显示文件的默认字体。该字体不在 XML 导出中，且因文件而异：同一主题在一个文件中显示 Helvetica Neue，在另一个文件中显示 Arial。每个布局一项。",
+    "messages.file_default": "{total} 个文本对象中有 {count} 个显示文件的默认字体——主题未指定字体"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "发现项",
+    "summary_kpi.props.items[1].label": "使用文件默认值的对象",
+    "summary_kpi.props.items[2].label": "受影响的文件",
+    "findings_card.props.title": "字体交由文件默认值",
+    "findings_table.props.searchPlaceholder": "搜索文件、布局或主题…",
+    "findings_table.props.empty.message": "没有布局把字体交由文件默认值。",
+    "findings_table.props.columns[0].label": "文件",
+    "findings_table.props.columns[1].label": "布局",
+    "findings_table.props.columns[2].label": "主题",
+    "findings_table.props.columns[3].label": "使用文件默认值的对象",
+    "findings_table.props.columns[4].label": "文本对象"
+  }
+}

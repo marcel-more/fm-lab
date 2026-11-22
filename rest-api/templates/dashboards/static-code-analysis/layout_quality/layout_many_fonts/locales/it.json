@@ -1,0 +1,21 @@
+{
+  "manifest": {
+    "title": "Formato con molti font",
+    "description": "Regola di qualità dei formati — gli oggetti di testo di un formato mostrano più font della soglia (predefinita 3). Ogni font conta: il font di base di ogni oggetto, le parti di testo con un font proprio e le aree di testo dei grafici; il predefinito del file (il tema non nomina alcun font) non conta come font. Molti font in un formato indicano di solito una formattazione oggetto per oggetto invece che tramite il tema.",
+    "messages.many": "Il formato mostra {count} font: {fonts}"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Risultati",
+    "summary_kpi.props.items[1].label": "File interessati",
+    "threshold_slider.props.label": "Più font di",
+    "threshold_slider.props.valueSuffix": " font",
+    "findings_card.props.title": "Formato con molti font",
+    "findings_table.props.searchPlaceholder": "Cerca file, formato o font…",
+    "findings_table.props.empty.message": "Nessun formato con più font della soglia.",
+    "findings_table.props.columns[0].label": "File",
+    "findings_table.props.columns[1].label": "Formato",
+    "findings_table.props.columns[2].label": "Font",
+    "findings_table.props.columns[3].label": "Font con nome",
+    "findings_table.props.columns[4].label": "Oggetti con il predefinito del file"
+  }
+}

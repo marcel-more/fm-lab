@@ -1,0 +1,20 @@
+{
+  "manifest": {
+    "title": "Fuente local igual a la heredada",
+    "description": "Regla de calidad de formatos: un objeto define localmente una fuente que recibiría de todos modos de su estilo o tema. FileMaker escribe ese ajuste al aplicar negrita a una fuente con su propia variante negrita (la familia se guarda con el nombre PostScript de la negrita). Hoy no cambia nada, pero fija la fuente: un cambio de tema posterior ya no llega al objeto.",
+    "messages.redundant": "El objeto hereda de todos modos la fuente local {font}"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Hallazgos",
+    "summary_kpi.props.items[1].label": "Formatos afectados",
+    "findings_card.props.title": "Fuente local igual a la heredada",
+    "findings_table.props.searchPlaceholder": "Buscar archivo, formato, objeto o fuente…",
+    "findings_table.props.empty.message": "Ningún objeto repite localmente su fuente heredada.",
+    "findings_table.props.columns[0].label": "Archivo",
+    "findings_table.props.columns[1].label": "Formato",
+    "findings_table.props.columns[2].label": "Tipo de objeto",
+    "findings_table.props.columns[3].label": "Objeto",
+    "findings_table.props.columns[4].label": "Fuente",
+    "findings_table.props.columns[5].label": "Nombre PostScript"
+  }
+}

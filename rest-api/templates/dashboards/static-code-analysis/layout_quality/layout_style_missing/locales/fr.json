@@ -1,0 +1,21 @@
+{
+  "manifest": {
+    "title": "Style absent du thème",
+    "description": "Règle de qualité des modèles — un objet nomme un style que le thème de son modèle ne contient pas : aucune règle du thème ne porte ce style, dans aucun état. Le plus souvent un style personnalisé supprimé du thème, ou un style qui n'a pas suivi lors du passage du modèle à un autre thème. L'inspecteur affiche toujours le nom du style, mais le thème n'a aucune règle pour lui.",
+    "messages.missing": "Le style {style} n'existe pas dans le thème {theme}"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Résultats",
+    "summary_kpi.props.items[1].label": "Styles manquants",
+    "summary_kpi.props.items[2].label": "Modèles concernés",
+    "findings_card.props.title": "Style absent du thème",
+    "findings_table.props.searchPlaceholder": "Rechercher fichier, modèle, objet, style ou thème…",
+    "findings_table.props.empty.message": "Chaque style appliqué existe dans son thème.",
+    "findings_table.props.columns[0].label": "Fichier",
+    "findings_table.props.columns[1].label": "Modèle",
+    "findings_table.props.columns[2].label": "Type d'objet",
+    "findings_table.props.columns[3].label": "Objet",
+    "findings_table.props.columns[4].label": "Style",
+    "findings_table.props.columns[5].label": "Thème"
+  }
+}

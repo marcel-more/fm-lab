@@ -1,100 +1,41 @@
--- @template_type: content
--- @description: Theme detail view - display name (localized) plus internal FileMaker name and references
--- @params: uuid (required), file (optional)
--- @output_format: content
+-- @template_type: report
+-- @description: Structured detail of a theme (design) — display and internal name plus the number of layouts using it; reads only columns every catalog has
+-- @params: uuid (required), file (optional, clone-scoping)
+-- @output_format: json
 -- @author: Marcel
--- @version: 1.0
+-- @version: 2.0
 -- @tags: theme, design, details
--- @note: Object_Name im Katalog ist der lokalisierte Anzeigename (z.B. „Apex Blau");
--- @note: der interne name (com.filemaker.theme.*) kommt zusätzlich aus ThemeCatalog.
+-- @note: One row with `section` = 'meta'. Header attributes and the style list come from the
+--        companion object_details_theme_styles (schema >= 1.46.0), which the service appends
+--        only when ThemeNamedStyles exists — so this template stays valid on older catalogs
+--        (`theme_styles.available` drives the client notice). v1.0 was a text block with the
+--        uses_theme references; the references tab lists them.
+-- @note: Object_Name in the catalog is the localized display name (e.g. "Apex Blau"); the
+--        internal name (com.filemaker.theme.*) comes from ThemeCatalog.
+-- @note: layout_count = distinct layouts with a uses_theme edge to this theme in its file.
 
-WITH object_info AS (
-  SELECT oc.Object_UUID, oc.Object_Type, oc.Object_Name, oc.File_Name, oc.Source_Table, oc.Object_ID,
-         tc.Theme_Name AS Internal_Name
-  FROM ObjectCatalog oc
-  LEFT JOIN ThemeCatalog tc
-    ON tc.Theme_UUID = oc.Object_UUID AND tc.File_Name = oc.File_Name
-  WHERE oc.Object_UUID = getvariable('uuid')
-    -- Clone-Scoping: Object_UUID ist nur je File eindeutig
-    AND (getvariable('file') IS NULL OR oc.File_Name = getvariable('file'))
+WITH theme AS (
+  SELECT tc.Theme_UUID, tc.Theme_ID, tc.Theme_Name, tc.Theme_Display, tc.File_Name
+  FROM ThemeCatalog tc
+  WHERE tc.Theme_UUID = getvariable('uuid')
+    -- Clone scoping: Theme_UUID is unique per file only
+    AND (getvariable('file') IS NULL OR tc.File_Name = getvariable('file'))
+  ORDER BY tc.File_Name
   LIMIT 1
 ),
-child_refs AS (
-  SELECT
-    oc.Object_Type as Target_Type,
-    oc.Object_Name as Target_Name,
-    oc.File_Name as Target_File,
-    ol.Link_Role,
-    ol.Is_Cross_File
+layouts AS (
+  SELECT count(DISTINCT ol.Source_UUID) AS n
   FROM ObjectLinks ol
-  JOIN ObjectCatalog oc ON ol.Target_UUID = oc.Object_UUID AND oc.File_Name = ol.Target_File
-  WHERE ol.Source_UUID = getvariable('uuid')
-    AND ol.Link_Type = 'operational'
-    AND (getvariable('file') IS NULL OR ol.Source_File = getvariable('file'))
-  ORDER BY oc.Object_Type, oc.Object_Name
-),
-parent_refs AS (
-  SELECT
-    oc.Object_Type as Source_Type,
-    oc.Object_Name as Source_Name,
-    oc.File_Name as Source_File,
-    ol.Link_Role,
-    ol.Is_Cross_File
-  FROM ObjectLinks ol
-  JOIN ObjectCatalog oc ON ol.Source_UUID = oc.Object_UUID AND oc.File_Name = ol.Source_File
-  WHERE ol.Target_UUID = getvariable('uuid')
-    AND ol.Link_Type = 'operational'
-    AND (getvariable('file') IS NULL OR ol.Target_File = getvariable('file'))
-  ORDER BY oc.Object_Type, oc.Object_Name
+  JOIN theme t ON ol.Target_UUID = t.Theme_UUID AND ol.Target_File = t.File_Name
+  WHERE ol.Link_Role = 'uses_theme'
 )
-
-SELECT content FROM (
-  SELECT 1 as sort_key, 0 as sub_key,
-    '=== ' || oi.Object_Type || ' Details ===' as content
-  FROM object_info oi
-
-  UNION ALL
-  SELECT 2, 0, '' FROM object_info
-
-  -- Anzeigename (lokalisiert) + interner FileMaker-Name
-  UNION ALL
-  SELECT 3, 1, 'Name:          ' || oi.Object_Name FROM object_info oi
-  UNION ALL
-  SELECT 3, 2, 'Internal name: ' || oi.Internal_Name FROM object_info oi
-    WHERE oi.Internal_Name IS NOT NULL AND oi.Internal_Name <> oi.Object_Name
-  UNION ALL
-  SELECT 3, 3, 'Type:          ' || oi.Object_Type FROM object_info oi
-  UNION ALL
-  SELECT 3, 4, 'File:          ' || oi.File_Name FROM object_info oi
-  UNION ALL
-  SELECT 3, 5, 'UUID:          ' || oi.Object_UUID FROM object_info oi
-
-  -- Child references
-  UNION ALL
-  SELECT 5, 0, '' WHERE (SELECT COUNT(*) FROM child_refs) > 0
-  UNION ALL
-  SELECT 5, 1,
-    '--- References (uses) --- (' || CAST((SELECT COUNT(*) FROM child_refs) AS VARCHAR) || ')'
-  WHERE (SELECT COUNT(*) FROM child_refs) > 0
-  UNION ALL
-  SELECT 6, ROW_NUMBER() OVER (ORDER BY Target_Type, Target_Name),
-    '  -> ' || Target_Type || ': ' || Target_Name
-    || CASE WHEN Is_Cross_File THEN ' [' || Target_File || ']' ELSE '' END
-    || ' (' || Link_Role || ')'
-  FROM child_refs
-
-  -- Parent references (Layouts, die dieses Design verwenden)
-  UNION ALL
-  SELECT 8, 0, '' WHERE (SELECT COUNT(*) FROM parent_refs) > 0
-  UNION ALL
-  SELECT 8, 1,
-    '--- Referenced by (used in) --- (' || CAST((SELECT COUNT(*) FROM parent_refs) AS VARCHAR) || ')'
-  WHERE (SELECT COUNT(*) FROM parent_refs) > 0
-  UNION ALL
-  SELECT 9, ROW_NUMBER() OVER (ORDER BY Source_Type, Source_Name),
-    '  <- ' || Source_Type || ': ' || Source_Name
-    || CASE WHEN Is_Cross_File THEN ' [' || Source_File || ']' ELSE '' END
-    || ' (' || Link_Role || ')'
-  FROM parent_refs
-) details
-ORDER BY sort_key, sub_key;
+SELECT
+  'meta'                                                   AS section,
+  t.Theme_UUID                                             AS theme_uuid,
+  t.Theme_ID                                               AS theme_id,
+  t.Theme_Name                                             AS internal_name,
+  coalesce(t.Theme_Display, t.Theme_Name)                  AS display_name,
+  t.File_Name                                              AS file_name,
+  (t.Theme_Name = 'com.filemaker.theme.classic')           AS is_classic,
+  (SELECT n FROM layouts)                                  AS layout_count
+FROM theme t;

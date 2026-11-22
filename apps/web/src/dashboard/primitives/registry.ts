@@ -16,6 +16,7 @@ import { ToggleChips } from './ToggleChips';
 import { Select } from './Select';
 import { MarkdownBlock } from './MarkdownBlock';
 import { HtmlContent } from './HtmlContent';
+import { TextInput } from './TextInput';
 import { NavButton } from './NavButton';
 import { Empty } from './Empty';
 import { Spacer } from './Spacer';
@@ -28,7 +29,7 @@ import { XmlConvertLog } from './XmlConvertLog';
 import { XmlEmptyStateCard } from './XmlEmptyStateCard';
 import { SemanticNamesStatus } from './SemanticNamesStatus';
 import { XmlImportIntegrity } from './XmlImportIntegrity';
-import { CalendarHeatmap, StackedTimeSeries, Sparkline } from './Charts';
+import { CalendarHeatmap, StackedTimeSeries, Sparkline, Mermaid } from './Charts';
 import { ScopeNotice } from './ScopeNotice';
 import { registerInlineControl } from './inlineControls';
 
@@ -60,6 +61,7 @@ registerPrimitive('ToggleChips', ToggleChips);
 registerPrimitive('Select', Select);
 registerPrimitive('Markdown', MarkdownBlock);
 registerPrimitive('HtmlContent', HtmlContent);
+registerPrimitive('TextInput', TextInput);
 registerPrimitive('NavButton', NavButton);
 registerPrimitive('Empty', Empty);
 registerPrimitive('Spacer', Spacer);
@@ -73,6 +75,7 @@ registerPrimitive('XmlImportIntegrity', XmlImportIntegrity);
 registerPrimitive('CalendarHeatmap', CalendarHeatmap);
 registerPrimitive('StackedTimeSeries', StackedTimeSeries);
 registerPrimitive('Sparkline', Sparkline);
+registerPrimitive('Mermaid', Mermaid);
 registerPrimitive('ScopeNotice', ScopeNotice);
 
 // Inline-Controls (rendered inside List rows when rowTemplate.inlineControl is set)

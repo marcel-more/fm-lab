@@ -1,0 +1,21 @@
+{
+  "manifest": {
+    "title": "Layout mit vielen Schriften",
+    "description": "Layout-Qualitätsregel — die Textobjekte eines Layouts zeigen mehr Schriften als der Schwellwert (Standard 3). Jede Schrift zählt: die Grundschrift jedes Objekts, formatierte Textteile mit eigener Schrift und die Textbereiche von Diagrammen; der Standard der Datei (Design nennt keine Schrift) zählt nicht als Schrift. Viele Schriften auf einem Layout heißen meist: Objekt für Objekt gestaltet statt über das Design.",
+    "messages.many": "Das Layout zeigt {count} Schriften: {fonts}"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Treffer",
+    "summary_kpi.props.items[1].label": "Betroffene Dateien",
+    "threshold_slider.props.label": "Mehr Schriften als",
+    "threshold_slider.props.valueSuffix": " Schriften",
+    "findings_card.props.title": "Layout mit vielen Schriften",
+    "findings_table.props.searchPlaceholder": "Datei, Layout oder Schrift suchen…",
+    "findings_table.props.empty.message": "Kein Layout mit mehr Schriften als der Schwellwert.",
+    "findings_table.props.columns[0].label": "Datei",
+    "findings_table.props.columns[1].label": "Layout",
+    "findings_table.props.columns[2].label": "Schriften",
+    "findings_table.props.columns[3].label": "Benannte Schriften",
+    "findings_table.props.columns[4].label": "Objekte mit Datei-Standard"
+  }
+}

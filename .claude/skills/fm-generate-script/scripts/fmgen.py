@@ -181,8 +181,15 @@ def _flag(args, name: str, env: str) -> bool:
     return os.environ.get(env, "").strip().lower() in ("1", "true", "on", "yes")
 
 
+def _read_xml(path: str) -> str:
+    """Read a snippet keeping its CRs: universal-newline reading would turn the
+    CR line breaks of a calculation into LF (gate G112, clipboard delivery)."""
+    with open(path, encoding="utf-8", newline="") as fh:
+        return fh.read()
+
+
 def do_gate(args, ref) -> tuple[int, dict]:
-    xml_text = Path(args.input).read_text(encoding="utf-8")
+    xml_text = _read_xml(args.input)
     resolution, ir_steps = None, None
     # Target FileMaker version for the version gate (G303): an explicit
     # --target-version wins, otherwise the FilesCatalog version of the target
@@ -221,7 +228,7 @@ def do_actionscript(args, ref) -> tuple[int, dict]:
     except LookupError as e:
         raise db.DbError(str(e))
     if args.wrap_snippet:
-        xml_text = Path(args.wrap_snippet).read_text(encoding="utf-8")
+        xml_text = _read_xml(args.wrap_snippet)
         result = actionscript.wrap_snippet(xml_text, layer, args.script_name)
     else:
         if not args.input:
@@ -300,7 +307,10 @@ def do_run(args, ref) -> int:
         (out_dir / f"{stem}.emit-errors.json").write_text(_dumps(xml_or_err), encoding="utf-8")
         return code
     xml_path = out_dir / f"{stem}.xml"
-    xml_path.write_text(xml_or_err, encoding="utf-8")  # type: ignore[arg-type]
+    # newline="": no platform newline translation — the snippet's CRs and LFs
+    # are written exactly as emitted
+    with open(xml_path, "w", encoding="utf-8", newline="") as fh:
+        fh.write(xml_or_err)  # type: ignore[arg-type]
 
     args.input = str(xml_path)
     args.resolved = str(out_dir / f"{stem}.resolved.json")

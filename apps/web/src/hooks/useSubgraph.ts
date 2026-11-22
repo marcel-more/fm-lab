@@ -4,6 +4,7 @@ import { API_BASE } from '../config/apiBase';
 import { getTypeColor, getCommunityColor } from '../lib/graphColors';
 import { recencyPaint, resolveCssColor } from '../lib/activityColors';
 import { formatObjectDisplayName } from '../lib/objectName';
+import type { CallSite } from './useTrace';
 
 /**
  * Loads a focus-centered subgraph from `GET /api/graph/subgraph` and exposes
@@ -44,6 +45,41 @@ export type GraphNode = {
   traceDepth?: number;
   /** Trace-Modus (W7/D10): Boundary-Knoten — sichtbar, aber nicht expandiert. */
   isExcluded?: boolean;
+  /** Datenfluss-Trace (mode=data): Rolle im Wertfluss — start · field · step · variable · param · result · calc · entry · control · sink · blind. */
+  flowRole?: string;
+  /** Datenfluss-Trace: Feld- bzw. Variablenebene des Knotens. */
+  fieldLevel?: number | null;
+  varLevel?: number | null;
+  /** Datenfluss-Trace: Blatt (Steuerung, Senke, Grenzebene) — nicht weiter verfolgt. */
+  isLeaf?: boolean;
+  /** Datenfluss-Trace: Pseudoknoten (Parameter, Ergebnis, Auto-Eingabe …) mit Eigentümer. */
+  isPseudo?: boolean;
+  ownerUuid?: string | null;
+  ownerType?: string | null;
+  /** Datenfluss-Trace: Schritt-Anker (Script-Ansicht `?step=`). */
+  stepIndex?: number | null;
+  stepId?: number | null;
+  scriptUuid?: string | null;
+  /** Datenfluss-Trace: Haltepunkt des Lösungsprofils (Regelart) — sichtbar, nicht expandiert. */
+  profileStop?: string | null;
+  /** Datenfluss-Trace: Sprungziel beim Klick (vom Server aufgelöst, siehe buildOpenTargetPath). */
+  open?: OpenTarget;
+  /** Ablauf-Trace: Wirkung je Script — Zahl verschiedener Ziele je Touch-Rolle. */
+  effects?: Record<string, number>;
+};
+
+/**
+ * Sprungziel eines Knotens: Objekt der Detailansicht (`type`/`uuid`/`file`),
+ * hervorzuhebender Unterknoten (`ref`), Schritt-Anker (`step`) bzw.
+ * Variablen-Auswahl (`var`, `<scope>:<name>`); `type: 'File'` = Dateiansicht.
+ */
+export type OpenTarget = {
+  type: string;
+  uuid: string;
+  file: string | null;
+  ref?: string;
+  step?: string;
+  var?: string;
 };
 
 export type GraphEdge = {
@@ -56,6 +92,14 @@ export type GraphEdge = {
   crossFile: boolean;
   /** Trace-Modus: Kanten-Klasse im Ablauf (chain/trigger/touch/induced) — Styling-Achse. */
   traceKind?: string;
+  /** Datenfluss-Trace: Kantenart (`step_writes_field`, `local_def_use`, …). */
+  flowKind?: string;
+  /** Datenfluss-Trace: Kantenklasse data · control · entry · sink — Styling-Achse. */
+  flowClass?: string;
+  /** Datenfluss-Trace: exact · approx. Ablauf-Trace: exact · approx (ohne Schritt-Anker) · dynamic. */
+  precision?: string;
+  /** Ablauf-Trace: Aufrufstellen einer calls_script-/navigates_to_layout-Kante, nach Schritt sortiert. */
+  callSites?: CallSite[];
 };
 
 export type SubgraphStats = {
@@ -205,6 +249,10 @@ export function subgraphToElements(nodes: GraphNode[], edges: GraphEdge[], edgeL
       traceDepth: n.traceDepth,
       // Trace-Modus (W7): Boundary-Markierung — Stylesheet `node[?traceExcluded]`.
       traceExcluded: n.isExcluded === true,
+      // Datenfluss-Trace: Rolle + Profil-Haltepunkt (`node[flowRole = "…"]`, `node[?profileStop]`).
+      flowRole: n.flowRole,
+      profileStop: n.profileStop ? n.profileStop : undefined,
+      flowLeaf: n.isLeaf === true || undefined,
       // Both colors travel in data; the stylesheet picks one via the
       // `.color-community` class toggled by the standalone färb-lens.
       color: getTypeColor(n.type),
@@ -267,6 +315,14 @@ export function subgraphToElements(nodes: GraphNode[], edges: GraphEdge[], edgeL
         isCrossFile: e.crossFile,
         // Trace-Modus: Ablauf-Klasse der Kante (Styling via `edge[traceKind = "…"]`).
         traceKind: e.traceKind,
+        // Datenfluss-Trace: Kantenklasse + Präzision (`edge[flowClass = "…"]`, `edge[precision = "approx"]`).
+        flowClass: e.flowClass,
+        precision: e.precision,
+        // Ablauf-Trace: Aufrufstellen (Tooltip) und „alle bedingt" (`edge[?traceConditional]`
+        // gestrichelt). Fehlendes ifDepth = 0 (der Server lässt leere Felder weg).
+        callSites: e.callSites && e.callSites.length > 0 ? e.callSites : undefined,
+        traceConditional: e.callSites && e.callSites.length > 0
+          && e.callSites.every((c) => (c.ifDepth ?? 0) > 0) ? true : undefined,
       },
     });
   }

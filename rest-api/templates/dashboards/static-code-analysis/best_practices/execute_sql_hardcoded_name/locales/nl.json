@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "ExecuteSQL met vaste naam",
+    "description": "Best-practiceregel — een ExecuteSQL-instructie noemt een tabelinstantie of veld als platte tekst in de SQL-string, in plaats van de naam op te bouwen uit een veldverwijzing (GetFieldName of een naamwrapper). De verwijzing werkt vandaag, maar FileMaker volgt haar niet: wie de tabelinstantie of het veld hernoemt, breekt de query zonder enige waarschuwing — ExecuteSQL geeft dan ? terug."
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Bevindingen",
+    "summary_kpi.props.items[1].label": "Betrokken bestanden",
+    "summary_kpi.props.items[2].label": "Genoemde velden",
+    "summary_kpi.props.items[3].label": "Genoemde tabelinstanties",
+    "findings_card.props.title": "ExecuteSQL met vaste naam",
+    "findings_table.props.searchPlaceholder": "Zoek bestand, object of naam…",
+    "findings_table.props.empty.message": "Geen vaste naam in ExecuteSQL gevonden.",
+    "findings_table.props.columns[0].label": "Bestand",
+    "findings_table.props.columns[1].label": "Object",
+    "findings_table.props.columns[2].label": "Type",
+    "findings_table.props.columns[3].label": "Stap",
+    "findings_table.props.columns[4].label": "Functie",
+    "findings_table.props.columns[5].label": "Clausule",
+    "findings_table.props.columns[6].label": "Naam in SQL",
+    "findings_table.props.columns[7].label": "Doel"
+  }
+}

@@ -7,6 +7,11 @@
       "area": "module"
     },
     {
+      "name": "display_layout_fonts",
+      "path": "modules/layout-view/display_layout_fonts.sql",
+      "area": "module"
+    },
+    {
       "name": "display_layout_meta",
       "path": "modules/layout-view/display_layout_meta.sql",
       "area": "module"
@@ -29,6 +34,11 @@
     {
       "name": "object_change_meta",
       "path": "modules/object-detail/object_change_meta.sql",
+      "area": "module"
+    },
+    {
+      "name": "display_theme_style_layouts",
+      "path": "modules/theme-view/display_theme_style_layouts.sql",
       "area": "module"
     },
     {
@@ -77,8 +87,18 @@
       "area": "system"
     },
     {
+      "name": "graph_trace_data",
+      "path": "system/graph/graph_trace_data.sql",
+      "area": "system"
+    },
+    {
       "name": "graph_trace_entries",
       "path": "system/graph/graph_trace_entries.sql",
+      "area": "system"
+    },
+    {
+      "name": "graph_trace_profile_candidates",
+      "path": "system/graph/graph_trace_profile_candidates.sql",
       "area": "system"
     },
     {
@@ -232,6 +252,11 @@
       "area": "system"
     },
     {
+      "name": "object_details_theme_styles",
+      "path": "system/object-details/object_details_theme_styles.sql",
+      "area": "system"
+    },
+    {
       "name": "object_details_valuelist",
       "path": "system/object-details/object_details_valuelist.sql",
       "area": "system"
@@ -282,6 +307,7 @@
     "modules/hierarchy",
     "modules/layout-view",
     "modules/object-detail",
+    "modules/theme-view",
     "system",
     "system/graph",
     "system/object-details",

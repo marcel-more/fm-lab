@@ -1,4 +1,4 @@
-<!-- @CLAUDE_MD_VERSION 0.9.19 -->
+<!-- @CLAUDE_MD_VERSION 0.9.20 -->
 # FM-Lab — FileMaker Solution Analysis & Code Generation
 
 ## 1. Role & focus
@@ -42,11 +42,15 @@ The DuckDB tables mirror the XML object catalogs. Most-used tables:
 | `FilesCatalog` | Imported FileMaker files (version, DDR-Info flag, `SaXML_Version`/`SaXML_Profile`) |
 | `ScriptCatalog` / `StepsForScripts` | Scripts and their steps (+ `DDR_ScriptSteps` human-readable). `Step_Index` is 0-based — user-facing step numbers are `Step_Index + 1` |
 | `StepCalculations` / `v_script_block_tree` | All calculation slots of a step (window name vs. geometry, dialog title vs. message) / per-step Loop-&-If nesting depth — use for any branch-scope question instead of hand-reconstructing control flow |
+| `v_dataflow_edges` / `v_step_guards` | Value flow between fields, steps, variables, script parameters/results, field formulas and entries (`Flow_Class` data/control/entry/sink, local variables setter → reader) / the enclosing If branch and loops per step — for "where does the value of F come from / go to"; always built from schema 1.43.0 on (absent only after a failed import phase — re-import) |
+| `v_script_step_links` / `ImportStepSources` | The script's edges per **step** (same roles as `ObjectLinks`; `Via` = step parameter or step formula) — use for every "which step sets / reads / calls X" question, never regex `Parameters_XML` / `Step_XML` / source of every *Import Records* step (kind, path, formula, resolved solution file) |
+| `CalculationSqlRefs` | Every table / column / parameter of an `ExecuteSQL` statement: clause, select-list / argument position, target (TO, field, system table, none = broken), `Resolution` (`reference` = name wrapper · `name` = plain text in the SQL, rename-fragile · `dynamic`) — never regex `Formula_Text` for SQL |
 | `CalculationsCatalog` / `v_calculation_links` | Every calculation **instance** (owner × role × index; `Object_Type='Calculation'`, exists also without DDR-Info) / its per-slot target resolution derived from the owner edges — where-used stays on the owner edges (`has_calculation` never counts as usage) |
 | `FieldsForTables` / `FieldDisplayNames` | Fields incl. type, AutoEnter, validation, storage; FileMaker 26: annotation + display-names formula (`Field_Annotation`, `DisplayNames_Calc_Text`, elements in `FieldDisplayNames`) and disabled definitions (`*_Enabled` = false → no where-used links) |
 | `BaseTableCatalog` / `TableOccurrenceCatalog` / `RelationshipCatalog` | Data model & relationship graph |
 | `Layouts` / `LayoutObjects` / `LayoutParts` / `LayoutTableViewColumns` | Layouts, all 26 layout-object types, parts, table-view columns (FileMaker 26 exports only; edge `displays_field`/`table_view_column`) |
 | `LayoutObjectConditions` | Conditional-formatting rules, one row per rule (type/operator, operands, formula + `Calculation_UUID`-FK, raw CSS) — never regex `Object_XML` for CF |
+| `v_layout_object_font` / `v_layout_object_style` / `ThemeNamedStyles` / `LayoutObjectStyles` / `ThemeStyleRules` / `LayoutObjectFontRuns` | Effective font per text-bearing layout object with the source of every value (local → style → part → type → group → file default) / applied style per layout object of every type (NULL = none; style usage = grouping, only used styles exist) / every named style of a theme with its Inspector name, unused ones included / own `LocalCSS` per object (depth-anchored) / theme CSS one row per declaration / rich-text runs and chart fonts — never regex `Object_XML` or `Theme_XML` for styles and fonts; `default` = per-file font that is not in the export, never name it |
 | `LayoutObjectSymbols` | `{{…}}` symbol inventory per text layout object (`Symbol_Norm` = case-robust key) — a **valid** symbol also carries the where-used edge `displays_symbol` → BuiltinFunction `Get(<Symbol>)`; an invalid one stays edgeless and surfaces via the test `layout-merge-anchors`. Never regex `Text_Content` for symbols |
 | `CustomFunctionsCatalog` / `CalcsForCustomFunctions` | Custom functions and their formulas |
 | `ValueListCatalog` / `OptionsForValueLists` | Value lists |
@@ -80,11 +84,16 @@ private helper script**:
 | About to … | Read first |
 |---|---|
 | read a script's steps | `query-cookbook.md` § Script dump |
+| trace where a field's value comes from / goes to | `query-cookbook.md` § Where does the value of field F come from? — `v_dataflow_edges` |
+| find the step that sets / reads / calls X | `query-cookbook.md` § Which step sets / calls / reads X? — `v_script_step_links` |
 | find callers / walk a call chain | `analysis-patterns.md` `call-chain-resolution` |
 | judge branch scope, dead code, reachability | `analysis-patterns.md` `control-flow-reachability` |
 | where-used for any object | `query-cookbook.md` § Where-used & dependencies |
+| find which font an object shows / where a font is used | `query-cookbook.md` § Which font does an object show? — `v_layout_object_font` |
+| find which styles are used / where a style is applied | `query-cookbook.md` § Which styles are used? — `v_layout_object_style` |
 | "unused" / "rarely used" / usage ranking for any object type | `query-cookbook.md` § Usage counts for any object type — `v_object_usage` |
 | where-used / "unused" for a table occurrence | `query-cookbook.md` § Where-used for Table Occurrences — `TO::Field` links only the field, `ObjectLinks` alone undercounts |
+| find where a field / TO is used inside `ExecuteSQL` | `query-cookbook.md` § Where is field F (or TO T) used in SQL? — `CalculationSqlRefs` |
 | reach for a helper script | stop — query directly; report a shortfall (below) |
 
 `docs/agents/*` and this file are **maintainer-owned reference material** that

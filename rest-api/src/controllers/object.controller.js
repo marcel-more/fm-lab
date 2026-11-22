@@ -106,7 +106,7 @@ async function get(req, res, next) {
     // sprachunabhängig kanonisch ist; alle anderen Typen bleiben unberührt.
     if (lang) await referenceService.enrichBuiltinLocalizedNames(ctx, [result.data], lang);
 
-    const formattedData = formatters.format([result.data], format);
+    const formattedData = await formatters.format([result.data], format);
 
     sendFormatted(
       res,
@@ -144,7 +144,7 @@ async function list(req, res, next) {
     // Objektliste und Detailseite denselben Namen zeigen.
     if (lang) await referenceService.enrichBuiltinLocalizedNames(ctx, result.data, lang);
 
-    const formattedData = formatters.format(result.data, format);
+    const formattedData = await formatters.format(result.data, format);
 
     // Debug-SQL nur für den einfachen (nicht aggregierten) Pfad sinnvoll.
     const debugQuery = debug
@@ -174,7 +174,7 @@ async function listCategories(req, res, next) {
 
     const result = await objectService.listCategorySummary(ctx, { type, file });
 
-    const formattedData = formatters.format(result.data, format);
+    const formattedData = await formatters.format(result.data, format);
 
     sendFormatted(
       res,
@@ -206,7 +206,7 @@ async function listWithFolders(req, res, next) {
       'query'
     );
 
-    const formattedData = formatters.format(result.data, format);
+    const formattedData = await formatters.format(result.data, format);
 
     sendFormatted(
       res,
@@ -230,7 +230,7 @@ async function count(req, res, next) {
 
     const result = await objectService.countObjects(ctx, { type, file, group_by });
 
-    const formattedData = formatters.format(result.data, format);
+    const formattedData = await formatters.format(result.data, format);
 
     sendFormatted(
       res,
@@ -263,7 +263,7 @@ async function search(req, res, next) {
     // FINDET (Matched_Spelling) — Finden und Anzeigen gehören zusammen.
     if (lang) await referenceService.enrichBuiltinLocalizedNames(ctx, result.data, lang);
 
-    const formattedData = formatters.format(result.data, format);
+    const formattedData = await formatters.format(result.data, format);
 
     const debugQuery = debug
       ? `SELECT * FROM ObjectCatalog WHERE Object_Name LIKE '${name}'${type ? ` AND Object_Type = '${type}'` : ''}${file ? ` AND File_Name = '${file}'` : ''} ORDER BY Object_Name LIMIT ${limit} OFFSET ${offset}`
@@ -293,7 +293,7 @@ async function searchCount(req, res, next) {
       name, type, file, modifiedSince: modified_since, usageMin: usage_min, usageMax: usage_max,
     });
 
-    const formattedData = formatters.format(result.data, format);
+    const formattedData = await formatters.format(result.data, format);
 
     const debugQuery = debug
       ? `SELECT COUNT(*) as count FROM ObjectCatalog WHERE Object_Name ILIKE '${name}'${type ? ` AND Object_Type = '${type}'` : ''}${file ? ` AND File_Name = '${file}'` : ''}`
@@ -321,7 +321,7 @@ async function references(req, res, next) {
 
     const result = await objectService.getReferences(ctx, { uuid, direction, link_type, limit, file, origin });
 
-    const formattedData = formatters.format(result.data, format);
+    const formattedData = await formatters.format(result.data, format);
 
     sendFormatted(
       res,
@@ -376,7 +376,7 @@ async function getDetails(req, res, next) {
       effectiveFormat = 'content';
     }
 
-    const formattedData = formatters.format(result.data, effectiveFormat);
+    const formattedData = await formatters.format(result.data, effectiveFormat);
 
     sendFormatted(
       res,
@@ -947,6 +947,50 @@ async function respondWithTokens(req, res, { uuid, file, meta, debug, enrich }) 
         : null;
     } catch (e) {
       payload.layoutObject = null;
+    }
+
+    // Applied style of the object for the properties panel. Own query, so an
+    // older catalog only loses this row: v_layout_object_style (schema 1.45.0,
+    // with theme and "style missing in the theme"), else LayoutObjectStyles
+    // (schema 1.44.0, name only), else no style data at all (style undefined).
+    if (payload.layoutObject) {
+      const db = require('../config/database');
+      const toStyle = (r, full) => ({
+        name: r?.Style_Name ?? null,
+        display: r?.Style_Display ?? null,
+        isCustom: r?.Style_Name ? String(r.Style_Name).startsWith('FM-') : false,
+        ruleMissing: full ? r?.Style_Rule_Missing === true : null,
+        theme: full ? (r?.Theme_Display ?? r?.Theme_Name ?? null) : null,
+      });
+      try {
+        // Ask which source exists first — a failing query would log an error
+        // with SQL on every detail view of an older catalog.
+        const avail = await db.executeQuery(
+          ctx,
+          `SELECT list(table_name) AS names FROM information_schema.tables
+           WHERE table_schema = 'main' AND table_name IN ('v_layout_object_style', 'LayoutObjectStyles')`
+        );
+        const names = new Set(avail.rows[0]?.names ?? []);
+        if (names.has('v_layout_object_style')) {
+          const res = await db.executeQuery(
+            ctx,
+            `SELECT Style_Name, Style_Display, Style_Rule_Missing, Theme_Name, Theme_Display
+             FROM v_layout_object_style WHERE Object_UUID = ? AND File_Name = ? LIMIT 1`,
+            [uuid, resolvedFile]
+          );
+          payload.layoutObject.style = toStyle(res.rows[0], true);
+        } else if (names.has('LayoutObjectStyles')) {
+          const res = await db.executeQuery(
+            ctx,
+            `SELECT Style_Name, Style_Display FROM LayoutObjectStyles
+             WHERE Object_UUID = ? AND File_Name = ? LIMIT 1`,
+            [uuid, resolvedFile]
+          );
+          payload.layoutObject.style = toStyle(res.rows[0], false);
+        }
+      } catch (e) {
+        // no style row — the rest of the context stays
+      }
     }
 
     // Aufgelöste Merge-Text-Zeile (mergeText): reine Merge-Anker (<<Feld>>,

@@ -2691,6 +2691,20 @@ async function getDetails(ctx, uuid, file, lang) {
       extraMeta = { to_usage: { available }, result_count: data.length };
     }
 
+    // Theme: header attributes and the named styles live in ThemeCatalog columns
+    // and ThemeNamedStyles of schema >= 1.46.0 — appended from a companion
+    // template only when the table exists, so the main projection stays valid on
+    // older catalogs (`theme_styles.available` drives the client notice).
+    if (objectType === 'Theme') {
+      const available = await hasPersistentCatalogTable(ctx, 'ThemeNamedStyles');
+      if (available) {
+        const styles = await templateService.executeTemplate(
+          ctx, 'object_details_theme_styles', { uuid, file: resolvedFile }, 'report');
+        data = data.concat(styles.data);
+      }
+      extraMeta = { theme_styles: { available }, result_count: data.length };
+    }
+
     return {
       data,
       meta: {

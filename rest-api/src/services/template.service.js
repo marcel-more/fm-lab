@@ -5,6 +5,7 @@ const environment = require('../config/environment');
 const { createError } = require('../middleware/error-handler');
 const db = require('../config/database');
 const paging = require('./paging.service');
+const systemParams = require('./system-params');
 const queryDiscovery = require('./query-discovery');
 
 /**
@@ -397,6 +398,8 @@ async function executeTemplate(ctx, templateName, params = {}, source = 'query')
     // bundles. Module and bundle queries stay out of the listing but resolve
     // via `custom:<name>`.
     const template = await loadResolvedTemplate(templateName, source);
+    // System parameters (fmlab_*): reserved, a request cannot override them.
+    params = systemParams.withSystemParams(ctx, params);
 
     // Server paging: resolve the page window before interpolation, the sort
     // marker after it (see paging.service). Templates without the paging tail
@@ -420,8 +423,9 @@ async function executeTemplate(ctx, templateName, params = {}, source = 'query')
       sortColumns: template.metadata.sort_columns,
     });
 
-    // Execute query
-    const result = await db.executeQuery(ctx, sql);
+    // Execute query — SQL from a file passes the statement gate (queries only,
+    // see FILE_SQL_STATEMENT_TYPES in config/database.js).
+    const result = await db.executeFileQuery(ctx, sql);
 
     // Validate output
     validateTemplateOutput(result.rows, template.metadata);

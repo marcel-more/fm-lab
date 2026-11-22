@@ -840,8 +840,11 @@ def _serialize(elem: ET.Element, indent: int, out: list[str]) -> None:
     children = list(elem)
     raw = elem.text or ""
     if elem.tag == "Calculation":
-        # CDATA, verbatim content (already plain text in the IR)
-        body = raw.strip()
+        # CDATA, verbatim content (already plain text in the IR). Line breaks
+        # as CR: FileMaker writes a raw CR into a calculation's CDATA and
+        # ignores LF on paste — a multi-line formula would arrive on one line
+        # (gate G112).
+        body = raw.strip().replace("\r\n", "\r").replace("\n", "\r")
         body = body.replace("]]>", "]]]]><![CDATA[>")
         out.append(f"{pad}<{elem.tag}{attrs}><![CDATA[{body}]]></{elem.tag}>")
         return

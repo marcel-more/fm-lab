@@ -1,0 +1,20 @@
+{
+  "manifest": {
+    "title": "파일 기본값에 맡긴 글꼴",
+    "description": "레이아웃 품질 규칙 — 개체, 스타일, 테마 어디에도 글꼴이 지정되지 않아(클래식과 미니멀리스트는 지정 없음) 레이아웃의 텍스트 개체가 파일 기본 글꼴을 표시합니다. 이 글꼴은 XML 내보내기에 없고 파일마다 다릅니다. 같은 테마라도 어떤 파일에서는 Helvetica Neue, 다른 파일에서는 Arial입니다. 레이아웃당 1건.",
+    "messages.file_default": "텍스트 개체 {total}개 중 {count}개가 파일 기본 글꼴을 표시 — 테마가 글꼴을 지정하지 않음"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "발견 항목",
+    "summary_kpi.props.items[1].label": "파일 기본값 개체",
+    "summary_kpi.props.items[2].label": "영향받는 파일",
+    "findings_card.props.title": "파일 기본값에 맡긴 글꼴",
+    "findings_table.props.searchPlaceholder": "파일, 레이아웃 또는 테마 검색…",
+    "findings_table.props.empty.message": "파일 기본값에 글꼴을 맡긴 레이아웃이 없습니다.",
+    "findings_table.props.columns[0].label": "파일",
+    "findings_table.props.columns[1].label": "레이아웃",
+    "findings_table.props.columns[2].label": "테마",
+    "findings_table.props.columns[3].label": "파일 기본값 개체",
+    "findings_table.props.columns[4].label": "텍스트 개체"
+  }
+}

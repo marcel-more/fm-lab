@@ -1,0 +1,87 @@
+{
+  "id": "execute_sql_hardcoded_name",
+  "version": "1.0.0",
+  "title": "ExecuteSQL with hard-coded name",
+  "description": "Best-practice rule — an ExecuteSQL statement names a table occurrence or field as plain text in the SQL string instead of building the name from a field reference (GetFieldName or a name wrapper). The reference works today, but FileMaker does not track it: renaming the table occurrence or field breaks the query without any warning — ExecuteSQL then returns ?.",
+  "author": "fm-lab rules",
+  "icon": "type",
+  "category": "best_practices",
+  "tags": [
+    "rule",
+    "best_practices",
+    "sql"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "info",
+    "category": "best_practices",
+    "rationale": "Plain-text names are invisible to FileMaker's rename propagation. Every rename of a table occurrence or field is a silent breaking change for these queries.",
+    "remediation": "Build the identifiers from field references, e.g. GetValue ( Substitute ( GetFieldName ( TO::Field ) ; \"::\" ; ¶ ) ; 2 ) wrapped in Quote, or a custom function that does this — then FileMaker keeps the query in sync on rename.",
+    "meta": {
+      "name": "ExecuteSQL with hard-coded name",
+      "author": "fm-lab rules",
+      "source": "fm-lab",
+      "url": null,
+      "description": "Best-practice rule — an ExecuteSQL statement names a table occurrence or field as plain text in the SQL string instead of building the name from a field reference (GetFieldName or a name wrapper). The reference works today, but FileMaker does not track it: renaming the table occurrence or field breaks the query without any warning — ExecuteSQL then returns ?.",
+      "created": "2026-11-17",
+      "references": [],
+      "calibration": "Built on CalculationSqlRefs (schema 1.42.0), rows with Resolution = name that resolve to an existing field or table occurrence. Since schema 1.42.0 these names also produce reads_field links, so the fields no longer count as unused — this rule is the place where the rename risk stays visible."
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Script",
+      "Field",
+      "CustomFunction",
+      "LayoutObject"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — ExecuteSQL with hard-coded name"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

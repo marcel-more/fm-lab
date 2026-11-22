@@ -1,0 +1,92 @@
+{
+  "id": "layout_font_local_redundant",
+  "version": "1.0.0",
+  "title": "Local font equals the inherited font",
+  "description": "Layout-quality rule — an object sets a font locally that it would get from its style or theme anyway. FileMaker writes such a setting when bold is applied to a font with its own bold face (the family is stored with the bold PostScript name). The setting changes nothing today, but it pins the font: a later theme change no longer reaches the object.",
+  "author": "fm-lab rules",
+  "icon": "type",
+  "category": "layout_quality",
+  "tags": [
+    "rule",
+    "layout_quality",
+    "fonts"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "info",
+    "category": "layout_quality",
+    "rationale": "A local font that repeats the inherited one is invisible until the theme changes — then this object keeps the old font while its neighbours follow.",
+    "remediation": "Clear the local font setting of the object (keep bold through the style or the font weight).",
+    "meta": {
+      "name": "Local font equals the inherited font",
+      "author": "fm-lab rules",
+      "source": "fm-lab",
+      "url": null,
+      "description": "Layout-quality rule — an object sets a font locally that it would get from its style or theme anyway.",
+      "created": "2026-11-21",
+      "references": [
+        {
+          "project": "fm-lab",
+          "rule": "Font and style analysis (schema 1.44.0)",
+          "url": null
+        }
+      ]
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Layout"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Local font equals the inherited font"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  },
+  "messages": {
+    "redundant": "Local font {font} is the font the object inherits anyway"
+  }
+}

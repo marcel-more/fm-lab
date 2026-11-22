@@ -74,6 +74,12 @@ Interactive graph views in the frontend are rendered with [Cytoscape.js](https:/
 
 The Graph Atlas overview additionally uses [visx](https://airbnb.io/visx/) (`@visx/hierarchy`) to render the cluster treemap.
 
+### Diagrams in dashboards
+
+The `Mermaid` dashboard primitive draws diagrams written in [Mermaid](https://mermaid.js.org/) syntax with [pele](https://github.com/obsidianmd/pele) (MIT, no runtime dependencies). pele has its own layout and style, so a diagram looks somewhat different than in GitHub or VS Code; its colors follow the fm-lab theme. The renderer and each diagram type load only when a dashboard shows a diagram.
+
+The REST API uses the same pele version (one copy in the npm workspace) for its diagram formats: `format=svg` draws on the server, `format=mermaid` returns a page that loads pele from the API itself (`/api/assets/pele.js`) — no CDN.
+
 ---
 
 ## Graph analysis

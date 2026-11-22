@@ -393,5 +393,25 @@
     "clear": "ソリューション全体を表示",
     "clearTitle": "スコープを解除してソリューション全体を表示",
     "hint": "数値と一覧はこのスコープのみを表示します"
+  },
+  "mermaid": {
+    "error": "図を描画できませんでした",
+    "tooLarge": "図が大きすぎて描画できません",
+    "position": "{{line}} 行目、{{column}} 列目"
+  },
+  "ask": {
+    "title": "選択",
+    "cancel": "キャンセル",
+    "needsSelection": "先に行を選択してください",
+    "notForChoice": "この選択では利用できません。"
+  },
+  "download": {
+    "empty": "エクスポートするものがありません。",
+    "noDataset": "データ「{{detail}}」はこのページに読み込まれていません。",
+    "noSelection": "先に行を選択してください。",
+    "tooLarge": "ファイルが大きすぎてダウンロードできません（20 MB 超）。",
+    "svgOneRow": "SVG には図を 1 つだけ含められます。先に項目を 1 つ選択してください。",
+    "renderFailed": "図を描画できませんでした: {{detail}}",
+    "diagramError": "図を描画できません: {{detail}}"
   }
 }

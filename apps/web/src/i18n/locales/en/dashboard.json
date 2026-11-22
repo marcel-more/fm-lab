@@ -394,5 +394,25 @@
     "clear": "Show whole solution",
     "clearTitle": "Remove the scope and show the whole solution",
     "hint": "Counts and lists show only this scope"
+  },
+  "mermaid": {
+    "error": "The diagram could not be drawn",
+    "tooLarge": "The diagram is too large to draw",
+    "position": "line {{line}}, column {{column}}"
+  },
+  "ask": {
+    "title": "Choose",
+    "cancel": "Cancel",
+    "needsSelection": "Select a row first",
+    "notForChoice": "Not available with this choice."
+  },
+  "download": {
+    "empty": "Nothing to export.",
+    "noDataset": "The data '{{detail}}' is not loaded on this page.",
+    "noSelection": "Select a row first.",
+    "tooLarge": "The file is too large to download (more than 20 MB).",
+    "svgOneRow": "An SVG holds exactly one diagram – pick one entry first.",
+    "renderFailed": "The diagram could not be drawn: {{detail}}",
+    "diagramError": "Diagram could not be drawn: {{detail}}"
   }
 }

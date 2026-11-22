@@ -26,16 +26,38 @@ listed here, check the primitive's source file instead of guessing.
   child may bind its own. `KPIStrip`, `DefinitionList`, `FilterChips`, `Select`
   and `Slider` read the **first row** of their bound dataset.
 - `visibleWhen` (optional, any node): show the node only when the first row of
-  `dataset` satisfies `equals` / `notEquals` / `truthy` on `field`.
+  `dataset` satisfies `equals` / `notEquals` / `truthy` on `field` — or, with
+  `{ "selection": "<channel>", "equals": "<value>" }`, when a selection channel
+  holds that value (no data reload; see *Selection channels* below).
+- `data.selection` (optional): `{ "dataset": "ways", "selection": { "channel":
+  "way", "key": "way_no" }, "fallback": "first" }` — the node shows only the row
+  of `dataset` whose `key` equals the channel value (a Card hands that row to its
+  children). Without a selection: the first row (`fallback: "first"`, default)
+  or none (`"none"` — a Card then shows its empty state).
+
+### Selection channels (master-detail without reloading)
+
+A channel is a named value that lives only in the browser page — no URL param,
+no SQL re-run; it resets when the page changes.
+- **Write:** `Table` with `selectionKey: "<channel>"` + `selectField: "<col>"`
+  (row click); `FilterChips` with `channel: "<channel>"` instead of `param`.
+- **Read:** `data.selection` (the selected row), `visibleWhen.selection` (show /
+  hide), `Table.highlightField` (tint matching rows).
+- `Table.selectionDefault: "first"` selects the first row on load and whenever
+  the selected value is no longer in the rows; `selectionToggle: false` keeps a
+  second click from clearing the selection (master lists).
+- `FilterChips.default` with `channel` is the channel's initial value.
+- Every view of the detail must be in the loaded rows (all variants as columns of
+  one dataset) — switching never fetches. Pattern: `references/patterns.md` P7.
 
 ## Container primitives
 
 | Primitive | Props (defaults) |
 |---|---|
 | `Grid` | `columns` (12), `gap` (16) — always the root |
-| `Card` | `span` (12), `title`, `subtitle`, `variant` (`"hero"` = gradient, purely cosmetic) |
+| `Card` | `span` (12), `title`, `subtitle`, `variant` (`"hero"` = gradient, purely cosmetic), `collapsible` (false), `collapsed` (false) — with `collapsible: true` the title becomes a toggle (needs a `title`); `collapsed: true` starts closed. The body is not rendered while closed |
 | `Stack` | `gap` (12), `align` (`stretch`), `span` |
-| `Row` | `gap` (12), `align` (`center`), `span` |
+| `Row` | `gap` (12), `align` (`center`), `justify` (`start` · `center` · `end` · `space-between` — e.g. a `KPIStrip` left, an action button right), `span` |
 | `Spacer` | `size` |
 
 Span values: `12` full, `6` half, `4` third, `8`+`4` two-thirds + third.
@@ -106,6 +128,9 @@ when both used and unused rows exist).
 SQL filters the whole result and reports the counts in `_chip_facets` (decision
 rule in `references/patterns.md`). `groups` apply to client chips only; a server
 chip groups values in the SQL (a hidden chip column, e.g. `_chip_step`).
+`order` sorts the chips: `count` (default, most rows first), `label`
+(alphabetical) or `rows` (order of first appearance — for a list sorted by
+level, phase, …).
 
 `nowrap: true` keeps a column on one line (timestamps, names, counts); the
 remaining columns absorb the width and wrap instead.
@@ -194,6 +219,15 @@ lists):
   search and sort across KPI tile clicks too, declare `q`/`sort`/`dir` (or the
   table's own names) `sticky` in the manifest; keep the page param click-scoped,
   so a filter change returns to page 1. Reference: `schema/table_occurrence_usage`.
+- `rowAction` + `rowActionLabel` (second click target): an arrow button in an
+  extra column at the right end of every row, with its own action spec in the
+  `onRowClick` form; its click does not fire the row click. Typical pair: the
+  row opens the layout object, the arrow opens the layout with the object
+  highlighted — `{ "action": "openObject", "args": { "uuid": "{{_layout_uuid}}",
+  "type": "Layout", "file": "{{file_name}}", "ref": "{{nav_uuid}}" } }` (several
+  objects: `"marks": "{{_marks}}"`, comma-separated UUIDs). `rowActionLabel` is
+  the tooltip (English; locale key `<table id>.props.rowActionLabel`). Same look
+  as `@row_action` of a single-file dashboard. Reference: `layouts/font_usage_objects`.
 - Reference bundles: `dashboards/static-code-analysis/unused_code/variable_set_never_read`
   (FilterChips + paging), `…/best_practices/relationship_with_sort` (server chip).
 
@@ -260,13 +294,14 @@ Because the query re-runs, counts are true totals (not LIMIT-capped).
 
 | Primitive | Props | Use for |
 |---|---|---|
-| `FilterChips` | `param` (required), `default`, `options[]` of `{ value, label, countField? }`, `resetParams[]`; bind a summary dataset — `countField` reads its first row | 2–5 named lenses (all / without X / only X) with true-total counts |
+| `FilterChips` | `param` (or `channel`), `default`, `options[]` of `{ value, label, countField? }`, `resetParams[]`; bind a summary dataset — `countField` reads its first row. With `channel` instead of `param` the choice goes into a selection channel (no reload) | 2–5 named lenses (all / without X / only X) with true-total counts; with `channel`: a view switch (simple / technical) |
 | `Select` | `param` (required), `default`, `valueField` ("value"), `labelField` ("label"), `label`, `emptyOptionLabel`, `multiple`, `separator` (","), `resetParams[]`; options come from the bound dataset's rows | many options / data-driven option lists (e.g. classification sets, file pickers); `multiple: true` for "any of these types / files" |
+| `TextInput` | `param` (required), `default`, `label`, `placeholder`, `width` (16, characters), `resetParams[]`; no dataset | free text for the SQL (a name prefix, a regex, a function name) — committed on Enter or when the field loses focus, Escape restores the value. An empty field writes `?param=` (SQL sees `''`, e.g. "switched off"); the default removes the param |
 | `Slider` | `param` (required), `label`, `min` (0), `max` or `maxField` (from bound dataset), `step` (1), `default`, `valueSuffix` | numeric thresholds |
 | `ToggleChips` | `items[]` of `{ param, label, on, off, default, resetParams? }`, `resetParams[]` (shared); no dataset | several independent on/off switches in one chip bar (e.g. "Mass events", "Technical authors") — each chip flips its own param between `on` and `off` |
 
-All four keep the URL canonical: at the default value the param is removed.
-`resetParams` (FilterChips, Select, ToggleChips) names URL params dropped
+All five keep the URL canonical: at the default value the param is removed.
+`resetParams` (FilterChips, Select, TextInput, ToggleChips) names URL params dropped
 together with every change — typically the page param of a server-paged `Table`.
 `FilterChips` chooses one of several values for **one** param; use
 `ToggleChips` when the chips are independent of each other. A chip whose param
@@ -370,8 +405,55 @@ bundle: `rest-api/templates/dashboards/changelog/changes/` (`activity_map.sql`,
 | Primitive | Props |
 |---|---|
 | `Markdown` | `content`, `span` — notes/help blocks |
-| `NavButton` | `label`, `subtitle`, `showCount` (row count of the bound dataset), `onClick` |
+| `NavButton` | `label`, `subtitle`, `showCount` (row count of the bound dataset), `onClick`, `variant`: `"link"` (a quiet text link for cross references), `"button"` (a compact filled action button like "XML konvertieren", e.g. "Export …"), `"button-outline"` (the same, outlined) |
 | `Empty` | `message` |
+| `Mermaid` | `field` (default `mermaid`) or `source` (diagram text in the layout, `{{token}}`s), `nodesField`, `onNodeClick`, `title`, `ariaLabel`, `maxHeight` (px), `zoom` (`auto`/`true`/`false`), `emptyText` — draws a Mermaid diagram (all Mermaid 12 types: `flowchart`, `sequenceDiagram`, `pie`, `stateDiagram`, `gantt`, `mindmap`, …). Details below |
+| `HtmlContent` | `field` (default `content_html`) — renders HTML from a column of the bound row with the docs typography. **Always sanitized** in the browser (allow-list below); anything outside the list is removed, never executed |
+
+**`Mermaid` details.**
+- Text source: with its **own** `data.dataset` the node joins `field` of all rows
+  with a line break (e.g. one row per diagram line); inherited from a Card it
+  uses the Card's row. `source` in the layout wins over both.
+- Clickable nodes: `nodesField` names a column with a JSON array
+  `[{"id":"n1","uuid":"…","type":"Script","file":"…"}]` — `id` is the Mermaid
+  node id written in the text. `onNodeClick` is an ActionSpec whose tokens come
+  from that object, usually
+  `{"action":"openObject","args":{"uuid":"{{uuid}}","file":"{{file}}"}}`.
+  Mapped nodes get a pointer, keyboard focus and Enter.
+- Build `nodes_json` with `CAST(to_json(list({ 'id' : id, 'uuid' : uuid, … })) AS VARCHAR)`
+  (a space before every `:` — the `:word` trap; no `::VARCHAR`).
+- Node labels: always quote, `n1["label"]`, and replace `"` with `#quot;`
+  (`replace(name, '"', '#quot;')`); `<br/>` breaks a line. A class is attached
+  with `:::name` — write it as `repeat(chr(58), 3) || 'name'` in SQL (trap).
+- Colors follow the app theme (light/dark) automatically. A `classDef` with a
+  fixed `fill` stays that color in both themes — keep such fills light and few.
+- Errors appear as a red box with line, column and the faulty line; links
+  (`click … "url"`) and images in the text are switched off.
+- Renderer: pele (own layout; not pixel-identical to GitHub/VS Code).
+
+**`HtmlContent` allow-list.** Build the HTML in SQL and escape every value that
+comes from the catalog (`&` → `&amp;` first, then `<`, `>`, `"`); the
+sanitizer is the safety net, not the escaping.
+- Elements (HTML): `p h1–h6 ul ol li dl dt dd table thead tbody tfoot tr th td
+  caption colgroup col details summary section article div span b strong i em u
+  s small sub sup code pre kbd samp var abbr cite q del ins mark time br wbr hr
+  blockquote a img figure figcaption`. Unknown elements are unwrapped (their
+  text stays); `script style iframe form input template …` go with their content.
+- Elements (SVG): `svg g defs marker path rect circle ellipse line polyline
+  polygon text tspan title desc` — no `foreignObject`, `use`, `image`, `a`,
+  `animate*`.
+- Attributes: `class id title lang dir role aria-label aria-hidden align valign
+  width height colspan rowspan scope span start reversed value open border
+  cellpadding cellspacing alt datetime style`; `a@href` (`http(s):`, `mailto:`,
+  `tel:`, `fmp(s):`, relative, `#…`), `a@target="_blank"`, `img@src` (`https:`
+  or a path such as `/api/…`). SVG: geometry and paint (`x y … d points
+  transform viewBox fill stroke stroke-* font-* text-anchor marker-end refX …`),
+  `url(#id)` only to a local id. Never: `on*`, `data-*`, `xlink:href`,
+  `srcset`, `javascript:`.
+- `style`: only `overflow overflow-x overflow-y overflow-wrap word-break width
+  min-width max-width table-layout text-align white-space vertical-align`;
+  other properties are removed. Mind the `:word` trap (`references/sql-rules.md`):
+  write `overflow: auto` **with a space**, never `overflow:auto`.
 
 (Registry primitives not listed here — `DocsInstallErrorBezel`, `XmlConvert*`,
 `SemanticNamesStatus`, `XmlImportIntegrity` — are system-internal; do not use
@@ -394,6 +476,71 @@ emits ready-made arg strings).
 | `runQuery` | `query`, `params?` | Custom template via the `_generic` bundle |
 | `openUrl` | `url` (`https://` external w/ confirmation, or `/api/…` same-tab) | External link |
 | `copyToClipboard` | `value` | Copy |
+| `downloadFile` | `dataset`, `rows` (`all`/`selected`), `channel` + `key` (for `selected`), `template`, `separator` (`\n\n`), `header`, `footer`, `context`, `filename`, `mime` (`text/markdown` default, `text/plain`, `text/csv`, `image/svg+xml`, `text/html`), `document` + `title` and `appLinks` (`text`/`absolute`) for `text/html` | Builds a file **in the browser** from rows already loaded on the page and downloads it — no server call. Only from `NavButton.onClick` (it carries the datasets and channels). Details below |
+
+**`downloadFile`.** `template` is filled once per exported row (`{{column}}`s of
+that row), joined with `separator`; `header`/`footer` and `filename` take
+tokens from the first row of the `context` dataset (in `filename` the first
+exported row wins). The file name keeps letters, digits, `.`, `_`, `-` (the rest
+becomes `_`) and gets the extension of `mime`. An empty result shows a notice
+instead of an empty file; above 20 MB the download is refused. A Mermaid block
+in a Markdown export: ```` "template": "### {{title}}\n\n```mermaid\n{{mermaid}}\n```" ````.
+
+**Diagrams as drawings, HTML and SVG files.** `{{ mermaid | svg }}` (only in
+`downloadFile`) inserts the Mermaid text of that column as a finished SVG drawing
+— rendered in the browser at export time, light colours, no external resources.
+- `mime: "text/html"`: every token is HTML-escaped, except `| svg` and a plain
+  `{{ <column>_html }}` (sanitized by the server, see `render`). `document: true`
+  wraps the content in a complete page (doctype, charset, `title` with
+  `context` tokens, embedded styles; wide diagrams scroll on screen and shrink
+  to the page in print). Links into the app inside `*_html` columns point
+  nowhere in a file: `appLinks: "text"` (default) keeps only their text,
+  `"absolute"` points them to the running fm-lab.
+- `mime: "image/svg+xml"`: exactly one row (`rows: "selected"`, otherwise a
+  notice), `template: "{{ mermaid | svg }}"`; the file gets an XML header and a
+  white background (readable in dark viewers). `header`/`footer` are ignored.
+- A diagram that cannot be drawn becomes a short note in an HTML/Markdown file
+  and refuses an SVG file.
+```json
+{ "action": "downloadFile",
+  "args": { "dataset": "ways", "rows": "all", "context": "head", "mime": "text/html",
+            "document": true, "title": "{{export_title}}",
+            "header": "<h1>{{export_title}}</h1>",
+            "template": "<section><h2>{{title}}</h2><figure>{{ mermaid | svg }}</figure>{{ text_md_html }}</section>",
+            "filename": "{{filename}}" } }
+```
+
+**`ask` (any ActionSpec).** Shows a small dialog first; the chosen option merges
+its `args` into the action. Cancel = nothing happens.
+```json
+{ "action": "downloadFile",
+  "ask": { "title": "Export",
+           "options": [
+             { "label": "All ways",      "args": { "rows": "all" } },
+             { "label": "Only this way", "args": { "rows": "selected", "filename": "ways_{{way_no}}" },
+               "requiresSelection": "way" } ] },
+  "args": { "dataset": "ways", "channel": "way", "key": "way_no", "context": "head",
+            "template": "…", "filename": "ways_{{table}}" } }
+```
+`requiresSelection` disables an option while that selection channel is empty.
+Labels are localizable: `<node id>.props.onClick.ask.options[N].label`.
+
+**`ask.choice` — a radio group above the buttons** (e.g. the file format). The
+chosen entry merges its `args` too: action `args` < `choice` entry < option.
+An entry's `onlyWith` (option `id`s) disables the other buttons while it is
+chosen; the last choice is remembered per page in the browser.
+```json
+"ask": { "title": "Export",
+         "choice": { "label": "Format", "options": [
+           { "id": "md",   "label": "Markdown", "args": { "mime": "text/markdown", "template": "…" } },
+           { "id": "html", "label": "HTML",     "args": { "mime": "text/html", "document": true, "template": "…{{ mermaid | svg }}…" } },
+           { "id": "svg",  "label": "SVG (diagram only)", "args": { "mime": "image/svg+xml", "template": "{{ mermaid | svg }}" },
+             "onlyWith": ["one"] } ] },
+         "options": [
+           { "id": "all", "label": "All ways",      "args": { "rows": "all" } },
+           { "id": "one", "label": "Only this way", "args": { "rows": "selected" }, "requiresSelection": "way" } ] }
+```
+Localizable: `….ask.choice.label`, `….ask.choice.options[N].label`.
 
 ### The self-navigation filter idiom
 
@@ -435,7 +582,8 @@ not flat args.
 `{{field}}` → field value of the current row. Filters:
 `{{ field | upper }}`, `{{ field | lower }}`, `{{ field | number:2 }}`,
 `{{ field | date:relative }}`, `{{ field | date:iso }}`,
-`{{ field | truncate:60 }}`, `{{ field | default:N/A }}`.
+`{{ field | truncate:60 }}`, `{{ field | default:N/A }}`; in `downloadFile` also
+`{{ field | svg }}` (Mermaid text → SVG drawing, see above).
 
 `format` values for KPI items / table columns:
 
@@ -462,6 +610,16 @@ use `badge`, or format in SQL.)
   (see §Filter primitives).
 - `datasets[].source` matches `^(bundle|custom|report|builtin):.+$`.
 - `datasets[].params` (optional object) = per-dataset default param values.
+- `datasets[].render` (optional object, column → `"markdown"`): the server renders
+  that Markdown column to HTML and adds `<column>_html` to every row (GFM:
+  tables, lists, code, inline HTML such as `<details>`; sanitized) — show it with
+  `HtmlContent` (`field: "<column>_html"`). Above 500 rows nothing is rendered
+  (`meta.render.skipped`); `datasets[].renderMaxRows` raises that cap (at most
+  2000). Prefer this over building HTML in SQL. A column only meant for display
+  (the client never reads its Markdown) takes the object form
+  `{ "format": "markdown", "keepSource": false }` — the server drops the
+  Markdown column after rendering and the response shrinks; keep the plain
+  `"markdown"` form for a column an export (`downloadFile`) still uses.
 - Every `data.dataset` name used in `layout.json` must exist in
   `manifest.datasets[].id` — the loader does NOT catch this (empty card at runtime).
 - `permissions`: `{ "read_only": true, "allow_navigation": true }`.

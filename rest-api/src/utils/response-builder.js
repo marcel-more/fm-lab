@@ -97,10 +97,33 @@ function getContentType(format) {
     content: 'text/plain; charset=utf-8',
     mermaid: 'text/html; charset=utf-8',      // HTML mit Mermaid.js
     'mermaid-raw': 'text/plain; charset=utf-8',  // Nur Mermaid-Code
+    svg: 'image/svg+xml; charset=utf-8',         // Diagramm als SVG (pele, serverseitig)
     tokens: 'application/json',                  // Structured token payload
   };
 
   return contentTypes[format] || 'application/json';
+}
+
+/**
+ * Trailing comment in the syntax of a non-JSON format: `<!-- … -->` for HTML,
+ * Markdown, the Mermaid page and SVG (a `--` inside would end an XML comment),
+ * `%%` for Mermaid source, `#` for the text formats.
+ * @param {string} format
+ * @param {string} text
+ * @returns {string}
+ */
+function trailingComment(format, text) {
+  switch (format) {
+    case 'html':
+    case 'markdown':
+    case 'mermaid':
+    case 'svg':
+      return `\n<!-- ${text.replace(/--/g, '- -')} -->`;
+    case 'mermaid-raw':
+      return `\n%% ${text.replace(/[\r\n]+/g, ' ')}`;
+    default:
+      return `\n# ${text}`;
+  }
 }
 
 /**
@@ -129,30 +152,10 @@ function sendFormatted(res, data, format = 'json', meta = null, debugQuery = nul
   let output = data;
 
   if (meta || debugQuery) {
-    // Add meta/debug as comments at the end
+    // Add meta/debug as comments at the end, in the comment syntax of the format
     const comments = [];
-
-    if (meta) {
-      if (format === 'html') {
-        comments.push(`<!-- Metadata: ${JSON.stringify(meta)} -->`);
-      } else if (format === 'markdown') {
-        comments.push(`\n<!-- Metadata: ${JSON.stringify(meta)} -->`);
-      } else {
-        // For text-based formats, add as comment lines
-        comments.push(`\n# Metadata: ${JSON.stringify(meta)}`);
-      }
-    }
-
-    if (debugQuery) {
-      if (format === 'html') {
-        comments.push(`<!-- Debug Query: ${debugQuery} -->`);
-      } else if (format === 'markdown') {
-        comments.push(`\n<!-- Debug Query: ${debugQuery} -->`);
-      } else {
-        comments.push(`# Debug Query: ${debugQuery}`);
-      }
-    }
-
+    if (meta) comments.push(trailingComment(format, `Metadata: ${JSON.stringify(meta)}`));
+    if (debugQuery) comments.push(trailingComment(format, `Debug Query: ${debugQuery}`));
     output = data + comments.join('\n');
   }
 

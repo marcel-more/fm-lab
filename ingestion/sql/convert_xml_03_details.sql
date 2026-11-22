@@ -4,7 +4,9 @@
 -- Erzeugt VariableUsages + VariablesCatalog aus DDR-Chunks, Set-Variable-Steps,
 -- MBS-Superglobalen, Merge-Variablen, Trigger-Parametern und Regex-Fallback;
 -- außerdem StepCalculations (A.9), abgeleitete Step-/Layout-Spalten (A.10/A.11)
--- und LayoutObjectConditions (A.12, Conditional-Formatting-Regeln).
+-- und LayoutObjectConditions (A.12, Conditional-Formatting-Regeln); seit Schema 1.44.0
+-- die Schrift-/Stil-Tabellen ThemeStyleRules, LayoutObjectStyles, LayoutObjectFontRuns
+-- und LayoutObjectCssType (A.14–A.17); seit Schema 1.46.0 ThemeNamedStyles (A.14b).
 -- TABLE-ONLY (liest nur P1/P2-Tabellen, kein read_xml). Läuft nach Phase 2 und
 -- VOR Phase 4 (ObjectCatalog registriert die Variablen-Objekte; P4 füllt den
 -- Calculation_UUID-FK von LayoutObjectConditions).
@@ -69,7 +71,7 @@ CREATE TABLE VariableUsages (
     Table_Name VARCHAR,
     Field_Name VARCHAR,
     Calc_Hash VARCHAR,
-    Source VARCHAR NOT NULL,               -- set_variable_step, ddr_chunk, mbs_variable_call, merge_variable, regex_fallback
+    Source VARCHAR NOT NULL,               -- set_variable_step, target_variable_step, ddr_chunk, let_assign, mbs_variable_call, merge_variable, regex_fallback
     File_Name VARCHAR NOT NULL
 );
 
@@ -941,9 +943,19 @@ WHERE f.formula_noliterals IS NOT NULL;
 -- A.7: Regex-Fallback für Dateien ohne DDR
 -- ========================================
 
+-- Konverter 2.50.1: Die Blöcke verknüpfen XMLMetadata über File_Name (ohne Endung);
+-- vorher über Filename (mit „.fmp12“) — der Ersatzweg lieferte deshalb nie Zeilen.
+-- Zeichenketten und Kommentare werden vor der Suche entfernt (ein "$x" im Text ist
+-- kein Lesen), je Kontext zählt eine Variable einmal (wie der DDR-Pfad A.3), und die
+-- Wertformel von Set Variable zählt mit (Calculation_Text trägt dort nur die Formel,
+-- nicht den Zielnamen; den Zielnamen erfasst A.4 als Setzen). Execute SQL mit
+-- „SQL-Text“-Eingabe zählt nicht (keine Formel, wie A.7f).
+CREATE OR REPLACE TEMP MACRO _vr_strip(s) AS
+    regexp_replace(COALESCE(s, ''), '(?s)"(?:[^"\\]|\\.)*"|/\*.*?\*/|//[^\r\n]*', ' ', 'g');
+
 -- 7a: Regex-Variablen aus Script-Schritt-Formeln (nur Dateien ohne DDR)
 INSERT INTO VariableUsages
-SELECT
+SELECT DISTINCT
     var_name as Variable_Name,
     CASE WHEN var_name LIKE '$$$%' THEN 'superglobal' WHEN var_name LIKE '$$%' THEN 'global' ELSE 'local' END as Variable_Scope,
     'read' as Usage_Type,
@@ -959,17 +971,18 @@ SELECT
     'regex_fallback' as Source,
     s.File_Name
 FROM StepsForScripts s
-JOIN XMLMetadata m ON s.File_Name = m.Filename
+JOIN XMLMetadata m ON s.File_Name = m.File_Name
 CROSS JOIN LATERAL unnest(
-    regexp_extract_all(s.Calculation_Text, '\$\$?\$?[\p{L}_][\p{L}\p{N}_]*')
+    regexp_extract_all(_vr_strip(s.Calculation_Text), '\$\$?\$?[\p{L}_][\p{L}\p{N}_]*')
 ) as t(var_name)
 WHERE m.Has_DDR_INFO = 'False'
   AND s.Calculation_Text IS NOT NULL
-  AND s.Step_ID != 141;  -- 'Set Variable'
+  -- Execute SQL mit „SQL-Text“-Eingabe: keine Formel (wie A.7f im DDR-Pfad)
+  AND NOT (s.Step_ID = 117 AND s.Step_XML LIKE '%<SQL index="0"%');
 
 -- 7b: Regex-Variablen aus Calculated Fields (nur Dateien ohne DDR)
 INSERT INTO VariableUsages
-SELECT
+SELECT DISTINCT
     var_name as Variable_Name,
     CASE WHEN var_name LIKE '$$$%' THEN 'superglobal' WHEN var_name LIKE '$$%' THEN 'global' ELSE 'local' END as Variable_Scope,
     'read' as Usage_Type,
@@ -985,16 +998,16 @@ SELECT
     'regex_fallback' as Source,
     f.File_Name
 FROM FieldsForTables f
-JOIN XMLMetadata m ON f.File_Name = m.Filename
+JOIN XMLMetadata m ON f.File_Name = m.File_Name
 CROSS JOIN LATERAL unnest(
-    regexp_extract_all(f.Calculation_Text, '\$\$?\$?[\p{L}_][\p{L}\p{N}_]*')
+    regexp_extract_all(_vr_strip(f.Calculation_Text), '\$\$?\$?[\p{L}_][\p{L}\p{N}_]*')
 ) as t(var_name)
 WHERE m.Has_DDR_INFO = 'False'
   AND f.Calculation_Text IS NOT NULL;
 
 -- 7c: Regex-Variablen aus AutoEnter Calculated Fields (nur Dateien ohne DDR)
 INSERT INTO VariableUsages
-SELECT
+SELECT DISTINCT
     var_name as Variable_Name,
     CASE WHEN var_name LIKE '$$$%' THEN 'superglobal' WHEN var_name LIKE '$$%' THEN 'global' ELSE 'local' END as Variable_Scope,
     'read' as Usage_Type,
@@ -1010,16 +1023,16 @@ SELECT
     'regex_fallback' as Source,
     f.File_Name
 FROM FieldsForTables f
-JOIN XMLMetadata m ON f.File_Name = m.Filename
+JOIN XMLMetadata m ON f.File_Name = m.File_Name
 CROSS JOIN LATERAL unnest(
-    regexp_extract_all(f.AE_Calc_Text, '\$\$?\$?[\p{L}_][\p{L}\p{N}_]*')
+    regexp_extract_all(_vr_strip(f.AE_Calc_Text), '\$\$?\$?[\p{L}_][\p{L}\p{N}_]*')
 ) as t(var_name)
 WHERE m.Has_DDR_INFO = 'False'
   AND f.AE_Calc_Text IS NOT NULL;
 
 -- 7d: Regex-Variablen aus CustomFunction-Formeln (nur Dateien ohne DDR)
 INSERT INTO VariableUsages
-SELECT
+SELECT DISTINCT
     var_name as Variable_Name,
     CASE WHEN var_name LIKE '$$$%' THEN 'superglobal' WHEN var_name LIKE '$$%' THEN 'global' ELSE 'local' END as Variable_Scope,
     'read' as Usage_Type,
@@ -1035,12 +1048,233 @@ SELECT
     'regex_fallback' as Source,
     ccf.File_Name
 FROM CalcsForCustomFunctions ccf
-JOIN XMLMetadata m ON ccf.File_Name = m.Filename
+JOIN XMLMetadata m ON ccf.File_Name = m.File_Name
 CROSS JOIN LATERAL unnest(
-    regexp_extract_all(ccf.Calculation_Code, '\$\$?\$?[\p{L}_][\p{L}\p{N}_]*')
+    regexp_extract_all(_vr_strip(ccf.Calculation_Code), '\$\$?\$?[\p{L}_][\p{L}\p{N}_]*')
 ) as t(var_name)
 WHERE m.Has_DDR_INFO = 'False'
   AND ccf.Calculation_Code IS NOT NULL;
+
+
+-- ========================================
+-- A.7g: Let-Zuweisungen von $/$$-Variablen
+-- ========================================
+-- `Let ( [ $x = Ausdruck ; … ] ; … )` bzw. `Let ( $x = Ausdruck ; … )` SETZT eine
+-- Script-Variable ($) oder globale Variable ($$) — anders als ein Let-Name ohne $
+-- (let_local) lebt sie über die Formel hinaus. Die DDR-Chunks führen die Variable
+-- nur als VariableReference; A.3 erfasst sie deshalb als Lesen. Hier: Zuweisung
+-- erkennen (Usage_Type 'set', Source 'let_assign') und ein Lesen streichen, das nur
+-- aus Zuweisungspositionen stammt (die Variable kommt in der Formel sonst nicht vor).
+--
+-- Erkennung über die Klammerstruktur, nicht per Regex: die Variable steht direkt vor
+-- '=' und ihr innerster offener Klammer-Öffner ist entweder die '[' einer Let-Liste
+-- (`Let ( [`, Vorgänger '[' oder ';') oder die '(' von `Let` selbst (Vorgänger '(').
+-- Vergleiche wie `Case ( $a = 1 ; …)` oder `If ( $a = 1 …)` fallen damit heraus.
+-- `Let` steht in Chunks und Formeltext kanonisch (englisch). Zeichenketten und
+-- Kommentare zählen nicht als Klammern. Nicht erkannt: Zuweisung an eine Wiederholung
+-- (`$x[2] = …`). Kontexte: Script-Schritte und Custom Functions (P4 Blöcke 24/27
+-- kennen dort Setzen); Felder und Layout-Formeln bleiben unverändert.
+-- Ohne DDR-Info: Formeltext des Schritts (Calculation_Text, wie der Regex-Ersatzweg
+-- 7a), Setzen und Streichen des Lesens wie im DDR-Pfad.
+CREATE OR REPLACE TEMP MACRO _va_lex(s) AS
+    regexp_extract_all(COALESCE(s, ''),
+        '(?s)/\*.*?\*/|//[^\r\n]*|"(?:[^"\\]|\\.)*"|[()\[\];=]|\s+|[^"()\[\];=\s/]+|.');
+
+CREATE OR REPLACE TEMP MACRO _va_kind(v) AS
+    CASE WHEN v[1:2] IN ('/*', '//')                         THEN 'comment'
+         WHEN v[1] = '"'                                     THEN 'str'
+         WHEN v IN ('(', ')', ';', '[', ']', '=')            THEN v
+         WHEN regexp_matches(v, '^\s+$')                     THEN 'ws'
+         WHEN v[1] = '$'                                     THEN 'var'
+         ELSE 'other' END;
+
+-- Kandidaten: Chunk-Listen mit FunctionRef Let und mindestens einer $-Variable
+-- (DDR-Pfad, Calc_Key = Calc_Hash) bzw. Schritt-Formeltexte mit Let und '$' in
+-- Dateien ohne DDR-Info (Calc_Key = Script_UUID|Step_Index).
+DROP TABLE IF EXISTS _va_calc;
+CREATE TEMP TABLE _va_calc AS
+SELECT File_Name, Calc_Hash, min(Calc_UUID) AS Calc_UUID
+FROM DDR_Calculations
+WHERE Calc_Hash IN (SELECT Calc_Hash FROM DDR_Calculations
+                    WHERE Chunk_Type = 'FunctionRef' AND Chunk_Content LIKE '%>Let<%')
+GROUP BY ALL
+HAVING bool_or(Chunk_Type = 'VariableReference' AND Chunk_Content LIKE '%>$%');
+
+DROP TABLE IF EXISTS _va_tok;
+CREATE TEMP TABLE _va_tok AS
+WITH ch AS (
+    SELECT c.File_Name, c.Calc_Hash, d.Chunk_Index, d.Chunk_Type, d.Chunk_Content
+    FROM _va_calc c
+    JOIN DDR_Calculations d ON d.Calc_UUID = c.Calc_UUID AND d.File_Name = c.File_Name
+    WHERE d.Chunk_Type <> 'Comment'
+),
+lx AS (
+    SELECT File_Name, Calc_Hash, Chunk_Index, Chunk_Type,
+           CASE WHEN Chunk_Type = 'NoRef' THEN _va_lex(xml_extract_text(Chunk_Content, '/Chunk')[1])
+                ELSE [regexp_extract(Chunk_Content, '>([^<]*)</Chunk>', 1)] END AS toks
+    FROM ch
+)
+SELECT 'ddr' AS Src, File_Name, Calc_Hash AS Calc_Key, Chunk_Index AS O1, t.i AS O2,
+       CASE Chunk_Type WHEN 'NoRef'             THEN _va_kind(t.v)
+                       WHEN 'VariableReference' THEN 'var'
+                       WHEN 'FunctionRef'       THEN 'func'
+                       ELSE 'other' END AS Kind,
+       -- wie A.3: Entities dekodieren (wa_entity_decode-gegatet), sonst passt der Name
+       -- nicht zu den Lese-Zeilen derselben Formel
+       CASE WHEN Chunk_Type = 'VariableReference' AND getvariable('wa_entity_decode')
+            THEN html_unescape(t.v) ELSE t.v END AS Val
+FROM lx, LATERAL (SELECT unnest(toks) AS v, generate_subscripts(toks, 1) AS i) t
+UNION ALL
+SELECT 'text', s.File_Name, s.Script_UUID || '|' || s.Step_Index, 0, t.i,
+       _va_kind(t.v), t.v
+FROM StepsForScripts s
+JOIN XMLMetadata m ON s.File_Name = m.File_Name,
+     LATERAL (SELECT unnest(_va_lex(s.Calculation_Text)) AS v,
+                     generate_subscripts(_va_lex(s.Calculation_Text), 1) AS i) t
+WHERE m.Has_DDR_INFO = 'False'
+  AND s.Calculation_Text IS NOT NULL
+  AND regexp_matches(s.Calculation_Text, '(?i)\blet\s*\(')
+  AND NOT (s.Step_ID = 117 AND s.Step_XML LIKE '%<SQL index="0"%')
+  AND s.Calculation_Text LIKE '%$%';
+
+-- signifikante Tokens: Klammertiefe vor dem Token, Nachbarn
+DROP TABLE IF EXISTS _va_sig;
+CREATE TEMP TABLE _va_sig AS
+WITH s AS (
+    SELECT *, ROW_NUMBER() OVER (PARTITION BY Src, File_Name, Calc_Key ORDER BY O1, O2) AS Pos
+    FROM _va_tok WHERE Kind NOT IN ('ws', 'comment')
+)
+SELECT *,
+       COALESCE(SUM(CASE WHEN Kind IN ('(', '[') THEN 1 WHEN Kind IN (')', ']') THEN -1 ELSE 0 END)
+                OVER (w ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING), 0) AS Depth,
+       lag(Kind)     OVER w AS P_Kind,
+       lag(Kind, 2)  OVER w AS P2_Kind,
+       lag(Val)      OVER w AS P_Val,
+       lag(Val, 2)   OVER w AS P2_Val,
+       lead(Kind)    OVER w AS N_Kind
+FROM s
+WINDOW w AS (PARTITION BY Src, File_Name, Calc_Key ORDER BY Pos);
+
+-- Öffner mit Let-Kontext; eine Variable gehört zum innersten offenen Öffner
+-- (Ebene = Tiefe der Variable - 1, letzter Öffner dieser Ebene davor)
+DROP TABLE IF EXISTS _va_open;
+CREATE TEMP TABLE _va_open AS
+SELECT Src, File_Name, Calc_Key, Pos, Depth AS Lvl,
+       (Kind = '[' AND P_Kind = '(' AND P2_Kind IN ('func', 'other') AND lower(P2_Val) = 'let') AS Let_List,
+       (Kind = '(' AND P_Kind IN ('func', 'other') AND lower(P_Val) = 'let')                  AS Let_Paren
+FROM _va_sig
+WHERE Kind IN ('(', '[');
+
+DROP TABLE IF EXISTS _va_assign;
+CREATE TEMP TABLE _va_assign AS
+SELECT v.Src, v.File_Name, v.Calc_Key, v.Pos, v.Val AS Variable_Name
+FROM _va_sig v
+ASOF JOIN _va_open o
+  ON o.Src = v.Src AND o.File_Name = v.File_Name AND o.Calc_Key = v.Calc_Key
+ AND o.Lvl = v.Depth - 1 AND o.Pos < v.Pos
+WHERE v.Kind = 'var' AND v.Val LIKE '$%' AND v.N_Kind = '='
+  AND ((o.Let_List AND v.P_Kind IN ('[', ';'))
+    OR (o.Let_Paren AND v.P_Kind = '('));
+
+-- je Formel und Variable: Zuweisungen und Vorkommen gesamt
+DROP TABLE IF EXISTS _va_let;
+CREATE TEMP TABLE _va_let AS
+SELECT s.Src, s.File_Name, s.Calc_Key, s.Val AS Variable_Name,
+       count(*)     AS n_occ,
+       count(a.Pos) AS n_assign
+FROM _va_sig s
+LEFT JOIN _va_assign a
+       ON a.Src = s.Src AND a.File_Name = s.File_Name AND a.Calc_Key = s.Calc_Key AND a.Pos = s.Pos
+WHERE s.Kind = 'var' AND s.Val LIKE '$%'
+GROUP BY ALL
+HAVING count(a.Pos) > 0;
+
+-- 7g-1: Setzen in Script-Schritt-Formeln (Hash-Zuordnung wie 3d)
+INSERT INTO VariableUsages
+WITH step_hashes AS (
+    SELECT DISTINCT
+        Script_Name, Script_UUID, Step_Index, File_Name,
+        unnest(regexp_extract_all(CAST(Parameters_XML AS VARCHAR),
+            'kind="ChunkList" hash="([A-F0-9]+)"', 1)) AS calc_hash
+    FROM StepsForScripts
+    WHERE Parameters_XML IS NOT NULL
+      AND CAST(Parameters_XML AS VARCHAR) LIKE '%ChunkList%'
+)
+SELECT DISTINCT
+    l.Variable_Name,
+    CASE WHEN l.Variable_Name LIKE '$$$%' THEN 'superglobal'
+         WHEN l.Variable_Name LIKE '$$%'  THEN 'global'
+         ELSE 'local' END AS Variable_Scope,
+    'set' AS Usage_Type,
+    'script_step' AS Context_Type,
+    s.Script_UUID AS Context_UUID,
+    s.Script_Name AS Context_Name,
+    s.Script_Name,
+    s.Script_UUID,
+    s.Step_Index,
+    NULL AS Table_Name,
+    NULL AS Field_Name,
+    l.Calc_Key AS Calc_Hash,
+    'let_assign' AS Source,
+    l.File_Name
+FROM _va_let l
+JOIN step_hashes s ON s.calc_hash = l.Calc_Key AND s.File_Name = l.File_Name
+WHERE l.Src = 'ddr';
+
+-- 7g-2: Setzen in Custom Functions (Hash-Zuordnung wie 3c)
+INSERT INTO VariableUsages
+SELECT DISTINCT
+    l.Variable_Name,
+    CASE WHEN l.Variable_Name LIKE '$$$%' THEN 'superglobal'
+         WHEN l.Variable_Name LIKE '$$%'  THEN 'global'
+         ELSE 'local' END,
+    'set', 'custom_function',
+    cf.CF_UUID, cf.CF_Name,
+    NULL, NULL, NULL, NULL, NULL,
+    l.Calc_Key, 'let_assign', l.File_Name
+FROM _va_let l
+JOIN CustomFunctionsCatalog cf ON cf.DDR_Hash = l.Calc_Key AND cf.File_Name = l.File_Name
+WHERE l.Src = 'ddr';
+
+-- 7g-3: Setzen in Schritt-Formeltexten ohne DDR-Info
+INSERT INTO VariableUsages
+SELECT DISTINCT
+    l.Variable_Name,
+    CASE WHEN l.Variable_Name LIKE '$$$%' THEN 'superglobal'
+         WHEN l.Variable_Name LIKE '$$%'  THEN 'global'
+         ELSE 'local' END,
+    'set', 'script_step',
+    s.Script_UUID, s.Script_Name, s.Script_Name, s.Script_UUID, s.Step_Index,
+    NULL, NULL, NULL, 'let_assign', l.File_Name
+FROM _va_let l
+JOIN StepsForScripts s ON s.File_Name = l.File_Name
+                      AND s.Script_UUID || '|' || s.Step_Index = l.Calc_Key
+WHERE l.Src = 'text';
+
+-- 7g-4: Lesen streichen, das nur aus Zuweisungspositionen stammt (DDR-Pfad)
+DELETE FROM VariableUsages v
+USING _va_let l
+WHERE l.Src = 'ddr' AND l.n_occ = l.n_assign
+  AND v.Source = 'ddr_chunk' AND v.Usage_Type = 'read'
+  AND v.Context_Type IN ('script_step', 'custom_function')
+  AND v.File_Name = l.File_Name AND v.Calc_Hash = l.Calc_Key
+  AND v.Variable_Name = l.Variable_Name;
+
+-- 7g-5: dasselbe im Textpfad ohne DDR-Info (Lese-Zeilen des Regex-Ersatzwegs 7a)
+DELETE FROM VariableUsages v
+USING _va_let l
+WHERE l.Src = 'text' AND l.n_occ = l.n_assign
+  AND v.Source = 'regex_fallback' AND v.Usage_Type = 'read'
+  AND v.Context_Type = 'script_step'
+  AND v.File_Name = l.File_Name AND v.Script_UUID || '|' || v.Step_Index = l.Calc_Key
+  AND v.Variable_Name = l.Variable_Name;
+
+DROP TABLE IF EXISTS _va_tok;
+DROP TABLE IF EXISTS _va_sig;
+DROP TABLE IF EXISTS _va_open;
+DROP TABLE IF EXISTS _va_assign;
+DROP TABLE IF EXISTS _va_calc;
+DROP TABLE IF EXISTS _va_let;
 
 
 -- ========================================
@@ -1064,6 +1298,40 @@ SET Scope_Anchor = CASE
     ELSE File_Name
 END;
 
+
+-- ========================================
+-- A.7f: Execute SQL mit Text-Eingabe ist keine Formel
+-- ========================================
+-- Der Schritt Execute SQL (Step_ID 117) nimmt die Abfrage als „SQL-Text“
+-- (<SQL index="0">, wörtlich an die ODBC-Quelle gesendet) oder als „Berechneter
+-- SQL-Text“ (<SQL index="1">, eine Formel). FileMaker legt beide in ein
+-- <Calculation>-Element und exportiert auch für den Text eine Chunk-Liste mit
+-- Feld-, Funktions- und Variablen-Bausteinen. Die daraus in P2/P3 entstandenen
+-- Bezüge sind keine: FileMaker wertet den Text nicht aus. Entfernt werden die
+-- Formel-Referenzen (XMLCalcReferences, PluginFunctionUsages; bei Schritten
+-- Quelle = Script, Subkey = Step_Index, Subrole 'SQL') und die Variablen-
+-- Nutzungen aus diesen Chunks — vor VariablesCatalog (A.8), P3.5 und P4.
+DROP TABLE IF EXISTS _sql_text_slots;
+CREATE TEMP TABLE _sql_text_slots AS
+SELECT Script_UUID, File_Name, Step_Index,
+       regexp_extract(Step_XML, '<SQL index="0"[\s\S]*?<DDRREF kind="ChunkList" hash="([^"]+)"', 1) AS Calc_Hash
+FROM StepsForScripts
+WHERE Step_ID = 117
+  AND Step_XML LIKE '%<SQL index="0"%';
+
+DELETE FROM XMLCalcReferences x USING _sql_text_slots t
+WHERE x.Source_UUID = t.Script_UUID AND x.File_Name = t.File_Name
+  AND x.Source_Subkey = t.Step_Index::VARCHAR AND x.Subrole = 'SQL';
+
+DELETE FROM PluginFunctionUsages p USING _sql_text_slots t
+WHERE p.Source_UUID = t.Script_UUID AND p.File_Name = t.File_Name
+  AND p.Source_Subkey = t.Step_Index::VARCHAR AND p.Subrole = 'SQL';
+
+DELETE FROM VariableUsages v USING _sql_text_slots t
+WHERE v.Source IN ('ddr_chunk', 'let_assign') AND v.Script_UUID = t.Script_UUID AND v.File_Name = t.File_Name
+  AND v.Step_Index = t.Step_Index AND v.Calc_Hash = t.Calc_Hash;
+
+DROP TABLE IF EXISTS _sql_text_slots;
 
 -- ========================================
 -- A.8: VariablesCatalog (Aggregation)
@@ -1108,6 +1376,7 @@ SELECT
     first(Context_Name ORDER BY File_Name, Script_Name, Step_Index, Context_Name) as First_Seen_Context,
     Variable_Name LIKE '% %' as Has_Spaces,
     CASE WHEN bool_or(Source = 'ddr_chunk') THEN 'ddr'
+         WHEN bool_or(Source = 'let_assign' AND Calc_Hash IS NOT NULL) THEN 'ddr'
          WHEN bool_or(Source IN ('set_variable_step', 'target_variable_step')) THEN 'step'
          WHEN bool_or(Source = 'mbs_variable_call') THEN 'mbs'
          WHEN bool_or(Source = 'merge_variable') THEN 'merge'
@@ -1401,7 +1670,25 @@ SELECT
     xml_extract_text(calc_xml, '/Calculation/@position')[1]::BIGINT AS Calc_Position,
     Slot_Seq,
     xml_extract_text(calc_xml, '/Calculation/Calculation/Text')[1] AS Calc_Text
-FROM slot_calcs;
+FROM slot_calcs
+UNION ALL
+-- Execute SQL (Step_ID 117) mit „Berechnetem SQL-Text“ (<SQL index="1">): die
+-- Formel steht ohne @position unter <SQL><Calculation> (FileMaker 22:
+-- <SQL><Tooltip><Calculation>) — Slot 'SQL',
+-- Calc_Position NULL (der DDR-Anker heißt '_<Step-UUID>_SQL'). Die Text-Eingabe
+-- (index="0") ist keine Formel und fehlt hier bewusst (s. A.7f).
+SELECT
+    s.Step_UUID, s.File_Name, s.Script_UUID, s.Script_Name, s.Script_ID,
+    s.Step_Index, s.Step_ID, s.Step_Name, s.Is_Enabled,
+    'SQL' AS Slot,
+    NULL::BIGINT AS Calc_Position,
+    1 AS Slot_Seq,
+    -- FileMaker 22 schachtelt die Formel in <Tooltip> (wie die Quell-Formeln von
+    -- Import Records, A.11a) — daher der Nachfahren-Pfad
+    xml_extract_text(s.Step_XML, '//SQL[@index="1"]//Calculation/Text')[1] AS Calc_Text
+FROM StepsForScripts s
+WHERE s.Step_ID = 117
+  AND s.Step_XML LIKE '%<SQL index="1"%';
 
 
 -- ============================================
@@ -1475,6 +1762,85 @@ SET L_Theme_Resolved_Name = COALESCE(
 -- 'False', defensiv mitgeführt).
 WHERE (l.Folder_Type IS NULL OR l.Folder_Type = 'False')
   AND NOT COALESCE(l.Is_Separator, FALSE);
+
+
+-- ============================================
+-- A.11a: ImportStepSources — Quelle je Import-Schritt (Schema 1.41.0)
+-- ============================================
+-- Woher ein Import Records (Step 35) liest, steht nur im Schritt-XML unter
+-- Parameter type="DataSourceReference": @fileType (4-Zeichen-Code), @value (Art),
+-- darunter die Pfadliste (UniversalPathList/ObjectList/Location) bzw. bei XML die
+-- Teile XML und XSL — je als Pfad (index 1) oder als Formel (index 3, Calculation/
+-- Text; FileMaker 22 schachtelt sie in <Tooltip>, daher //Calculation). Diese Tabelle hält das einmal je Schritt fest, damit Konsumenten (Datenspur,
+-- Detailansicht) nicht per Regex im XML suchen. Gleiche Form in SaXML 2.2 und 2.3.
+--   Source_Kind        filemaker (FMPR) · tab (TABS) · csv (COMS) · merge (MRGE) ·
+--                      xml · unspecified (kein Code: Quelle erst im Dialog) · sonst
+--                      der Code klein geschrieben
+--   Source_Location    Pfadliste, eine Zeile je Eintrag (auch $Variablen, roh)
+--   Source_Formula     Formel der Quelle (XML über berechnete URL)
+--   XSL_Location / XSL_Formula   Stylesheet eines XML-Imports
+--   Source_File        bei FileMaker-Quellen die importierte Datei der Lösung, auf
+--                      die der erste passende Pfad zeigt (Präfix file:/filemac:/…,
+--                      Verzeichnis und .fmp12 entfernt, Vergleich ohne Groß/klein —
+--                      wie DataSourceFileMap in P4); NULL, wenn keine passt
+-- Schritte ohne DataSourceReference (Quelle nur im Dialog) haben keine Zeile.
+-- DROP+CREATE: Neuaufbau je P3-Lauf.
+DROP TABLE IF EXISTS ImportStepSources;
+CREATE TABLE ImportStepSources AS
+WITH s AS (
+    SELECT DISTINCT st.Step_UUID, st.File_Name, st.Script_UUID, st.Step_Index, st.Parameters_XML AS px
+    FROM StepsForScripts st
+    WHERE st.Step_ID = 35
+      AND st.Parameters_XML LIKE '%DataSourceReference%'
+),
+x AS (
+    SELECT s.Step_UUID, s.File_Name, s.Script_UUID, s.Step_Index,
+           trim(xml_extract_text(s.px, b.p || '/@fileType')[1])                 AS code,
+           xml_extract_text(s.px, b.p || '/@value')[1]                          AS kind_value,
+           list_concat(xml_extract_text(s.px, b.p || '/UniversalPathList/ObjectList/Location'),
+                       xml_extract_text(s.px, b.p || '/XML/UniversalPathList/ObjectList/Location')) AS locs,
+           xml_extract_text(s.px, b.p || '/XML//Calculation/Text')[1]           AS src_formula,
+           xml_extract_text(s.px, b.p || '/XSL/UniversalPathList/ObjectList/Location') AS xsl_locs,
+           xml_extract_text(s.px, b.p || '/XSL//Calculation/Text')[1]           AS xsl_formula
+    FROM s,
+         (SELECT '/ParameterValues/Parameter[@type=''DataSourceReference'']/DataSourceReference' AS p) b
+),
+lines AS (
+    SELECT x.Step_UUID, x.File_Name, k.ord,
+           regexp_replace(regexp_replace(regexp_replace(trim(k.entry),
+               '^file(mac|win|linux)?:', ''), '.*/', ''), '\.fmp12$', '') AS cand
+    FROM x,
+         LATERAL (SELECT unnest(string_split(array_to_string(x.locs, chr(10)), chr(10))) AS entry,
+                         unnest(range(1, len(string_split(array_to_string(x.locs, chr(10)), chr(10))) + 1)) AS ord) k
+    WHERE x.code = 'FMPR'
+),
+resolved AS (
+    SELECT l.Step_UUID, l.File_Name, arg_min(fc.File_Name, l.ord) AS Source_File
+    FROM lines l
+    JOIN FilesCatalog fc ON lower(fc.File_Name) = lower(l.cand)
+    GROUP BY l.Step_UUID, l.File_Name
+)
+SELECT
+    x.Step_UUID, x.File_Name, x.Script_UUID,
+    CAST(x.Step_Index AS INTEGER)                                 AS Step_Index,
+    CASE COALESCE(x.code, '')
+        WHEN 'FMPR' THEN 'filemaker'
+        WHEN 'TABS' THEN 'tab'
+        WHEN 'COMS' THEN 'csv'
+        WHEN 'MRGE' THEN 'merge'
+        WHEN 'XML'  THEN 'xml'
+        WHEN ''     THEN 'unspecified'
+        ELSE lower(x.code)
+    END                                                           AS Source_Kind,
+    NULLIF(x.code, '')                                            AS File_Type_Code,
+    x.kind_value                                                  AS Source_Value,
+    NULLIF(array_to_string(x.locs, chr(10)), '')                  AS Source_Location,
+    x.src_formula                                                 AS Source_Formula,
+    NULLIF(array_to_string(x.xsl_locs, chr(10)), '')              AS XSL_Location,
+    x.xsl_formula                                                 AS XSL_Formula,
+    r.Source_File
+FROM x
+LEFT JOIN resolved r ON r.Step_UUID = x.Step_UUID AND r.File_Name = x.File_Name;
 
 
 -- ============================================
@@ -1720,3 +2086,319 @@ FROM sym
 GROUP BY ALL;
 
 CREATE INDEX idx_layoutobjectsymbols_owner ON LayoutObjectSymbols(Object_UUID, File_Name);
+
+
+-- ========================================
+-- A.14: ThemeStyleRules — Theme-CSS in Regeln und Deklarationen (Schema 1.44.0)
+-- ========================================
+-- Das CSS jedes Themes (ThemeCatalog.Theme_XML, <CSS><![CDATA[…]]>) zerlegt in
+-- eine Zeile je Deklaration — allgemein, nicht nur Schrift-Eigenschaften, damit
+-- spätere Farb-/Rahmen-Analysen dieselbe Tabelle lesen. Grundlage der Schrift-
+-- Kaskade (lokal → Stil → Teil → Typ → Gruppe, siehe v_layout_object_font).
+-- Selektor-Grammatik (korpusweit ohne Rest zerlegbar, Kommentare entfernt):
+--   [<teil> ]<token>[.<klasse>][:<zustand>][ .<element>]
+--   text_box:normal .self                      Typ-Standard
+--   edit_box.FM-<UUID>:normal .self            eigener Stil (Klasse = Stilname)
+--   edit_box.FM-<UUID>                         eigener Stil OHNE Abweichung: nackter
+--                                              Selektor mit leerem Block (in FileMaker geprüft)
+--   header text_box:normal .self               Teil-Regel (enthält nur Abweichungen)
+--   field:normal .self                         Gruppen-Regel aller Feld-Steuerelemente
+--   part.<name>:normal .self                   benannter Bereichsstil (Token 'part')
+-- Steht nur ein Token vor der Klasse, ist es das Typ-Token; Part_Token bleibt NULL
+-- (auch für Bereichs-Tokens wie body/header als eigene Regel).
+-- Werte können Semikolons in Klammern tragen (-fm-font-family(arial,sans-serif,
+-- ArialMT;sans-serif)) und bis zu drei Ebenen verschachtelte Klammern
+-- (-webkit-gradient(… from(rgba(…)))) — das Deklarationsmuster lässt beides zu.
+-- Eine Regel ohne Deklaration bleibt als EINE Zeile mit Property/Value NULL
+-- erhalten (Existenz eines Stils ohne Abweichung).
+-- Rule_Seq = Position im CSS; bei gleichem Selektor gilt die spätere Regel.
+-- DROP+CREATE: Neuaufbau je P3-Lauf.
+CREATE OR REPLACE TEMP MACRO _css_trim(s) AS regexp_replace(s, '^\s+|\s+$', '', 'g');
+
+DROP TABLE IF EXISTS ThemeStyleRules;
+CREATE TABLE ThemeStyleRules AS
+WITH t AS (
+    SELECT tc.Theme_UUID, tc.Theme_Name, tc.File_Name,
+           regexp_replace(coalesce(regexp_extract(tc.Theme_XML,
+               '<CSS>\s*<!\[CDATA\[(.*)\]\]>\s*</CSS>', 1, 's'), ''),
+               '/\*.*?\*/', '', 'gs') AS css
+    FROM ThemeCatalog tc
+    WHERE tc.Theme_XML IS NOT NULL
+),
+rules AS (
+    -- regexp_extract_all über dieselbe Quelle und dasselbe Muster → Selektor, Block
+    -- und Position bleiben zeilen-aligniert (Muster ThemePartStyles).
+    SELECT Theme_UUID, Theme_Name, File_Name,
+           unnest(regexp_extract_all(css, '([^{}]+)\{([^{}]*)\}', 1))   AS sel_raw,
+           unnest(regexp_extract_all(css, '([^{}]+)\{([^{}]*)\}', 2))   AS body,
+           unnest(generate_series(1, len(regexp_extract_all(css, '([^{}]+)\{([^{}]*)\}', 1)))) AS Rule_Seq
+    FROM t
+),
+parsed AS (
+    SELECT r.*, _css_trim(sel_raw) AS Selector,
+           regexp_extract_all(body,
+               '([-a-zA-Z0-9]+)\s*:\s*((?:[^;()]|\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\))*);', 1) AS props,
+           regexp_extract_all(body,
+               '([-a-zA-Z0-9]+)\s*:\s*((?:[^;()]|\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\))*);', 2) AS vals
+    FROM rules r
+),
+decl AS (
+    -- leere Regel → eine Zeile mit NULL-Deklaration; sonst eine Zeile je Deklaration
+    SELECT p.Theme_UUID, p.Theme_Name, p.File_Name, p.Rule_Seq, p.Selector,
+           unnest(CASE WHEN len(p.props) = 0 THEN [NULL::VARCHAR] ELSE p.props END) AS Property,
+           unnest(CASE WHEN len(p.vals)  = 0 THEN [NULL::VARCHAR] ELSE p.vals  END) AS val_raw,
+           unnest(CASE WHEN len(p.props) = 0 THEN [NULL::INTEGER]
+                       ELSE generate_series(1, len(p.props))::INTEGER[] END)    AS Decl_Seq
+    FROM parsed p
+)
+SELECT
+    Theme_UUID, Theme_Name, File_Name,
+    CAST(Rule_Seq AS INTEGER)                                                   AS Rule_Seq,
+    Selector,
+    NULLIF(regexp_extract(Selector, '^(?:([a-z0-9_]+) )?([a-z0-9_]+)(?:\.([A-Za-z0-9_-]+))?(?::([a-z_-]+))?(?:\s+\.([a-z0-9_-]+))?$', 1), '') AS Part_Token,
+    NULLIF(regexp_extract(Selector, '^(?:([a-z0-9_]+) )?([a-z0-9_]+)(?:\.([A-Za-z0-9_-]+))?(?::([a-z_-]+))?(?:\s+\.([a-z0-9_-]+))?$', 2), '') AS Type_Token,
+    NULLIF(regexp_extract(Selector, '^(?:([a-z0-9_]+) )?([a-z0-9_]+)(?:\.([A-Za-z0-9_-]+))?(?::([a-z_-]+))?(?:\s+\.([a-z0-9_-]+))?$', 3), '') AS Style_Class,
+    NULLIF(regexp_extract(Selector, '^(?:([a-z0-9_]+) )?([a-z0-9_]+)(?:\.([A-Za-z0-9_-]+))?(?::([a-z_-]+))?(?:\s+\.([a-z0-9_-]+))?$', 4), '') AS State,
+    NULLIF(regexp_extract(Selector, '^(?:([a-z0-9_]+) )?([a-z0-9_]+)(?:\.([A-Za-z0-9_-]+))?(?::([a-z_-]+))?(?:\s+\.([a-z0-9_-]+))?$', 5), '') AS Element,
+    Decl_Seq,
+    Property,
+    _css_trim(val_raw)                                                          AS Value
+FROM decl;
+
+CREATE INDEX idx_themestylerules_theme ON ThemeStyleRules(Theme_UUID, File_Name);
+
+
+-- ========================================
+-- A.14b: ThemeNamedStyles — benannte Stile eines Designs (Schema 1.46.0)
+-- ========================================
+-- Jeder Stil eines Designs mit seinem Inspector-Namen, aus
+-- ThemeCatalog.Theme_XML /Theme/Metadata/namedstyles: je Stil ein Kindelement
+-- <Klasse>Inspector-Name</Klasse> — eingebaute (title_text_1, warning_button)
+-- und eigene (FM-<UUID>). Nur diese Liste kennt auch die UNBENUTZTEN Stile mit
+-- Namen (LayoutObjectStyles/v_layout_object_style sehen nur angewandte).
+--   Style_Seq     = Position in namedstyles (FileMaker-Reihenfolge)
+--   Style_Class   = Elementname = Stilklasse, gleich ThemeStyleRules.Style_Class
+--   Style_Display = Textinhalt, über den XML-Parser gelesen: ältere Exporte
+--                   schreiben Umlaute als Zeichenreferenz (Wei&#xDF;), der Parser
+--                   dekodiert sie. Sprache = ThemeCatalog.Theme_Locale.
+--   Is_Custom     = eigener Stil (Klasse FM-<UUID>)
+-- Designs ohne namedstyles („Klassisch", „Minimalistisch") liefern keine Zeile.
+-- Kein Dedup: eine doppelte Klasse je Design meldet v_check_theme_named_styles.
+-- DROP+CREATE: Neuaufbau je P3-Lauf.
+DROP TABLE IF EXISTS ThemeNamedStyles;
+CREATE TABLE ThemeNamedStyles AS
+WITH el AS (
+    SELECT tc.File_Name, tc.Theme_UUID, tc.Theme_Name,
+           unnest(xml_extract_elements(tc.Theme_XML, '/Theme/Metadata/namedstyles/*'))  AS style_xml,
+           generate_subscripts(xml_extract_elements(tc.Theme_XML, '/Theme/Metadata/namedstyles/*'), 1) AS Style_Seq
+    FROM ThemeCatalog tc
+    WHERE tc.Theme_XML IS NOT NULL
+)
+SELECT
+    File_Name, Theme_UUID, Theme_Name,
+    CAST(Style_Seq AS INTEGER)                                         AS Style_Seq,
+    regexp_extract(style_xml::VARCHAR, '^\s*<([^\s/>]+)', 1)           AS Style_Class,
+    xml_extract_text(style_xml, '/*')[1]                               AS Style_Display,
+    starts_with(regexp_extract(style_xml::VARCHAR, '^\s*<([^\s/>]+)', 1), 'FM-') AS Is_Custom
+FROM el;
+
+CREATE INDEX idx_themenamedstyles_theme ON ThemeNamedStyles(Theme_UUID, File_Name);
+
+
+-- ========================================
+-- A.15: LayoutObjectStyles — eigenes LocalCSS je Layout-Objekt (Schema 1.44.0)
+-- ========================================
+-- Eine Zeile je Objekt mit EIGENEM <LocalCSS>, DEPTH-VERANKERT über
+-- /LayoutObject/LocalCSS (Container — Group, Portal, Tab/Slide Control,
+-- Button Bar, Popover — tragen die Kind-XML in Object_XML; der Pfad erfasst
+-- nur das eigene Element).
+--   Style_Name     @name — angewandter Stil (FM-<UUID> = eigener Stil, sonst
+--                  Klassenname eines mitgelieferten Stils); NULL = kein Stil
+--                  (FileMaker schreibt dann name="")
+--   Style_Display  @displayName — Anzeigename im Inspektor
+--   Style_Type     @type — nur FileMaker 26 (ThemeCustomStyle / ObjectCustomStyle);
+--                  FileMaker 22 schreibt kein @type → Stil über Style_Name erkennen
+--   Local_CSS      roher Regelsatz (alle Zustände und Elemente)
+--   Local_Font_*   font-family / -size / -weight / -style der eigenen Regel
+--                  self[.<stil>]:normal .self, wörtlich wie geschrieben
+--                  (z. B. -fm-font-family(Courier New,CourierNewPSMT)); NULL = lokal
+--                  nicht gesetzt. Rauschen: Fett setzen schreibt bei Schriften
+--                  mit eigenem Fett-Schnitt auch font-family mit dem Schnitt-PostScript;
+--                  ein Design-Wechsel setzt die Familie zurück, die Größe bleibt lokal.
+-- Die übrigen lokalen Deklarationen bleiben bewusst unzerlegt (≈ 0,9 Mio. in der
+-- größten Korpus-Lösung) — wer sie braucht, liest Local_CSS.
+-- DROP+CREATE: Neuaufbau je P3-Lauf.
+CREATE OR REPLACE TEMP MACRO _css_prop(body, prop) AS
+    NULLIF(_css_trim(regexp_extract(body,
+        '(?:^|[;{\s])' || prop || '\s*:\s*((?:[^;()]|\((?:[^()]|\([^()]*\))*\))*);', 1)), '');
+
+DROP TABLE IF EXISTS LayoutObjectStyles;
+CREATE TABLE LayoutObjectStyles AS
+WITH lo AS (
+    -- Dedup analog A.12: deterministischer Erst-Vertreter je (Object_UUID, File_Name)
+    SELECT Object_UUID, File_Name, Layout_ID, Object_Type,
+           CAST(Object_XML AS VARCHAR) AS xml_str,
+           ROW_NUMBER() OVER (PARTITION BY Object_UUID, File_Name ORDER BY Object_ID) AS rn
+    FROM LayoutObjects
+    WHERE Object_XML LIKE '%<LocalCSS%'
+),
+x AS (
+    SELECT Object_UUID, File_Name, Layout_ID, Object_Type,
+           xml_extract_text(xml_str, '/LayoutObject/LocalCSS/@name')        AS names,
+           xml_extract_text(xml_str, '/LayoutObject/LocalCSS/@displayName') AS displays,
+           xml_extract_text(xml_str, '/LayoutObject/LocalCSS/@type')        AS types,
+           xml_extract_text(xml_str, '/LayoutObject/LocalCSS')              AS css
+    FROM lo
+    WHERE rn = 1
+),
+own AS (
+    -- Container ohne eigenes LocalCSS matchen den Vorfilter über die Kind-XML,
+    -- liefern am depth-Pfad aber eine leere Liste → keine Zeile.
+    SELECT x.*,
+           NULLIF(css[1], '') AS Local_CSS,
+           regexp_extract(coalesce(css[1], ''),
+               'self(?:\.[A-Za-z0-9_-]+)?:normal \.self\s*\{([^}]*)\}', 1) AS self_body
+    FROM x
+    WHERE len(css) > 0 OR len(names) > 0
+)
+SELECT
+    Object_UUID, Layout_ID, File_Name, Object_Type,
+    NULLIF(names[1], '')                       AS Style_Name,
+    NULLIF(displays[1], '')                    AS Style_Display,
+    NULLIF(types[1], '')                       AS Style_Type,
+    Local_CSS,
+    _css_prop(self_body, 'font-family')        AS Local_Font_Family,
+    _css_prop(self_body, 'font-size')          AS Local_Font_Size,
+    _css_prop(self_body, 'font-weight')        AS Local_Font_Weight,
+    _css_prop(self_body, 'font-style')         AS Local_Font_Style
+FROM own;
+
+CREATE INDEX idx_layoutobjectstyles_owner ON LayoutObjectStyles(Object_UUID, File_Name);
+
+
+-- ========================================
+-- A.16: LayoutObjectFontRuns — Schriften als XML-Element (Schema 1.44.0)
+-- ========================================
+-- Zwei Quellen, beide depth-verankert:
+--   rich_text  Formatierte Teilläufe eines Textes (Text-Objekt, Tastenbeschriftung):
+--              CharacterStyle[@Start] unter dem EIGENEN Objekt
+--              (count(ancestor::LayoutObject)=1). FileMaker legt einen Lauf über den
+--              ganzen Text als lokales CSS ab — Läufe sind Teil-Formatierungen,
+--              die Grundschrift kommt aus der Kaskade.
+--              Run_End = 4294967295 (0xFFFFFFFF) heißt „bis zum Textende".
+--              Style_Mask = gesetzte Eigenschaften des Laufs: 1 Familie, 2 Größe,
+--              16 Schnitt; ein Lauf ohne FontReference (nur Größe/Schnitt) hat keine
+--              eigene Familie (Font_Family NULL).
+--   chart      Feste Schrift je Textbereich eines Diagramms (Slot): title,
+--              series_{x,y,w,z}_title, legend, {x,y}_axis_{title,label}, data_label.
+--              Die Standardschrift des Diagrammdialogs schreibt sich in Titel,
+--              Legende und Achsen; Reihentitel behalten die Theme-Schrift.
+-- Slot_Index = 1-basierte Reihenfolge je Objekt, Quelle und Slot.
+-- DROP+CREATE: Neuaufbau je P3-Lauf.
+DROP TABLE IF EXISTS LayoutObjectFontRuns;
+CREATE TABLE LayoutObjectFontRuns AS
+WITH lo AS (
+    SELECT Object_UUID, File_Name, Layout_ID, Object_Type,
+           CAST(Object_XML AS VARCHAR) AS xml_str,
+           ROW_NUMBER() OVER (PARTITION BY Object_UUID, File_Name ORDER BY Object_ID) AS rn
+    FROM LayoutObjects
+    WHERE Object_XML LIKE '%<CharacterStyle%' OR Object_XML LIKE '%<DataLabel%'
+),
+rt AS (
+    SELECT Object_UUID, File_Name, Layout_ID, Object_Type,
+           unnest(xml_extract_elements(xml_str,
+               '//CharacterStyle[@Start][count(ancestor::LayoutObject)=1]'))        AS el,
+           generate_subscripts(xml_extract_elements(xml_str,
+               '//CharacterStyle[@Start][count(ancestor::LayoutObject)=1]'), 1)     AS Slot_Index
+    FROM lo
+    WHERE rn = 1 AND xml_str LIKE '%<CharacterStyleList%'
+),
+slots(Slot, p) AS (
+    VALUES ('title',          '/LayoutObject/External/Chart/Title/CharacterStyle'),
+           ('series_x_title', '/LayoutObject/External/Chart/ChartSeries/XSeriesList/Series/Title/CharacterStyle'),
+           ('series_y_title', '/LayoutObject/External/Chart/ChartSeries/YSeriesList/Series/Title/CharacterStyle'),
+           ('series_w_title', '/LayoutObject/External/Chart/ChartSeries/WSeriesList/Series/Title/CharacterStyle'),
+           ('series_z_title', '/LayoutObject/External/Chart/ChartSeries/ZSeriesList/Series/Title/CharacterStyle'),
+           ('legend',         '/LayoutObject/External/Chart/Legend/CharacterStyle'),
+           ('x_axis_title',   '/LayoutObject/External/Chart/ChartAxis/XAxisList/Axis/Title/CharacterStyle'),
+           ('x_axis_label',   '/LayoutObject/External/Chart/ChartAxis/XAxisList/Axis/Label/CharacterStyle'),
+           ('y_axis_title',   '/LayoutObject/External/Chart/ChartAxis/YAxisList/Axis/Title/CharacterStyle'),
+           ('y_axis_label',   '/LayoutObject/External/Chart/ChartAxis/YAxisList/Axis/Label/CharacterStyle'),
+           ('data_label',     '/LayoutObject/External/Chart/VisualExtension/DataLabel')
+),
+ch AS (
+    SELECT lo.Object_UUID, lo.File_Name, lo.Layout_ID, lo.Object_Type, s.Slot,
+           unnest(xml_extract_elements(lo.xml_str, s.p))                  AS el,
+           generate_subscripts(xml_extract_elements(lo.xml_str, s.p), 1)  AS Slot_Index
+    FROM lo, slots s
+    WHERE lo.rn = 1 AND lo.Object_Type = 'Chart'
+)
+SELECT
+    Object_UUID, Layout_ID, File_Name, Object_Type,
+    'rich_text'                                                                    AS Source,
+    CAST(NULL AS VARCHAR)                                                          AS Slot,
+    CAST(Slot_Index AS INTEGER)                                                    AS Slot_Index,
+    TRY_CAST(xml_extract_text(el, '/CharacterStyle/@Start')[1] AS BIGINT)          AS Run_Start,
+    TRY_CAST(xml_extract_text(el, '/CharacterStyle/@End')[1] AS BIGINT)            AS Run_End,
+    NULLIF(xml_extract_text(el, '/CharacterStyle/Text')[1], '')                    AS Run_Text,
+    NULLIF(xml_extract_text(el, '/CharacterStyle/Style/FontReference/@name')[1], '')            AS Font_Family,
+    NULLIF(xml_extract_text(el, '/CharacterStyle/Style/FontReference/@postscriptName')[1], '')  AS Font_PostScript,
+    TRY_CAST(xml_extract_text(el, '/CharacterStyle/Style/FontStyle/@size')[1] AS DOUBLE)        AS Font_Size,
+    TRY_CAST(xml_extract_text(el, '/CharacterStyle/Style/FontStyle/@face')[1] AS BIGINT)        AS Face,
+    TRY_CAST(xml_extract_text(el, '/CharacterStyle/Style/FontStyle/@mask')[1] AS BIGINT)        AS Style_Mask
+FROM rt
+UNION ALL
+SELECT
+    Object_UUID, Layout_ID, File_Name, Object_Type,
+    'chart', Slot, CAST(Slot_Index AS INTEGER),
+    NULL, NULL, NULL,
+    NULLIF(_css_trim(xml_extract_text(el, '/*/font-family')[1]), '')               AS Font_Family,
+    NULLIF(xml_extract_text(el, '/*/font-family/@postscript')[1], '')              AS Font_PostScript,
+    TRY_CAST(xml_extract_text(el, '/*/Font-size')[1] AS DOUBLE)                    AS Font_Size,
+    TRY_CAST(xml_extract_text(el, '/*/Face')[1] AS BIGINT)                         AS Face,
+    NULL
+FROM ch;
+
+CREATE INDEX idx_layoutobjectfontruns_owner ON LayoutObjectFontRuns(Object_UUID, File_Name);
+
+
+-- ========================================
+-- A.17: LayoutObjectCssType — Objekttyp → CSS-Typ-Token (Schema 1.44.0)
+-- ========================================
+-- Kuratierte Zuordnung, in FileMaker 22 und 26 verifiziert (eigene Stile je Objekttyp
+-- in FileMaker 22 und 26): unter welchem Typ-Token das Theme-CSS die Regeln eines
+-- Objekttyps führt. Parent_Object_Type NULL = jeder Container; eine Zeile mit
+-- Parent_Object_Type gilt vorrangig (Segment-Tasten einer Button Bar, Panels eines
+-- Register-Steuerelements).
+--   Group_Token  abstrakte Gruppen-Regel (field:normal .self), die greift, wenn die
+--                Typ-Regel die Eigenschaft nicht setzt (Typ vor Gruppe)
+--   Has_Text     das Objekt zeigt selbst Text → nimmt an der Schrift-Prüfung teil
+-- Dropdown-Liste, Dropdown-Kalender und verdecktes Feld führen ihre Regeln unter
+-- edit_box: neue Stile legen FileMaker 22/26 nur dort an, und die Theme-Regeln
+-- drop_down / calendar wirken nicht auf die Feldschrift. Ältere Dateien
+-- können eigene Stile zusätzlich unter drop_down / calendar führen.
+-- Objekttypen ohne Zeile (Rectangle, Line, Oval, Graphic, Group, Grouped Button,
+-- PopoverPanel, Panel eines Slide Control …) zeigen keinen eigenen Text.
+DROP TABLE IF EXISTS LayoutObjectCssType;
+CREATE TABLE LayoutObjectCssType AS
+SELECT * FROM (VALUES
+    ('Text',               NULL,             'text_box',           NULL,    TRUE),
+    ('Edit Box',           NULL,             'edit_box',           'field', TRUE),
+    ('Concealed Edit Box', NULL,             'edit_box',           'field', TRUE),
+    ('Drop-down List',     NULL,             'edit_box',           'field', TRUE),
+    ('Drop-down Calendar', NULL,             'edit_box',           'field', TRUE),
+    ('Pop-up Menu',        NULL,             'pop_up',             'field', TRUE),
+    ('Checkbox Set',       NULL,             'checkbox_set',       'field', TRUE),
+    ('Radio Button Set',   NULL,             'radio_set',          'field', TRUE),
+    ('Container',          NULL,             'container',          'field', FALSE),
+    ('Button',             NULL,             'button',             NULL,    TRUE),
+    ('Button',             'Button Bar',     'button_bar_segment', NULL,    TRUE),
+    ('Popover Button',     NULL,             'button',             NULL,    TRUE),
+    ('Button Bar',         NULL,             'button_bar',         NULL,    FALSE),
+    ('Tab Control',        NULL,             'tab_control',        NULL,    TRUE),
+    ('Panel',              'Tab Control',    'tab_panel',          NULL,    FALSE),
+    ('Slide Control',      NULL,             'dot_control',        NULL,    FALSE),
+    ('Portal',             NULL,             'portal',             NULL,    FALSE),
+    ('Web Viewer',         NULL,             'web_viewer',         NULL,    FALSE),
+    ('Chart',              NULL,             'chart',              NULL,    FALSE)
+) AS v(Object_Type, Parent_Object_Type, Type_Token, Group_Token, Has_Text);

@@ -1004,7 +1004,7 @@ WHERE Owner_Type <> 'unresolved'
     'field_calculation', 'auto_enter', 'validation', 'validation_message',
     'container_path', 'display_names',
     'custom_function',
-    'step_parameter', 'step_xslt',
+    'step_parameter', 'step_xslt', 'step_sql_text',
     'record_access',
     'hide', 'field_entry', 'tooltip', 'placeholder', 'conditional_format', 'portal_filter',
     'web_viewer_url', 'button_label', 'button_action', 'panel_title', 'popover_title',
@@ -1061,6 +1061,72 @@ SELECT
      WHERE c.Calc_Hash IS DISTINCT FROM cc.Formula_Hash)
                                                               AS fk_hash_mismatch_n,
     (SELECT COUNT(*) FROM LayoutObjectConditions)             AS rules_n;
+
+-- Schrift-/Stil-Ableitung (ThemeStyleRules, LayoutObjectStyles, LayoutObjectFontRuns,
+-- Schema 1.44.0) — table-only Kennzahlen, Bewertung macht die Shell:
+--   dup_object_style_n — Objekte mit mehr als einer LayoutObjectStyles-Zeile. Soll 0;
+--     > 0 ⇒ Dedup oder Tiefenverankerung (/LayoutObject/LocalCSS) defekt. WARN.
+--   unparsed_selector_n — Theme-Regeln, deren Selektor nicht in die Grammatik
+--     [<teil> ]<token>[.<klasse>][:<zustand>][ .<element>] passt (Type_Token NULL).
+--     Korpusweit 0; > 0 ⇒ neue Selektorform, die Kaskade übersieht diese Regeln. INFO.
+--   style_without_rule_n — Objekte mit Stilname, für den das Theme ihres Layouts
+--     keine Regel führt (weder mit noch ohne Zustand). Erwartbar klein (Stile, die
+--     ein Design-Wechsel nicht mitnimmt, bleiben selten als Name stehen); INFO.
+--   rules_n / object_styles_n / font_runs_n — Statistik.
+CREATE OR REPLACE VIEW v_check_layout_styles AS
+SELECT
+    (SELECT COUNT(*) FROM (
+        SELECT Object_UUID, File_Name FROM LayoutObjectStyles
+        GROUP BY Object_UUID, File_Name HAVING COUNT(*) > 1))   AS dup_object_style_n,
+    (SELECT COUNT(DISTINCT (File_Name, Theme_UUID, Rule_Seq))
+     FROM ThemeStyleRules WHERE Type_Token IS NULL)             AS unparsed_selector_n,
+    (SELECT COUNT(*)
+     FROM LayoutObjectStyles s
+     JOIN Layouts l ON l.L_ID = s.Layout_ID AND l.File_Name = s.File_Name
+     WHERE s.Style_Name IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM ThemeStyleRules r
+                        WHERE r.File_Name = s.File_Name
+                          AND r.Theme_UUID = l.L_Theme_Resolved_UUID
+                          AND r.Style_Class = s.Style_Name))    AS style_without_rule_n,
+    (SELECT COUNT(DISTINCT (File_Name, Theme_UUID, Rule_Seq)) FROM ThemeStyleRules) AS rules_n,
+    (SELECT COUNT(*) FROM LayoutObjectStyles)                   AS object_styles_n,
+    (SELECT COUNT(*) FROM LayoutObjectFontRuns)                 AS font_runs_n;
+
+-- Benannte Stile der Designs (ThemeNamedStyles, Schema 1.46.0) — table-only
+-- Kennzahlen, Bewertung macht die Shell:
+--   dup_class_n — Stilklassen, die ein Design mehrfach in namedstyles führt. Korpusweit
+--     0; > 0 ⇒ Export- oder Extraktionsfehler, die Stilliste zeigt den Stil doppelt. WARN.
+--   rule_class_unnamed_n — Stilklassen mit CSS-Regel (ThemeStyleRules) ohne
+--     namedstyles-Eintrag, in Designs MIT namedstyles. Bekannt und nicht gezählt:
+--     navigation_button (eingebaut, ohne Inspector-Namen). > 0 ⇒ neue Klasse ohne
+--     Namen, die Stilliste des Designs übersieht sie. INFO.
+--   named_without_rule_n — namedstyles-Einträge ohne CSS-Regel im Design. Korpusweit
+--     0; > 0 ⇒ Objekttyp des Stils unbekannt (Type_Token fehlt). INFO.
+--   named_styles_n / custom_styles_n / themes_without_named_n — Statistik.
+CREATE OR REPLACE VIEW v_check_theme_named_styles AS
+SELECT
+    (SELECT COUNT(*) FROM (
+        SELECT 1 FROM ThemeNamedStyles
+        GROUP BY File_Name, Theme_UUID, Style_Class HAVING COUNT(*) > 1)) AS dup_class_n,
+    (SELECT COUNT(DISTINCT (r.File_Name, r.Theme_UUID, r.Style_Class))
+     FROM ThemeStyleRules r
+     WHERE r.Style_Class IS NOT NULL
+       AND r.Style_Class <> 'navigation_button'
+       AND EXISTS (SELECT 1 FROM ThemeNamedStyles n
+                    WHERE n.File_Name = r.File_Name AND n.Theme_UUID = r.Theme_UUID)
+       AND NOT EXISTS (SELECT 1 FROM ThemeNamedStyles n
+                        WHERE n.File_Name = r.File_Name AND n.Theme_UUID = r.Theme_UUID
+                          AND n.Style_Class = r.Style_Class))          AS rule_class_unnamed_n,
+    (SELECT COUNT(*)
+     FROM ThemeNamedStyles n
+     WHERE NOT EXISTS (SELECT 1 FROM ThemeStyleRules r
+                        WHERE r.File_Name = n.File_Name AND r.Theme_UUID = n.Theme_UUID
+                          AND r.Style_Class = n.Style_Class))          AS named_without_rule_n,
+    (SELECT COUNT(*) FROM ThemeNamedStyles)                            AS named_styles_n,
+    (SELECT COUNT(*) FROM ThemeNamedStyles WHERE Is_Custom)            AS custom_styles_n,
+    (SELECT COUNT(*) FROM ThemeCatalog tc
+     WHERE NOT EXISTS (SELECT 1 FROM ThemeNamedStyles n
+                        WHERE n.File_Name = tc.File_Name AND n.Theme_UUID = tc.Theme_UUID)) AS themes_without_named_n;
 
 -- Owner-Attribution der DDR-verankerten Berechnungs-Instanzen: der Formel-Hash
 -- einer LayoutObject-/ScriptStep-Instanz muss im EIGENEN XML des Owners stehen

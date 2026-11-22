@@ -543,9 +543,10 @@
  * Genutzt von `useRowSearch` über alle Listen-Primitives. */
 .dash-search-bar {
   display: flex;
+  flex-wrap: wrap; /* a narrow card wraps the controls instead of squeezing them */
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: 8px 12px;
   padding: 0 0 8px 0;
   font-size: 0.78rem;
   color: var(--color-text-muted);
@@ -636,119 +637,7 @@
   gap: 6px;
   padding: 0 0 8px 0;
 }
-.dash-select {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 0 8px 0;
-}
-.dash-select__label {
-  font-size: 0.78rem;
-  color: var(--color-text-secondary);
-}
-.dash-select__control {
-  font-family: inherit;
-  font-size: 0.82rem;
-  color: var(--color-text-primary);
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 6px;
-  padding: 4px 10px;
-  cursor: pointer;
-  transition: border-color 0.12s;
-}
-.dash-select__control:hover,
-.dash-select__control:focus {
-  border-color: var(--color-accent);
-  outline: none;
-}
-/* Multi-select: trigger button (+ × to clear) and a checkbox popover. The
- * popover is portalled into document.body and positioned via inline style
- * (top/left), so it escapes the Card's overflow:hidden. */
-.dash-select__group {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-}
-.dash-select__trigger {
-  max-width: 260px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: left;
-}
-.dash-select__trigger::after {
-  content: ' ▾';
-  color: var(--color-text-muted);
-}
-.dash-select__trigger--active {
-  border-color: var(--color-accent);
-}
-.dash-select__reset {
-  font-family: inherit;
-  font-size: 1rem;
-  line-height: 1;
-  color: var(--color-text-muted);
-  background: none;
-  border: none;
-  border-radius: 4px;
-  padding: 2px 6px;
-  cursor: pointer;
-}
-.dash-select__reset:hover,
-.dash-select__reset:focus-visible {
-  color: var(--color-text-primary);
-  background: var(--color-hover-bg);
-  outline: none;
-}
-.dash-select__popover {
-  position: fixed;
-  z-index: 1000;
-  min-width: 220px;
-  max-width: min(420px, calc(100vw - 16px));
-  max-height: min(420px, calc(100vh - 16px));
-  display: flex;
-  flex-direction: column;
-  padding: 6px;
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
-}
-.dash-select__options {
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.dash-select__option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 3px 6px;
-  border-radius: 4px;
-  font-size: 0.82rem;
-  color: var(--color-text-primary);
-  cursor: pointer;
-}
-.dash-select__option:hover {
-  background: var(--color-hover-bg);
-}
-.dash-select__clear {
-  align-self: flex-start;
-  margin-bottom: 4px;
-  font-family: inherit;
-  font-size: 0.78rem;
-  color: var(--color-accent);
-  background: none;
-  border: none;
-  padding: 3px 6px;
-  cursor: pointer;
-}
-.dash-select__clear:disabled {
-  color: var(--color-text-muted);
-  cursor: default;
-}
+/* .dash-select* (single and multi select) live in components/MultiSelectPopover.css. */
 .dash-chip {
   display: inline-flex;
   align-items: center;
@@ -945,6 +834,10 @@
 .dash-autotable__pager--top {
   padding: 0;
   margin-left: auto;
+}
+.dash-autotable__pager button,
+.dash-autotable__pager span {
+  white-space: nowrap;
 }
 .dash-autotable__pager button {
   background: var(--color-bg-surface);
@@ -1962,6 +1855,50 @@
 .dash-navbutton--link .dash-navbutton__label::after {
   content: '→';
   font-size: 0.9em;
+}
+
+/* Action button (variant "button" / "button-outline"): same look as the
+ * "XML konvertieren" button (.xml-convert-btn), e.g. "Export …" next to a KPI strip. */
+.dash-navbutton--button,
+.dash-navbutton--button-outline {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  width: auto;
+  height: auto;
+  padding: 8px 16px;
+  border-radius: 6px;
+  white-space: nowrap;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.dash-navbutton--button {
+  background: var(--color-accent);
+  border: 1px solid var(--color-accent);
+}
+.dash-navbutton--button .dash-navbutton__label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+}
+.dash-navbutton--button:hover {
+  background: var(--color-accent-hover, var(--color-accent));
+  border-color: var(--color-accent-hover, var(--color-accent));
+}
+.dash-navbutton--button-outline {
+  background: none;
+  border: 1px solid var(--color-border);
+}
+.dash-navbutton--button-outline .dash-navbutton__label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+.dash-navbutton--button-outline:hover {
+  background: var(--color-hover-bg);
+  border-color: var(--color-border);
+}
+.dash-navbutton--button-outline:hover .dash-navbutton__label {
+  color: var(--color-text-primary);
 }
 
 /* --- Markdown --- */
@@ -3385,4 +3322,170 @@
   .dash-pulse__dot {
     display: none;
   }
+}
+
+/* --- Mermaid (pele) ---
+   pele reads colors and fonts from --pele-* variables; mapping them onto the
+   theme tokens makes a theme switch recolor the diagram without re-rendering. */
+.dash-mermaid {
+  margin: 0;
+  --pele-bg: var(--color-bg-elevated);
+  --pele-fg: var(--color-text-primary);
+  --pele-muted: var(--color-text-secondary);
+  --pele-line: var(--color-text-secondary);
+  --pele-surface: var(--color-bg-surface);
+  --pele-surface-alt: var(--color-bg-surface-2);
+  --pele-border: var(--color-border-strong);
+  --pele-accent: var(--color-accent);
+  --pele-font-mono: var(--font-mono);
+  --pele-radius: 4px;
+  --pele-series-1: var(--color-chart-1);
+  --pele-series-2: var(--color-chart-2);
+  --pele-series-3: var(--color-chart-3);
+  --pele-series-4: var(--color-chart-4);
+  --pele-series-5: var(--color-chart-5);
+  --pele-series-6: var(--color-chart-6);
+  --pele-series-7: var(--color-chart-7);
+  --pele-series-8: var(--color-chart-other);
+}
+.dash-mermaid__title {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin: 0 0 8px;
+}
+.dash-mermaid__box {
+  position: relative; /* anchors pele's zoom controls to the diagram */
+  min-height: 40px;
+}
+/* pele writes its own error text into the box; the error box above replaces it. */
+.dash-mermaid__box > .pele-error {
+  display: none;
+}
+.dash-mermaid__node--link {
+  cursor: pointer;
+}
+.dash-mermaid__node--link:hover > :first-child,
+.dash-mermaid__node--link:focus-visible > :first-child {
+  stroke: var(--color-accent);
+  stroke-width: 2px;
+}
+.dash-mermaid__node--link:focus {
+  outline: none;
+}
+.dash-mermaid__error {
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: var(--color-error-bg);
+  color: var(--color-error-fg);
+  border: 1px solid var(--color-error-border);
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+.dash-mermaid__error-text {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+/* --- Ask dialog (ActionSpec `ask`, ActionAskHost.tsx) --- */
+.dash-ask {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0;
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  min-width: 280px;
+  max-width: min(480px, calc(100vw - 32px));
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+}
+.dash-ask::backdrop {
+  background: rgba(0, 0, 0, 0.35);
+}
+.dash-ask__body {
+  padding: 16px;
+}
+.dash-ask__title {
+  font-size: 1rem;
+  margin: 0 0 12px;
+}
+.dash-ask__choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0 0 12px;
+  padding: 0;
+  border: none;
+}
+.dash-ask__choice-label {
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+.dash-ask__choice-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+.dash-ask__choice-option input {
+  accent-color: var(--color-accent);
+  margin: 0;
+}
+.dash-ask__options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dash-ask__option {
+  text-align: left;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 6px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+.dash-ask__option:hover:not(:disabled),
+.dash-ask__option:focus-visible {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft-bg);
+}
+.dash-ask__option:disabled {
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+}
+.dash-ask__footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+.dash-ask__cancel {
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+/* --- Collapsible card (Card.collapsible) --- */
+.dash-card__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* --- TextInput (free-text URL param) --- */
+.dash-textinput {
+  max-width: 100%;
 }

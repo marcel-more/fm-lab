@@ -21,6 +21,17 @@ router.get('/graph/trace', validate('graphTrace'), controller.getTrace);
 // GET /api/graph/trace/entries?start=…  — Einstiegspfad-Presets mit Seed-Zählern
 router.get('/graph/trace/entries', validate('graphTraceEntries'), controller.getTraceEntries);
 
+// GET/PUT /api/graph/trace/profile — Lösungsprofil des Datenfluss-Trace
+// (state/dataflow_profile.json): Regeln, Kandidaten H1–H4, Bestätigen/Verwerfen
+// (einzeln oder je Heuristik). Der PUT-Body wird im Service validiert.
+router.get('/graph/trace/profile', validate('graphTraceProfile'), controller.getTraceProfile);
+router.put('/graph/trace/profile', controller.putTraceProfile);
+
+// GET /api/graph/trace/capability — kann diese Lösung den Datenfluss-Trace?
+// Immer 200: { dataflow: 'available' | 'not_built' | 'schema_drift' } — das
+// Frontend fragt einmal je Lösung, statt je Klick an 422/409 zu scheitern.
+router.get('/graph/trace/capability', validate('graphTraceProfile'), controller.getTraceCapability);
+
 // GET /api/graph/overview?view=…&level=…&segment_by=…&weight=…  — Graph-Atlas Top-Down-Einstieg
 router.get('/graph/overview', validate('graphOverview'), controller.getOverview);
 

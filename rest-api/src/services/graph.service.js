@@ -5,9 +5,12 @@ const templateService = require('./template.service');
 const db = require('../config/database');
 const annotations = require('./annotations.service');
 const debugSession = require('./debug-session.service');
+const { buildFlowWays } = require('./graph-trace-flow-ways');
+const ddrCoverage = require('./ddr-coverage');
 const environment = require('../config/environment');
 const settingsStore = require('../plugins/settings-store');
 const { classifyIdTerm } = require('./object.service');
+const { createError } = require('../middleware/error-handler');
 
 /**
  * LRU-Cache für Subgraph-Antworten („LRU-Cache cacht (focus, depth,
@@ -416,7 +419,7 @@ const traceEntriesCache = new LRUCache({ max: 200, ttl: 1000 * 60 * 5 });
 const TRACE_KEY_FIELDS = (() => {
   const { schemas } = require('../middleware/validator');
   return Object.keys(schemas.graphTrace.describe().keys)
-    .filter((k) => !['format', 'meta', 'debug'].includes(k))
+    .filter((k) => !['format', 'meta', 'debug', 'way', 'way_dir'].includes(k))
     .sort();
 })();
 
@@ -450,10 +453,46 @@ function toTraceParams(p) {
     include_buttons: p.include_buttons,
     include_builtins: p.include_builtins,
     include_interaction_triggers: p.include_interaction_triggers,
+    include_disabled: p.include_disabled === true,
     node_limit: p.node_limit,
     hub_degree: p.hub_degree,
     exclude: p.exclude ?? null,
+    // „Quelle verfolgen“ aufwärts: Weg-IDs, deren Einstieg eine Ebene weiter geht
+    expand_way: p.expand_way ?? null,
   };
+}
+
+/** JSON-Spalte des Templates (DuckDB liefert VARCHAR) → Objekt; leer → null. */
+function parseTracePayload(v) {
+  if (v === null || v === undefined || v === '') return null;
+  return typeof v === 'string' ? JSON.parse(v) : v;
+}
+
+/**
+ * Aufrufstelle ohne leere Felder (Nutzlast): null, false, 0 und [] entfallen;
+ * `enabled` steht nur bei deaktivierten Schritten (false), fehlt = aktiv.
+ * Der Anker (stepUuid, stepIndex, stepId) bleibt immer.
+ */
+function compactCallSite(site) {
+  const out = {};
+  for (const [k, v] of Object.entries(site)) {
+    if (k === 'stepUuid' || k === 'stepIndex' || k === 'stepId') out[k] = v;
+    else if (k === 'enabled') { if (v === false) out.enabled = false; }
+    else if (k === 'guard' && v) {
+      const g = {};
+      for (const [gk, gv] of Object.entries(v)) if (gv !== null && gv !== undefined) g[gk] = gv;
+      out.guard = g;
+    } else if (v !== null && v !== undefined && v !== false && v !== 0
+               && !(Array.isArray(v) && v.length === 0)) out[k] = v;
+  }
+  return out;
+}
+
+/** Wirkung je Script: [{ role, n }] (Template, nach Rolle sortiert) → { role: n }. */
+function effectsObject(list) {
+  const out = {};
+  for (const e of list || []) out[e.role] = Number(e.n);
+  return out;
 }
 
 /** Exclude-Items ('uuid' oder 'uuid::file') parsen — Reihenfolge-erhaltend. */
@@ -503,9 +542,40 @@ async function resolveExcluded(ctx, exclude) {
 }
 
 /**
+ * Beschriftung von Graph-IDs (`uuid::file`) aus dem Katalog — für Knoten, die
+ * eine Antwort nennt, ohne sie zu liefern. Unbekannte IDs fallen weg.
+ * @returns {Promise<Array<{id: string, label: ?string, type: ?string, file: ?string}>>}
+ */
+async function resolveCatalogIds(ctx, ids) {
+  if (!ids || ids.length === 0) return [];
+  const items = ids.map((id) => {
+    const sep = id.indexOf('::');
+    return { id, uuid: sep === -1 ? id : id.slice(0, sep), file: sep === -1 ? null : id.slice(sep + 2) };
+  });
+  const uuidList = [...new Set(items.map((i) => i.uuid))].map((u) => `'${escapeLiteral(u)}'`).join(', ');
+  const result = await db.executeQuery(
+    ctx,
+    `SELECT Object_UUID, Object_Name, Object_Type, File_Name
+     FROM ObjectCatalog WHERE Object_UUID IN (${uuidList})`
+  );
+  const out = [];
+  for (const i of items) {
+    const row = result.rows.find((r) => r.Object_UUID === i.uuid && (r.File_Name ?? null) === i.file);
+    if (row) out.push({ id: i.id, label: row.Object_Name ?? null, type: row.Object_Type ?? null, file: row.File_Name ?? null });
+  }
+  return out;
+}
+
+/**
  * Trace-Berechnung. `startType` kommt vom Controller (bereits für die
  * v1-Typ-Weiche aufgelöst) und bestimmt das effektive Einstiegs-Preset —
  * deckungsgleich mit der entry_sel-Logik im Template.
+ *
+ * Template 2.x ist schrittgenau (v_script_step_links, v_step_guards,
+ * v_dataflow_edges) und verlangt Schema 1.43.0: ältere Kataloge antworten mit
+ * SCHEMA_DRIFT, eine gescheiterte Datenfluss-Phase mit DATAFLOW_NOT_BUILT.
+ * Die Wege beider Richtungen (trace.ways, overview, refs) baut
+ * graph-trace-flow-ways.js aus den Vorgänger-, Einstiegs- und Aufwärts-Zeilen.
  * @returns {Promise<{payload: Object, sql: string}>}
  */
 async function getTrace(ctx, p, startType) {
@@ -514,6 +584,8 @@ async function getTrace(ctx, p, startType) {
   if (cached) {
     return { payload: cached.payload, sql: cached.sql, cached: true };
   }
+
+  await assertDataflowAvailable(ctx);
 
   const result = await templateService.executeTemplate(
     ctx,
@@ -526,6 +598,13 @@ async function getTrace(ctx, p, startType) {
   const edges = [];
   const seeds = [];
   const suggestions = []; // Hub-Score-Kandidaten (Node-Zeilen mit sugg_reason)
+  const preds = [];       // Vorgänger je Knoten (Grundlage der Wege, nicht in der Antwort)
+  const entries = [];     // Einstiegsgruppen je Script des Aufwärts-Walks
+  const upinfo = [];      // Aufwärts-Knoten mit Aufrufer-Zahl (root / budget)
+  const xpreds = [];      // „Quelle verfolgen“: Vorgänger je aufgeklapptem Weg
+  const xupinfo = [];     // „Quelle verfolgen“: neue Knoten je aufgeklapptem Weg
+  const dynamicCallSites = []; // Aufrufschritte ohne statisches Ziel
+  let stepStats = {};
   let totalReachable = 0;
   let maxDepthReached = 0;
   let dynamicCalls = 0;
@@ -553,6 +632,9 @@ async function getTrace(ctx, p, startType) {
         traceDepth,
         isExcluded: r.is_excluded === true, // Boundary-Knoten
       });
+      // Wirkung je Script: Zahl verschiedener Ziele je Touch-Rolle
+      const nodePayload = parseTracePayload(r.payload);
+      if (nodePayload?.effects) nodes[nodes.length - 1].effects = effectsObject(nodePayload.effects);
       if (r.sugg_reason) {
         suggestions.push({
           id: r.id,
@@ -568,7 +650,7 @@ async function getTrace(ctx, p, startType) {
         });
       }
     } else if (r.row_kind === 'edge') {
-      edges.push({
+      const edge = {
         id: r.id,
         source: r.source,
         target: r.target,
@@ -577,11 +659,41 @@ async function getTrace(ctx, p, startType) {
         linkType: r.link_type,
         crossFile: r.cross_file === true,
         traceKind: r.trace_kind,
-      });
+      };
+      // Aufruf- und Navigationskanten: Aufrufstellen (Schritt, Bedingung,
+      // Schleife, Parameter, Ergebnis-Leser) und Präzision (approx = ohne
+      // Schritt-Anker, heute nur MBS FM.RunScript)
+      const edgePayload = parseTracePayload(r.payload);
+      if (edgePayload) {
+        edge.precision = edgePayload.precision;
+        edge.callSites = (edgePayload.callSites ?? []).map(compactCallSite);
+      }
+      edges.push(edge);
     } else if (r.row_kind === 'seed') {
       seeds.push({ uuid: r.uuid, label: r.label, type: r.type, file: r.file });
+    } else if (r.row_kind === 'pred') {
+      const pr = parseTracePayload(r.payload);
+      preds.push({ id: r.id, label: r.label, type: r.type, file: r.file, ...pr });
+    } else if (r.row_kind === 'blind') {
+      const b = parseTracePayload(r.payload);
+      dynamicCallSites.push({ id: r.id, script: r.source, file: r.file, ...b });
+    } else if (r.row_kind === 'stats') {
+      stepStats = parseTracePayload(r.payload) || {};
+    } else if (r.row_kind === 'entry') {
+      entries.push({ script: r.source, ...parseTracePayload(r.payload) });
+    } else if (r.row_kind === 'upinfo') {
+      upinfo.push({ id: r.id, label: r.label, type: r.type, file: r.file, ...parseTracePayload(r.payload) });
+    } else if (r.row_kind === 'xpred') {
+      xpreds.push({ id: r.id, label: r.label, type: r.type, file: r.file, ...parseTracePayload(r.payload) });
+    } else if (r.row_kind === 'xupinfo') {
+      xupinfo.push({ id: r.id, label: r.label, type: r.type, file: r.file, ...parseTracePayload(r.payload) });
     }
   }
+
+  // Bedingte Aufrufe: Aufrufstellen an Script-Aufrufkanten innerhalb eines If
+  const conditionalCalls = edges
+    .filter((e) => e.role === 'calls_script' && e.callSites)
+    .reduce((n, e) => n + e.callSites.filter((s) => (s.ifDepth ?? 0) > 0).length, 0);
 
   // P5-Naht: Community-Daten nachreichen (no-op ohne Cluster-Tabellen).
   await enrichCommunities(ctx, nodes);
@@ -589,6 +701,70 @@ async function getTrace(ctx, p, startType) {
 
   // Ausschlussliste katalog-aufgelöst (auch nicht mehr erreichte Einträge).
   const excluded = await resolveExcluded(ctx, p.exclude);
+
+  // Wege beidseitig aus den Vorgängern, Einstiegsgruppen und blinden
+  // Stellen; die Vorgänger selbst bleiben Arbeitsmaterial (Nutzlast).
+  const focus = nodes.find((n) => n.isFocus);
+  const startId = focus ? focus.id : `${p.start}${p.start_file ? `::${p.start_file}` : ''}`;
+  const labels = new Map(nodes.map((n) => [n.id, { label: n.label, type: n.type, file: n.file }]));
+  const waysLimit = p.ways_limit ?? 300;
+  const built = buildFlowWays({
+    startId, preds, blind: dynamicCallSites, entries, upinfo, labels,
+    upDepth: p.up_depth, waysLimit, xpreds, xupinfo,
+  });
+  // Referenzen nur für Knoten außerhalb des Canvas (Schritte, gedeckelte Knoten,
+  // Einstiegsobjekte); Sprungziele für Referenzen und abweichende Knoten.
+  const refs = {};
+  for (const [id, r] of Object.entries(built.refs)) {
+    if (!labels.has(id)) refs[id] = r;
+  }
+  // Ereignis-Owner der Trigger-Wege eines Layout-Starts (Layout-Objekt, Feld
+  // nach Feld-Anker, das Layout selbst) stehen weder im Canvas noch in den
+  // Pfaden — Beschriftung aus dem Katalog
+  const ownerIds = [...new Set(built.ways.map((w) => w.eventOwner).filter(
+    (id) => id && !labels.has(id) && !refs[id]
+  ))];
+  for (const o of await resolveCatalogIds(ctx, ownerIds)) {
+    refs[o.id] = { label: o.label, type: o.type, file: o.file, flowRole: 'entry' };
+  }
+  // Schritt und DynamicCall: nur die UUID des Scripts (`script`) statt eines
+  // open-Ziels — Schritt-UUID und Datei stecken im Schlüssel der Referenz
+  // (`<Step_UUID>::<Datei>` bzw. `<Step_UUID>#dyncall::<Datei>`), das Script
+  // liegt in derselben Datei. Der Client öffnet das Script am Schritt (Nutzlast).
+  const isStepRef = (r) => r.type === 'ScriptStep' || r.type === 'DynamicCall';
+  for (const r of Object.values(refs)) {
+    if (isStepRef(r) && r.scriptId) {
+      const sep = r.scriptId.indexOf('::');
+      r.script = sep === -1 ? r.scriptId : r.scriptId.slice(0, sep);
+      delete r.scriptId;
+      delete r.stepUuid;
+    }
+  }
+  const refItems = Object.entries(refs)
+    .filter(([, r]) => !isStepRef(r))
+    .map(([id, r]) => {
+      const sep = id.indexOf('::');
+      return { id, uuid: sep === -1 ? id : id.slice(0, sep), type: r.type, file: r.file, ref: r };
+    });
+  await enrichTraceOpen(ctx, [...nodes, ...refItems], { omitSelf: true });
+  for (const it of refItems) if (it.open) it.ref.open = it.open;
+
+  const waysTruncated = built.stats.downTotal > built.stats.down || built.stats.upTotal > built.stats.up;
+  const truncatedBy = [];
+  if (totalReachable > p.node_limit) truncatedBy.push('node_limit');
+  if (waysTruncated) truncatedBy.push('ways_limit');
+
+  // Wirkung über den Trace: verschiedene Ziele je Touch-Rolle im Canvas
+  const effectsTotal = {};
+  {
+    const seen = new Map();
+    for (const e of edges) {
+      if (e.traceKind !== 'touch') continue;
+      if (!seen.has(e.role)) seen.set(e.role, new Set());
+      seen.get(e.role).add(e.target);
+    }
+    for (const role of [...seen.keys()].sort()) effectsTotal[role] = seen.get(role).size;
+  }
 
   const entry = startType === 'Script' ? 'script' : (p.entry ?? 'layout_runtime');
   const payload = {
@@ -604,18 +780,50 @@ async function getTrace(ctx, p, startType) {
       includeButtons: p.include_buttons,
       includeBuiltins: p.include_builtins,
       includeInteractionTriggers: p.include_interaction_triggers,
+      includeDisabled: p.include_disabled === true,
       nodeLimit: p.node_limit,
       hubDegree: p.hub_degree,
       exclude: p.exclude ?? null,
+      expandWay: p.expand_way ? String(p.expand_way).split(',') : [],
+      waysLimit,
     },
     trace: {
+      mode: 'flow',
       start: { uuid: p.start, file: p.start_file ?? null, type: startType ?? null },
       entry,
       seeds,
       excluded,
       // Score-absteigend — die Reihenfolge ist die Anzeige-Reihenfolge der Chips.
       suggestions: suggestions.sort((a, b) => b.score - a.score),
-      stats: { dynamicCalls },
+      // Wege beider Richtungen (dir down = „Ruft auf“, up = „Erreicht über“),
+      // Nummern je Richtung; Weg 0 je Richtung als Übersicht; Beschriftung und
+      // Schritt-Kontext der Knoten außerhalb des Canvas unter refs.
+      ways: built.ways,
+      overview: built.overview,
+      refs,
+      effectsTotal,
+      // Blinde Stellen wie im Datenfluss-Modus als Zähler; die Aufrufschritte
+      // selbst (by_name / unresolved, mit Anker am Script) unter sites.
+      blindSpots: {
+        dynamicCalls,
+        unresolvedCalls: Number(stepStats.unresolvedCalls ?? 0),
+        sites: dynamicCallSites,
+        // Files without DDR info the trace touches: formula references (fields
+        // read, parameters, results) are missing there, effects undercount.
+        noDdr: ddrCoverage.noDdrBlindSpot(
+          (await ddrCoverage.loadDdrCoverage(ctx)).noDdr,
+          [p.start_file, ...nodes.map((n) => n.file), ...Object.values(refs).map((r) => r.file)]
+        ),
+      },
+      stats: {
+        dynamicCalls,
+        unresolvedCalls: Number(stepStats.unresolvedCalls ?? 0),
+        disabledSteps: Number(stepStats.disabledSteps ?? 0),
+        conditionalCalls,
+        ways: { down: built.stats.down, up: built.stats.up },
+        waysTotal: { down: built.stats.downTotal, up: built.stats.upTotal },
+        truncatedBy,
+      },
     },
     truncated: totalReachable > p.node_limit, // "no silent caps"
     stats: {
@@ -628,6 +836,556 @@ async function getTrace(ctx, p, startType) {
     nodes,
     edges,
   };
+
+  // Mermaid je Weg und je Übersicht beider Richtungen (ways_mermaid)
+  if (p.ways_mermaid === true) {
+    const { buildFlowWayMermaid } = require('./graph-trace-mermaid');
+    const idMap = (built) => Object.fromEntries([...built.ids].map(([key, nid]) => [nid, key]));
+    for (const w of payload.trace.ways) {
+      const built = buildFlowWayMermaid(payload, w.wayNo, { dir: w.dir });
+      w.mermaid = built.text;
+      w.mermaidIds = idMap(built);
+    }
+    payload.trace.overviewMermaid = {};
+    payload.trace.overviewMermaidIds = {};
+    for (const dir of ['down', 'up']) {
+      const built = buildFlowWayMermaid(payload, 0, { dir });
+      payload.trace.overviewMermaid[dir] = built.text;
+      payload.trace.overviewMermaidIds[dir] = idMap(built);
+    }
+  }
+
+  traceCache.set(cacheKey, { payload, sql: result.sql });
+  return { payload, sql: result.sql, cached: false };
+}
+
+/**
+ * Datenfluss-Tabellen vorhanden? Fehlen sie, entscheidet die Schema-Version der
+ * Lösung: älteres Schema → SCHEMA_DRIFT (neu konvertieren), aktuelles Schema →
+ * DATAFLOW_NOT_BUILT (die nicht abschaltbare Phase ist beim Import gescheitert;
+ * convert_fm_xml.sh entfernt dann die halb gebauten Tabellen). Bewusst
+ * ohne REST-Stub — ein leerer Stub würde den Zustand verdecken.
+ */
+async function assertDataflowAvailable(ctx) {
+  const result = await db.executeQuery(
+    ctx,
+    `SELECT COUNT(*) AS cnt FROM information_schema.tables WHERE table_name = 'v_dataflow_edges'`
+  );
+  if (numOf(result.rows[0]?.cnt) > 0) return;
+  const { classifySchemaDrift } = require('../utils/schema-drift');
+  const drift = classifySchemaDrift(
+    ctx, new Error('Table with name v_dataflow_edges does not exist!')
+  );
+  if (drift) throw drift;
+  throw createError(
+    'DATAFLOW_NOT_BUILT',
+    'The dataflow tables are missing in this catalog — the dataflow phase failed during'
+      + ' the import (see the import log); re-import the solution',
+    { solution: ctx?.solution ?? null, table: 'v_dataflow_edges' }
+  );
+}
+
+/** Validierte Query-Params → graph_trace_data.sql-Parameter. */
+function toDataTraceParams(p, labelsAll, prof, anchor = null) {
+  return {
+    start: p.start,
+    start_file: p.start_file ?? null,
+    dir: p.dir,
+    field_levels: p.field_levels,
+    var_levels: p.var_levels,
+    step_limit: p.step_limit,
+    call_context: p.call_context,
+    include_control: p.include_control,
+    include_sinks: p.include_sinks,
+    node_limit: p.node_limit,
+    exclude: p.exclude ?? null,
+    expand_way: p.expand_way ?? null,
+    include_reset: p.include_reset === true,
+    ways_limit: p.ways_limit ?? 300,
+    labels_all: labelsAll === true,
+    // Lösungsprofil: aufgelöste Knotenlisten der bestätigten Regeln (leer = aus)
+    prof_layouts: prof && prof.layouts.length ? prof.layouts.join(',') : null,
+    prof_scripts: prof && prof.scripts.length ? prof.scripts.join(',') : null,
+    prof_ui_vars: prof && prof.uiVars.length ? prof.uiVars.join(',') : null,
+    prof_hub_vars: prof && prof.hubVars.length ? prof.hubVars.join(',') : null,
+    // Schritt-Anker: nur für lokale Startvariablen, Rolle aufgelöst
+    start_step: anchor ? anchor.uuid : null,
+    start_role: anchor ? anchor.role : null,
+  };
+}
+
+/**
+ * Schritt-Anker einer Variablen-Startes: prüft, dass die Variable
+ * lokal ist und der Schritt sie in der verlangten Rolle liest bzw. setzt.
+ * Rolle ohne Angabe: Herkunft (up) → `read`, wenn der Schritt liest, sonst
+ * `set`; Verwendung (down) → `set`. Globale Variablen: Anker ohne Wirkung
+ * (`null` — Setzer und Leser liegen in beliebigen Scripts).
+ * @returns {Promise<null|{uuid, file, role, roles, stepIndex, stepName, scriptUuid, scriptName}>}
+ */
+async function resolveStartStep(ctx, p, startType) {
+  if (!p.start_step) return null;
+  if (startType !== 'Variable') {
+    throw createError('VALIDATION_ERROR', `start_step is only valid for a Variable start (start is a ${startType})`,
+      { start: p.start, start_step: p.start_step });
+  }
+  const lit = (v) => `'${escapeLiteral(String(v))}'`;
+  const fileCond = p.start_file ? `AND v.File_Name = ${lit(p.start_file)}` : '';
+  const scope = (await db.executeQuery(ctx,
+    `SELECT any_value(v.Variable_Scope) AS scope, any_value(v.File_Name) AS file
+       FROM VariablesCatalog v
+      WHERE md5(v.Variable_Scope || '::' || v.Scope_Anchor || '::' || v.Variable_Name) = ${lit(p.start)} ${fileCond}`
+  )).rows[0];
+  if (!scope || scope.scope !== 'local') return null;
+  const file = p.start_file || scope.file;
+  const rows = (await db.executeQuery(ctx,
+    `SELECT l.Link_Role AS role, l.Step_Index AS step_index, l.Step_Name AS step_name,
+            l.Script_UUID AS script_uuid, sc.Script_Name AS script_name
+       FROM v_script_step_links l
+       LEFT JOIN ScriptCatalog sc ON sc.Script_UUID = l.Script_UUID AND sc.File_Name = l.File_Name
+      WHERE l.Step_UUID = ${lit(p.start_step)} AND l.File_Name = ${lit(file)}
+        AND l.Target_UUID = ${lit(p.start)} AND l.Link_Role IN ('sets_variable', 'reads_variable')`
+  )).rows;
+  const roles = [...new Set(rows.map((r) => (r.role === 'sets_variable' ? 'set' : 'read')))].sort();
+  const role = p.start_role || (p.dir === 'up' ? (roles.includes('read') ? 'read' : 'set') : 'set');
+  if (!roles.includes(role)) {
+    throw createError('TRACE_STEP_ROLE',
+      roles.length === 0
+        ? `Step '${p.start_step}' neither reads nor sets this variable`
+        : p.dir === 'down' && role === 'set'
+          ? 'Usage needs a step that sets the variable; this step only reads it'
+          : `Step '${p.start_step}' does not ${role === 'set' ? 'set' : 'read'} this variable`,
+      { start: p.start, start_step: p.start_step, roles, role, dir: p.dir });
+  }
+  if (p.dir === 'down' && role === 'read') {
+    throw createError('TRACE_STEP_ROLE', 'Usage needs a step that sets the variable (start_role=set)',
+      { start: p.start, start_step: p.start_step, roles, role, dir: p.dir });
+  }
+  const r = rows[0];
+  return {
+    uuid: p.start_step,
+    file,
+    role,
+    roles,
+    stepIndex: r.step_index === null || r.step_index === undefined ? null : Number(r.step_index),
+    stepName: r.step_name ?? null,
+    scriptUuid: r.script_uuid ?? null,
+    scriptName: r.script_name ?? null,
+  };
+}
+
+/**
+ * Offene Profil-Kandidaten, die dieser Trace berührt: Layouts der Einstiegs-
+ * gruppen (H1, Name), Scripts/Parameter/Ergebnisse (H2) und Variablen (H3/H4)
+ * unter den Knoten.
+ */
+function candidatesOnTrace(candidates, nodes, ways) {
+  const ids = new Set(nodes.map((n) => n.id));
+  for (const w of ways) for (const id of w.pathNodes || []) ids.add(id);
+  const layoutNames = new Set();
+  for (const w of ways) for (const g of w.entryGroups || []) for (const l of g.layouts || []) layoutNames.add(l.name);
+  const hit = (c) => {
+    if (c.kind === 'technical_layout') return layoutNames.has(c.pattern);
+    if (c.kind === 'boundary_script') {
+      return ids.has(`${c.uuid}::${c.file}`) || ids.has(`${c.uuid}#param::${c.file}`)
+        || ids.has(`${c.uuid}#result::${c.file}`);
+    }
+    return ids.has(`${c.uuid}::${c.file}`);
+  };
+  return candidates
+    .filter((c) => c.status === 'open' && hit(c))
+    // Regel-Schlüssel (pattern bzw. uuid + file) mitliefern: das Panel bestätigt
+    // bzw. verwirft den Kandidaten damit direkt per PUT /trace/profile.
+    .map((c) => ({
+      key: c.key,
+      heuristic: c.heuristic,
+      kind: c.kind,
+      name: c.name,
+      uncertain: c.uncertain,
+      ...(c.pattern !== undefined && c.pattern !== null ? { pattern: c.pattern } : { uuid: c.uuid, file: c.file }),
+    }));
+}
+
+const intOrNull = (v) => (v === null || v === undefined ? null : Number(v));
+
+/** Template-Knotenzeile → Knoten der Antwort. */
+function dataTraceNode(r) {
+  return {
+    id: r.id,
+    uuid: r.uuid,
+    label: r.label,
+    type: r.type,
+    file: r.file,
+    depth: intOrNull(r.depth),
+    degree: 0,
+    isHub: false,
+    isFocus: r.is_focus === true,
+    community: null,
+    communityName: null,
+    flowRole: r.flow_role,
+    fieldLevel: intOrNull(r.field_level),
+    varLevel: intOrNull(r.var_level),
+    isLeaf: r.is_leaf === true,
+    isExcluded: r.is_excluded === true,
+    // Pseudoknoten (Parameter, Ergebnis, Auto-Eingabe, …): Klick führt zum Eigentümer
+    isPseudo: r.owner_uuid !== null && r.owner_uuid !== undefined,
+    ownerUuid: r.owner_uuid ?? null,
+    ownerType: r.owner_type ?? null,
+    stepIndex: intOrNull(r.step_index),
+    stepId: intOrNull(r.step_id),
+    scriptUuid: r.script_uuid ?? null,
+    // Haltepunkt des Lösungsprofils (Regelart) — sichtbar, aber nicht expandiert
+    profileStop: r.profile_stop ?? null,
+  };
+}
+
+/**
+ * Sprungziel eines Trace-Knotens (Klick in Wege-Liste und Mermaid-Weg; Datenfluss-
+ * und Ablauf-Modus):
+ * `open = { type, uuid, file, ref?, step?, var? }` — das Objekt, das die
+ * Detailansicht öffnet, dazu der hervorzuhebende Unterknoten (`ref`), der
+ * Schritt-Anker (`step`) bzw. die Variablen-Auswahl (`var`, `<scope>:<name>`).
+ *
+ * - Schritt → Script am Schritt; Layout-Objekt → Layout mit Objekt; Menübefehl →
+ *   Menü mit Befehl; Datei → Dateiansicht (`type: 'File'`).
+ * - Berechnung und Pseudoknoten (Parameter, Ergebnis, Auto-Eingabe, Import-Quelle,
+ *   dynamisches Ziel …) springen zu ihrem Eigentümer — und von dort nach den
+ *   Regeln oben (eine Berechnung im Schritt öffnet das Script am Schritt).
+ * - Lokale Variable → ihr Script mit Variablen-Auswahl; globale → Variable selbst.
+ * - Sonst das Objekt selbst.
+ * @param {Object} ctx
+ * @param {Array<{id:string, uuid:string, type:string, file:?string, ownerUuid:?string, ownerType:?string}>} items
+ * @param {Object} [opts]
+ * @param {boolean} [opts.omitSelf] - kein `open`, wenn es nur auf den Knoten selbst zeigt
+ *   (Ablauf-Modus: hält die Nutzlast klein; der Client fällt auf den Knoten zurück)
+ */
+async function enrichTraceOpen(ctx, items, opts = {}) {
+  if (items.length === 0) return;
+  const lit = (v) => `'${escapeLiteral(String(v))}'`;
+  const pairs = (list) => [...new Map(list.map((x) => [`${x.uuid}::${x.file ?? ''}`, x])).values()]
+    .map((x) => `(${lit(x.uuid)}, ${lit(x.file ?? '')})`).join(',');
+  const query = async (sql) => (await db.executeQuery(ctx, sql)).rows;
+
+  // Stufe 1: Subjekt = Eigentümer (Pseudoknoten, Berechnung) bzw. der Knoten selbst
+  const subject = new Map();
+  const calcs = items.filter((n) => n.type === 'Calculation' && !n.ownerUuid);
+  const calcOwner = new Map();
+  if (calcs.length > 0) {
+    const rows = await query(
+      `SELECT Calculation_UUID AS uuid, File_Name AS file, Owner_UUID AS owner, Owner_Type AS owner_type
+         FROM CalculationsCatalog
+        WHERE (Calculation_UUID, File_Name) IN (${pairs(calcs)})`
+    );
+    for (const r of rows) calcOwner.set(`${r.uuid}::${r.file ?? ''}`, r);
+  }
+  for (const n of items) {
+    const key = `${n.uuid}::${n.file ?? ''}`;
+    if (n.ownerUuid) subject.set(n.id, { uuid: n.ownerUuid, type: n.ownerType, file: n.file });
+    else if (calcOwner.has(key)) {
+      const o = calcOwner.get(key);
+      subject.set(n.id, { uuid: o.owner, type: o.owner_type, file: n.file });
+    } else subject.set(n.id, { uuid: n.uuid, type: n.type, file: n.file });
+  }
+
+  // Stufe 2: Container der Subjekte (Schritt → Script, Layout-Objekt → Layout,
+  // Menübefehl → Menü, Variable → Bereich + Anker)
+  const subs = [...subject.values()].filter((x) => x.uuid);
+  const ofType = (t) => subs.filter((x) => x.type === t);
+  const stepScript = new Map();
+  const loLayout = new Map();
+  const itemMenu = new Map();
+  const varInfo = new Map();
+  if (ofType('ScriptStep').length > 0) {
+    for (const r of await query(
+      `SELECT Step_UUID AS uuid, File_Name AS file, Script_UUID AS script
+         FROM StepsForScripts WHERE (Step_UUID, File_Name) IN (${pairs(ofType('ScriptStep'))})`
+    )) stepScript.set(`${r.uuid}::${r.file ?? ''}`, r.script);
+  }
+  if (ofType('LayoutObject').length > 0) {
+    for (const r of await query(
+      `SELECT lo.Object_UUID AS uuid, lo.File_Name AS file, any_value(l.L_UUID) AS layout
+         FROM LayoutObjects lo JOIN Layouts l ON l.L_ID = lo.Layout_ID AND l.File_Name = lo.File_Name
+        WHERE (lo.Object_UUID, lo.File_Name) IN (${pairs(ofType('LayoutObject'))})
+        GROUP BY ALL`
+    )) loLayout.set(`${r.uuid}::${r.file ?? ''}`, r.layout);
+  }
+  if (ofType('CustomMenuItem').length > 0) {
+    for (const r of await query(
+      `SELECT Source_UUID AS uuid, Source_File AS file, any_value(Target_UUID) AS menu
+         FROM ObjectLinks
+        WHERE Link_Role = 'parent_menu' AND (Source_UUID, Source_File) IN (${pairs(ofType('CustomMenuItem'))})
+        GROUP BY ALL`
+    )) itemMenu.set(`${r.uuid}::${r.file ?? ''}`, r.menu);
+  }
+  if (ofType('Variable').length > 0) {
+    for (const r of await query(
+      `SELECT md5(Variable_Scope || '::' || Scope_Anchor || '::' || Variable_Name) AS uuid,
+              File_Name AS file, Variable_Scope AS scope, Scope_Anchor AS anchor, Variable_Name AS name
+         FROM VariablesCatalog
+        WHERE (md5(Variable_Scope || '::' || Scope_Anchor || '::' || Variable_Name), File_Name)
+              IN (${pairs(ofType('Variable'))})`
+    )) varInfo.set(`${r.uuid}::${r.file ?? ''}`, r);
+  }
+
+  for (const n of items) {
+    const sub = subject.get(n.id);
+    const key = `${sub.uuid}::${sub.file ?? ''}`;
+    let open = { type: sub.type, uuid: sub.uuid, file: sub.file ?? null };
+    if (sub.type === 'ScriptStep' && stepScript.has(key)) {
+      open = { type: 'Script', uuid: stepScript.get(key), file: sub.file ?? null, step: sub.uuid };
+    } else if (sub.type === 'LayoutObject' && loLayout.has(key)) {
+      open = { type: 'Layout', uuid: loLayout.get(key), file: sub.file ?? null, ref: sub.uuid };
+    } else if (sub.type === 'CustomMenuItem' && itemMenu.has(key)) {
+      open = { type: 'CustomMenu', uuid: itemMenu.get(key), file: sub.file ?? null, ref: sub.uuid };
+    } else if (sub.type === 'Variable' && varInfo.has(key)) {
+      const v = varInfo.get(key);
+      if (v.scope === 'local' && v.anchor) {
+        open = { type: 'Script', uuid: v.anchor, file: sub.file ?? null, var: `local:${v.name}` };
+      }
+    }
+    // omitSelf (Ablauf-Modus): kein open, wenn es nur auf den Knoten selbst zeigt
+    // — der Client öffnet dann { type, uuid, file } des Knotens.
+    if (opts.omitSelf && open.type === n.type && open.uuid === n.uuid
+        && (open.file ?? null) === (n.file ?? null) && !open.step && !open.ref && !open.var) continue;
+    n.open = open;
+  }
+}
+
+/** Feld eines Wegs: Verwendung ordnet es der Wirkungsgruppe writes/calc zu. */
+function wayField(f, dir) {
+  if (dir !== 'down') return { id: f.id, via: f.via };
+  const kind = f.via === 'step_writes_field' || f.via === 'step_writes_dynamic' ? 'writes' : 'calc';
+  return { id: f.id, via: f.via, kind };
+}
+
+/**
+ * Datenfluss-Trace (mode=data) ab einem Feld oder einer Variable — Herkunft (dir=up) bzw.
+ * Verwendung (dir=down) über v_dataflow_edges (Template graph_trace_data.sql).
+ * Antwort wie der Ablauf-Trace (nodes/edges/stats/truncated), Knoten mit
+ * flowRole/fieldLevel/varLevel, Kanten mit flowKind/flowClass/precision, dazu
+ * data.trace.stats (Kürzungen, deaktivierte Schritte, offener Aufrufkontext),
+ * data.trace.blindSpots und die Wege: data.trace.ways, resetGroup (up),
+ * usageGroups (down), overview (Weg 0) und refs (Beschriftung der Knoten, die
+ * Wege und Gruppen nennen, außerhalb von node_limit).
+ * @param {Object} [opts]
+ * @param {boolean} [opts.labelsAll] - alle Pfadknoten beschriften (Mermaid je Weg)
+ * @returns {Promise<{payload: Object, sql: string}>}
+ */
+async function getDataTrace(ctx, p, opts = {}) {
+  const labelsAll = opts.labelsAll === true || p.ways_mermaid === true;
+  await assertDataflowAvailable(ctx);
+
+  // Lösungsprofil: nur bestätigte Regeln; der Hash gehört in den Cache-Key
+  const profileSvc = require('./dataflow-profile.service');
+  const profile = profileSvc.loadProfile(ctx);
+  const profileOn = p.profile !== 'off';
+  const hash = profileSvc.profileHash(profile);
+  const cacheKey = `${traceCacheKey(ctx, p)}|labels:${labelsAll}|profile:${profileOn ? hash : 'off'}`;
+  const cached = traceCache.get(cacheKey);
+  if (cached) return { payload: cached.payload, sql: cached.sql, cached: true };
+
+  const resolved = await profileSvc.resolveRules(ctx, profile);
+  const anchor = await resolveStartStep(ctx, p, opts.startType || 'Field');
+  const result = await templateService.executeTemplate(
+    ctx, 'graph_trace_data', toDataTraceParams(p, labelsAll, profileOn ? resolved : null, anchor), 'report'
+  );
+
+  const nodes = [];
+  const edges = [];
+  const refs = {};
+  const ways = [];
+  const usageGroups = [];
+  let resetGroup = null;
+  let overview = { fields: [], links: [] };
+  let s = {};
+  const json = (v) => (typeof v === 'string' ? JSON.parse(v) : v);
+  for (const r of result.data) {
+    switch (r.row_kind) {
+      case 'node':
+        nodes.push(dataTraceNode(r));
+        break;
+      case 'ref': {
+        const n = dataTraceNode(r);
+        refs[n.id] = {
+          label: n.label, type: n.type, file: n.file, flowRole: n.flowRole, depth: n.depth,
+          ownerUuid: n.ownerUuid, ownerType: n.ownerType,
+          stepIndex: n.stepIndex, stepId: n.stepId, scriptUuid: n.scriptUuid,
+        };
+        break;
+      }
+      case 'edge':
+        edges.push({
+          id: r.id,
+          source: r.source,
+          target: r.target,
+          role: r.flow_kind,
+          subrole: r.subrole,
+          crossFile: r.cross_file === true,
+          flowKind: r.flow_kind,
+          flowClass: r.flow_class,
+          precision: r.precision,
+        });
+        break;
+      case 'way': {
+        const w = json(r.payload);
+        w.fields = (w.fields || []).map((f) => wayField(f, p.dir));
+        ways.push(w);
+        break;
+      }
+      case 'usage':
+        usageGroups.push(json(r.payload));
+        break;
+      case 'reset':
+        resetGroup = json(r.payload);
+        break;
+      case 'overview': {
+        const o = json(r.payload);
+        overview = { fields: o.fields || [], links: o.links || [] };
+        break;
+      }
+      case 'stats':
+        s = json(r.payload) || {};
+        break;
+      default:
+        break;
+    }
+  }
+  ways.sort((a, b) => a.wayNo - b.wayNo);
+  usageGroups.sort((a, b) => b.n - a.n || String(a.kind).localeCompare(String(b.kind)));
+
+  await enrichCommunities(ctx, nodes.filter((n) => !n.isPseudo));
+  // Sprungziele für Knoten und Refs (Klick in Wege-Liste und Mermaid-Weg)
+  const refItems = Object.entries(refs).map(([id, r]) => {
+    const sep = id.indexOf('::');
+    const raw = sep === -1 ? id : id.slice(0, sep);
+    return Object.assign(r, { id, uuid: raw.split('#')[0], type: r.type, file: r.file });
+  });
+  await enrichTraceOpen(ctx, [...nodes, ...refItems]);
+  for (const r of refItems) { delete r.id; delete r.uuid; }
+  const excluded = await resolveExcluded(ctx, p.exclude);
+
+  // Files without DDR info: formula references are missing there, so a way
+  // through such a file can end early (way.noDdr) — see ddr-coverage.js.
+  const ddrNoDdr = (await ddrCoverage.loadDdrCoverage(ctx)).noDdr;
+  const ddrSet = new Set(ddrNoDdr);
+  const wayFiles = (w) => [w.writer, ...(w.pathNodes || [])].map(ddrCoverage.fileOfId);
+  if (ddrSet.size > 0) {
+    for (const w of ways) if (wayFiles(w).some((f) => ddrSet.has(f))) w.noDdr = true;
+  }
+  const noDdrBlind = ddrCoverage.noDdrBlindSpot(ddrNoDdr, [
+    p.start_file,
+    ...nodes.map((n) => n.file),
+    ...Object.values(refs).map((r) => r.file),
+    ...ways.flatMap(wayFiles),
+  ]);
+
+  const totalReachable = numOf(s.total_reachable);
+  const waysTotal = numOf(s.ways_total);
+  const truncatedBy = [];
+  if (numOf(s.cut_field_levels) > 0) truncatedBy.push('field_levels');
+  if (numOf(s.cut_var_levels) > 0) truncatedBy.push('var_levels');
+  if (numOf(s.cut_step_limit) > 0) truncatedBy.push('step_limit');
+  if (s.cut_state_limit === true) truncatedBy.push('state_limit');
+  if (totalReachable > p.node_limit) truncatedBy.push('node_limit');
+  if (waysTotal > ways.length) truncatedBy.push('ways_limit');
+
+  const payload = {
+    start: p.start,
+    params: {
+      mode: 'data',
+      dir: p.dir,
+      fieldLevels: p.field_levels,
+      varLevels: p.var_levels,
+      stepLimit: p.step_limit,
+      callContext: p.call_context,
+      includeControl: p.include_control,
+      includeSinks: p.include_sinks,
+      nodeLimit: p.node_limit,
+      exclude: p.exclude ?? null,
+      expandWay: p.expand_way ? String(p.expand_way).split(',') : [],
+      includeReset: p.include_reset === true,
+      waysLimit: p.ways_limit ?? 300,
+    },
+    trace: {
+      mode: 'data',
+      dir: p.dir,
+      start: { uuid: p.start, file: p.start_file ?? null, type: opts.startType || 'Field', step: anchor },
+      excluded,
+      stats: {
+        states: numOf(s.states),
+        truncatedBy,
+        cutFieldLevels: numOf(s.cut_field_levels),
+        cutVarLevels: numOf(s.cut_var_levels),
+        cutStepLimit: numOf(s.cut_step_limit),
+        disabledSteps: numOf(s.disabled_steps),
+        contextOpen: numOf(s.context_open),
+        maxFieldLevel: s.max_field_level === null || s.max_field_level === undefined ? 0 : Number(s.max_field_level),
+        maxVarLevel: s.max_var_level === null || s.max_var_level === undefined ? 0 : Number(s.max_var_level),
+        ways: ways.length,
+        waysTotal,
+        resetWays: numOf(s.reset_ways),
+        entries: numOf(s.entries),
+        reachedFields: numOf(s.reached_fields),
+      },
+      blindSpots: {
+        uninitialized: numOf(s.blind_uninitialized),
+        dynamicWrites: numOf(s.blind_dynamic_writes),
+        dynamicCalls: numOf(s.blind_dynamic_calls),
+        dynamicSql: numOf(s.blind_dynamic_sql),
+        approxEdges: numOf(s.approx_edges),
+        noDdr: noDdrBlind,
+      },
+      ways,
+      resetGroup: p.dir === 'up' ? (resetGroup || { n: 0, ways: [] }) : null,
+      usageGroups: p.dir === 'down' ? usageGroups : null,
+      overview,
+      refs,
+      profile: {
+        enabled: profileOn,
+        hash,
+        confirmed: profile.rules.filter((r) => r.status === 'confirmed').length,
+        orphaned: resolved.orphaned.length,
+        applied: {
+          technicalLayout: numOf(s.profile_applied?.technical_layout),
+          boundaryScript: numOf(s.profile_applied?.boundary_script),
+          uiStateVariable: numOf(s.profile_applied?.ui_state_variable),
+          hubVariable: numOf(s.profile_applied?.hub_variable),
+          hubReaders: numOf(s.profile_applied?.hub_readers),
+        },
+        candidates: [],
+      },
+    },
+    truncated: truncatedBy.length > 0,
+    stats: {
+      nodeCount: nodes.length,
+      edgeCount: edges.length,
+      totalReachable,
+      maxDepthReached: s.max_depth === null || s.max_depth === undefined ? 0 : Number(s.max_depth),
+    },
+    nodes,
+    edges,
+  };
+
+  // Kandidaten auf dem Weg (Hinweis-Chips) — Fehler hier lassen den Trace stehen
+  try {
+    const candidates = await profileSvc.getCandidates(ctx, profile);
+    payload.trace.profile.candidates = candidatesOnTrace(candidates, nodes, ways);
+  } catch (err) {
+    payload.trace.profile.candidatesError = err.message;
+  }
+
+  if (p.ways_mermaid === true) {
+    const { buildWayMermaid } = require('./graph-trace-mermaid');
+    // Mermaid-Knoten-ID → Graph-ID (Klick im Diagramm wählt den Knoten im Canvas)
+    const idMap = (built) => Object.fromEntries([...built.ids].map(([key, nid]) => [nid, key]));
+    for (const w of ways) {
+      const built = buildWayMermaid(payload, w.wayNo);
+      w.mermaid = built.text;
+      w.mermaidIds = idMap(built);
+    }
+    const overview = buildWayMermaid(payload, 0);
+    payload.trace.overviewMermaid = overview.text;
+    payload.trace.overviewMermaidIds = idMap(overview);
+  }
 
   traceCache.set(cacheKey, { payload, sql: result.sql });
   return { payload, sql: result.sql, cached: false };
@@ -1562,12 +2320,14 @@ function clearCache() {
 }
 
 module.exports = {
+  assertDataflowAvailable,
   objectExists,
   objectFocusStatus,
   objectTypeOf,
   getSubgraph,
   getNeighbors,
   getTrace,
+  getDataTrace,
   getTraceEntries,
   getOverview,
   getDepthProfile,

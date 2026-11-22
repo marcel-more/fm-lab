@@ -87,6 +87,21 @@
       "unit": "file"
     },
     {
+      "id": "font_usage",
+      "path": "layouts/fonts/font_usage",
+      "unit": "bundle"
+    },
+    {
+      "id": "font_usage_layouts",
+      "path": "layouts/fonts/font_usage_layouts",
+      "unit": "bundle"
+    },
+    {
+      "id": "font_usage_objects",
+      "path": "layouts/fonts/font_usage_objects",
+      "unit": "bundle"
+    },
+    {
       "id": "hide_condition_inventory",
       "path": "layouts/hide_condition_inventory.sql",
       "unit": "file"
@@ -184,6 +199,11 @@
     {
       "id": "fm_file_coupling",
       "path": "modularization/fm_file_coupling",
+      "unit": "bundle"
+    },
+    {
+      "id": "indirections",
+      "path": "modularization/indirections",
       "unit": "bundle"
     },
     {
@@ -314,6 +334,11 @@
     {
       "id": "allow_user_abort_off",
       "path": "static-code-analysis/best_practices/allow_user_abort_off",
+      "unit": "bundle"
+    },
+    {
+      "id": "execute_sql_hardcoded_name",
+      "path": "static-code-analysis/best_practices/execute_sql_hardcoded_name",
       "unit": "bundle"
     },
     {
@@ -532,6 +557,11 @@
       "unit": "bundle"
     },
     {
+      "id": "execute_sql_broken_reference",
+      "path": "static-code-analysis/error_prone/execute_sql_broken_reference",
+      "unit": "bundle"
+    },
+    {
       "id": "exit_script_in_loop",
       "path": "static-code-analysis/error_prone/exit_script_in_loop",
       "unit": "bundle"
@@ -627,6 +657,16 @@
       "unit": "bundle"
     },
     {
+      "id": "layout_font_file_default",
+      "path": "static-code-analysis/layout_quality/layout_font_file_default",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_font_local_redundant",
+      "path": "static-code-analysis/layout_quality/layout_font_local_redundant",
+      "unit": "bundle"
+    },
+    {
       "id": "layout_geometry_explorer",
       "path": "static-code-analysis/layout_quality/layout_geometry_explorer",
       "unit": "bundle"
@@ -649,6 +689,11 @@
     {
       "id": "layout_lost_object",
       "path": "static-code-analysis/layout_quality/layout_lost_object",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_many_fonts",
+      "path": "static-code-analysis/layout_quality/layout_many_fonts",
       "unit": "bundle"
     },
     {
@@ -684,6 +729,11 @@
     {
       "id": "layout_stacked_duplicate_object",
       "path": "static-code-analysis/layout_quality/layout_stacked_duplicate_object",
+      "unit": "bundle"
+    },
+    {
+      "id": "layout_style_missing",
+      "path": "static-code-analysis/layout_quality/layout_style_missing",
       "unit": "bundle"
     },
     {
@@ -1071,6 +1121,7 @@
     "changelog",
     "developer-workflow",
     "layouts",
+    "layouts/fonts",
     "metadata-integrity",
     "modularization",
     "modules",

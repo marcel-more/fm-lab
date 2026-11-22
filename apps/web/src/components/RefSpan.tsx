@@ -296,6 +296,7 @@ export const RefSpan: React.FC<RefSpanProps> = ({ reference, text }) => {
   const searchPredicate = useScriptSearchPredicate();
   const varSel = useVarSelection();
   const { uuid: currentUuid } = useParams<{ uuid: string }>();
+  const navigate = useNavigate();
 
   // Highlight greift, wenn die Ref-UUID im Set ist (Token-Match). Fallback auf
   // Namensvergleich, wenn die UUID fehlt — z.B. bei Variablen ohne ObjectCatalog-
@@ -326,15 +327,34 @@ export const RefSpan: React.FC<RefSpanProps> = ({ reference, text }) => {
     const varClass = isSelected
       ? ` fm-ref--var-selected${reference.usage === 'set' ? ' fm-ref--var-set' : ''}`
       : '';
-    const varTitle = varSel
-      ? `${title} — ${t(isSelected ? 'detail:varSelect.clearHint' : 'detail:varSelect.hint')}`
-      : title;
+    // Katalog-Variable (UUID): Klick öffnet ihre Detailansicht, Shift-/Option-
+    // Klick schaltet die Hervorhebung (varClickProps). Lokale Variablen nehmen
+    // den Schritt der Script-Zeile und ihre Rolle dort mit (Schritt-Anker:
+    // „Herkunft an diesem Schritt“ / „Verwendung ab diesem Schritt“).
+    const anchored = reference.scope === 'local' && (reference.usage === 'read' || reference.usage === 'set');
+    const open = reference.uuid && path
+      ? {
+          path: anchored
+            ? (el: HTMLElement) => {
+                const step = el.closest('li[data-step-uuid]')?.getAttribute('data-step-uuid');
+                if (!step) return path;
+                const sep = path.includes('?') ? '&' : '?';
+                return `${path}${sep}at_step=${encodeURIComponent(step)}&at_use=${reference.usage}`;
+              }
+            : path,
+          navigate,
+        }
+      : null;
+    const hintKey = open
+      ? (isSelected ? 'detail:varSelect.openClearHint' : 'detail:varSelect.openHint')
+      : (isSelected ? 'detail:varSelect.clearHint' : 'detail:varSelect.hint');
+    const varTitle = varSel ? `${title} — ${t(hintKey)}` : title;
     return (
       <span
         className={`${className}${varClass}${varSel ? ' fm-ref-link' : ''}`}
         title={varTitle}
         data-ref-type="variable"
-        {...varClickProps(varSel, varKey)}
+        {...varClickProps(varSel, varKey, open)}
       >
         {text}
       </span>

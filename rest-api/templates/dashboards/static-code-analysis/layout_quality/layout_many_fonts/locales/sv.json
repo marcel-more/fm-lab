@@ -1,0 +1,21 @@
+{
+  "manifest": {
+    "title": "Layout med många typsnitt",
+    "description": "Layoutkvalitetsregel — textobjekten i en layout visar fler typsnitt än gränsvärdet (standard 3). Varje typsnitt räknas: varje objekts grundtypsnitt, formaterade textdelar med eget typsnitt och diagrammens textområden; filens standard (temat anger inget typsnitt) räknas inte som typsnitt. Många typsnitt i en layout betyder oftast formatering objekt för objekt i stället för via temat.",
+    "messages.many": "Layouten visar {count} typsnitt: {fonts}"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Träffar",
+    "summary_kpi.props.items[1].label": "Berörda filer",
+    "threshold_slider.props.label": "Fler typsnitt än",
+    "threshold_slider.props.valueSuffix": " typsnitt",
+    "findings_card.props.title": "Layout med många typsnitt",
+    "findings_table.props.searchPlaceholder": "Sök fil, layout eller typsnitt…",
+    "findings_table.props.empty.message": "Ingen layout med fler typsnitt än gränsvärdet.",
+    "findings_table.props.columns[0].label": "Fil",
+    "findings_table.props.columns[1].label": "Layout",
+    "findings_table.props.columns[2].label": "Typsnitt",
+    "findings_table.props.columns[3].label": "Namngivna typsnitt",
+    "findings_table.props.columns[4].label": "Objekt med filens standard"
+  }
+}

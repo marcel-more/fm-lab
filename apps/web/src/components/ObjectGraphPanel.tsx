@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   GraphExplorer,
@@ -8,7 +8,8 @@ import {
 } from './GraphExplorer';
 import type { FMObject } from '../types';
 import type { SubgraphDirection } from '../hooks/useSubgraph';
-import { buildObjectPath } from '../lib/navigation';
+import { buildObjectPath, buildDataTracePath } from '../lib/navigation';
+import { dataflowUsable, useDataflowCapability } from '../hooks/useDataTrace';
 
 /**
  * Embedded Graph Explorer for the object DetailView "Graph" tab
@@ -73,8 +74,30 @@ export const ObjectGraphPanel = forwardRef<ObjectGraphPanelHandle, { object: FMO
     if (file) q.set('trace_file', file);
     navigate(`/graph?${q.toString()}`);
   }, [navigate]);
-  // v1-Startobjekte des Trace: Script + Layout.
-  const traceable = object.Object_Type === 'Script' || object.Object_Type === 'Layout';
+  // Ein Einstieg „Trace" für alle Starttypen (ab Schema 1.43.0): Script/Layout
+  // öffnen den Ablauf-Trace, Feld/Variable den Datenfluss-Trace. Die Richtung
+  // wählt erst der Explorer (Tabs der Wege-Liste) — Default jeweils „oben"
+  // (Erreicht über · Herkunft).
+  const dataflowCap = useDataflowCapability();
+  const usable = dataflowUsable(dataflowCap);
+  const traceable = (object.Object_Type === 'Script' || object.Object_Type === 'Layout') && usable;
+  const dataTraceable = (object.Object_Type === 'Field' || object.Object_Type === 'Variable') && usable;
+  // Schritt-Anker: kam der Klick aus einer Script-Zeile (`at_step`, Rolle
+  // `at_use` = read | set), startet der Trace an diesem Schritt; das Trace-Panel
+  // zeigt den Anker und hebt ihn auf („Ganzes Script").
+  const [searchParams] = useSearchParams();
+  const atStep = object.Object_Type === 'Variable' ? searchParams.get('at_step') : null;
+  const atUse = searchParams.get('at_use');
+  const anchor = atStep && (atUse === 'read' || atUse === 'set') ? { step: atStep, role: atUse } as const : null;
+  const openDataTrace = () => navigate(buildDataTracePath(focus, object.File_Name ?? null, 'up', anchor));
+  // Inspect-Aktion „Trace" eines Nachbarknotens (Feld/Variable) im eingebetteten Explorer.
+  const handleOpenDataTrace = useCallback(
+    (uuid: string, file: string | null | undefined, dir: 'up' | 'down') => navigate(buildDataTracePath(uuid, file, dir)),
+    [navigate],
+  );
+  const traceHint = dataTraceable
+    ? `explorer:trace.data.actionHint${anchor ? 'Anchored' : object.Object_Type === 'Variable' ? 'Variable' : ''}`
+    : 'explorer:trace.actionHint';
 
   return (
     <div className="detail-graph-panel">
@@ -93,12 +116,12 @@ export const ObjectGraphPanel = forwardRef<ObjectGraphPanelHandle, { object: FMO
         >
           {t('explorer:toolbar.fullscreen')}
         </button>
-        {traceable && (
+        {(traceable || dataTraceable) && (
           <button
             type="button"
             className="detail-graph-fullscreen"
-            onClick={() => handleOpenTrace(focus, object.File_Name ?? null)}
-            title={t('explorer:trace.actionHint') as string}
+            onClick={() => (dataTraceable ? openDataTrace() : handleOpenTrace(focus, object.File_Name ?? null))}
+            title={t(traceHint) as string}
           >
             {/* Eigenname „Trace" bewusst unübersetzt. */}
             Trace
@@ -128,6 +151,7 @@ export const ObjectGraphPanel = forwardRef<ObjectGraphPanelHandle, { object: FMO
         groupByFile={groupByFile}
         onGroupByFileChange={setGroupByFile}
         onOpenTrace={handleOpenTrace}
+        onOpenDataTrace={handleOpenDataTrace}
       />
     </div>
   );

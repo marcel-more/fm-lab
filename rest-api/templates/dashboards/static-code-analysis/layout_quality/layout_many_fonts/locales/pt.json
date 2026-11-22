@@ -1,0 +1,21 @@
+{
+  "manifest": {
+    "title": "Layout com muitas fontes",
+    "description": "Regra de qualidade de layouts — os objetos de texto de um layout mostram mais fontes que o limite (padrão 3). Toda fonte conta: a fonte base de cada objeto, partes de texto com fonte própria e as áreas de texto de gráficos; o padrão do arquivo (o tema não nomeia fonte) não conta como fonte. Muitas fontes num layout costumam indicar formatação objeto por objeto em vez de pelo tema.",
+    "messages.many": "O layout mostra {count} fontes: {fonts}"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Ocorrências",
+    "summary_kpi.props.items[1].label": "Arquivos afetados",
+    "threshold_slider.props.label": "Mais fontes que",
+    "threshold_slider.props.valueSuffix": " fontes",
+    "findings_card.props.title": "Layout com muitas fontes",
+    "findings_table.props.searchPlaceholder": "Buscar arquivo, layout ou fonte…",
+    "findings_table.props.empty.message": "Nenhum layout com mais fontes que o limite.",
+    "findings_table.props.columns[0].label": "Arquivo",
+    "findings_table.props.columns[1].label": "Layout",
+    "findings_table.props.columns[2].label": "Fontes",
+    "findings_table.props.columns[3].label": "Fontes nomeadas",
+    "findings_table.props.columns[4].label": "Objetos com o padrão do arquivo"
+  }
+}

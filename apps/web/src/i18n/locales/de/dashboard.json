@@ -394,5 +394,25 @@
     "clear": "Ganze Lösung zeigen",
     "clearTitle": "Scope entfernen und die ganze Lösung zeigen",
     "hint": "Zahlen und Listen zeigen nur diesen Scope"
+  },
+  "mermaid": {
+    "error": "Das Diagramm konnte nicht gezeichnet werden",
+    "tooLarge": "Das Diagramm ist zu groß zum Zeichnen",
+    "position": "Zeile {{line}}, Spalte {{column}}"
+  },
+  "ask": {
+    "title": "Auswählen",
+    "cancel": "Abbrechen",
+    "needsSelection": "Zuerst eine Zeile auswählen",
+    "notForChoice": "Mit dieser Auswahl nicht möglich."
+  },
+  "download": {
+    "empty": "Nichts zu exportieren.",
+    "noDataset": "Die Daten „{{detail}}“ sind auf dieser Seite nicht geladen.",
+    "noSelection": "Zuerst eine Zeile auswählen.",
+    "tooLarge": "Die Datei ist zu groß zum Herunterladen (über 20 MB).",
+    "svgOneRow": "Ein SVG enthält genau ein Diagramm – zuerst einen Eintrag wählen.",
+    "renderFailed": "Das Diagramm ließ sich nicht zeichnen: {{detail}}",
+    "diagramError": "Diagramm nicht darstellbar: {{detail}}"
   }
 }

@@ -36,7 +36,7 @@ The rules are organized into rubrics — each has its own page with use cases, i
 
 - [Developer workflow](../sca/SCA%20Developer%20Workflow.md) — TODO/FIXME markers in scripts, layouts and calculations
 - [Metadata integrity](../sca/SCA%20Metadata%20Integrity.md) — duplicate UUIDs and export artifacts that disturb tooling
-- [Modularization](../sca/SCA%20Modularization.md) — inventory dashboards for module boundaries: files, plugins, APIs, server surface
+- [Modularization](../sca/SCA%20Modularization.md) — inventory dashboards for module boundaries: files, plugins, APIs, server surface, indirect references
 
 ---
 

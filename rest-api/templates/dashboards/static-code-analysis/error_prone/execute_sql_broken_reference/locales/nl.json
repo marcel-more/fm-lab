@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "ExecuteSQL-verwijzing zonder doel",
+    "description": "Foutgevoelige regel — een tabel of veld dat in een ExecuteSQL-instructie wordt genoemd, bestaat niet in de oplossing: de naam in FROM/JOIN komt met geen enkele tabelinstantie van het bestand overeen, een kolom met geen enkel veld van zijn tabel, of een formuleverwijzing in de SQL wijst naar een verwijderd veld (<Field Missing>). FileMaker meldt hiervoor geen fout: ExecuteSQL geeft gewoon ? terug en de aanroepende logica werkt met een lege of verkeerde waarde."
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Bevindingen",
+    "summary_kpi.props.items[1].label": "Betrokken bestanden",
+    "summary_kpi.props.items[2].label": "SQL-verwijzingen in bereik",
+    "summary_kpi.props.items[3].label": "Niet controleerbaar (dynamisch)",
+    "findings_card.props.title": "ExecuteSQL-verwijzing zonder doel",
+    "findings_table.props.searchPlaceholder": "Zoek bestand, object of naam…",
+    "findings_table.props.empty.message": "Geen ExecuteSQL-verwijzing zonder doel gevonden.",
+    "findings_table.props.columns[0].label": "Bestand",
+    "findings_table.props.columns[1].label": "Object",
+    "findings_table.props.columns[2].label": "Type",
+    "findings_table.props.columns[3].label": "Stap",
+    "findings_table.props.columns[4].label": "Functie",
+    "findings_table.props.columns[5].label": "Clausule",
+    "findings_table.props.columns[6].label": "Naam in SQL",
+    "findings_table.props.columns[7].label": "Defect"
+  }
+}

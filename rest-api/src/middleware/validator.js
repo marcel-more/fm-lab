@@ -290,6 +290,44 @@ const schemas = {
   graphTrace: Joi.object({
     start: Joi.string().required(),
     start_file: Joi.string().optional(), // Clone-Disambiguierung des Startobjekts
+    // Modus: flow = Ablauf-Trace (Script/Layout), data = Datenfluss-Trace ab einem
+    // Feld (Template graph_trace_data.sql). Die data-Parameter
+    // haben Defaults und wirken nur im data-Modus (Cache-Key enthält sie trotzdem).
+    mode: Joi.string().lowercase().valid('flow', 'data').default('flow'),
+    dir: Joi.string().lowercase().valid('up', 'down').default('up'), // Herkunft / Verwendung
+    field_levels: Joi.number().integer().min(1).max(10).default(1),  // 1 = direkte Schreibstellen
+    var_levels: Joi.number().integer().min(1).max(10).default(5),
+    step_limit: Joi.number().integer().min(10).max(300).default(150),
+    call_context: Joi.number().integer().valid(0, 1).default(1),     // Aufrufkontext k = 1
+    include_control: Joi.boolean().default(false),                   // Steuer-/Guard-Kanten als Blätter
+    include_sinks: Joi.boolean().default(true),                      // Senken als Blätter (nur down)
+    // Wege: „Quelle verfolgen“ — Weg-IDs (12 Hex) aus trace.ways[].wayId, deren
+    // Quellfelder eine Feldebene weiter gehen; Zurücksetzen als Wege statt Gruppe;
+    // Wege-Deckel; Mermaid je Weg im JSON; way = ein Weg für die Diagrammformate
+    // (0 = Übersicht Feld → Feld; wirkt nicht auf den Cache-Key). Im Ablauf-Modus
+    // (Script Trace v2) gilt ways_limit je Richtung (up / down), ways_mermaid
+    // liefert den Quelltext beider Richtungen, way + way_dir wählen einen Weg;
+    // expand_way = „Quelle verfolgen“ an Aufwärts-Wegen (Button-/Trigger-
+    // Einstieg: navigierende Scripts des Owner-Layouts; Budget: Aufrufer
+    // jenseits von up_depth).
+    expand_way: Joi.string().lowercase().max(259)
+      .pattern(/^[0-9a-f]{12}(,[0-9a-f]{12}){0,19}$/)
+      .optional(),
+    include_reset: Joi.boolean().default(false),
+    ways_limit: Joi.number().integer().min(1).max(2000).default(300),
+    ways_mermaid: Joi.boolean().default(false),
+    way: Joi.number().integer().min(0).max(2000).optional(),
+    // Ablauf-Modus: Weg-Nummern zählen je Richtung — way_dir wählt sie für die
+    // Diagrammformate (down = „Ruft auf“, up = „Erreicht über“); wirkt wie way
+    // nicht auf den Cache-Key.
+    way_dir: Joi.string().lowercase().valid('up', 'down').default('down'),
+    // Lösungsprofil: on = bestätigte Regeln wirken, off = generische Sicht
+    profile: Joi.string().lowercase().valid('on', 'off').default('on'),
+    // Schritt-Anker für lokale Variablen: Schritt-UUID + Rolle des
+    // Schritts für die Startvariable (read = Herkunft an diesem Leser, set =
+    // Quellen bzw. Leser dieses Setzers); ohne Rolle leitet der Service sie ab.
+    start_step: Joi.string().max(100).optional(),
+    start_role: Joi.string().lowercase().valid('read', 'set').optional(),
     entry: Joi.string().lowercase()
       .valid('script', 'layout_runtime', 'layout_inbound', 'layout_full')
       .optional(), // Einstiegspfad-Preset (nur Nicht-Script-Starts; Default typabhängig)
@@ -304,6 +342,10 @@ const schemas = {
     // ExternalCommand) zünden per Default keine Kaskade — sie feuern während
     // eines Script-Ablaufs nicht. TRUE nimmt sie wieder hinein.
     include_interaction_triggers: Joi.boolean().default(false),
+    // Deaktivierte Schritte: per Default verfolgt der Ablauf-Trace weder Aufrufe
+    // noch Touches noch Navigation aus deaktivierten Schritten. TRUE nimmt sie
+    // wieder hinein (Knoten- und Kantenmenge wie vor Template 2.0.0).
+    include_disabled: Joi.boolean().default(false),
     node_limit: Joi.number().integer().min(1).max(environment.api.maxLimit).default(1000),
     hub_degree: Joi.number().integer().min(1).default(100),
     // Boundary-Ausschlussliste — kommaseparierte Composite-IDs
@@ -317,6 +359,11 @@ const schemas = {
     format: Joi.string().lowercase().valid(...Object.values(OUTPUT_FORMATS)).default('json'),
     meta: Joi.boolean().default(false),
     debug: Joi.boolean().default(false),
+  }),
+
+  // GET /api/graph/trace/profile - Lösungsprofil des Datenfluss-Trace (Regeln + Kandidaten)
+  graphTraceProfile: Joi.object({
+    format: Joi.string().lowercase().valid('json').default('json'),
   }),
 
   // GET /api/graph/trace/entries - Einstiegspfad-Vorschau (Presets + Seed-Zähler)

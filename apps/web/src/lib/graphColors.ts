@@ -107,3 +107,23 @@ export function readGraphThemeTokens(): GraphThemeTokens {
     rest: read('--color-graph-rest', fallback.rest),
   };
 }
+
+/**
+ * Border colours per data-trace flow role (Graph Explorer `mode=data`). Same
+ * tones as the server-built way diagrams (rest-api graph-trace-mermaid
+ * ROLE_COLORS) so canvas, legend and Mermaid read alike; mid-tones stay
+ * readable in light and dark.
+ */
+export const DATA_FLOW_ROLE_COLORS: Readonly<Record<string, string>> = Object.freeze({
+  start: '#f59e0b',
+  field: '#22c55e',
+  step: '#0ea5e9',
+  variable: '#ca8a04',
+  param: '#a855f7',
+  result: '#a855f7',
+  calc: '#8b5cf6',
+  entry: '#ec4899',
+  control: '#64748b',
+  sink: '#94a3b8',
+  blind: '#ef4444',
+});

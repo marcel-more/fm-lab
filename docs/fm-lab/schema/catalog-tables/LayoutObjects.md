@@ -54,4 +54,4 @@ Every object on every layout — all 26 object types, from edit boxes and button
 - `Entry_Browse` / `Entry_Find` decode the field-entry bits of `Entry_Options_Raw` per mode (`allow`, `select_only`, `view_only`, `by_calculation`); `Entry_Calculation_Text` is the formula of the `by_calculation` state (FileMaker 26 exports only).
 - `ScriptTrigger_Parameter_Text` is the object-level **aggregate** of all trigger-parameter texts (concatenated); the per-trigger truth lives in [ScriptTriggers.Trigger_Parameter_Text](ScriptTriggers.md).
 
-**See also:** [Layouts](Layouts.md) · [LayoutParts](LayoutParts.md) · [LayoutObjectConditions](LayoutObjectConditions.md) · [LayoutObjectSymbols](LayoutObjectSymbols.md) · [ObjectLinks](../object-catalog/ObjectLinks.md)
+**See also:** [Layouts](Layouts.md) · [LayoutParts](LayoutParts.md) · [LayoutObjectConditions](LayoutObjectConditions.md) · [LayoutObjectSymbols](LayoutObjectSymbols.md) · [LayoutObjectStyles](LayoutObjectStyles.md) · [LayoutObjectFontRuns](LayoutObjectFontRuns.md) · [ObjectLinks](../object-catalog/ObjectLinks.md)

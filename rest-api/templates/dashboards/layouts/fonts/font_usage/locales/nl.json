@@ -1,0 +1,35 @@
+{
+  "manifest": {
+    "title": "Overzicht lettertypen",
+    "description": "Welke lettertypen de lay-outs tonen: één rij per lettertype met gebruik, objecten, lay-outs, bestanden, groottes en herkomst — ingesteld op het object, door een stijl of door het thema. Objecten waarvan het lettertype aan de standaard van het bestand is overgelaten (het thema noemt er geen: Klassiek, Minimalistisch) vormen een eigen rij. Een klik op een lettertype opent de lay-outs die het tonen; bestand, thema, grootte en zoekopdracht blijven behouden."
+  },
+  "layout": {
+    "summary_kpistrip.props.items[0].label": "Lettertypen",
+    "summary_kpistrip.props.items[1].label": "Gebruik met lettertypenaam",
+    "summary_kpistrip.props.items[2].label": "Lay-outs met lettertypenaam",
+    "summary_kpistrip.props.items[3].label": "Bestanden met lettertypenaam",
+    "summary_kpistrip.props.items[4].label": "Objecten zonder benoemd lettertype",
+    "search_input.props.placeholder": "Zoek lettertype, lay-out, object of veld…",
+    "file_select.props.label": "Bestand",
+    "file_select.props.emptyOptionLabel": "Alle bestanden",
+    "theme_select.props.label": "Thema",
+    "theme_select.props.emptyOptionLabel": "Alle thema's",
+    "size_select.props.label": "Grootte",
+    "size_select.props.emptyOptionLabel": "Alle groottes",
+    "fonts_card.props.title": "Lettertypen",
+    "fonts_table.props.columns[0].label": "Lettertype",
+    "fonts_table.props.columns[0].valueLabels.#default": "Standaard van het bestand (lettertype niet in de export)",
+    "fonts_table.props.columns[1].label": "Gebruik",
+    "fonts_table.props.columns[2].label": "Objecten",
+    "fonts_table.props.columns[3].label": "Lay-outs",
+    "fonts_table.props.columns[4].label": "Bestanden",
+    "fonts_table.props.columns[5].label": "Groottes",
+    "fonts_table.props.columns[6].label": "Lokaal ingesteld",
+    "fonts_table.props.columns[7].label": "Uit een stijl",
+    "fonts_table.props.columns[8].label": "Uit het thema",
+    "fonts_table.props.columns[9].label": "Opgemaakte tekst en grafieken",
+    "fonts_table.props.empty.message": "Geen lettertypegebruik in deze selectie.",
+    "notes_card.props.title": "Waar een lettertype vandaan komt",
+    "notes_md.props.content": "**Herkomst van het basislettertype.** FileMaker neemt de eerste ingestelde waarde:\n- *lokaal* — op het object zelf ingesteld.\n- *lokaal, gelijk aan geërfd* — op het object ingesteld, maar hetzelfde lettertype dat het toch al zou krijgen. FileMaker schrijft het wanneer *vet* wordt toegepast op een lettertype met een eigen vette variant; geen bewuste keuze.\n- *stijl* — de stijl op het object. Een stijl bevat alleen wat hij wijzigt; de rest komt uit het thema.\n- *thema* — de standaard van het thema voor het objecttype, het lay-outonderdeel of alle velden.\n- *standaard van het bestand* — het thema noemt helemaal geen lettertype (Klassiek, Minimalistisch). FileMaker gebruikt dan een standaard van het bestand die de XML-export niet bevat — hetzelfde thema toont in het ene bestand Helvetica Neue en in het andere Arial. De lijst noemt voor deze objecten daarom geen lettertype; controleer per bestand één object in FileMaker.\n\n**Ander lettertypegebruik.** *Opgemaakte tekst* is een met de tekstcursor opgemaakt deel van een tekst; het komt bij het basislettertype van het object, de rest van de tekst behoudt dat. *Grafiek* is het lettertype van een tekstgebied van een grafiek (titel, legenda, assen, gegevenslabels); reekstitels zijn weggelaten, ze behouden het thema-lettertype.\n\n**Telling.** *Lettertypen* groepeert schrijfwijzen van één lettertype (`arial`, `Arial`). De standaard van het bestand is geen lettertype: hij telt niet mee in het aantal lettertypen en niet bij *veel lettertypen*. *Onzeker*: de waarde komt uit een regel van het lay-outonderdeel (rangorde niet geverifieerd), of de toegepaste stijl bestaat niet meer in het thema.\n\n**Grenzen.** Lettertypen van voorwaardelijke opmaak worden niet getoond. Een lettertypenaam zegt niets over de vraag of het lettertype op de clients is geïnstalleerd."
+  }
+}

@@ -17,7 +17,7 @@ Explains native FileMaker functions and script steps — by name in any supporte
 
 ## What it does
 
-The skill is index-first: a name in any of the eleven supported languages — including localized parameter aliases — resolves through the lookup tables to the canonical function or step, then signature, parameters, purpose, return type, origin version and the deep-link slug are read from the [fm-spec](../Wiki/fm-spec.md) database in your language. Only when you ask for more (further examples, related topics) is the mirrored help page opened, in this order: local page in the target language → local English page → online page → online English page. If the target language is not installed locally, the skill says so once and suggests `install-claris-docs --lang=<code>`.
+The skill is index-first: a name in any of the eleven supported languages — including localized parameter aliases — resolves through the lookup tables to the canonical function or step, then signature, parameters, purpose, return type, origin version and the deep-link slug are read from the [fm-spec](../Wiki/fm-spec.md) database in your language. Only when you ask for more (further examples, related topics) is the mirrored help page opened, in this order: local page in the target language → local English page → online page → online English page. If the target language is not installed locally, the skill says so once and suggests `install-claris-docs --lang=<code>`. A name Claris has renamed since (`Get ( LastExternalErrorDetail )`) resolves too, and the answer says that it is the old name, which name replaces it and since which FileMaker version ([function_renames](../schema/fm-spec-tables/function_renames.md)).
 
 Two modes:
 

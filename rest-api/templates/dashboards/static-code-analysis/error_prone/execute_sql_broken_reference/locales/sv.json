@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "ExecuteSQL-referens utan mål",
+    "description": "Felbenägen regel — en tabell eller ett fält som namnges i en ExecuteSQL-sats finns inte i lösningen: namnet i FROM/JOIN matchar ingen tabellförekomst i filen, en kolumn matchar inget fält i sin tabell, eller en formelreferens i SQL:en pekar på ett borttaget fält (<Field Missing>). FileMaker rapporterar inget fel: ExecuteSQL returnerar helt enkelt ? och den anropande logiken arbetar med ett tomt eller felaktigt värde."
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Träffar",
+    "summary_kpi.props.items[1].label": "Berörda filer",
+    "summary_kpi.props.items[2].label": "SQL-referenser i omfånget",
+    "summary_kpi.props.items[3].label": "Ej kontrollerbara (dynamiska)",
+    "findings_card.props.title": "ExecuteSQL-referens utan mål",
+    "findings_table.props.searchPlaceholder": "Sök fil, objekt eller namn…",
+    "findings_table.props.empty.message": "Ingen ExecuteSQL-referens utan mål hittades.",
+    "findings_table.props.columns[0].label": "Fil",
+    "findings_table.props.columns[1].label": "Objekt",
+    "findings_table.props.columns[2].label": "Typ",
+    "findings_table.props.columns[3].label": "Steg",
+    "findings_table.props.columns[4].label": "Funktion",
+    "findings_table.props.columns[5].label": "Sats",
+    "findings_table.props.columns[6].label": "Namn i SQL",
+    "findings_table.props.columns[7].label": "Defekt"
+  }
+}

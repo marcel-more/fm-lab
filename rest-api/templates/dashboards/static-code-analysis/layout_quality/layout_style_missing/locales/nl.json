@@ -1,0 +1,21 @@
+{
+  "manifest": {
+    "title": "Stijl ontbreekt in het thema",
+    "description": "Lay-outkwaliteitsregel — een object noemt een stijl die het thema van zijn lay-out niet bevat: geen regel van het thema draagt de stijl, in geen enkele toestand. Meestal een eigen stijl die uit het thema is verwijderd, of een stijl die niet meekwam toen de lay-out naar een ander thema ging. De Infovenster toont de stijlnaam nog, maar het thema heeft er geen regel voor.",
+    "messages.missing": "De stijl {style} bestaat niet in het thema {theme}"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Bevindingen",
+    "summary_kpi.props.items[1].label": "Ontbrekende stijlen",
+    "summary_kpi.props.items[2].label": "Betrokken lay-outs",
+    "findings_card.props.title": "Stijl ontbreekt in het thema",
+    "findings_table.props.searchPlaceholder": "Zoek bestand, lay-out, object, stijl of thema…",
+    "findings_table.props.empty.message": "Elke toegepaste stijl bestaat in zijn thema.",
+    "findings_table.props.columns[0].label": "Bestand",
+    "findings_table.props.columns[1].label": "Lay-out",
+    "findings_table.props.columns[2].label": "Objecttype",
+    "findings_table.props.columns[3].label": "Object",
+    "findings_table.props.columns[4].label": "Stijl",
+    "findings_table.props.columns[5].label": "Thema"
+  }
+}

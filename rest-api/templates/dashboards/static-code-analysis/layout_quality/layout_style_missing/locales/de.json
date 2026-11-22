@@ -1,0 +1,21 @@
+{
+  "manifest": {
+    "title": "Stil fehlt im Design",
+    "description": "Layout-Qualitätsregel — ein Objekt nennt einen Stil, den das Design seines Layouts nicht enthält: Keine Regel des Designs führt den Stil, in keinem Zustand. Meist ein eigener Stil, der aus dem Design gelöscht wurde, oder ein Stil, der beim Wechsel des Layouts in ein anderes Design nicht mitkam. Der Inspektor zeigt den Stilnamen weiter, das Design hat aber keine Regel dafür.",
+    "messages.missing": "Der Stil {style} existiert im Design {theme} nicht"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Treffer",
+    "summary_kpi.props.items[1].label": "Fehlende Stile",
+    "summary_kpi.props.items[2].label": "Betroffene Layouts",
+    "findings_card.props.title": "Stil fehlt im Design",
+    "findings_table.props.searchPlaceholder": "Datei, Layout, Objekt, Stil oder Design suchen…",
+    "findings_table.props.empty.message": "Jeder angewandte Stil existiert in seinem Design.",
+    "findings_table.props.columns[0].label": "Datei",
+    "findings_table.props.columns[1].label": "Layout",
+    "findings_table.props.columns[2].label": "Objekttyp",
+    "findings_table.props.columns[3].label": "Objekt",
+    "findings_table.props.columns[4].label": "Stil",
+    "findings_table.props.columns[5].label": "Design"
+  }
+}

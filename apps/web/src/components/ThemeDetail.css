@@ -1,0 +1,167 @@
+/* Theme (design) detail view — ThemeDetail.tsx. Table, chips and search reuse
+ * the fm-bt-* building blocks of BaseTableViewer.css. */
+
+.fm-td-code {
+  word-break: break-all;
+}
+
+.fm-td-notice {
+  font-size: 0.85rem;
+  color: var(--color-info-fg);
+  background: var(--color-info-bg);
+  border: 1px solid var(--color-info-border);
+  border-radius: 6px;
+  padding: 0.5rem 0.7rem;
+}
+
+.fm-td-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  margin: 0 0 0.7rem;
+}
+.fm-td-search {
+  flex: 1 1 14rem;
+  max-width: 320px;
+}
+
+.fm-td-empty {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  padding: 0.4rem 0;
+}
+
+.fm-td-table .fm-td-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.fm-td-col-toggle {
+  width: 1.6rem;
+  padding-right: 0 !important;
+}
+.fm-td-toggle,
+.fm-td-name-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.fm-td-toggle {
+  display: inline-flex;
+  align-items: center;
+}
+.fm-td-toggle:focus-visible,
+.fm-td-name-btn:focus-visible {
+  outline: 2px solid var(--color-accent-ring);
+  outline-offset: 1px;
+  border-radius: 3px;
+}
+.fm-td-name {
+  font-weight: 500;
+}
+.fm-td-name-btn:hover {
+  color: var(--color-accent-soft-fg);
+}
+.fm-td-types {
+  color: var(--color-text-secondary);
+}
+.fm-td-row.is-unused .fm-td-name,
+.fm-td-row.is-unused .fm-td-types {
+  color: var(--color-text-muted);
+}
+.fm-td-unused-badge {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  padding: 0 0.45rem;
+}
+
+.fm-td-layouts-row td {
+  border-bottom: 1px solid var(--color-border);
+  padding-top: 0;
+}
+.fm-td-layouts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.fm-td-layouts li {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+}
+.fm-td-layouts-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding-bottom: 0.3rem;
+}
+.fm-td-layout-search {
+  max-width: 280px;
+  font-size: 0.82rem;
+  padding: 0.25rem 0.55rem;
+}
+.fm-td-layouts-status {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  padding: 0 0 0.3rem;
+}
+.fm-td-more {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--color-accent-soft-fg);
+  cursor: pointer;
+}
+.fm-td-more:hover {
+  text-decoration: underline;
+}
+.fm-td-more:focus-visible {
+  outline: 2px solid var(--color-accent-ring);
+  outline-offset: 1px;
+  border-radius: 3px;
+}
+.fm-td-layout-count {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.fm-td-builtin {
+  margin-top: 1rem;
+}
+.fm-td-builtin-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: none;
+  background: none;
+  padding: 0.2rem 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.fm-td-builtin-toggle:hover {
+  color: var(--color-text-primary);
+}
+.fm-td-builtin-toggle:focus-visible {
+  outline: 2px solid var(--color-accent-ring);
+  outline-offset: 1px;
+  border-radius: 3px;
+}
+.fm-td-builtin .fm-td-table {
+  margin-top: 0.4rem;
+}

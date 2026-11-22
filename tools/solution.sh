@@ -12,8 +12,9 @@
 #                                          an empty 'default' (invariant I1)
 #   solution.sh export <id> [--include-xml] [-o <file.zip>]
 #                                          zip the bundle — default WITHOUT xml/
-#                                          and state/ (manifest + DBs: analyzable,
-#                                          not re-convertible); --include-xml adds
+#                                          and state/ (manifest + DBs + the data
+#                                          trace profile: analyzable, not
+#                                          re-convertible); --include-xml adds
 #                                          the XML sources (re-convertible)
 #   solution.sh logs <id>                  list the convert logs of a solution
 #   solution.sh current [--path db|xml|state] [--source]
@@ -260,7 +261,7 @@ cmd_export() {
     # Node zip writer (tools/lib/solution_ops.mjs): portable — no zip binary in
     # the container, no python3 needed. Default excludes xml/ (large, often
     # confidential) and the volatile state/ — package = manifest + catalog DB +
-    # annotations DB.
+    # annotations DB + state/dataflow_profile.json (solution knowledge, not run state).
     node "$SOLUTION_OPS" export "$SOLUTIONS_ROOT/$id" "$out" "$include_xml" || exit 1
     $include_xml && echo "Included xml/ — the package is re-convertible." \
                  || echo "Without xml/ and state/ (default) — analyzable, not re-convertible. Use --include-xml for a full package."

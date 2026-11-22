@@ -1,0 +1,35 @@
+{
+  "manifest": {
+    "title": "글꼴 개요",
+    "description": "레이아웃이 표시하는 글꼴: 글꼴마다 한 행으로 사용, 개체, 레이아웃, 파일, 크기와 출처(개체에서 설정, 스타일, 테마)를 보여 줍니다. 글꼴이 파일 기본값에 맡겨진 개체(테마가 글꼴을 지정하지 않음: 클래식, 미니멀리스트)는 별도의 행이 됩니다. 글꼴을 클릭하면 그 글꼴을 표시하는 레이아웃이 열리며 파일, 테마, 크기와 검색이 유지됩니다."
+  },
+  "layout": {
+    "summary_kpistrip.props.items[0].label": "글꼴",
+    "summary_kpistrip.props.items[1].label": "글꼴 이름이 있는 사용",
+    "summary_kpistrip.props.items[2].label": "글꼴 이름이 있는 레이아웃",
+    "summary_kpistrip.props.items[3].label": "글꼴 이름이 있는 파일",
+    "summary_kpistrip.props.items[4].label": "이름 있는 글꼴이 없는 개체",
+    "search_input.props.placeholder": "글꼴, 레이아웃, 개체 또는 필드 검색…",
+    "file_select.props.label": "파일",
+    "file_select.props.emptyOptionLabel": "모든 파일",
+    "theme_select.props.label": "테마",
+    "theme_select.props.emptyOptionLabel": "모든 테마",
+    "size_select.props.label": "크기",
+    "size_select.props.emptyOptionLabel": "모든 크기",
+    "fonts_card.props.title": "글꼴",
+    "fonts_table.props.columns[0].label": "글꼴",
+    "fonts_table.props.columns[0].valueLabels.#default": "파일 기본값(글꼴이 내보내기에 없음)",
+    "fonts_table.props.columns[1].label": "사용",
+    "fonts_table.props.columns[2].label": "개체",
+    "fonts_table.props.columns[3].label": "레이아웃",
+    "fonts_table.props.columns[4].label": "파일",
+    "fonts_table.props.columns[5].label": "크기",
+    "fonts_table.props.columns[6].label": "로컬 설정",
+    "fonts_table.props.columns[7].label": "스타일에서",
+    "fonts_table.props.columns[8].label": "테마에서",
+    "fonts_table.props.columns[9].label": "서식 있는 텍스트와 차트",
+    "fonts_table.props.empty.message": "이 선택에 글꼴 사용이 없습니다.",
+    "notes_card.props.title": "글꼴의 출처",
+    "notes_md.props.content": "**기본 글꼴의 출처.** FileMaker는 처음 설정된 값을 사용합니다.\n- *로컬* — 개체 자체에서 설정.\n- *로컬, 상속과 동일* — 개체에서 설정했지만 어차피 받게 될 글꼴과 같습니다. 고유한 굵은 서체가 있는 글꼴에 *굵게*를 적용하면 FileMaker가 이를 기록합니다. 의도적인 선택이 아닙니다.\n- *스타일* — 개체에 적용된 스타일. 스타일은 바꾸는 내용만 담고 나머지는 테마에서 옵니다.\n- *테마* — 개체 유형, 레이아웃 파트 또는 모든 필드에 대한 테마 기본값.\n- *파일 기본값* — 테마가 글꼴을 전혀 지정하지 않습니다(클래식, 미니멀리스트). 이때 FileMaker는 XML 내보내기에 포함되지 않는 파일 기본값을 사용합니다. 같은 테마라도 어떤 파일에서는 Helvetica Neue, 다른 파일에서는 Arial로 표시됩니다. 그래서 목록은 이 개체들의 글꼴 이름을 표시하지 않습니다. 파일마다 개체 하나를 FileMaker에서 확인하세요.\n\n**기타 글꼴 사용.** *서식 있는 텍스트*는 텍스트 커서로 서식을 지정한 텍스트 일부로, 개체의 기본 글꼴에 더해지며 나머지 텍스트는 기본 글꼴을 유지합니다. *차트*는 차트 텍스트 영역(제목, 범례, 축, 데이터 레이블)의 글꼴입니다. 계열 제목은 테마 글꼴을 유지하므로 제외했습니다.\n\n**집계.** *글꼴*은 한 글꼴의 여러 표기(`arial`, `Arial`)를 묶습니다. 파일 기본값은 글꼴이 아닙니다. 글꼴 수에도 *글꼴이 많음*에도 세지 않습니다. *불확실*: 값이 레이아웃 파트 규칙에서 왔거나(우선순위 미검증), 적용된 스타일이 테마에 더 이상 없습니다.\n\n**제한.** 조건부 서식의 글꼴은 나열하지 않습니다. 글꼴 이름만으로는 클라이언트에 그 글꼴이 설치되어 있는지 알 수 없습니다."
+  }
+}

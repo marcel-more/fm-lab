@@ -394,5 +394,25 @@
     "clear": "Mostrar toda la solución",
     "clearTitle": "Quitar el ámbito y mostrar toda la solución",
     "hint": "Las cifras y listas muestran solo este ámbito"
+  },
+  "mermaid": {
+    "error": "No se pudo dibujar el diagrama",
+    "tooLarge": "El diagrama es demasiado grande para dibujarlo",
+    "position": "línea {{line}}, columna {{column}}"
+  },
+  "ask": {
+    "title": "Elegir",
+    "cancel": "Cancelar",
+    "needsSelection": "Selecciona primero una fila",
+    "notForChoice": "No disponible con esta opción."
+  },
+  "download": {
+    "empty": "No hay nada que exportar.",
+    "noDataset": "Los datos «{{detail}}» no están cargados en esta página.",
+    "noSelection": "Selecciona primero una fila.",
+    "tooLarge": "El archivo es demasiado grande para descargarlo (más de 20 MB).",
+    "svgOneRow": "Un SVG contiene exactamente un diagrama: elija primero una entrada.",
+    "renderFailed": "No se pudo dibujar el diagrama: {{detail}}",
+    "diagramError": "No se pudo dibujar el diagrama: {{detail}}"
   }
 }

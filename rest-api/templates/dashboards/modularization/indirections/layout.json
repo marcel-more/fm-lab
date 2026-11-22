@@ -1,0 +1,604 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "type": "Grid",
+    "props": {
+      "columns": 12,
+      "gap": 16
+    },
+    "children": [
+      {
+        "type": "Card",
+        "id": "summary",
+        "props": {
+          "span": 12,
+          "variant": "hero"
+        },
+        "data": {
+          "dataset": "summary"
+        },
+        "children": [
+          {
+            "type": "KPIStrip",
+            "id": "summary_kpistrip",
+            "props": {
+              "items": [
+                {
+                  "label": "Indirect references",
+                  "field": "total",
+                  "format": "number"
+                },
+                {
+                  "label": "Files",
+                  "field": "files",
+                  "format": "number"
+                },
+                {
+                  "label": "Carriers",
+                  "field": "carriers",
+                  "format": "number"
+                },
+                {
+                  "label": "Fixed reference possible",
+                  "field": "r_literal_resolved",
+                  "format": "number",
+                  "toggle": true,
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "indirections",
+                      "params": {
+                        "resolution": "literal_resolved",
+                        "page": ""
+                      }
+                    }
+                  }
+                },
+                {
+                  "label": "Target missing",
+                  "field": "r_literal_unresolved",
+                  "format": "number",
+                  "toggle": true,
+                  "onClick": {
+                    "action": "openDashboard",
+                    "args": {
+                      "id": "indirections",
+                      "params": {
+                        "resolution": "literal_unresolved",
+                        "page": ""
+                      }
+                    }
+                  }
+                },
+                {
+                  "label": "Guarded by Get(LastError)",
+                  "field": "guarded",
+                  "format": "number"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "filters",
+        "props": {
+          "span": 12,
+          "title": "Filter"
+        },
+        "data": {
+          "dataset": "summary"
+        },
+        "children": [
+          {
+            "type": "FilterChips",
+            "id": "filters_kind_chips",
+            "props": {
+              "param": "kind",
+              "default": "all",
+              "resetParams": [
+                "page",
+                "mechanism"
+              ],
+              "options": [
+                {
+                  "value": "all",
+                  "label": "All",
+                  "countField": "k_all"
+                },
+                {
+                  "value": "script",
+                  "label": "Script",
+                  "countField": "k_script"
+                },
+                {
+                  "value": "layout",
+                  "label": "Layout",
+                  "countField": "k_layout"
+                },
+                {
+                  "value": "field",
+                  "label": "Field",
+                  "countField": "k_field"
+                },
+                {
+                  "value": "table",
+                  "label": "Table",
+                  "countField": "k_table"
+                },
+                {
+                  "value": "sql",
+                  "label": "SQL",
+                  "countField": "k_sql"
+                },
+                {
+                  "value": "layout_object",
+                  "label": "Layout object",
+                  "countField": "k_layout_object"
+                },
+                {
+                  "value": "value_list",
+                  "label": "Value list",
+                  "countField": "k_value_list"
+                },
+                {
+                  "value": "formula",
+                  "label": "Formula",
+                  "countField": "k_formula"
+                },
+                {
+                  "value": "introspection",
+                  "label": "Introspection",
+                  "countField": "k_introspection"
+                },
+                {
+                  "value": "window",
+                  "label": "Window",
+                  "countField": "k_window"
+                }
+              ]
+            }
+          },
+          {
+            "type": "FilterChips",
+            "id": "filters_resolution_chips",
+            "props": {
+              "param": "resolution",
+              "default": "all",
+              "resetParams": [
+                "page"
+              ],
+              "options": [
+                {
+                  "value": "all",
+                  "label": "All",
+                  "countField": "r_all"
+                },
+                {
+                  "value": "dynamic",
+                  "label": "Dynamic",
+                  "countField": "r_dynamic"
+                },
+                {
+                  "value": "literal_resolved",
+                  "label": "Fixed reference possible",
+                  "countField": "r_literal_resolved"
+                },
+                {
+                  "value": "literal_unresolved",
+                  "label": "Target missing",
+                  "countField": "r_literal_unresolved"
+                },
+                {
+                  "value": "literal_external",
+                  "label": "File not imported",
+                  "countField": "r_literal_external"
+                },
+                {
+                  "value": "literal_other_file",
+                  "label": "In another file",
+                  "countField": "r_literal_other_file"
+                },
+                {
+                  "value": "empty",
+                  "label": "No formula",
+                  "countField": "r_empty"
+                },
+                {
+                  "value": "no_target",
+                  "label": "No name target",
+                  "countField": "r_no_target"
+                }
+              ]
+            }
+          },
+          {
+            "type": "Row",
+            "id": "filters_row",
+            "props": {
+              "gap": 16
+            },
+            "children": [
+              {
+                "type": "Select",
+                "id": "filters_mechanism_select",
+                "data": {
+                  "dataset": "by_mechanism"
+                },
+                "props": {
+                  "param": "mechanism",
+                  "valueField": "mechanism_id",
+                  "labelField": "mechanism_label",
+                  "label": "Mechanism",
+                  "emptyOptionLabel": "All mechanisms",
+                  "resetParams": [
+                    "page"
+                  ]
+                }
+              },
+              {
+                "type": "ToggleChips",
+                "id": "filters_toggles",
+                "props": {
+                  "resetParams": [
+                    "page"
+                  ],
+                  "items": [
+                    {
+                      "param": "disabled",
+                      "label": "Disabled steps",
+                      "on": "include",
+                      "off": "hide",
+                      "default": "hide"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "by_mechanism",
+        "props": {
+          "span": 12,
+          "title": "By mechanism",
+          "collapsible": true
+        },
+        "data": {
+          "dataset": "by_mechanism"
+        },
+        "children": [
+          {
+            "type": "Table",
+            "id": "by_mechanism_table",
+            "props": {
+              "rowKey": "mechanism_id",
+              "density": "compact",
+              "sortable": true,
+              "columns": [
+                {
+                  "field": "mechanism_id",
+                  "label": "Mechanism",
+                  "valueLabels": {
+                    "M01": "Perform Script by name",
+                    "M02": "Perform Script on Server by name",
+                    "M10": "Layout by name (calculation)",
+                    "M11": "Layout by number (calculation)",
+                    "M12": "Execute FileMaker Data API",
+                    "M20": "Set Field By Name",
+                    "M21": "GetField()",
+                    "M30": "Evaluate()",
+                    "M31": "ExecuteSQL, statement built at run time",
+                    "M32": "ExecuteSQL, names in the SQL text",
+                    "M33": "Execute SQL, calculated SQL text",
+                    "M40": "Go to Object by name",
+                    "M41": "Object name of a script step",
+                    "M42": "GetLayoutObjectAttribute()",
+                    "M50v": "ValueListItems()",
+                    "M50f": "Design function, field by name",
+                    "M50l": "Design function, layout by name",
+                    "M50t": "Design function, table by name",
+                    "M60": "Design function, list of names",
+                    "M70": "Window by name"
+                  }
+                },
+                {
+                  "field": "kind",
+                  "label": "Target type",
+                  "format": "badge",
+                  "valueLabels": {
+                    "script": "Script",
+                    "layout": "Layout",
+                    "field": "Field",
+                    "table": "Table",
+                    "sql": "SQL",
+                    "layout_object": "Layout object",
+                    "value_list": "Value list",
+                    "formula": "Formula",
+                    "introspection": "Introspection",
+                    "window": "Window"
+                  }
+                },
+                {
+                  "field": "sites",
+                  "label": "Sites",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "files",
+                  "label": "Files",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "carriers",
+                  "label": "Carriers",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "dynamic",
+                  "label": "Dynamic",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "literal_resolved",
+                  "label": "Fixed reference possible",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "literal_unresolved",
+                  "label": "Target missing",
+                  "align": "right",
+                  "format": "number"
+                }
+              ],
+              "onRowClick": {
+                "action": "openDashboard",
+                "args": {
+                  "id": "indirections",
+                  "params": {
+                    "mechanism": "{{mechanism_id}}",
+                    "page": ""
+                  }
+                }
+              },
+              "empty": {
+                "message": "No indirect reference in this selection."
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "findings",
+        "props": {
+          "span": 12,
+          "title": "Sites",
+          "keepChildrenOnEmpty": true
+        },
+        "data": {
+          "dataset": "findings"
+        },
+        "children": [
+          {
+            "type": "Table",
+            "id": "findings_table",
+            "props": {
+              "rowKey": "row_key",
+              "density": "compact",
+              "sortable": true,
+              "searchable": "auto",
+              "searchPlaceholder": "Search carrier, expression, target …",
+              "pageParam": "page",
+              "searchParam": "q",
+              "sortParam": "sort",
+              "clientMode": true,
+              "columns": [
+                {
+                  "field": "mechanism_id",
+                  "label": "Mechanism",
+                  "valueLabels": {
+                    "M01": "Perform Script by name",
+                    "M02": "Perform Script on Server by name",
+                    "M10": "Layout by name (calculation)",
+                    "M11": "Layout by number (calculation)",
+                    "M12": "Execute FileMaker Data API",
+                    "M20": "Set Field By Name",
+                    "M21": "GetField()",
+                    "M30": "Evaluate()",
+                    "M31": "ExecuteSQL, statement built at run time",
+                    "M32": "ExecuteSQL, names in the SQL text",
+                    "M33": "Execute SQL, calculated SQL text",
+                    "M40": "Go to Object by name",
+                    "M41": "Object name of a script step",
+                    "M42": "GetLayoutObjectAttribute()",
+                    "M50v": "ValueListItems()",
+                    "M50f": "Design function, field by name",
+                    "M50l": "Design function, layout by name",
+                    "M50t": "Design function, table by name",
+                    "M60": "Design function, list of names",
+                    "M70": "Window by name"
+                  }
+                },
+                {
+                  "field": "carrier_name",
+                  "label": "Carrier",
+                  "breakAt": "separators"
+                },
+                {
+                  "field": "step_no",
+                  "label": "Step",
+                  "align": "right"
+                },
+                {
+                  "field": "expression",
+                  "label": "Expression",
+                  "breakAt": "anywhere"
+                },
+                {
+                  "field": "resolution_class",
+                  "label": "Resolution",
+                  "format": "badge",
+                  "valueLabels": {
+                    "dynamic": "Dynamic",
+                    "literal_resolved": "Fixed reference possible",
+                    "literal_unresolved": "Target missing",
+                    "literal_external": "File not imported",
+                    "literal_other_file": "In another file",
+                    "empty": "No formula",
+                    "no_target": "No name target"
+                  }
+                },
+                {
+                  "field": "low_confidence",
+                  "label": "Confidence",
+                  "nowrap": true,
+                  "valueLabels": {
+                    "true": "Low",
+                    "false": ""
+                  }
+                },
+                {
+                  "field": "target_name",
+                  "label": "Target",
+                  "breakAt": "separators"
+                },
+                {
+                  "field": "guarded",
+                  "label": "Guarded",
+                  "nowrap": true,
+                  "valueLabels": {
+                    "true": "Get(LastError)",
+                    "false": ""
+                  }
+                },
+                {
+                  "field": "file",
+                  "label": "File",
+                  "nowrap": true
+                }
+              ],
+              "onRowClick": {
+                "action": "openObject",
+                "args": {
+                  "uuid": "{{nav_uuid}}",
+                  "type": "{{nav_type}}",
+                  "file": "{{file}}",
+                  "params": {
+                    "step": "{{step_uuid}}"
+                  }
+                }
+              },
+              "empty": {
+                "message": "No indirect reference in this selection."
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "carriers",
+        "props": {
+          "span": 12,
+          "title": "Carriers with the most indirections",
+          "collapsible": true
+        },
+        "data": {
+          "dataset": "carriers"
+        },
+        "children": [
+          {
+            "type": "Table",
+            "id": "carriers_table",
+            "props": {
+              "rowKey": "carrier_name",
+              "density": "compact",
+              "sortable": true,
+              "columns": [
+                {
+                  "field": "carrier_type",
+                  "label": "Type",
+                  "format": "badge",
+                  "valueLabels": {
+                    "Script": "Script",
+                    "CustomFunction": "Custom function",
+                    "Field": "Field",
+                    "LayoutObject": "Layout object"
+                  }
+                },
+                {
+                  "field": "carrier_name",
+                  "label": "Carrier",
+                  "breakAt": "separators"
+                },
+                {
+                  "field": "sites",
+                  "label": "Sites",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "files",
+                  "label": "Files",
+                  "align": "right",
+                  "format": "number"
+                },
+                {
+                  "field": "mechanisms",
+                  "label": "Mechanisms"
+                },
+                {
+                  "field": "cf_callers",
+                  "label": "Callers (custom function)",
+                  "align": "right",
+                  "format": "number"
+                }
+              ],
+              "onRowClick": {
+                "action": "openDashboard",
+                "args": {
+                  "id": "indirections",
+                  "params": {
+                    "q": "{{carrier_name}}",
+                    "page": ""
+                  }
+                }
+              },
+              "empty": {
+                "message": "No carrier in this selection."
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "notes",
+        "props": {
+          "span": 12,
+          "title": "Notes",
+          "collapsible": true,
+          "collapsed": true
+        },
+        "children": [
+          {
+            "type": "Markdown",
+            "id": "notes_markdown",
+            "props": {
+              "content": "An **indirection** addresses an object through a name, a number or a text that FileMaker evaluates only at run time. The object graph has no edge for it — where-used, renaming, the unused-object rules, the Graph Explorer and the module clustering cannot follow it.\n\n- **Counted:** Perform Script (on Server) by name, Go to Layout / Go to List of Records by name or number, Set Field By Name, object names of Go to Object, Refresh Object, Refresh Portal, Set Web Viewer, Perform JavaScript in Web Viewer and AVPlayer Play, Execute FileMaker Data API, Evaluate, GetField, GetLayoutObjectAttribute, ValueListItems and the design functions that take an object name, ExecuteSQL with names in the SQL text or a statement built at run time, Execute SQL with a calculated SQL text. A plain string literal counts as well: it has no edge either.\n- **Not counted:** variables bound as `?` parameters of ExecuteSQL, `GetFieldName(TO::Field)` and other wrappers around a fixed reference, calculated values (window geometry, record numbers, dialog texts).\n- **Resolution:** a literal is resolved against the catalog. *Fixed reference possible* — the target exists; *Target missing* — no object of that name (a script call followed by a `Get(LastError)` check is marked *Guarded*: an optional target on purpose); *File not imported* — the data source names a file outside the imported solution; *In another file* — a layout-object name that exists only in another imported file (data and interface split over files; the window the step acts on may show a layout of that file); *No formula* — an indirect mode without a formula. Layout numbers count the layouts of the file in their order (folders excluded) and are marked low confidence. Layout-object names match any layout of the file.\n- **Files without DDR-Info:** the function calls of their formulas are matched in the formula text (string literals and comments ignored, localised function names included) and marked with *low* confidence. Layout numbers and SQL names FileMaker could not decide are marked the same way.\n- **Introspection** (ScriptNames, LayoutIDs, …) and **window names** are signals, not indirections — they have chips of their own and are not part of *All*.\n- **Not yet covered:** the single script step of a button or a custom menu item, MBS calls with a computed script or SQL, `fmp://` URLs and `FileMaker.PerformScript` in web viewers.\n- **Carriers** groups a script that exists in several files (a developer tool, a module copy) into one row; a click filters the sites by its name."
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

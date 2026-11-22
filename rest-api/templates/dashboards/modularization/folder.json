@@ -1,7 +1,7 @@
 {
   "title": "Modularization",
   "icon": "boxes",
-  "description": "Inventory dashboards for module boundaries — where logic leaves the solution: into other FileMaker files, the file system, the network, processes, the server. Descriptive catalogs with drilldown (always \"green\"); the derived severity rules live under Static Code Analysis.",
+  "description": "Inventory dashboards for module boundaries — where logic leaves the solution: into other FileMaker files, the file system, the network, processes, the server — and where references leave the static object graph (indirections). Descriptive catalogs with drilldown (always \"green\"); the derived severity rules live under Static Code Analysis.",
   "order": 2,
   "locales": {
     "de": "Modularisierung",

@@ -1,0 +1,111 @@
+{
+  "id": "font_usage",
+  "version": "2.0.0",
+  "title": "Font overview",
+  "description": "Which fonts the layouts show: one row per font with its uses, objects, layouts, files, sizes and where it comes from — set on the object, by a style or by the theme. Objects whose font is left to the default of the file (the theme names none: Classic, Minimalist) form a row of their own. A click on a font opens the layouts that show it; file, theme, size and search carry over.",
+  "author": "fm-lab",
+  "icon": "type",
+  "tags": [
+    "layouts",
+    "fonts",
+    "themes",
+    "styling",
+    "inventory"
+  ],
+  "entry": "layout.json",
+  "analysis": {
+    "objectTypes": [
+      "Layout",
+      "LayoutObject"
+    ],
+    "outputTypes": [
+      "count",
+      "inventory-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "summary": "native",
+        "fonts": "native",
+        "file_options": "native",
+        "theme_options": "native",
+        "size_options": "native"
+      }
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql",
+      "params": { "source_default": "all" }
+    },
+    {
+      "id": "fonts",
+      "source": "bundle:data/fonts.sql",
+      "params": { "source_default": "all" }
+    },
+    {
+      "id": "file_options",
+      "source": "bundle:data/options.sql",
+      "params": { "dim": "file", "source_default": "all" }
+    },
+    {
+      "id": "theme_options",
+      "source": "bundle:data/options.sql",
+      "params": { "dim": "theme", "source_default": "all" }
+    },
+    {
+      "id": "size_options",
+      "source": "bundle:data/options.sql",
+      "params": { "dim": "size", "source_default": "all" }
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "File filter: file names, comma-separated (the app-level file filter is one of them); empty = all files."
+    },
+    {
+      "name": "scope_uuids",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Analysis-Test scope: comma-separated layout or layout-object UUIDs."
+    },
+    {
+      "name": "search",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Search term, matched per font use (font, layout, object, field, theme, style, file, type, size, source)."
+    },
+    {
+      "name": "theme",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Theme filter: theme names separated by '|'; empty = all themes."
+    },
+    {
+      "name": "size",
+      "type": "string",
+      "required": false,
+      "sticky": true,
+      "description": "Size filter: sizes such as 12pt separated by '|'; empty = all sizes."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  }
+}

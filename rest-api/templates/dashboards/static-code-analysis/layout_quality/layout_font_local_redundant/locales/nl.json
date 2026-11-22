@@ -1,0 +1,20 @@
+{
+  "manifest": {
+    "title": "Lokaal lettertype gelijk aan geërfd",
+    "description": "Lay-outkwaliteitsregel — een object stelt lokaal een lettertype in dat het via stijl of thema toch al zou krijgen. FileMaker schrijft zo'n instelling wanneer vet wordt toegepast op een lettertype met een eigen vette variant (de familie wordt opgeslagen met de PostScript-naam van de vette variant). Nu verandert het niets, maar het legt het lettertype vast: een latere themawissel bereikt het object niet meer.",
+    "messages.redundant": "Het object erft het lokale lettertype {font} toch al"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Bevindingen",
+    "summary_kpi.props.items[1].label": "Betrokken lay-outs",
+    "findings_card.props.title": "Lokaal lettertype gelijk aan geërfd",
+    "findings_table.props.searchPlaceholder": "Zoek bestand, lay-out, object of lettertype…",
+    "findings_table.props.empty.message": "Geen object herhaalt het geërfde lettertype lokaal.",
+    "findings_table.props.columns[0].label": "Bestand",
+    "findings_table.props.columns[1].label": "Lay-out",
+    "findings_table.props.columns[2].label": "Objecttype",
+    "findings_table.props.columns[3].label": "Object",
+    "findings_table.props.columns[4].label": "Lettertype",
+    "findings_table.props.columns[5].label": "PostScript-naam"
+  }
+}

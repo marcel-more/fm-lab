@@ -85,6 +85,13 @@ export function parseVarParam(raw: string | null | undefined): string | null {
  * Interaktions-Props für ein klickbares Variable-Token (Klick + Enter/Space,
  * Button-Rolle, aria-pressed). Ohne Provider → leeres Objekt (nicht klickbar).
  * Gemeinsam genutzt von CalcTokenSpan, RefSpan und dem CF-Parameter-Header.
+ *
+ * Mit `open` (die Variable ist ein Katalogobjekt mit Detailansicht):
+ *   - Klick / Enter öffnet die Detailansicht der Variable,
+ *   - ⌘/Strg-Klick öffnet sie in einem neuen Tab,
+ *   - Shift- oder Option/Alt-Klick (bzw. Shift+Enter, Leertaste) schaltet die
+ *     Hervorhebung aller Vorkommen um.
+ * Ohne `open` (CF-Parameter, Let-Variablen) schaltet jeder Klick die Hervorhebung.
  */
 export interface VarClickProps {
   onClick: React.MouseEventHandler<HTMLElement>;
@@ -94,19 +101,45 @@ export interface VarClickProps {
   'aria-pressed': boolean;
 }
 
+/**
+ * Sprungziel eines Variable-Tokens: App-Pfad + Navigation des Hosts. `path`
+ * als Funktion erhält das geklickte Element — so kann der Pfad Kontext der
+ * Klickstelle mitnehmen (Schritt-Anker der Script-Zeile).
+ */
+export interface VarOpenTarget {
+  path: string | ((target: HTMLElement) => string);
+  navigate: (path: string) => void;
+}
+
+const pathOf = (open: VarOpenTarget, el: HTMLElement) =>
+  (typeof open.path === 'function' ? open.path(el) : open.path);
+
 export function varClickProps(
   varSel: VarSelection | null,
   key: string,
+  open?: VarOpenTarget | null,
 ): Partial<VarClickProps> {
   if (!varSel) return {};
   const toggle = () => varSel.toggle(key);
   return {
-    onClick: toggle,
+    onClick: (e) => {
+      if (!open || e.shiftKey || e.altKey) {
+        toggle();
+        return;
+      }
+      e.preventDefault();
+      const path = pathOf(open, e.currentTarget);
+      if (e.metaKey || e.ctrlKey) window.open(path, '_blank', 'noopener');
+      else open.navigate(path);
+    },
     role: 'button',
     tabIndex: 0,
     'aria-pressed': varSel.selectedKey === key,
     onKeyDown: (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
+      if (e.key === 'Enter' && open && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        open.navigate(pathOf(open, e.currentTarget));
+      } else if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         toggle();
       }

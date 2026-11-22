@@ -393,5 +393,25 @@
     "clear": "전체 솔루션 표시",
     "clearTitle": "범위를 해제하고 전체 솔루션 표시",
     "hint": "수치와 목록은 이 범위만 표시합니다"
+  },
+  "mermaid": {
+    "error": "다이어그램을 그릴 수 없습니다",
+    "tooLarge": "다이어그램이 너무 커서 그릴 수 없습니다",
+    "position": "{{line}}행, {{column}}열"
+  },
+  "ask": {
+    "title": "선택",
+    "cancel": "취소",
+    "needsSelection": "먼저 행을 선택하세요",
+    "notForChoice": "이 선택에서는 사용할 수 없습니다."
+  },
+  "download": {
+    "empty": "내보낼 항목이 없습니다.",
+    "noDataset": "데이터 '{{detail}}'이(가) 이 페이지에 로드되지 않았습니다.",
+    "noSelection": "먼저 행을 선택하세요.",
+    "tooLarge": "파일이 너무 커서 다운로드할 수 없습니다(20MB 초과).",
+    "svgOneRow": "SVG에는 다이어그램이 하나만 들어갑니다. 먼저 항목 하나를 선택하세요.",
+    "renderFailed": "다이어그램을 그릴 수 없습니다: {{detail}}",
+    "diagramError": "다이어그램을 그릴 수 없음: {{detail}}"
   }
 }

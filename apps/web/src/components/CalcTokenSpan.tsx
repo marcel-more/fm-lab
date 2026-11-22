@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { CalcToken } from '../script/calcTokens';
 import type { ScriptRef } from '../script/types';
@@ -53,6 +53,7 @@ export const CalcTokenSpan: React.FC<{ token: CalcToken }> = ({ token }) => {
   // aktuelle Objekt. `currentFile` ist daher die korrekte Zieldatei (kein 404-
   // Risiko). Felder/Plugins können hingegen cross-file sein → kein file (Downgrade).
   const currentFile = useCurrentFile();
+  const navigate = useNavigate();
   const highlighted = isUuidHighlighted(highlightSet, token.uuid ?? null);
   const hlClass = highlighted ? ' fm-ref--highlighted' : '';
 
@@ -114,15 +115,21 @@ export const CalcTokenSpan: React.FC<{ token: CalcToken }> = ({ token }) => {
       const varKey = varKeyFromCalcToken(token);
       const isSelected = !!varSel && varSel.selectedKey === varKey;
       const scopeLabel = `Variable (${token.scope || 'local'})`;
-      const title = varSel
-        ? `${scopeLabel} — ${t(isSelected ? 'detail:varSelect.clearHint' : 'detail:varSelect.hint')}`
-        : scopeLabel;
+      // Katalog-Variable (UUID): Klick öffnet ihre Detailansicht (Variablen liegen
+      // in der Datei des Kontexts), Shift-/Option-Klick schaltet die Hervorhebung.
+      const open = token.uuid
+        ? { path: buildObjectPath(token.uuid, currentUuid ?? null, currentFile ?? null), navigate }
+        : null;
+      const hintKey = open
+        ? (isSelected ? 'detail:varSelect.openClearHint' : 'detail:varSelect.openHint')
+        : (isSelected ? 'detail:varSelect.clearHint' : 'detail:varSelect.hint');
+      const title = varSel ? `${scopeLabel} — ${t(hintKey)}` : scopeLabel;
       return (
         <span
           className={`fm-ref fm-ref--variable${hlClass}${isSelected ? ' fm-ref--var-selected' : ''}${varSel ? ' fm-ref-link' : ''}`}
           data-ref-type="variable"
           title={title}
-          {...varClickProps(varSel, varKey)}
+          {...varClickProps(varSel, varKey, open)}
         >
           {text}
         </span>

@@ -1,0 +1,84 @@
+{
+  "id": "sql-reference-integrity",
+  "version": "1.0.0",
+  "title": "SQL Reference Integrity",
+  "description": "Table and field references inside ExecuteSQL statements: names that point to no table occurrence or field (the query silently returns ?), and names written as plain text in the SQL string — FileMaker does not track them, so a rename breaks the query without warning. Based on CalculationSqlRefs (schema 1.42.0).",
+  "keywords": [
+    "sql",
+    "executesql",
+    "rename",
+    "broken",
+    "reference",
+    "integrity"
+  ],
+  "testType": "error-check",
+  "objectTypes": [
+    "Script",
+    "Field",
+    "CustomFunction",
+    "LayoutObject"
+  ],
+  "scopes": [
+    "solution",
+    "file",
+    "object",
+    "object-list",
+    "cluster"
+  ],
+  "outputs": [
+    "count",
+    "findings-table"
+  ],
+  "members": [
+    {
+      "kind": "dashboard",
+      "ref": "execute_sql_broken_reference"
+    },
+    {
+      "kind": "dashboard",
+      "ref": "execute_sql_hardcoded_name"
+    }
+  ],
+  "locales": {
+    "de": {
+      "title": "SQL-Bezugsintegrität",
+      "description": "Tabellen- und Feldbezüge in ExecuteSQL-Anweisungen: Namen, die auf kein Tabellenauftreten oder Feld zeigen (die Abfrage liefert still ?), und Namen, die als reiner Text im SQL-String stehen — FileMaker verfolgt sie nicht, eine Umbenennung bricht die Abfrage ohne Warnung. Grundlage ist CalculationSqlRefs (Schema 1.42.0)."
+    },
+    "es": {
+      "title": "Integridad de referencias SQL",
+      "description": "Referencias a tablas y campos dentro de sentencias ExecuteSQL: nombres que no apuntan a ninguna ocurrencia de tabla ni campo (la consulta devuelve ? en silencio) y nombres escritos como texto plano en la cadena SQL — FileMaker no los rastrea, así que un cambio de nombre rompe la consulta sin aviso. Basado en CalculationSqlRefs (esquema 1.42.0)."
+    },
+    "fr": {
+      "title": "Intégrité des références SQL",
+      "description": "Références de tables et de rubriques dans les instructions ExecuteSQL : noms qui ne pointent vers aucune occurrence de table ni rubrique (la requête renvoie ? en silence) et noms écrits en texte brut dans la chaîne SQL — FileMaker ne les suit pas, un renommage casse donc la requête sans avertissement. Basé sur CalculationSqlRefs (schéma 1.42.0)."
+    },
+    "it": {
+      "title": "Integrità dei riferimenti SQL",
+      "description": "Riferimenti a tabelle e campi nelle istruzioni ExecuteSQL: nomi che non puntano ad alcuna ricorrenza di tabella o campo (la query restituisce ? in silenzio) e nomi scritti come testo semplice nella stringa SQL — FileMaker non li traccia, quindi una ridenominazione rompe la query senza avviso. Basato su CalculationSqlRefs (schema 1.42.0)."
+    },
+    "ja": {
+      "title": "SQL 参照の整合性",
+      "description": "ExecuteSQL 文内のテーブル参照とフィールド参照：どのテーブルオカレンスやフィールドも指していない名前（クエリは黙って ? を返します）と、SQL 文字列内にプレーンテキストで書かれた名前 — FileMaker はこれを追跡しないため、名前を変更すると警告なしにクエリが壊れます。CalculationSqlRefs（スキーマ 1.42.0）に基づきます。"
+    },
+    "ko": {
+      "title": "SQL 참조 무결성",
+      "description": "ExecuteSQL 문 안의 테이블 및 필드 참조: 어떤 테이블 어커런스나 필드도 가리키지 않는 이름(쿼리가 조용히 ?를 반환)과 SQL 문자열에 일반 텍스트로 쓴 이름 — FileMaker가 이를 추적하지 않으므로 이름을 바꾸면 경고 없이 쿼리가 깨집니다. CalculationSqlRefs(스키마 1.42.0) 기반."
+    },
+    "nl": {
+      "title": "Integriteit van SQL-verwijzingen",
+      "description": "Tabel- en veldverwijzingen in ExecuteSQL-instructies: namen die naar geen tabelinstantie of veld wijzen (de query geeft stil ? terug) en namen die als platte tekst in de SQL-string staan — FileMaker volgt ze niet, dus een hernoeming breekt de query zonder waarschuwing. Gebaseerd op CalculationSqlRefs (schema 1.42.0)."
+    },
+    "pt": {
+      "title": "Integridade de referências SQL",
+      "description": "Referências a tabelas e campos dentro de instruções ExecuteSQL: nomes que não apontam para nenhuma ocorrência de tabela nem campo (a consulta devolve ? em silêncio) e nomes escritos como texto simples na string SQL — o FileMaker não os acompanha, por isso uma renomeação quebra a consulta sem aviso. Baseado em CalculationSqlRefs (esquema 1.42.0)."
+    },
+    "sv": {
+      "title": "SQL-referensintegritet",
+      "description": "Tabell- och fältreferenser i ExecuteSQL-satser: namn som inte pekar på någon tabellförekomst eller något fält (frågan returnerar tyst ?) och namn som står som ren text i SQL-strängen — FileMaker spårar dem inte, så ett namnbyte bryter frågan utan varning. Baserat på CalculationSqlRefs (schema 1.42.0)."
+    },
+    "zh-Hans": {
+      "title": "SQL 引用完整性",
+      "description": "ExecuteSQL 语句中的表和字段引用：不指向任何表实例或字段的名称（查询会静默返回 ?），以及在 SQL 字符串中以纯文本书写的名称 — FileMaker 不会跟踪它们，因此重命名会在没有警告的情况下破坏查询。基于 CalculationSqlRefs（架构 1.42.0）。"
+    }
+  }
+}

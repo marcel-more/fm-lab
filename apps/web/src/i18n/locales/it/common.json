@@ -72,7 +72,8 @@
   "dashboard": {
     "loading": "Caricamento del dashboard…",
     "loadError": "Caricamento non riuscito: {{message}}",
-    "noData": "Nessun dato disponibile."
+    "noData": "Nessun dato disponibile.",
+    "bylineLabel": "Autore:"
   },
   "solutionPicker": {
     "label": "Soluzione",

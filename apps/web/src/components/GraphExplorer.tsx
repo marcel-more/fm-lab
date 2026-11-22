@@ -8,6 +8,7 @@ import {
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { ExplorerFilterPanel, type CommunityLegendItem } from './ExplorerFilterPanel';
 import { ExplorerGraph, type ExplorerGraphHandle, type FilterMode, type ColorMode, type GraphPartition } from './ExplorerGraph';
 import { ExplorerInspectPanel, type InspectNeighbor } from './ExplorerInspectPanel';
@@ -22,17 +23,45 @@ import {
 import {
   useTrace,
   useTraceEntries,
+  buildTraceQuery,
+  TRACE_EXPAND_MAX,
+  loadFlowTraceWayMermaid,
   EXCLUDABLE_TYPES,
+  type FlowWay,
   type TraceEntryKey,
   type TraceExcludedItem,
+  type TraceParams,
+  type TraceResponse,
   type TraceSuggestion,
 } from '../hooks/useTrace';
 import { ExplorerTracePanel, ExplorerTraceEntryChooser, type TraceControlValues } from './ExplorerTracePanel';
+import {
+  useDataTrace,
+  buildDataTraceQuery,
+  loadDataTraceWayMermaid,
+  putDataflowProfile,
+  candidateRule,
+  DATA_TRACE_EXPAND_MAX,
+  type DataTraceParams,
+  type DataProfileCandidate,
+  type DataWay,
+} from '../hooks/useDataTrace';
+import { ExplorerDataTracePanel, type DataTraceControlValues } from './ExplorerDataTracePanel';
+import { ExplorerDataWaysPanel, makeNodeInfo, type DataNodeInfo } from './ExplorerDataWaysPanel';
+import { ExplorerWayDiagram } from './ExplorerWayDiagram';
+import { ExplorerFlowWaysPanel, makeFlowNodeInfo } from './ExplorerFlowWaysPanel';
+import type { WayNodeInfo } from './ExplorerWaysPanel';
+import { diagramPreviewTarget, expandWayPath } from '../lib/traceWays';
+import { DataflowProfileDialog } from './DataflowProfileDialog';
+import { buildObjectPath, buildOpenTargetPath } from '../lib/navigation';
 import { useDepthProfile } from '../hooks/useDepthProfile';
 import { usePanelResize } from '../hooks/usePanelResize';
 import { getCommunityColor } from '../lib/graphColors';
 import { formatObjectDisplayName } from '../lib/objectName';
 import '../views/GraphExplorerView.css';
+
+/** Boundary-fähige Typen des Datenfluss-Trace (Felder, Scripts, Schritte, Variablen). */
+const DATA_EXCLUDABLE_TYPES = new Set(['Field', 'Script', 'ScriptStep', 'Variable']);
 
 /** Backend-Default node_limit von /api/graph/subgraph — Basis des Clipping-Hinweises. */
 const NODE_LIMIT = 1000;
@@ -122,11 +151,33 @@ interface GraphExplorerProps {
    * alle Client-Lenses und Panels bleiben unverändert.
    */
   trace?: TraceParamsProp | null;
-  /** Trace-Parameter-Patch (Budgets/Schalter/Preset/Excludes) — der Host persistiert (URL). */
-  onTraceParamsChange?: (patch: Partial<TraceControlValues> & { entry?: TraceEntryKey; exclude?: string[] }) => void;
+  /** Trace-Parameter-Patch (Budgets/Schalter/Preset/Excludes, Wege-Tab, offenes Diagramm) — der Host persistiert (URL). */
+  onTraceParamsChange?: (patch: TraceParamsPatch) => void;
   /** Trace ab einem Knoten öffnen (Inspect-Panel-Aktion; v1 nur Script/Layout). */
   onOpenTrace?: (uuid: string, file?: string | null) => void;
+  /**
+   * Datenfluss-Trace (GET /api/graph/trace?mode=data) ab einem Feld — gesetzt
+   * statt `focus`/`trace`. Linkes Panel: Datenfluss-Kontrollen; rechter Slot:
+   * Wege-Liste; Overlay: Mermaid je Weg; Dialog: Lösungsprofil.
+   */
+  dataTrace?: DataTraceParamsProp | null;
+  onDataTraceParamsChange?: (patch: Partial<DataTraceControlValues> & { expandWay?: string[]; exclude?: string[]; clearAnchor?: boolean }) => void;
+  /** Datenfluss-Trace ab einem Feld/einer Variable öffnen (Inspect-Aktion „Trace"). */
+  onOpenDataTrace?: (uuid: string, file: string | null | undefined, dir: 'up' | 'down') => void;
 }
+
+export type DataTraceParamsProp = DataTraceParams;
+
+export type TraceParamsPatch = Partial<TraceControlValues> & {
+  entry?: TraceEntryKey;
+  exclude?: string[];
+  /** Tab der Wege-Liste: „Ruft auf" (down) / „Erreicht über" (up). */
+  wayDir?: 'up' | 'down';
+  /** Offenes Diagramm (Weg-Nummer der Richtung, 0 = Übersicht); null = keins. */
+  way?: number | null;
+  /** „Quelle verfolgen" aufwärts: Weg-IDs. */
+  expandWay?: string[];
+};
 
 export interface TraceParamsProp extends TraceControlValues {
   start: string;
@@ -135,6 +186,12 @@ export interface TraceParamsProp extends TraceControlValues {
   entry: TraceEntryKey | null;
   /** Boundary-Ausschlüsse (Composite-Node-IDs); URL ist die Quelle. */
   exclude: string[];
+  /** Gewählter Tab der Wege-Liste (`wdir`). */
+  wayDir: 'up' | 'down';
+  /** Offenes Diagramm (`way`); null = keins. */
+  way: number | null;
+  /** „Quelle verfolgen" aufwärts (`expand`). */
+  expandWay: string[];
 }
 
 export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>(
@@ -149,8 +206,15 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
       trace = null,
       onTraceParamsChange,
       onOpenTrace,
+      dataTrace = null,
+      onDataTraceParamsChange,
+      onOpenDataTrace,
     } = props;
     const traceActive = trace !== null;
+    const dataActive = dataTrace !== null;
+    // Irgendein Trace-Modus aktiv (Ablauf oder Datenfluss) — Subgraph aus.
+    const anyTrace = traceActive || dataActive;
+    const navigate = useNavigate();
     // The graph always uses the "logical" view (container-hoisted operational
     // links). The "raw" granularity exposed only isolated, non-navigable
     // ScriptStep nodes, so its GUI control was removed; the backend param stays
@@ -214,13 +278,13 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
     // nennt die Anzahl und erlaubt das Einblenden.
     const [showUnconnected, setShowUnconnected] = useState(false);
     // Jeder neu fokussierte Graph startet mit dem Default (nicht-verbundene ausgeblendet).
-    useEffect(() => { setShowUnconnected(false); }, [focus, focusFile, trace?.start, trace?.startFile]);
+    useEffect(() => { setShowUnconnected(false); }, [focus, focusFile, trace?.start, trace?.startFile, dataTrace?.start, dataTrace?.startFile]);
 
     // serverTypes geht als `types` an den Subgraph-Fetch (Refetch + Re-Layout).
     // Im Trace-Modus ist der Subgraph-Fetch deaktiviert (focus=null) — die Daten
     // kommen dann aus useTrace; beide Antworten teilen die nodes/edges-Grundform.
     const subgraphResult = useSubgraph({
-      focus: traceActive ? null : focus,
+      focus: anyTrace ? null : focus,
       focusFile, depth, direction, mode, types: serverTypes,
     });
 
@@ -233,28 +297,53 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
     );
     const isLayoutStart = (traceEntries ?? []).some((e) => e.entry !== 'script');
     const needsEntryChoice = traceActive && isLayoutStart && !trace?.entry;
-    const traceResult = useTrace(
-      trace && traceEntries !== null && !needsEntryChoice
-        ? {
-            start: trace.start,
-            startFile: trace.startFile ?? null,
-            entry: trace.entry,
-            upDepth: trace.upDepth,
-            downDepth: trace.downDepth,
-            triggerDepth: trace.triggerDepth,
-            expandUp: trace.expandUp,
-            includeLocalVars: trace.includeLocalVars,
-            includeButtons: trace.includeButtons,
-            includeInteractionTriggers: trace.includeInteractionTriggers,
-            exclude: trace.exclude,
-          }
-        : null,
-    );
-    const data = traceActive ? traceResult.data : subgraphResult.data;
-    const loading = traceActive ? traceResult.loading : subgraphResult.loading;
-    const error = traceActive ? (traceResult.error ?? traceEntriesError) : subgraphResult.error;
-    // Typisierter Zugriff auf die Trace-Zusatzfelder (dynamicCalls-Banner).
-    const traceData = traceActive ? traceResult.data : null;
+    // Ein Parametersatz für den Trace-Abruf und die Mermaid-Quelle der Wege
+    // (gleicher Schlüssel → die Diagramme passen zur Liste).
+    const traceParams: TraceParams | null = trace && traceEntries !== null && !needsEntryChoice
+      ? {
+          start: trace.start,
+          startFile: trace.startFile ?? null,
+          entry: trace.entry,
+          upDepth: trace.upDepth,
+          downDepth: trace.downDepth,
+          triggerDepth: trace.triggerDepth,
+          expandUp: trace.expandUp,
+          includeLocalVars: trace.includeLocalVars,
+          includeButtons: trace.includeButtons,
+          includeInteractionTriggers: trace.includeInteractionTriggers,
+          exclude: trace.exclude,
+          includeDisabled: trace.includeDisabled,
+          expandWay: trace.expandWay,
+        }
+      : null;
+    const traceResult = useTrace(traceParams);
+    // Ablauf-Trace (SD14): Aufrufschritte ohne statisches Ziel als Pseudoknoten
+    // `DynamicCall` (roter Rhombus) am aufrufenden Script — der Server liefert
+    // sie als blinde Stellen, nicht als Knoten.
+    const flowData = useMemo(() => withDynamicCallNodes(traceResult.data), [traceResult.data]);
+    // Datenfluss-Trace: reloadToken lädt nach einer Profiländerung neu (der
+    // Server-Cache-Schlüssel wechselt mit dem Profil-Hash, die URL nicht).
+    const [profileReload, setProfileReload] = useState(0);
+    const dataResult = useDataTrace(dataTrace, profileReload);
+    const dataTraceData = dataActive ? dataResult.data : null;
+
+    const data = dataActive ? dataResult.data : traceActive ? flowData : subgraphResult.data;
+    const loading = dataActive ? dataResult.loading : traceActive ? traceResult.loading : subgraphResult.loading;
+    const error = dataActive
+      ? (dataResult.errorCode === 'DATAFLOW_NOT_BUILT'
+          ? (t('explorer:trace.data.notBuilt') as string)
+          : dataResult.errorCode === 'SCHEMA_DRIFT'
+            ? (t('explorer:trace.data.schemaDrift') as string)
+            : dataResult.error)
+      : traceActive
+        ? (traceResult.errorCode === 'SCHEMA_DRIFT'
+            ? (t('explorer:trace.flow.schemaDrift') as string)
+            : traceResult.errorCode === 'DATAFLOW_NOT_BUILT'
+              ? (t('explorer:trace.flow.notBuilt') as string)
+              : (traceResult.error ?? traceEntriesError))
+        : subgraphResult.error;
+    // Typisierter Zugriff auf die Trace-Zusatzfelder (dynamicCalls-Banner, Wege).
+    const traceData = traceActive ? flowData : null;
     // Chooser auch nach einem leeren Preset (422 TRACE_EMPTY_ENTRY) zeigen.
     const traceChooser = traceActive && (needsEntryChoice || traceResult.emptyEntries !== null);
 
@@ -262,8 +351,9 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
     // Server-Antwort reichert nur Label/Typ an. So bleibt ein Chip auch dann
     // entfernbar, wenn der gedämpfte Trace ihn nicht mehr erreicht oder die
     // Antwort noch lädt.
-    const traceExcludedChips: TraceExcludedItem[] = (trace?.exclude ?? []).map((id) => {
-      const resolved = traceData?.trace.excluded.find((x) => x.id === id);
+    const activeExclude = dataTrace?.exclude ?? trace?.exclude ?? [];
+    const traceExcludedChips: TraceExcludedItem[] = activeExclude.map((id) => {
+      const resolved = (dataTraceData?.trace.excluded ?? traceData?.trace.excluded)?.find((x) => x.id === id);
       if (resolved) return resolved;
       const sep = id.indexOf('::');
       return {
@@ -278,13 +368,230 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
     // Exclude-Toggle (Inspect-Panel) — patcht die Liste, Host persistiert (URL).
     const handleToggleExclude = useCallback(
       (graphId: string) => {
-        if (!trace) return;
-        const next = trace.exclude.includes(graphId)
-          ? trace.exclude.filter((x) => x !== graphId)
-          : [...trace.exclude, graphId];
-        onTraceParamsChange?.({ exclude: next });
+        const current = dataTrace?.exclude ?? trace?.exclude;
+        if (!current) return;
+        const next = current.includes(graphId)
+          ? current.filter((x) => x !== graphId)
+          : [...current, graphId];
+        if (dataTrace) onDataTraceParamsChange?.({ exclude: next });
+        else onTraceParamsChange?.({ exclude: next });
+      },
+      [trace, dataTrace, onTraceParamsChange, onDataTraceParamsChange],
+    );
+
+    // ── Datenfluss-Trace: Wege-Auswahl, Mermaid-Overlay, Lösungsprofil ──────
+    const [selectedWayId, setSelectedWayId] = useState<string | null>(null);
+    const [waysOpen, setWaysOpen] = useState(true);
+    const [diagramWayNo, setDiagramWayNo] = useState<number | null>(null);
+    const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+    const [profileBusy, setProfileBusy] = useState<string | null>(null);
+    const [profileError, setProfileError] = useState<string | null>(null);
+    // Verwendung (down): Wirkungsliste statt Graph im Default — Graph auf Abruf.
+    const [showUsageGraph, setShowUsageGraph] = useState(false);
+    const usageGraphHidden = dataActive && dataTrace?.dir === 'down' && !showUsageGraph;
+
+    // Neuer Start oder Richtung → Auswahl, Overlay zurücksetzen; Wege-Liste öffnen.
+    useEffect(() => {
+      setSelectedWayId(null);
+      setDiagramWayNo(null);
+      setWaysOpen(true);
+      setShowUsageGraph(false);
+    }, [dataTrace?.start, dataTrace?.startFile, dataTrace?.dir]);
+
+    const selectedWay = useMemo<DataWay | null>(
+      () => dataTraceData?.trace.ways.find((w) => w.wayId === selectedWayId) ?? null,
+      [dataTraceData, selectedWayId],
+    );
+    // Gewählten Weg im Canvas hervorheben (nach dem Element-Update des Kinds).
+    useEffect(() => {
+      graphRef.current?.highlightPath(selectedWay ? selectedWay.pathNodes : null);
+    }, [selectedWay, data]);
+
+    const nodeInfo = useMemo(() => makeNodeInfo(dataTraceData), [dataTraceData]);
+
+    // Knoten aus Liste/Diagramm. Diagramm (navigate=true): immer zum Sprungziel
+    // des Servers (Schritt → Script am Schritt, Layout-Objekt → Layout mit Objekt,
+    // Berechnung/Pseudoknoten → Eigentümer, …). Liste: Knoten im Graph → Auswahl-
+    // ring (die Liste bleibt stehen), sonst ebenfalls zum Sprungziel.
+    const pickDataNode = useCallback(
+      (info: DataNodeInfo, navigateAlways = false) => {
+        if (info.inGraph && !navigateAlways) {
+          graphRef.current?.highlightNode(info.id);
+          graphRef.current?.previewNode(info.id);
+          return;
+        }
+        if (info.open) {
+          navigate(buildOpenTargetPath(info.open));
+          return;
+        }
+        if (info.type === 'ScriptStep' && info.scriptUuid) {
+          navigate(buildObjectPath(info.scriptUuid, null, info.file, { step: info.uuid }));
+          return;
+        }
+        if (info.ownerUuid) {
+          onOpenDetails(info.ownerUuid, info.file);
+          return;
+        }
+        onOpenDetails(info.uuid, info.file);
+      },
+      [navigate, onOpenDetails],
+    );
+
+    const handleExpandWay = useCallback(
+      (wayId: string) => {
+        if (!dataTrace || dataTrace.expandWay.includes(wayId)) return;
+        onDataTraceParamsChange?.({ expandWay: [...dataTrace.expandWay, wayId] });
+      },
+      [dataTrace, onDataTraceParamsChange],
+    );
+
+    const handleDecideCandidate = useCallback(
+      async (c: DataProfileCandidate, status: 'confirmed' | 'rejected') => {
+        setProfileBusy(c.key);
+        setProfileError(null);
+        try {
+          await putDataflowProfile({ rules: [candidateRule(c, status)] });
+          setProfileReload((n) => n + 1);
+        } catch (e) {
+          setProfileError(e instanceof Error ? e.message : String(e));
+        } finally {
+          setProfileBusy(null);
+        }
+      },
+      [],
+    );
+
+    const diagramTitle = useMemo(() => {
+      if (diagramWayNo === null) return '';
+      if (diagramWayNo === 0) return t('explorer:trace.ways.overview') as string;
+      const w = dataTraceData?.trace.ways.find((x) => x.wayNo === diagramWayNo);
+      const writer = nodeInfo(w?.writer ?? null);
+      return `#${diagramWayNo}${writer ? ` · ${writer.label}` : ''}`;
+    }, [diagramWayNo, dataTraceData, nodeInfo, t]);
+
+    // ── Ablauf-Trace: Wege-Liste (Tabs), Auswahl, Diagramm, Sprungziele ──────
+    const [flowSelectedWayId, setFlowSelectedWayId] = useState<string | null>(null);
+    const [flowWaysOpen, setFlowWaysOpen] = useState(true);
+    const [flowOpenGroupKey, setFlowOpenGroupKey] = useState<string | null>(null);
+    const flowWays = traceData?.trace.ways ?? null;
+    const flowDir = trace?.wayDir ?? 'up';
+    const flowDiagramWay = trace?.way ?? null;
+
+    useEffect(() => {
+      setFlowSelectedWayId(null);
+      setFlowOpenGroupKey(null);
+      setFlowWaysOpen(true);
+    }, [trace?.start, trace?.startFile]);
+
+    // Ein offenes Diagramm (Liste, Overlay, Deep-Link `way=`) wählt seinen Weg
+    // auch in der Liste: das Panel klappt die Vorfahren auf und scrollt hin,
+    // der Canvas hebt den Pfad hervor.
+    useEffect(() => {
+      if (!flowDiagramWay || !flowWays) return;
+      const w = flowWays.find((x) => x.dir === flowDir && x.wayNo === flowDiagramWay);
+      if (!w) return;
+      setFlowWaysOpen(true);
+      setFlowSelectedWayId(w.wayId);
+    }, [flowDiagramWay, flowDir, flowWays]);
+
+    const flowNodeInfo = useMemo(() => makeFlowNodeInfo(traceData), [traceData]);
+    const flowTypeOf = useCallback((id: string) => flowNodeInfo(id)?.type ?? null, [flowNodeInfo]);
+    const selectedFlowWay = useMemo<FlowWay | null>(
+      () => flowWays?.find((w) => w.wayId === flowSelectedWayId) ?? null,
+      [flowWays, flowSelectedWayId],
+    );
+    // Gewählten Weg im Canvas hervorheben — voller Pfad über die pathPrefix-Kette;
+    // Schritt-IDs stehen nicht im Canvas und fallen in highlightPath heraus.
+    useEffect(() => {
+      if (!traceActive) return;
+      graphRef.current?.highlightPath(
+        selectedFlowWay && flowWays ? expandWayPath(flowWays, selectedFlowWay, flowTypeOf).pathNodes : null,
+      );
+    }, [traceActive, selectedFlowWay, flowWays, flowTypeOf, data]);
+
+    // Knoten aus Liste/Diagramm: im Canvas → Auswahlring; sonst (bzw. immer aus
+    // dem Diagramm) zum Sprungziel — Schritt/DynamicCall → Script am Schritt,
+    // Layout-Objekt → Layout mit Objekt, sonst das Objekt selbst.
+    const pickFlowNode = useCallback(
+      (info: WayNodeInfo, navigateAlways = false) => {
+        if (info.inGraph && !navigateAlways && info.type !== 'DynamicCall') {
+          graphRef.current?.highlightNode(info.id);
+          graphRef.current?.previewNode(info.id);
+          return;
+        }
+        if (info.open) navigate(buildOpenTargetPath(info.open));
+        else onOpenDetails(info.uuid, info.file);
+      },
+      [navigate, onOpenDetails],
+    );
+
+    // Diagramm-Klick: Einstiegsgruppen-Schlüssel `<Script-ID>#entry:<Art>:<Ereignis>`
+    // → Tab „Erreicht über", Weg des Einstiegs-Scripts wählen, Gruppe aufklappen.
+    const pickFlowDiagramNode = useCallback(
+      (id: string) => {
+        const at = id.indexOf('#entry:');
+        if (at !== -1) {
+          const scriptId = id.slice(0, at);
+          const [kind, ...ev] = id.slice(at + 7).split(':');
+          const event = ev.join(':');
+          const way = flowWays?.find((w) => w.dir === 'up' && w.target === scriptId);
+          if (!way) return;
+          setFlowWaysOpen(true);
+          setSelectedNode(null);
+          setTypeListType(null);
+          setFlowSelectedWayId(way.wayId);
+          setFlowOpenGroupKey(`${way.wayId}|${kind}|${event}`);
+          if (trace?.wayDir !== 'up') onTraceParamsChange?.({ wayDir: 'up', way: trace?.way ?? null });
+          return;
+        }
+        const info = flowNodeInfo(id);
+        if (info) pickFlowNode(info, true);
+      },
+      [flowWays, flowNodeInfo, pickFlowNode, trace?.wayDir, trace?.way, onTraceParamsChange],
+    );
+
+    const flowDiagramTitle = useMemo(() => {
+      if (flowDiagramWay === null) return '';
+      const dirLabel = t(`explorer:trace.flow.tab.${flowDir}`) as string;
+      if (flowDiagramWay === 0) return `${t('explorer:trace.ways.overview')} · ${dirLabel}`;
+      const w = flowWays?.find((x) => x.dir === flowDir && x.wayNo === flowDiagramWay);
+      const target = flowNodeInfo(w?.target ?? null);
+      return `#${flowDiagramWay}${target ? ` · ${target.label}` : ''} · ${dirLabel}`;
+    }, [flowDiagramWay, flowDir, flowWays, flowNodeInfo, t]);
+
+    // „Quelle verfolgen" aufwärts: Weg-ID anhängen; die neuen Wege hängen
+    // in der Liste unter dem aufgeklappten.
+    const handleExpandFlowWay = useCallback(
+      (wayId: string) => {
+        if (!trace || trace.expandWay.includes(wayId)) return;
+        onTraceParamsChange?.({ expandWay: [...trace.expandWay, wayId] });
       },
       [trace, onTraceParamsChange],
+    );
+
+    // DynamicCall-Pseudoknoten: „Details“/„Fokus“ führen zum Script am Schritt.
+    const dynamicCallScripts = useMemo(() => {
+      const m = new Map<string, { script: string; file: string | null }>();
+      for (const site of traceData?.trace.blindSpots?.sites ?? []) {
+        const sep = site.script.indexOf('::');
+        m.set(site.stepUuid, { script: sep === -1 ? site.script : site.script.slice(0, sep), file: site.file });
+      }
+      return m;
+    }, [traceData]);
+    const openDetailsOrStep = useCallback(
+      (uuid: string, file?: string | null) => {
+        const dyn = dynamicCallScripts.get(uuid);
+        if (dyn) navigate(buildObjectPath(dyn.script, null, dyn.file, { step: uuid }));
+        else onOpenDetails(uuid, file);
+      },
+      [dynamicCallScripts, navigate, onOpenDetails],
+    );
+    const setFocusOrStep = useCallback(
+      (uuid: string, file?: string | null) => {
+        if (dynamicCallScripts.has(uuid)) openDetailsOrStep(uuid, file);
+        else onSetFocus(uuid, file);
+      },
+      [dynamicCallScripts, openDetailsOrStep, onSetFocus],
     );
 
     // Vorschläge: bereits ausgeschlossene Kandidaten client-seitig filtern
@@ -304,7 +611,7 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
     // erreichbare Menge zählt wie der Subgraph (sonst 2933 statt 1916). Im
     // Trace-Modus deaktiviert (der Regler ist durch die Budgets ersetzt).
     const { profile: depthProfile } = useDepthProfile(
-      traceActive ? null : focus, focusFile ?? null, direction, mode, serverTypes,
+      anyTrace ? null : focus, focusFile ?? null, direction, mode, serverTypes,
     );
 
     // Read the latest name filter from a ref so the imperative handle (mount-only)
@@ -523,6 +830,10 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
     const handleHoverItem = useCallback((graphId: string | null) => {
       graphRef.current?.previewNode(graphId);
     }, []);
+    // Knoten im Canvas — Diagramm-Hover weicht für Schritte/Berechnungen außerhalb
+    // des Canvas auf Script bzw. Eigentümer aus (diagramPreviewTarget).
+    const canvasIds = useMemo(() => new Set((data?.nodes ?? []).map((n) => n.id)), [data]);
+    const inCanvas = useCallback((graphId: string) => canvasIds.has(graphId), [canvasIds]);
 
     // Verfeinerung C — aktuelle Client-Typ-Auswahl serverseitig anwenden (Refetch lädt
     // bis node_limit NUR die gewählten Typen → der Deckel deckt sie voll ab).
@@ -614,7 +925,14 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
         }
         const otherNode = byId.get(otherId);
         if (!otherNode) continue;
-        rows.set(key, { node: otherNode, role: e.role, direction: dir, subroles: e.subrole ? [e.subrole] : [] });
+        // Ablauf-Trace: Aufrufstellen der Kante — der Schritt liegt im Quell-Script.
+        const src = byId.get(e.source);
+        rows.set(key, {
+          node: otherNode, role: e.role, direction: dir, subroles: e.subrole ? [e.subrole] : [],
+          ...(e.callSites && e.callSites.length > 0 && src
+            ? { callSites: e.callSites, caller: { uuid: src.uuid, file: src.file } }
+            : {}),
+        });
       }
       const out = [...rows.values()];
       for (const r of out) r.subroles.sort();
@@ -694,7 +1012,35 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
           onToggleType={handleToggleType}
           onShowAllTypes={handleShowAllTypes}
           onApplyServerTypes={handleApplyServerTypes}
-          traceControls={trace ? (
+          traceControls={dataTrace ? (
+            <ExplorerDataTracePanel
+              startType={dataTraceData?.trace.start.type ?? null}
+              startStep={dataTraceData?.trace.start.step ?? null}
+              onClearAnchor={() => onDataTraceParamsChange?.({ clearAnchor: true })}
+              values={{
+                dir: dataTrace.dir,
+                fieldLevels: dataTrace.fieldLevels,
+                includeControl: dataTrace.includeControl,
+                includeSinks: dataTrace.includeSinks,
+                includeReset: dataTrace.includeReset,
+                profile: dataTrace.profile,
+              }}
+              expandedWays={dataTrace.expandWay.length}
+              stats={dataTraceData?.trace.stats ?? null}
+              blindSpots={dataTraceData?.trace.blindSpots ?? null}
+              profile={dataTraceData?.trace.profile ?? null}
+              excluded={traceExcludedChips}
+              profileBusy={profileBusy}
+              profileError={profileError}
+              onChange={(patch) => onDataTraceParamsChange?.(patch)}
+              onResetExpansion={() => onDataTraceParamsChange?.({ expandWay: [] })}
+              onRemoveExclude={handleToggleExclude}
+              onClearExcludes={() => onDataTraceParamsChange?.({ exclude: [] })}
+              onDecideCandidate={handleDecideCandidate}
+              onOpenProfile={() => setProfileDialogOpen(true)}
+              onExitTrace={() => onSetFocus(dataTrace.start, dataTrace.startFile ?? null)}
+            />
+          ) : trace ? (
             <ExplorerTracePanel
               values={{
                 upDepth: trace.upDepth,
@@ -703,8 +1049,13 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
                 expandUp: trace.expandUp,
                 includeLocalVars: trace.includeLocalVars,
                 includeButtons: trace.includeButtons,
-            includeInteractionTriggers: trace.includeInteractionTriggers,
+                includeInteractionTriggers: trace.includeInteractionTriggers,
+                includeDisabled: trace.includeDisabled,
               }}
+              stats={traceData?.trace.stats ?? null}
+              noDdrFiles={traceData?.trace.blindSpots?.noDdr?.files ?? null}
+              expandedWays={trace.expandWay.length}
+              onResetExpansion={() => onTraceParamsChange?.({ expandWay: [] })}
               entry={trace.entry ?? traceData?.trace.entry ?? null}
               entries={traceEntries}
               excluded={traceExcludedChips}
@@ -731,7 +1082,10 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
         />
 
         <main className="graph-explorer-canvas-wrap">
-          {data?.truncated && (
+          {/* Datenfluss-Trace: Ebenen-/Wege-Grenzen sind gewollt (Default Ebene 1) und
+              stehen im linken Panel — Banner nur bei Knoten- bzw. Zustandsgrenze. */}
+          {data?.truncated && (!dataTraceData
+            || dataTraceData.trace.stats.truncatedBy.some((k) => k === 'node_limit' || k === 'state_limit')) && (
             <div className="graph-explorer-banner" role="status">
               {/* Reiner Hinweis — der Lade-Umfang („Alle Typen / Nur gewählte Typen")
                   steuert das Nachladen jetzt im KNOTENTYPEN-Bereich, nicht hier. */}
@@ -739,7 +1093,7 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
                   schon auf 1) — dann nur den weiterhin wirksamen Typ-Filter empfehlen. Die
                   gehaltenen Knoten sind serverseitig die grad-stärksten je Tiefe. */}
               <span>
-                {t(traceActive
+                {t(anyTrace
                   ? 'explorer:trace.truncated'
                   : depth <= 1 ? 'explorer:truncatedMinDepth' : 'explorer:truncated', {
                   kept: data.stats.nodeCount,
@@ -757,13 +1111,13 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
             </div>
           )}
 
-          {!focus && !traceActive && (
+          {!focus && !anyTrace && (
             <div className="graph-explorer-placeholder">
               <p>{t('explorer:emptyFocus')}</p>
             </div>
           )}
 
-          {(focus || traceActive) && error && (
+          {(focus || anyTrace) && error && (
             <div className="graph-explorer-error">{t('common:loadError', { message: error })}</div>
           )}
 
@@ -777,11 +1131,20 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
             />
           )}
 
-          {(focus || traceActive) && !error && !traceChooser && loading && !data && (
+          {(focus || anyTrace) && !error && !traceChooser && loading && !data && (
             <div className="graph-explorer-placeholder">{t('explorer:loading')}</div>
           )}
 
-          {(focus || traceActive) && !error && !traceChooser && (
+          {usageGraphHidden && !error && data && (
+            <div className="graph-explorer-placeholder">
+              <p>{t('explorer:trace.data.usageGraphHidden', { count: data.stats.nodeCount })}</p>
+              <button type="button" className="explorer-focus-details" onClick={() => setShowUsageGraph(true)}>
+                {t('explorer:trace.data.showGraph')}
+              </button>
+            </div>
+          )}
+
+          {(focus || anyTrace) && !error && !traceChooser && !usageGraphHidden && (
             <ExplorerGraph
               ref={graphRef}
               data={data}
@@ -793,8 +1156,8 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
               groupByFile={effectiveGroupByFile}
               selectedCommunity={communityLensActive ? selectedCommunity : null}
               hoveredCommunity={communityLensActive ? hoveredCommunity : null}
-              onSetFocus={onSetFocus}
-              onOpenDetails={onOpenDetails}
+              onSetFocus={setFocusOrStep}
+              onOpenDetails={openDetailsOrStep}
               onSelectNode={handleSelectNode}
               showUnconnected={showUnconnected}
               onPartition={setPartition}
@@ -802,6 +1165,49 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
           )}
 
           {loading && data && <div className="graph-explorer-loading-pill">{t('explorer:loading')}</div>}
+
+          {/* Datenfluss-Trace: Mermaid-Ansicht eines Wegs (0 = Übersicht) über dem Canvas. */}
+          {dataTrace && diagramWayNo !== null && dataTraceData && (
+            <ExplorerWayDiagram
+              loadKey={`${buildDataTraceQuery(dataTrace)}#${diagramWayNo}`}
+              load={() => loadDataTraceWayMermaid(dataTrace, diagramWayNo)}
+              title={diagramTitle}
+              onClose={() => setDiagramWayNo(null)}
+              onPickNode={(graphId) => {
+                const info = nodeInfo(graphId);
+                if (info) pickDataNode(info, true);
+              }}
+              onHoverNode={(id) => handleHoverItem(id && diagramPreviewTarget(id, nodeInfo, inCanvas))}
+            />
+          )}
+
+          {/* Ablauf-Trace: Mermaid-Ansicht eines Wegs der gewählten Richtung (0 = Übersicht). */}
+          {trace && traceParams && flowDiagramWay !== null && flowWays && (
+            <ExplorerWayDiagram
+              loadKey={`${buildTraceQuery(traceParams)}#${flowDir}#${flowDiagramWay}`}
+              load={() => loadFlowTraceWayMermaid(traceParams, flowDiagramWay, flowDir)}
+              title={flowDiagramTitle}
+              onClose={() => onTraceParamsChange?.({ way: null })}
+              onPickNode={pickFlowDiagramNode}
+              onHoverNode={(id) => handleHoverItem(id && diagramPreviewTarget(id, flowNodeInfo, inCanvas))}
+              readableScale={0.6}
+            />
+          )}
+
+          {traceData && flowWays && !flowWaysOpen && !typeListType && !selectedNode && (
+            <button type="button" className="graph-explorer-ways-pill" onClick={() => setFlowWaysOpen(true)}>
+              {t('explorer:trace.flow.waysTitle')}{' '}
+              <span className="explorer-chip-count">{traceData.trace.stats.ways?.[flowDir] ?? 0}</span>
+            </button>
+          )}
+
+          {/* Wege-Liste zugeklappt → Pill zum Wiederöffnen. */}
+          {dataTraceData && !waysOpen && !typeListType && !selectedNode && (
+            <button type="button" className="graph-explorer-ways-pill" onClick={() => setWaysOpen(true)}>
+              {t(dataTrace?.dir === 'down' ? 'explorer:trace.data.usage' : 'explorer:trace.data.origin')}
+              {' '}<span className="explorer-chip-count">{dataTraceData.trace.stats.ways}</span>
+            </button>
+          )}
 
           {/* Nicht mit dem Fokus verbundene Knoten (Inseln + isolierte): dezenter Hinweis
               + Einblenden-Toggle (Default: ausgeblendet). */}
@@ -831,7 +1237,7 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
         </main>
 
         {/* Anfasser zum rechten Slot — nur wenn ein Panel offen ist. */}
-        {(typeListType || selectedNode) && (
+        {(typeListType || selectedNode || (dataTraceData && waysOpen) || (traceData && flowWays && flowWaysOpen)) && (
           <div
             className="explorer-resizer explorer-resizer-right"
             role="separator"
@@ -866,7 +1272,7 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
             // Exclude-Toggle je Listenzeile — Gate am Panel (ein Typ pro
             // Instanz): nur im Trace-Modus und nur für ausschließbare Typen.
             onToggleExclude={
-              traceActive && EXCLUDABLE_TYPES.has(typeListType)
+              (traceActive && EXCLUDABLE_TYPES.has(typeListType)) || (dataActive && DATA_EXCLUDABLE_TYPES.has(typeListType))
                 ? handleToggleExclude
                 : undefined
             }
@@ -881,19 +1287,115 @@ export const GraphExplorer = forwardRef<GraphExplorerHandle, GraphExplorerProps>
               setSelectedNode(null);
               graphRef.current?.highlightNode(null);
             }}
-            onOpenDetails={onOpenDetails}
-            onSetFocus={onSetFocus}
+            onOpenDetails={openDetailsOrStep}
+            onSetFocus={setFocusOrStep}
             onExpand={handleExpand}
             onCollapse={handleCollapse}
             onSelectNeighbor={handleSelectNeighbor}
             onTrace={onOpenTrace}
-            onToggleExclude={traceActive ? handleToggleExclude : undefined}
-            nodeExcluded={trace?.exclude.includes(selectedNode.id) ?? false}
+            onDataTrace={onOpenDataTrace}
+            onToggleExclude={
+              (traceActive && EXCLUDABLE_TYPES.has(selectedNode.type)) || (dataActive && DATA_EXCLUDABLE_TYPES.has(selectedNode.type))
+                ? handleToggleExclude
+                : undefined
+            }
+            nodeExcluded={activeExclude.includes(selectedNode.id)}
+            onOpenCallSite={(caller, stepUuid) => navigate(buildObjectPath(caller.uuid, null, caller.file, { step: stepUuid }))}
+          />
+        ) : dataTraceData && dataTrace && waysOpen ? (
+          <ExplorerDataWaysPanel
+            width={rightWidth}
+            data={dataTraceData}
+            dir={dataTrace.dir}
+            onDirChange={(d) => onDataTraceParamsChange?.({ dir: d })}
+            startType={dataTraceData.trace.start.type ?? null}
+            nodeInfo={nodeInfo}
+            selectedWayId={selectedWayId}
+            expandedWayIds={dataTrace.expandWay}
+            canExpandMore={dataTrace.expandWay.length < DATA_TRACE_EXPAND_MAX}
+            onSelectWay={(w) => setSelectedWayId(w ? w.wayId : null)}
+            onShowMermaid={setDiagramWayNo}
+            onExpandWay={handleExpandWay}
+            onHoverNode={handleHoverItem}
+            onPickNode={(info) => pickDataNode(info)}
+            onOpenFlowTrace={(uuid, file) => onOpenTrace?.(uuid, file)}
+            onClose={() => {
+              setWaysOpen(false);
+              setSelectedWayId(null);
+              graphRef.current?.previewNode(null);
+            }}
+          />
+        ) : trace && traceData && flowWays && flowWaysOpen ? (
+          <ExplorerFlowWaysPanel
+            width={rightWidth}
+            data={traceData}
+            dir={flowDir}
+            onDirChange={(d) => onTraceParamsChange?.({ wayDir: d })}
+            nodeInfo={flowNodeInfo}
+            selectedWayId={flowSelectedWayId}
+            openGroupKey={flowOpenGroupKey}
+            expandedWayIds={trace.expandWay}
+            canExpandMore={trace.expandWay.length < TRACE_EXPAND_MAX}
+            onExpandWay={handleExpandFlowWay}
+            onSelectWay={(w) => setFlowSelectedWayId(w ? w.wayId : null)}
+            onShowMermaid={(n) => onTraceParamsChange?.({ way: n })}
+            onHoverNode={handleHoverItem}
+            onPickNode={pickFlowNode}
+            onOpenTrace={(uuid, file) => onOpenTrace?.(uuid, file)}
+            onClose={() => {
+              setFlowWaysOpen(false);
+              setFlowSelectedWayId(null);
+              graphRef.current?.previewNode(null);
+            }}
           />
         ) : null}
+
+        {profileDialogOpen && (
+          <DataflowProfileDialog
+            onClose={() => setProfileDialogOpen(false)}
+            onChanged={() => setProfileReload((n) => n + 1)}
+          />
+        )}
       </div>
     );
   },
 );
 
 GraphExplorer.displayName = 'GraphExplorer';
+
+/**
+ * Flow trace: the blind call sites (active call steps without a static target)
+ * as `DynamicCall` pseudo nodes plus an edge from the calling script — only for
+ * scripts in the canvas. Leaves every other response untouched.
+ */
+function withDynamicCallNodes(data: TraceResponse | null): TraceResponse | null {
+  const sites = data?.trace.blindSpots?.sites ?? [];
+  if (!data || sites.length === 0) return data;
+  const byId = new Map(data.nodes.map((n) => [n.id, n]));
+  const refs = data.trace.refs ?? {};
+  const nodes = [...data.nodes];
+  const edges = [...data.edges];
+  for (const site of sites) {
+    const caller = byId.get(site.script);
+    if (!caller || byId.has(site.id)) continue;
+    const label = refs[site.id]?.label ?? `#${site.stepIndex + 1} ${site.stepName ?? ''}`.trim();
+    nodes.push({
+      id: site.id, uuid: site.stepUuid, label: site.name ? `${label} · ${site.name}` : label, type: 'DynamicCall',
+      file: site.file, depth: caller.depth + 1, degree: 1, isHub: false, isFocus: false,
+      community: null, communityName: null, traceRole: 'blind', traceDepth: (caller.traceDepth ?? 0) + 1,
+    });
+    edges.push({
+      id: `${site.script}|calls_dynamic|${site.id}`, source: site.script, target: site.id,
+      role: 'calls_script', subrole: null, linkType: 'operational', crossFile: false,
+      traceKind: 'chain', precision: 'dynamic',
+      callSites: [{
+        stepUuid: site.stepUuid, stepIndex: site.stepIndex, stepId: site.stepId,
+        ...(site.guard ? { guard: site.guard } : {}),
+        ...(site.ifDepth ? { ifDepth: site.ifDepth } : {}),
+        ...(site.inLoop ? { inLoop: true } : {}),
+        ...(site.unreachable ? { unreachable: true } : {}),
+      }],
+    });
+  }
+  return { ...data, nodes, edges };
+}

@@ -1,6 +1,6 @@
 {
   "name": "@fm-lab/api",
-  "version": "0.9.19",
+  "version": "0.9.20",
   "description": "FM-Lab REST API",
   "main": "src/index.js",
   "scripts": {
@@ -31,7 +31,8 @@
     "joi": "^18.3.2",
     "lru-cache": "^11.2.4",
     "marked": "^18.0.4",
-    "morgan": "^1.12.1"
+    "morgan": "^1.12.1",
+    "pele": "~1.13.0"
   },
   "devDependencies": {
     "jest": "^30.5.2",

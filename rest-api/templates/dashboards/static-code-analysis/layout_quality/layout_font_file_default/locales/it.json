@@ -1,0 +1,20 @@
+{
+  "manifest": {
+    "title": "Font lasciato al predefinito del file",
+    "description": "Regola di qualità dei formati — oggetti di testo di un formato mostrano il font predefinito del file perché né l'oggetto, né il suo stile, né il tema nominano un font (Classico e Minimalista non ne nominano). Quel font non fa parte dell'esportazione XML e cambia da file a file: lo stesso tema mostra Helvetica Neue in un file e Arial in un altro. Un risultato per formato.",
+    "messages.file_default": "{count} di {total} oggetti di testo mostrano il font predefinito del file — il tema non nomina alcun font"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Risultati",
+    "summary_kpi.props.items[1].label": "Oggetti con il predefinito del file",
+    "summary_kpi.props.items[2].label": "File interessati",
+    "findings_card.props.title": "Font lasciato al predefinito del file",
+    "findings_table.props.searchPlaceholder": "Cerca file, formato o tema…",
+    "findings_table.props.empty.message": "Nessun formato lascia il font al predefinito del file.",
+    "findings_table.props.columns[0].label": "File",
+    "findings_table.props.columns[1].label": "Formato",
+    "findings_table.props.columns[2].label": "Tema",
+    "findings_table.props.columns[3].label": "Oggetti con il predefinito del file",
+    "findings_table.props.columns[4].label": "Oggetti di testo"
+  }
+}

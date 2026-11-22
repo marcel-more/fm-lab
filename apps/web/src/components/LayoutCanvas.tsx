@@ -1,8 +1,11 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { LayoutData, LayoutObject } from '../hooks/useLayoutData';
 import { useLayoutSearch } from '../hooks/useLayoutSearch';
+import { useLayoutFonts } from '../hooks/useLayoutFonts';
+import { FONT_DIMS } from '../lib/layoutFonts';
+import { LayoutFontFilter, LayoutFontPills } from './LayoutFontFilter';
 import { HighlightRing, LayoutObjectShape, SelectionRing, type LabelMode } from './LayoutObjectShape';
 import { LayoutObjectTooltip } from './LayoutObjectTooltip';
 import { LayoutTypeFilter } from './LayoutTypeFilter';
@@ -93,7 +96,11 @@ export const LayoutCanvas = forwardRef<LayoutCanvasHandle, Props>(({ data, exter
   const [transform, setTransform] = useState<ViewTransform>({ tx: 0, ty: 0, scale: 1 });
   const dragRef = useRef<{ startX: number; startY: number; tx: number; ty: number } | null>(null);
   const [labelMode, setLabelMode] = useState<LabelMode>('name');
-  const [filterDetailsMode, setFilterDetailsMode] = useState(false);
+  const [searchParams] = useSearchParams();
+  // Font/style params in the URL (deep link) → start in the details stage, else
+  // the active filter would be invisible.
+  const fontParamsSet = FONT_DIMS.some(d => !!searchParams.get(d));
+  const [filterDetailsMode, setFilterDetailsMode] = useState(fontParamsSet);
   const [hoverState, setHoverState] = useState<{ uuid: string; x: number; y: number } | null>(null);
 
   // object → part (catalog Part_Seq, fallback rule for older catalogs).
@@ -107,7 +114,19 @@ export const LayoutCanvas = forwardRef<LayoutCanvasHandle, Props>(({ data, exter
     return m;
   }, [partOf]);
 
-  const search = useLayoutSearch(data.objects, externalMatchUuids ?? null, onClearRef, partOf);
+  // Font uses and styles (template display_layout_fonts), loaded lazily: when the
+  // details stage opens, a font/style param is set or the first tooltip shows.
+  const layoutUuid = data.meta?.layout_uuid ?? data.parts[0]?.layout_uuid ?? null;
+  const fonts = useLayoutFonts(
+    layoutUuid,
+    data.fileName || null,
+    filterDetailsMode || fontParamsSet || hoverState != null,
+  );
+
+  const search = useLayoutSearch(
+    data.objects, externalMatchUuids ?? null, onClearRef, partOf, fonts.index,
+    fonts.status === 'unavailable' || fonts.status === 'error',
+  );
   const section = search.section;
   // A section number that does not exist in this layout (stale URL) is ignored.
   const sectionValid = section != null && data.parts.some(p => p.part_seq === section);
@@ -118,7 +137,8 @@ export const LayoutCanvas = forwardRef<LayoutCanvasHandle, Props>(({ data, exter
   // kennt die echte Trefferzahl. Nur melden, solange weder Suche noch Typ-Filter
   // aktiv sind — sonst gehört die Fundmenge dem User, nicht der Referenz.
   const refDriven = !!(externalMatchUuids && externalMatchUuids.size > 0)
-    && search.query === '' && search.activeTypes.size === 0 && search.activeCalc.size === 0;
+    && search.query === '' && search.activeTypes.size === 0 && search.activeCalc.size === 0
+    && !search.fontFilterActive;
   const refMatchCount = refDriven ? search.matches.length : null;
   useEffect(() => {
     if (refMatchCount !== null) onLiveMatchCount?.(refMatchCount);
@@ -271,7 +291,8 @@ export const LayoutCanvas = forwardRef<LayoutCanvasHandle, Props>(({ data, exter
     },
     hasFilters: () => searchStateRef.current.activeTypes.size > 0
       || searchStateRef.current.activeCalc.size > 0
-      || searchStateRef.current.section != null,
+      || searchStateRef.current.section != null
+      || searchStateRef.current.fontFilterActive,
     clearFilters: () => searchStateRef.current.clearTypes(),
   }), []);
 
@@ -299,7 +320,6 @@ export const LayoutCanvas = forwardRef<LayoutCanvasHandle, Props>(({ data, exter
 
   // Inventar-Deeplinks der Calc-Chips: Layout-Scope über file + scope_uuids
   // (= L_UUID). Die Queries akzeptieren beide Params (S-Block auf ly.L_UUID).
-  const layoutUuid = data.meta?.layout_uuid ?? data.parts[0]?.layout_uuid ?? null;
   const calcInventoryUrls = useMemo(() => {
     if (!layoutUuid) return undefined;
     const scope = `?file=${encodeURIComponent(data.fileName)}&scope_uuids=${encodeURIComponent(layoutUuid)}`;
@@ -398,6 +418,25 @@ export const LayoutCanvas = forwardRef<LayoutCanvasHandle, Props>(({ data, exter
           activeCalc={search.activeCalc}
           onToggleCalc={search.toggleCalc}
           calcInventoryUrls={calcInventoryUrls}
+          extraActive={search.fontFilterActive}
+          fontRow={(
+            <LayoutFontFilter
+              state={fonts}
+              filter={search.fontFilter}
+              onChange={search.setFontDim}
+              scopedObjects={search.scopedObjects}
+              facetBase={search.fontFacetBase}
+            />
+          )}
+          fontPills={(
+            <LayoutFontPills
+              state={fonts}
+              filter={search.fontFilter}
+              onClearDim={dim => search.setFontDim(dim, [])}
+              onOpenDetails={() => setFilterDetailsMode(true)}
+              scopedObjects={search.scopedObjects}
+            />
+          )}
         />
       </div>
 
@@ -485,7 +524,14 @@ export const LayoutCanvas = forwardRef<LayoutCanvasHandle, Props>(({ data, exter
         </svg>
 
         {hoverObject && hoverState && !dragRef.current && (
-          <LayoutObjectTooltip object={hoverObject} x={hoverState.x} y={hoverState.y} />
+          <LayoutObjectTooltip
+            object={hoverObject}
+            x={hoverState.x}
+            y={hoverState.y}
+            fontUses={fonts.index?.uses.get(hoverObject.object_uuid) ?? null}
+            fontStyle={fonts.index?.styles.get(hoverObject.object_uuid) ?? null}
+            fontsReady={fonts.status === 'ready'}
+          />
         )}
       </div>
     </div>

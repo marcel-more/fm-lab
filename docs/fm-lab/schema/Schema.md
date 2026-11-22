@@ -51,6 +51,7 @@ The [XML export](../xml/XML.md) represents each object type as its own dictionar
 | [ScriptCatalog](catalog-tables/ScriptCatalog.md) | All scripts incl. folder tree, options and modification metadata |
 | [StepsForScripts](catalog-tables/StepsForScripts.md) | Every script step, ordered, with extracted parameters |
 | [StepCalculations](catalog-tables/StepCalculations.md) | Every positioned calculation of a step with its slot context |
+| [ImportStepSources](catalog-tables/ImportStepSources.md) | Source of every *Import Records* step: kind, path list or formula, resolved file of the solution |
 | [DDR_ScriptSteps](catalog-tables/DDR_ScriptSteps.md) | Human-readable step text (requires DDR-Info) |
 | [ScriptTriggers](catalog-tables/ScriptTriggers.md) | Script triggers with owner (file / layout / object) and target script |
 
@@ -59,6 +60,7 @@ The [XML export](../xml/XML.md) represents each object type as its own dictionar
 | Table | Content |
 |---|---|
 | [CalculationsCatalog](catalog-tables/CalculationsCatalog.md) | Every calculation instance (owner × role × index) as an addressable object |
+| [CalculationSqlRefs](catalog-tables/CalculationSqlRefs.md) | Every table, column and parameter of an `ExecuteSQL` statement with clause and resolved target |
 | [DDR_Calculations](catalog-tables/DDR_Calculations.md) | Tokenized formula chunks for dependency analysis (requires DDR-Info) |
 | [DDR_ChunkListContexts](catalog-tables/DDR_ChunkListContexts.md) | Context TO and chunk count per ChunkList anchor — records empty ChunkLists too (requires DDR-Info) |
 | [DesignFunctionNames](catalog-tables/DesignFunctionNames.md) | FileMaker design-function names in every reference language — positive match list of the phase-1c chunk retype (generated from the reference database, not from the export) |
@@ -87,10 +89,15 @@ The [XML export](../xml/XML.md) represents each object type as its own dictionar
 | [LayoutParts](catalog-tables/LayoutParts.md) | Layout parts in sequence, incl. sub-summary break fields and part definition options |
 | [LayoutObjects](catalog-tables/LayoutObjects.md) | All layout objects (22 types) with real container nesting |
 | [LayoutObjectConditions](catalog-tables/LayoutObjectConditions.md) | Conditional-formatting rules, one row per rule, with parsed condition and format |
+| [LayoutObjectStyles](catalog-tables/LayoutObjectStyles.md) | Own local CSS per layout object: applied style and local font properties |
+| [LayoutObjectFontRuns](catalog-tables/LayoutObjectFontRuns.md) | Fonts stored as XML: formatted text runs and chart text areas |
+| [LayoutObjectCssType](catalog-tables/LayoutObjectCssType.md) | Object type → CSS type token of the theme rules |
 | [LayoutObjectSymbols](catalog-tables/LayoutObjectSymbols.md) | `{{…}}` symbol inventory per text layout object |
 | [LayoutTableViewColumns](catalog-tables/LayoutTableViewColumns.md) | Columns of a layout's table view incl. their field reference (FileMaker 26 exports only) |
-| [ThemeCatalog](catalog-tables/ThemeCatalog.md) | Layout themes incl. raw CSS rule set |
+| [ThemeCatalog](catalog-tables/ThemeCatalog.md) | Layout themes incl. header attributes and raw CSS rule set |
+| [ThemeNamedStyles](catalog-tables/ThemeNamedStyles.md) | Every named style of a theme with its Inspector name, unused ones included |
 | [ThemePartStyles](catalog-tables/ThemePartStyles.md) | Row-state defaults of the themes (body rule and named part styles) |
+| [ThemeStyleRules](catalog-tables/ThemeStyleRules.md) | Theme CSS, one row per declaration with the selector parsed |
 
 ### Custom functions
 
@@ -149,7 +156,7 @@ Most object tables above carry the raw change stamp of each object (`Modified_At
 
 ### Internal & auxiliary tables
 
-Beyond the documented surface, the catalog contains working tables the pipeline and the tooling use internally: raw reference extractions before resolution (`XMLStepReferences`, `XMLLayoutReferences`, `XMLCalcReferences`, `LayoutObjectSteps`), resolver helpers (`TableOccurrenceResolution`, `ObjectHomes`, `ScriptStepRoleMap`, `GetSubparameterMap`, `MBS_SubnameMap`, `DataSourceFileMap`, `step_metadata`, `sql_name_wrappers`), import monitoring and the [duplicate census](UUID%20Healing%20and%20Duplicate%20Census.md) (`DuplicateAbsorptions`, `DuplicateAbsorptionDetails`, `MergeAbsorptions` — since schema 1.19.0 also the UUID-healing mapping), bookkeeping (`PasteIndexList`, `SchemaInfo`) and the graph-clustering layer (`ObjectClusters`, `CommunityNames`, `ClusterNodeUniverse`, `ClusterEdgesBaseMat`). A set of `v_check_*` views implements the import quality gate, and analysis views (`v_calculation_links`, `v_script_block_tree`, `v_table_occurrence_usage`/`v_table_occurrence_class` — the full usage of a table occurrence, see [TableOccurrence](object-types/TableOccurrence.md#usage-through-fields) —, `v_object_usage` — usage counts and usage class of every field, script, layout, custom function, value list, base table, data source, privilege set, occurrence and relationship, the definition behind the unused-code rules —, `v_cross_file_dependencies`, `LogicalLinks`, `FolderHierarchy`, …) provide prepared perspectives for common queries — `v_calc_anchors` lives on as a materialized compatibility facade over [CalculationsCatalog](catalog-tables/CalculationsCatalog.md) (a table, not a view, since schema 1.22.0). They are stable enough to query, but their shape follows the pipeline's needs and may change between releases — treat the tables above as the documented contract.
+Beyond the documented surface, the catalog contains working tables the pipeline and the tooling use internally: raw reference extractions before resolution (`XMLStepReferences`, `XMLLayoutReferences`, `XMLCalcReferences`, `LayoutObjectSteps`), resolver helpers (`TableOccurrenceResolution`, `ObjectHomes`, `ScriptStepRoleMap`, `ScriptStepParamRoleMap`/`StepFieldParamRoles`, `GetSubparameterMap`, `MBS_SubnameMap`, `DataSourceFileMap`, `step_metadata`), import monitoring and the [duplicate census](UUID%20Healing%20and%20Duplicate%20Census.md) (`DuplicateAbsorptions`, `DuplicateAbsorptionDetails`, `MergeAbsorptions` — since schema 1.19.0 also the UUID-healing mapping), bookkeeping (`PasteIndexList`, `SchemaInfo`) and the graph-clustering layer (`ObjectClusters`, `CommunityNames`, `ClusterNodeUniverse`, `ClusterEdgesBaseMat`). A set of `v_check_*` views implements the import quality gate, and analysis views (`v_calculation_links`, `v_script_block_tree`, `v_script_step_links` — the script's links per step: which step sets, reads or calls what —, `v_dataflow_edges` / `v_step_guards` — value flow between fields, steps, variables, script parameters and results, formulas and entries, and the enclosing If branch and loops per step; the basis of the [data trace](../Wiki/Graph%20Explorer%20Data%20Trace.md) (schema 1.43.0) —, `v_table_occurrence_usage`/`v_table_occurrence_class` — the full usage of a table occurrence, see [TableOccurrence](object-types/TableOccurrence.md#usage-through-fields) —, `v_layout_object_font` — the effective font of every text-bearing layout object and where each value comes from (schema 1.44.0) —, `v_layout_object_style` — the applied style of every layout object with its layout and theme; style usage is a grouping of it (schema 1.45.0) —, `v_object_usage` — usage counts and usage class of every field, script, layout, custom function, value list, base table, data source, privilege set, occurrence and relationship, the definition behind the unused-code rules —, `v_cross_file_dependencies`, `LogicalLinks`, `FolderHierarchy`, …) provide prepared perspectives for common queries — `v_calc_anchors` lives on as a materialized compatibility facade over [CalculationsCatalog](catalog-tables/CalculationsCatalog.md) (a table, not a view, since schema 1.22.0). They are stable enough to query, but their shape follows the pipeline's needs and may change between releases — treat the tables above as the documented contract.
 
 
 ---
@@ -186,6 +193,7 @@ The database is organized in six layers plus a build stamp:
 | [function_categories_lang](fm-spec-tables/function_categories_lang.md) | Localized function-category names |
 | [function_parameters_lang](fm-spec-tables/function_parameters_lang.md) | Localized function-parameter names |
 | [function_name_lookup](fm-spec-tables/function_name_lookup.md) | Any localized name → canonical function ID |
+| [function_renames](fm-spec-tables/function_renames.md) | Names a function or Get selector carried before Claris renamed it, with the version of the rename |
 | [script_triggers_lang](fm-spec-tables/script_triggers_lang.md) | Localized trigger-event labels as the trigger dialogs write them |
 | [language_constants](fm-spec-tables/language_constants.md) | Canonical spellings of language constants, with the functions each constant is a parameter value of (`used_with`) |
 | [error_codes_lang](fm-spec-tables/error_codes_lang.md) | Localized messages of the FileMaker error codes (10 locales) |

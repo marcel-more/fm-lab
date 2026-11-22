@@ -22,6 +22,7 @@ const resultsRoutes = require('./results.routes');
 const favoritesRoutes = require('./favorites.routes');
 const maintenanceRoutes = require('./maintenance.routes');
 const debugRoutes = require('./debug.routes');
+const assetsRoutes = require('./assets.routes');
 const { loadPlugins } = require('../plugins/loader');
 
 /**
@@ -34,6 +35,9 @@ router.use('/', objectRoutes);
 
 // System routes (/api/version, /api/info)
 router.use('/', systemRoutes);
+
+// Browser assets of the API's own HTML pages (/api/assets/pele.js)
+router.use('/', assetsRoutes);
 
 // Version manifest (/api/version-manifest) — modul-granulares version.json
 router.use('/', versionRoutes);

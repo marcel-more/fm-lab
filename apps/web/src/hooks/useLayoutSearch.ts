@@ -2,6 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { LayoutObject } from './useLayoutData';
 import { useUrlState, stringSetCodec } from './useUrlState';
+import {
+  FONT_DIMS,
+  FONT_PARAM_SEPARATOR,
+  fontFilterActive,
+  matchesFontFilter,
+  readFontFilter,
+  type FontDim,
+  type FontFilter,
+  type LayoutFontIndex,
+} from '../lib/layoutFonts';
 
 const EMPTY_TYPES = new Set<string>();
 
@@ -94,6 +104,14 @@ export type LayoutSearchAPI = {
   /** Objects of the selected section (all objects without a section). */
   scopedObjects: LayoutObject[];
 
+  /** Font, size, face and style filter (URL params `font`, `size`, `face`, `style`, separator '|'). */
+  fontFilter: FontFilter;
+  /** At least one of the four params is set (also while the font data is still loading). */
+  fontFilterActive: boolean;
+  setFontDim: (dim: FontDim, values: string[]) => void;
+  /** Objects left by search, type, calculation and section filter — the base of the font facets. */
+  fontFacetBase: LayoutObject[];
+
   matchUuids: Set<string>;
   matches: LayoutObject[];
 
@@ -146,6 +164,10 @@ export function useLayoutSearch(
   onUserInteraction?: () => void,
   /** object_uuid → Part_Seq (catalog value or fallback rule); scopes the section filter. */
   partOf?: Map<string, number | null> | null,
+  /** Font uses and styles per object (useLayoutFonts); null while not loaded — the font filter then waits. */
+  fontIndex?: LayoutFontIndex | null,
+  /** Font data cannot load (catalog older than schema 1.45.0): the four params are ignored. */
+  fontFilterOff = false,
 ): LayoutSearchAPI {
   // Such- und Filter-State liegt in der URL — Stack erhält den State beim
   // Zurück-Navigieren. selectedUuid bleibt transient (Cursor pro TAB-Schritt
@@ -158,6 +180,10 @@ export function useLayoutSearch(
   const [activeCalc] = useUrlState<Set<string>>('calc', EMPTY_TYPES, stringSetCodec);
   const [searchParams, setSearchParams] = useSearchParams();
   const section = parseSectionParam(searchParams.get(SECTION_PARAM));
+  const fontRaw = FONT_DIMS.map(d => searchParams.get(d) ?? '').join('\u0000');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const fontFilter = useMemo(() => readFontFilter(n => searchParams.get(n)), [fontRaw]);
+  const fontActive = !fontFilterOff && fontFilterActive(fontFilter);
 
   // Section scope comes BEFORE every other dimension: search, type/calc chips,
   // match counts and the TAB cursor all work inside the selected part. The
@@ -178,26 +204,39 @@ export function useLayoutSearch(
   // bei jedem Render neue Refs sieht, wenn das Set extern leer übergeben wird.
   const externalHasItems = !!(externalMatchUuids && externalMatchUuids.size > 0);
 
-  const matches = useMemo<LayoutObject[]>(() => {
-    // UND zwischen den Dimensionen: Suchtext ∩ Typ-Filter ∩ Calc-Filter.
+  // UND zwischen den Dimensionen: Suchtext ∩ Typ-Filter ∩ Calc-Filter. Ohne die
+  // Schrift-Dimensionen = Basis der Schrift-Facetten (deren Zählung ignoriert sie).
+  const fontFacetBase = useMemo<LayoutObject[]>(() => {
     const typeFiltered = activeTypes.size === 0
       ? objects
       : objects.filter(o => activeTypes.has(o.object_type));
-
     let result = activeCalc.size === 0
       ? typeFiltered
       : typeFiltered.filter(o => matchesCalc(o, activeCalc));
     if (query !== '') {
       const q = query.toLowerCase();
       result = result.filter(o => buildSearchText(o).includes(q));
-    } else if (activeTypes.size === 0 && activeCalc.size === 0 && externalHasItems) {
-      // Ref-Vorauswahl wirkt NUR, solange weder Suche noch Typ-Filter aktiv sind.
-      // Sobald der User selbst filtert, gewinnt seine Wahl — der ref-Param wird
-      // zusätzlich im URL-Update mit entfernt (siehe runUserUpdate unten).
-      result = result.filter(o => externalMatchUuids!.has(o.object_uuid));
     }
     return result;
-  }, [objects, activeTypes, activeCalc, query, externalHasItems, externalMatchUuids]);
+  }, [objects, activeTypes, activeCalc, query]);
+
+  const matches = useMemo<LayoutObject[]>(() => {
+    if (fontActive) {
+      // Font dimensions apply once the data is there; while it loads the other
+      // dimensions decide alone (the URL still counts as a user filter).
+      return fontIndex
+        ? fontFacetBase.filter(o => matchesFontFilter(o.object_uuid, fontIndex, fontFilter))
+        : fontFacetBase;
+    }
+    if (query === '' && activeTypes.size === 0 && activeCalc.size === 0 && externalHasItems) {
+      // Ref-Vorauswahl wirkt NUR, solange weder Suche noch Typ-, Calc- oder
+      // Schrift-Filter aktiv sind. Sobald der User selbst filtert, gewinnt seine
+      // Wahl — der ref-Param wird zusätzlich im URL-Update mit entfernt (siehe
+      // runUserUpdate unten).
+      return fontFacetBase.filter(o => externalMatchUuids!.has(o.object_uuid));
+    }
+    return fontFacetBase;
+  }, [fontFacetBase, fontActive, fontIndex, fontFilter, query, activeTypes, activeCalc, externalHasItems, externalMatchUuids]);
 
   const matchUuids = useMemo(() => {
     const s = new Set<string>();
@@ -206,7 +245,7 @@ export function useLayoutSearch(
   }, [matches]);
 
   const anyDimensionActive =
-    query !== '' || activeTypes.size > 0 || activeCalc.size > 0 || externalHasItems;
+    query !== '' || activeTypes.size > 0 || activeCalc.size > 0 || fontActive || externalHasItems;
 
   // Selektion mit Fundmenge synchronisieren — analog useGraphSearch:
   //  - genau 1 Treffer → diesen automatisch selektieren (rote Umrandung sofort);
@@ -345,6 +384,16 @@ export function useLayoutSearch(
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runUserUpdate]);
 
+  // Font/style select: values joined by '|' (theme and style names may contain
+  // commas). Ends the reference mode like every user filter.
+  const setFontDim = useCallback((dim: FontDim, values: string[]) => {
+    runUserUpdate(p => {
+      if (values.length === 0) p.delete(dim);
+      else p.set(dim, values.join(FONT_PARAM_SEPARATOR));
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runUserUpdate]);
+
   const clearTypes = useCallback(() => {
     // clearTypes wird vom ESC-Stack und vom "Filter zurücksetzen"-Link genutzt
     // — beides ist eine programmatische Zurücknahme, nicht die Anlage eines
@@ -358,6 +407,8 @@ export function useLayoutSearch(
       next.delete('calc');
       // The section belongs to the filter stage (ESC, "reset filters").
       next.delete(SECTION_PARAM);
+      // So do the font and style selects.
+      for (const dim of FONT_DIMS) next.delete(dim);
       return next;
     }, { replace: true });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -399,6 +450,10 @@ export function useLayoutSearch(
     section,
     setSection,
     scopedObjects: objects,
+    fontFilter,
+    fontFilterActive: fontActive,
+    setFontDim,
+    fontFacetBase,
     matchUuids,
     matches,
     selectedUuid,

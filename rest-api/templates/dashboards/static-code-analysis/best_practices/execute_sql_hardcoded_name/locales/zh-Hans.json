@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "硬编码名称的 ExecuteSQL",
+    "description": "最佳实践规则 — ExecuteSQL 语句在 SQL 字符串中以纯文本命名表实例或字段，而不是通过字段引用（GetFieldName 或名称包装函数）构建名称。该引用目前可以工作，但 FileMaker 不会跟踪它：重命名表实例或字段会在没有任何警告的情况下破坏查询 — ExecuteSQL 随即返回 ?。"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "发现数",
+    "summary_kpi.props.items[1].label": "受影响文件",
+    "summary_kpi.props.items[2].label": "被命名的字段",
+    "summary_kpi.props.items[3].label": "被命名的表实例",
+    "findings_card.props.title": "硬编码名称的 ExecuteSQL",
+    "findings_table.props.searchPlaceholder": "搜索文件、对象或名称…",
+    "findings_table.props.empty.message": "未在 ExecuteSQL 中发现硬编码名称。",
+    "findings_table.props.columns[0].label": "文件",
+    "findings_table.props.columns[1].label": "对象",
+    "findings_table.props.columns[2].label": "类型",
+    "findings_table.props.columns[3].label": "步骤",
+    "findings_table.props.columns[4].label": "函数",
+    "findings_table.props.columns[5].label": "子句",
+    "findings_table.props.columns[6].label": "SQL 中的名称",
+    "findings_table.props.columns[7].label": "目标"
+  }
+}

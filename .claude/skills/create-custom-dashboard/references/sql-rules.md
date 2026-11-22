@@ -118,15 +118,43 @@ detail view's search (`sq` param), etc. See `references/primitives.md` §Actions
   `SET VARIABLE x = '…';` sets them (see `references/validation.md`).
 - Every `getvariable('p')` the SQL reads MUST be declared in `manifest.params`
   (type `string` / `number` / `boolean` — never `integer`/`int`/`float`/`bool`).
+- **System parameters** — set by the server, never declared in the manifest,
+  never overridable from the URL (the prefix `fmlab_` is reserved; such query
+  params are dropped):
+
+  | Variable | Value |
+  |---|---|
+  | `getvariable('fmlab_solution')` | id of the solution of the request (pin, `X-Solution` header or default) |
+  | `getvariable('fmlab_lang')` | UI language of the request (`en`, `de`, …) |
+  | `getvariable('fmlab_today')` | today, `YYYY-MM-DD` (server time) — file names, headers |
+  | `getvariable('fmlab_version')` | fm-lab version |
+
+  In a CLI probe they are unset (`NULL`) unless you `SET VARIABLE` them.
 - A parameter value is always one scalar (string, number, boolean, null). The
   API rejects arrays and objects with 400 and a repeated query parameter
   (`?type=a&type=b`) as well — a multi-value filter is ONE comma-separated
   string, split in SQL with `string_split` (pattern below, `scope_uuids`).
 - The API connection reads no files and loads no extensions: `read_csv`,
-  `read_json`, `read_text`, `glob`, `COPY`, `ATTACH`, `LOAD`/`INSTALL` fail
-  with a `Permission Error`. Built in: `json`, `icu`, `parquet`; **no**
+  `read_json`, `read_text`, `glob`, `ATTACH`, `LOAD`/`INSTALL` fail with a
+  `Permission Error`. Built in: `json`, `icu`, `parquet`; **no**
   `webbed` (`xml_extract_text`) — match `*_XML` with `LIKE`/`regexp_*` or use
   the resolved catalog tables. A CLI probe may load more than the API can run.
+- **Time limit:** a dataset query runs at most 2 minutes by default
+  (`DUCKDB_FILE_QUERY_TIMEOUT_MS`), then the API answers 504 `QUERY_TIMEOUT`.
+  Recursive CTEs that enumerate paths (`UNION ALL` with a path list) grow
+  exponentially — keep one row per node and state instead (`UNION`, or
+  `USING KEY`), and probe on the largest solution before shipping.
+- **One query per file.** The API runs SQL from files only if it is a single
+  statement of type `SELECT` (incl. `WITH`, `FROM`-first, `DESCRIBE`,
+  `SUMMARIZE`, `SHOW`), `MULTI` (standalone `PIVOT`) or `EXPLAIN` of such a
+  query. Anything else — `COPY`, `EXPORT`, `ATTACH`, `DETACH`, `SET VARIABLE`,
+  `USE`, `CREATE TEMP TABLE`/`VIEW`/`MACRO`, `INSERT`, `LOAD`, `CHECKPOINT` —
+  is answered with 400 `VALIDATION_ERROR` "SQL from a template file may only
+  query data: statement type X is not allowed" and never runs. Two
+  statements in one file (a `;` in the middle — a single trailing `;` is fine)
+  answer 400 `VALIDATION_ERROR` "… one statement per file". A
+  `SET VARIABLE x = …;` belongs to CLI probing only (see
+  `references/validation.md`), never into the file.
 - Per-dataset default values can additionally be set in
   `manifest.datasets[].params` (e.g. `{ "days": "all" }`); URL params override them.
 - **A param value arrives in three shapes — handle all three:**
@@ -234,6 +262,51 @@ AND (getvariable('scope_uuids') IS NULL
   `getvariable('file')` occurrences per file (M5a), and the S-Block anchor must
   match `analysis.scope.anchor` (M5b).
 
+### Markdown columns instead of HTML in SQL
+
+For explanatory text shown with `HtmlContent`, build **Markdown** in SQL and let
+the server render it (`manifest.datasets[].render`, see `references/primitives.md`
+§Manifest): no `&amp;`/`&lt;` chains, no `&#58;` tricks, and the same column can
+go into an export as it is. Line breaks with `chr(10)`. Escape catalog values:
+- in a table cell: `replace(name, '|', '\|')`;
+- `*`, `_`, `` ` `` at the start of a word render as emphasis/code — wrap names in
+  backticks (`` '`' || name || '`' ``) when they may contain them;
+- HTML in object names (`<`) stays text only in backticks or code blocks;
+  outside, the browser sanitizer removes unknown tags.
+
+### Shared SQL inside a bundle: `--#include`
+
+A line `--#include <relative path>` in a bundle SQL file is replaced by that
+file's content before anything else happens (then the `:word` preprocessor,
+then `getvariable`). Use it to share CTEs between the datasets of ONE bundle:
+
+```sql
+-- data/ways.sql
+WITH
+--#include shared/base.sql
+--#include shared/ways_core.sql
+SELECT * FROM ways_final
+```
+
+```sql
+-- data/shared/base.sql  (a fragment: CTE pieces, each ending with a comma)
+fields AS (SELECT … FROM FieldsForTables WHERE …),
+```
+
+Rules:
+- The path is relative to the including file and must stay inside the bundle
+  folder (else 400). Put fragments in a sub-folder such as `data/shared/` —
+  never next to bundles (a loose `.sql` file there is a single-file dashboard).
+  No sharing across bundles.
+- A fragment is **part of one statement**. Its final `;` is removed; any other
+  `;` outside strings and comments answers 400 with file and line — the API
+  runs one statement per file. `CREATE MACRO` / `SET VARIABLE` are no
+  alternative (refused by the statement gate).
+- Nesting up to 5 levels; a cycle answers 400 with the chain.
+- A DuckDB error with `LINE n` gets `(source: data/shared/x.sql:7)` appended.
+- Not `-- @include` (that would be a single-file dashboard header line).
+- Bundles only — single-file dashboards and query templates have no includes.
+
 ### ⚠️ The `:word` preprocessor trap
 
 Before the `getvariable` pass, the API replaces **every** `:word` token (regex
@@ -250,7 +323,10 @@ Rules:
   - `x::VARCHAR` (the second colon) → `CAST(x AS VARCHAR)`;
   - a list slice `lst[1:3]` → `list_slice(lst, 1, 3)`;
   - a time format `'%H:00'` → `'%H' || ':' || '00'` (`'%H:%M'` is safe — `%`
-    is no word character).
+    is no word character);
+  - inline CSS in HTML built for `HtmlContent`: `style="overflow:auto"` →
+    `style="overflow: auto"` (a space after the colon); no `&#58;` workaround
+    needed.
 - Never write `$` followed by a digit (`regexp_replace(…, '$1')`, prepared-style
   `$1` placeholders) — use `\1` in regex replacements.
 
@@ -320,3 +396,10 @@ the filtered list MUST agree:
 - Read-only: never `UPDATE` / `INSERT` / `DELETE` / DDL.
 - **Never regex a `*_XML` column for something `ObjectLinks` already resolves**
   (project rule; the link roles are resolved at import — query the edge).
+  The **step** behind a script edge is resolved too: `v_script_step_links` (which
+  step sets/reads a field, calls a script, goes to a layout; join on
+  `(Step_UUID, File_Name)`), the source of an *Import Records* step is in
+  `ImportStepSources` — no regex on `Parameters_XML` / `Step_XML` for either.
+  Tables, columns and parameters of `ExecuteSQL` statements are in
+  `CalculationSqlRefs` (clause, position, target, `Resolution`) — no regex on
+  `Formula_Text` for SQL names.

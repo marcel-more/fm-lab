@@ -192,7 +192,7 @@ Each bundled skill has its own reference page with invocation, options and prere
 **Agentic analysis**
 
 - `.claude/skills/fm-show` — Shows details or references for a given object in the web frontend.
-- `.claude/skills/fm-trace` — Opens the selective flow graph (trace mode of the Graph Explorer) for a script or layout: call chain, touched objects, and triggers.
+- `.claude/skills/fm-trace` — Opens the selective flow graph (trace mode of the Graph Explorer) for a script or layout: call chain, touched objects, and triggers; lists the ways of a script (calls / reached from, with conditions) in the terminal and prints a way as Mermaid.
 - `.claude/skills/fm-open` — Opens a given object directly in your FileMaker Solution through the fmIDE `Name that Thing API`.
 
 - `.claude/skills/fm-summarize` — Creates a concise technical briefing for a given object.

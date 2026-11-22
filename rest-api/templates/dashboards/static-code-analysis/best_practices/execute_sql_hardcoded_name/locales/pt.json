@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "ExecuteSQL com nome fixo",
+    "description": "Regra de boas práticas — uma instrução ExecuteSQL nomeia uma ocorrência de tabela ou um campo como texto simples na string SQL, em vez de construir o nome a partir de uma referência de campo (GetFieldName ou um wrapper de nomes). A referência funciona hoje, mas o FileMaker não a acompanha: renomear a ocorrência de tabela ou o campo quebra a consulta sem qualquer aviso — o ExecuteSQL devolve então ?."
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Resultados",
+    "summary_kpi.props.items[1].label": "Arquivos afetados",
+    "summary_kpi.props.items[2].label": "Campos nomeados",
+    "summary_kpi.props.items[3].label": "Ocorrências de tabela nomeadas",
+    "findings_card.props.title": "ExecuteSQL com nome fixo",
+    "findings_table.props.searchPlaceholder": "Pesquisar arquivo, objeto ou nome…",
+    "findings_table.props.empty.message": "Nenhum nome fixo encontrado em ExecuteSQL.",
+    "findings_table.props.columns[0].label": "Arquivo",
+    "findings_table.props.columns[1].label": "Objeto",
+    "findings_table.props.columns[2].label": "Tipo",
+    "findings_table.props.columns[3].label": "Passo",
+    "findings_table.props.columns[4].label": "Função",
+    "findings_table.props.columns[5].label": "Cláusula",
+    "findings_table.props.columns[6].label": "Nome no SQL",
+    "findings_table.props.columns[7].label": "Destino"
+  }
+}

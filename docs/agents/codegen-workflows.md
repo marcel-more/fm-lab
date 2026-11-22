@@ -79,7 +79,12 @@ Generate the artifact directly, under these ground rules:
 2. **fmxmlsnippet basics:** one well-formed `<fmxmlsnippet type="FMObjectList">`
    snippet, paste-ready; Step-IDs from the reference index (`fm_spec.duckdb`,
    `script_steps.step_id`), never from memory; calculations in CDATA; correct
-   XML entity escaping. For steps that carry **lists** (sort levels, find
+   XML entity escaping. **Text constants in calculations** are delimited by a
+   straight `"` only, and every quote inside one is escaped — `\"`, and the
+   typographic `\„ \“ \” \‟`: FileMaker reads `„ “ ” ‟` as delimiters too, so an
+   unescaped one ends the constant and FileMaker comments the formula out on paste
+   (`‘ ’ ‚ « »` are no delimiters). Language models put typographic quotes
+   into German or English prose on their own — check every constant. For steps that carry **lists** (sort levels, find
    requests, import filters, …) the repetition is grounded in
    `step_repeat_groups` (container, per-item template, derived counts) —
    the `step_xml_map` main template shows a single-instance exemplar only.
@@ -156,10 +161,27 @@ Constraints for dashboard SQL (REST API layer):
 - The API DB runs in `READ_ONLY` mode with tight memory — avoid multi-evaluating
   expensive views (materialize or pre-aggregate; see `ClusterEdgesBaseMat` precedent).
 - ⚠️ **No file access, no extension loading on the API connection:** `read_csv`,
-  `read_json`, `read_text`, `glob`, `COPY`, `ATTACH`, `LOAD`/`INSTALL` fail with a
-  `Permission Error` (only `ref`, `plugref` and the MBS exceptions CSV are reachable).
+  `read_json`, `read_text`, `glob`, `ATTACH`, `LOAD`/`INSTALL` on any other path fail
+  with a `Permission Error` (only `ref`, `plugref` and the MBS exceptions CSV are reachable).
   Built in: `json`, `icu`, `parquet` — **not** `webbed`, so no `xml_extract_text`
   in dashboard SQL. A query that works in the CLI can still fail in the API.
+- ⚠️ **SQL from files may only query** (statement gate, `rest-api/src/config/file-sql-gate.js`):
+  one statement per file, of type `SELECT` (incl. `WITH`, `FROM`-first, `DESCRIBE`,
+  `SUMMARIZE`, `SHOW`), `MULTI` (a standalone `PIVOT`) or `EXPLAIN` — and an `EXPLAIN` only
+  of such a query (`EXPLAIN ANALYZE` runs what it explains). `COPY`, `EXPORT`, `ATTACH`,
+  `DETACH`, `SET`/`SET VARIABLE`/`USE`, `CREATE` (also `TEMP`), `INSERT`, `LOAD`, `CALL`/
+  `CHECKPOINT`, transactions → 400 `VALIDATION_ERROR` "statement type X is not allowed",
+  nothing runs; several statements in one file (a `;` mid-text) → 400 "one statement per
+  file". Applies to templates, single-file dashboards and bundle datasets alike.
+- **Time limit:** SQL from files is interrupted after `DUCKDB_FILE_QUERY_TIMEOUT_MS` (default
+  120 s) → 504 `QUERY_TIMEOUT`; it runs on its own connection (TEMP overlay installed there),
+  spill capped by `DUCKDB_MAX_TEMP` (50 GB in Docker/dev container, else 20 GB). Path-enumerating recursive CTEs explode —
+  recurse over (node, state) with `UNION`/`USING KEY`.
+- **Shared SQL in bundles:** `--#include <relative path>` (bundle-internal, e.g.
+  `data/shared/`, max. 5 levels) — a fragment is part of ONE statement, an inner `;` → 400
+  with file:line. **System parameters** `getvariable('fmlab_solution' | 'fmlab_lang' |
+  'fmlab_today' | 'fmlab_version')` are set by the server, undeclared, not overridable.
+  Details: `create-custom-dashboard/references/sql-rules.md` §3.
 - **Parameters are scalars only** (string, number, boolean, null); arrays/objects and
   repeated query parameters answer 400. Multi-value filters travel as one
   comma-separated string and are split with `string_split`.

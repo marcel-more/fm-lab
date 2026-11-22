@@ -1,4 +1,5 @@
 import { useSearchParams } from 'react-router-dom';
+import { useSelection } from '../selectionContext';
 import { useTranslation } from 'react-i18next';
 import type { PrimitiveProps } from '../types';
 import { formatKpiValue } from './_format';
@@ -21,8 +22,12 @@ interface ChipOption {
  * summary dataset) is the true total, not a capped sample.
  *
  * Props:
- *   param    URL/getvariable name to drive (required, e.g. "comment")
- *   default  value selected when the param is absent from the URL
+ *   param    URL/getvariable name to drive (e.g. "comment")
+ *   channel  alternative to `param`: a selection channel (selectionContext) —
+ *            the choice stays in the browser, no data reload; nodes react via
+ *            `visibleWhen: { selection: <channel>, equals: <value> }`
+ *   default  value selected when the param is absent from the URL / the
+ *            initial channel value
  *   options  [{ value, label, countField }]
  *   resetParams  URL params dropped together with every change (e.g. the page
  *            param of a server-paged table, so a new filter starts on page 1)
@@ -31,17 +36,26 @@ export function FilterChips({ node, dataset }: PrimitiveProps) {
   const { i18n } = useTranslation();
   const props = node.props ?? {};
   const param = props.param as string | undefined;
+  const channel = props.channel as string | undefined;
   const fallback = (props.default as string) ?? '';
   const options = (props.options as ChipOption[]) ?? [];
   const resetParams = (props.resetParams as string[] | undefined) ?? [];
   const [searchParams, setSearchParams] = useSearchParams();
+  const { selection, select: selectChannel } = useSelection();
 
-  if (!param || options.length === 0) return null;
+  if ((!param && !channel) || options.length === 0) return null;
 
-  const current = searchParams.get(param) ?? fallback;
+  const current = channel
+    ? (selection[channel] ?? fallback)
+    : (searchParams.get(param as string) ?? fallback);
   const row = dataset?.data?.[0];
 
   const select = (value: string) => {
+    if (channel) {
+      selectChannel(channel, value);
+      return;
+    }
+    if (!param) return;
     setSearchParams(prev => {
       const n = new URLSearchParams(prev);
       // Keep the URL canonical: drop the param at its default.

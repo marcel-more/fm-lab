@@ -1,0 +1,35 @@
+{
+  "manifest": {
+    "title": "フォントの概要",
+    "description": "レイアウトが表示するフォント：フォントごとに 1 行で、使用数、オブジェクト、レイアウト、ファイル、サイズと由来（オブジェクトで設定、スタイル、テーマ）を示します。フォントがファイルの既定値に任されているオブジェクト（テーマがフォントを指定しない：クラシック、ミニマリスト）は独立した 1 行になります。フォントをクリックすると、そのフォントを表示するレイアウトが開きます。ファイル、テーマ、サイズ、検索は引き継がれます。"
+  },
+  "layout": {
+    "summary_kpistrip.props.items[0].label": "フォント",
+    "summary_kpistrip.props.items[1].label": "フォント名のある使用",
+    "summary_kpistrip.props.items[2].label": "フォント名のあるレイアウト",
+    "summary_kpistrip.props.items[3].label": "フォント名のあるファイル",
+    "summary_kpistrip.props.items[4].label": "名前のあるフォントがないオブジェクト",
+    "search_input.props.placeholder": "フォント、レイアウト、オブジェクト、フィールドを検索…",
+    "file_select.props.label": "ファイル",
+    "file_select.props.emptyOptionLabel": "すべてのファイル",
+    "theme_select.props.label": "テーマ",
+    "theme_select.props.emptyOptionLabel": "すべてのテーマ",
+    "size_select.props.label": "サイズ",
+    "size_select.props.emptyOptionLabel": "すべてのサイズ",
+    "fonts_card.props.title": "フォント",
+    "fonts_table.props.columns[0].label": "フォント",
+    "fonts_table.props.columns[0].valueLabels.#default": "ファイルの既定値（フォントは書き出しに含まれない）",
+    "fonts_table.props.columns[1].label": "使用数",
+    "fonts_table.props.columns[2].label": "オブジェクト",
+    "fonts_table.props.columns[3].label": "レイアウト",
+    "fonts_table.props.columns[4].label": "ファイル",
+    "fonts_table.props.columns[5].label": "サイズ",
+    "fonts_table.props.columns[6].label": "ローカルで設定",
+    "fonts_table.props.columns[7].label": "スタイルから",
+    "fonts_table.props.columns[8].label": "テーマから",
+    "fonts_table.props.columns[9].label": "リッチテキストとグラフ",
+    "fonts_table.props.empty.message": "この選択にはフォント使用がありません。",
+    "notes_card.props.title": "フォントの由来",
+    "notes_md.props.content": "**基本フォントの由来。** FileMaker は最初に設定されている値を使います。\n- *ローカル* — オブジェクト自体で設定。\n- *ローカル（継承と同じ）* — オブジェクトで設定されているが、いずれにせよ継承されるのと同じフォント。独自の太字書体を持つフォントに*太字*を適用すると FileMaker が書き込みます。意図的な選択ではありません。\n- *スタイル* — オブジェクトに適用されたスタイル。スタイルは変更点だけを持ち、それ以外はテーマから来ます。\n- *テーマ* — オブジェクトの種類、レイアウトパート、またはすべてのフィールドに対するテーマの既定値。\n- *ファイルの既定値* — テーマがフォントをまったく指定していない（クラシック、ミニマリスト）。FileMaker はファイルの既定値を使いますが、XML 書き出しには含まれません。同じテーマでもあるファイルでは Helvetica Neue、別のファイルでは Arial になります。そのため一覧ではこれらのオブジェクトのフォント名を表示しません。ファイルごとに 1 つのオブジェクトを FileMaker で確認してください。\n\n**その他のフォント使用。** *リッチテキスト*はテキストカーソルで書式設定したテキストの一部で、オブジェクトの基本フォントに加わります。残りのテキストは基本フォントのままです。*グラフ*はグラフのテキスト領域（タイトル、凡例、軸、データラベル）のフォントです。系列タイトルはテーマのフォントのままなので除外しています。\n\n**数え方。** *フォント*は同じフォントの表記ゆれ（`arial`、`Arial`）をまとめます。ファイルの既定値はフォントではありません。フォント数にも*フォントが多い*にも数えません。*不確か*：値がレイアウトパートのルールから来ている（優先順位は未検証）か、適用されたスタイルがテーマにもう存在しません。\n\n**制限。** 条件付き書式のフォントは一覧にありません。フォント名からは、そのフォントがクライアントにインストールされているかどうかはわかりません。"
+  }
+}

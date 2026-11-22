@@ -12,6 +12,7 @@
 #   FMLAB_DUCKDB_VERSION   DuckDB CLI / webbed version baked into the image (default: ingestion/version_check.json)
 #   FMLAB_DUCKDB_THREADS   DuckDB thread cap (default 4; raise on big hosts)
 #   FMLAB_MEM_LIMIT        per-container RAM cap for api+ingestion (default 8g)
+#   FMLAB_QUERY_TIMEOUT_MS time limit of one dashboard/template query in the REST API (default 120000; 0 = off)
 # Put them in a `.env` next to this file or `export` them before `docker compose up`.
 
 name: fm-lab
@@ -57,6 +58,8 @@ x-fmlab-env: &fmlab-env
   DUCKDB_TEMP_DIR: /duckdb_spill
   DUCKDB_MAX_TEMP: 50GB
   DUCKDB_THREADS: "${FMLAB_DUCKDB_THREADS:-4}"
+  # REST API: a dashboard/template query running longer is stopped (504 QUERY_TIMEOUT).
+  DUCKDB_FILE_QUERY_TIMEOUT_MS: "${FMLAB_QUERY_TIMEOUT_MS:-120000}"
   # Runtime marker + host repo root. The empty-state "open folder" affordance can't
   # reveal the host file manager from inside the container, so it shows the HOST path
   # instead. ${PWD} interpolates from the host shell at `docker compose up` time (the

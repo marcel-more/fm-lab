@@ -1663,6 +1663,22 @@ step_slots AS (
            ROW_NUMBER() OVER (PARTITION BY Step_UUID, File_Name, Calc_Position
                               ORDER BY Slot, Slot_Seq, Calc_Text) AS pos_rn
     FROM StepCalculations
+    WHERE Calc_Position IS NOT NULL
+),
+-- Execute SQL (Step_ID 117): der SQL-Slot trägt keine @position (DDR-Anker
+-- '_<Step-UUID>_SQL'). Berechneter SQL-Text → Formeltext aus StepCalculations
+-- (Slot 'SQL'); Text-Eingabe (<SQL index="0">) ist keine Formel → eigene Rolle
+-- step_sql_text, ihre Chunk-Bezüge hat P3 (A.7f) bereits entfernt.
+step_sql AS (
+    SELECT Step_UUID, File_Name, Calc_Text, Script_Name, Step_Index, Step_Name
+    FROM StepCalculations
+    WHERE Slot = 'SQL' AND Calc_Position IS NULL
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY Step_UUID, File_Name ORDER BY Calc_Text) = 1
+),
+sql_text_steps AS (
+    SELECT DISTINCT Step_UUID, File_Name
+    FROM StepsForScripts
+    WHERE Step_ID = 117 AND Step_XML LIKE '%<SQL index="0"%'
 ),
 -- PrivilegeSetRecordAccess-Vertreter je (Set, Hash) — derselbe Hash kann
 -- mehrere (Tabelle, Operation)-Slots bedienen; deterministischer Erst-Treffer
@@ -1743,16 +1759,44 @@ heal_anchor_owner AS (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY File_Name, Anchor_Name, Calc_Hash
                                ORDER BY Is_Survivor DESC, Member_UUID) = 1
 ),
+-- Tasten mit Einzelschritt (<action><Step>): die Formeln des Schritts ankern an
+-- der UUID des eingebetteten Schritts ('_<Schritt-UUID>_<Slot>'), die kein
+-- Katalogobjekt ist. Zuordnung über das Paar (Anker, Hash) aus dem XML — kopierte
+-- Tasten teilen die Schritt-UUID bei abweichender Formel, Container (Gruppe,
+-- Ausschnitt, Popover, Register) führen das XML ihrer Kinder mit. Unter allen
+-- Objekten mit dem Paar gewinnt das innerste (kürzestes XML), dann die kleinste UUID.
+action_step_owner AS (
+    SELECT File_Name, Anchor_Name, Calc_Hash, upper(Object_UUID) AS Owner_Key
+    FROM (
+        SELECT File_Name, Object_UUID, xml_len,
+               regexp_extract(m, 'hash="([^"]+)"', 1)                       AS Calc_Hash,
+               regexp_extract(m, '>(_[0-9A-Fa-f-]{36}_[0-9_]+)</DDRREF>', 1) AS Anchor_Name
+        FROM (
+            SELECT lo.File_Name, lo.Object_UUID, length(lo.Object_XML) AS xml_len,
+                   unnest(regexp_extract_all(lo.Object_XML,
+                       'kind="ChunkList" hash="[^"]+"[^>]*>_[0-9A-Fa-f-]{36}_[0-9_]+</DDRREF>')) AS m
+            FROM LayoutObjects lo
+            WHERE lo.Object_XML LIKE '%<action>%'
+        )
+    )
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY File_Name, Anchor_Name, Calc_Hash
+                               ORDER BY xml_len, Object_UUID) = 1
+),
 -- Owner-Schlüssel je Anker: geheilter Owner aus dem eigenen XML, sonst die
--- Anker-UUID. Als eigene Spalte vorberechnet, damit der ObjectCatalog-Join in
--- a_owner ein reiner Equi-Join bleibt (Blockwise-NL-Falle, s. Blockkopf).
+-- Tasten-Zuordnung eines eingebetteten Schritts, sonst die Anker-UUID. Als
+-- eigene Spalte vorberechnet, damit der ObjectCatalog-Join in a_owner ein
+-- reiner Equi-Join bleibt (Blockwise-NL-Falle, s. Blockkopf).
 ddr_keyed AS (
-    SELECT di.*, COALESCE(h.Owner_Key, di.Anchor_UUID) AS Owner_Key
+    SELECT di.*, COALESCE(h.Owner_Key, aso.Owner_Key, di.Anchor_UUID) AS Owner_Key
     FROM ddr_inst di
     LEFT JOIN heal_anchor_owner h
            ON h.File_Name   = di.File_Name
           AND h.Anchor_Name = di.Calc_UUID
           AND h.Calc_Hash   = di.Calc_Hash
+    LEFT JOIN action_step_owner aso
+           ON aso.File_Name   = di.File_Name
+          AND aso.Anchor_Name = di.Calc_UUID
+          AND aso.Calc_Hash   = di.Calc_Hash
 ),
 -- (A) DDR-Anker mit Owner-Auflösung. Nicht auflösbare Anker bleiben erhalten
 -- (Owner_Type='unresolved', Owner_UUID=Anchor_UUID — P6-überwacht, Soll 0).
@@ -1802,7 +1846,9 @@ a_rows AS (
         -- Eingabeformel, bekommt die Instanz deren Rolle statt 'hide'.
         CASE WHEN a.Owner_Type = 'LayoutObject' AND a.Calc_Kind_Raw = 'Hide'
                   AND fm_lo_ddr_is_entry(a.Display_Text, lo.Hide_Calculation_Text, lo.Entry_Calculation_Text)
-             THEN 'field_entry' END    AS Role_Override,
+             THEN 'field_entry'
+             WHEN a.Owner_Type = 'ScriptStep' AND a.Calc_Kind_Raw = 'SQL' AND stx.Step_UUID IS NOT NULL
+             THEN 'step_sql_text' END  AS Role_Override,
         a.Calc_Kind_Raw,
         a.DDR_Calc_UUID,
         a.Calc_Hash                    AS Formula_Hash,
@@ -1815,6 +1861,7 @@ a_rows AS (
             -- Klartext aus den FieldsForTables-Slots (Schema 1.28.0)
             WHEN a.Owner_Type = 'Field' AND a.Calc_Kind_Raw = '2' THEN ft.Validation_Calc_Text
             WHEN a.Owner_Type = 'Field' AND a.Calc_Kind_Raw = '5' THEN ft.DisplayNames_Calc_Text
+            WHEN a.Owner_Type = 'ScriptStep' AND a.Calc_Kind_Raw = 'SQL' THEN sq.Calc_Text
             WHEN a.Owner_Type = 'ScriptStep'                      THEN ss.Calc_Text
             WHEN a.Owner_Type = 'CustomFunction'                  THEN cfc.Calculation_Code
             WHEN a.Owner_Type = 'PrivilegeSet'                    THEN pra.Calculation_Text
@@ -1841,6 +1888,7 @@ a_rows AS (
             WHEN a.Owner_Type = 'Field' AND a.Calc_Kind_Raw = '1' THEN 'Field/AutoEnter/Calculated'
             WHEN a.Owner_Type = 'Field' AND a.Calc_Kind_Raw = '2' THEN 'Field/Validation/Calculated'
             WHEN a.Owner_Type = 'Field' AND a.Calc_Kind_Raw = '5' THEN 'Field/DisplayNames'
+            WHEN a.Owner_Type = 'ScriptStep' AND a.Calc_Kind_Raw = 'SQL' THEN 'Step/SQL'
             WHEN a.Owner_Type = 'ScriptStep' AND ss.Slot IS NOT NULL THEN 'Step/' || ss.Slot
             WHEN a.Owner_Type = 'ScriptStep'                      THEN 'Step/@position=' || a.Calc_Kind_Raw
             WHEN a.Owner_Type = 'CustomFunction'                  THEN 'CustomFunction/Calculation'
@@ -1862,6 +1910,10 @@ a_rows AS (
            ON ss.pos_rn = 1
           AND ss.Step_UUID = a.Owner_UUID AND ss.File_Name = a.File_Name
           AND ss.Calc_Position = a.Step_Pos
+    LEFT JOIN step_sql sq
+           ON sq.Step_UUID = a.Owner_UUID AND sq.File_Name = a.File_Name
+    LEFT JOIN sql_text_steps stx
+           ON stx.Step_UUID = a.Owner_UUID AND stx.File_Name = a.File_Name
     LEFT JOIN CalcsForCustomFunctions cfc
            ON cfc.CF_UUID = a.Owner_UUID AND cfc.File_Name = a.File_Name
     LEFT JOIN pra_rep pra
@@ -1957,6 +2009,17 @@ b_step AS (
                        WHERE a.Owner_UUID = sc.Step_UUID AND a.File_Name = sc.File_Name
                          AND a.Owner_Type = 'ScriptStep'
                          AND a.Step_Pos = sc.Calc_Position)
+    UNION ALL
+    -- Berechneter SQL-Text von Execute SQL ohne DDR-Anker
+    SELECT
+        sq.File_Name, sq.Step_UUID, 'ScriptStep',
+        sq.Script_Name || ' [' || sq.Step_Index || '] ' || sq.Step_Name,
+        'step_parameter', 'SQL',
+        CAST(NULL AS VARCHAR), sq.Calc_Text, 'Step/SQL'
+    FROM step_sql sq
+    WHERE NOT EXISTS (SELECT 1 FROM a_owner a
+                       WHERE a.Owner_UUID = sq.Step_UUID AND a.File_Name = sq.File_Name
+                         AND a.Owner_Type = 'ScriptStep' AND a.Calc_Kind_Raw = 'SQL')
 ),
 -- (B3) CF-Bodies ohne DDR-Anker
 b_cf AS (
@@ -2245,6 +2308,10 @@ classified AS (
                 WHEN cand.Calc_Kind_Raw = 'Placeholder'  THEN 'placeholder'
                 WHEN cand.Calc_Kind_Raw = 'Label'        THEN 'button_label'
                 WHEN cand.Calc_Kind_Raw = 'action'       THEN 'button_action'
+                -- Einzelschritt einer Taste: Parameter-Slots des eingebetteten
+                -- Schritts ('1', '2', …), Owner über action_step_owner
+                WHEN cand.Owner_Type = 'LayoutObject'
+                     AND cand.Calc_Kind_Raw ~ '^[0-9]+(_[0-9]+)*$' THEN 'button_action'
                 WHEN cand.Calc_Kind_Raw = 'Portal'       THEN 'portal_filter'
                 WHEN cand.Calc_Kind_Raw = 'WebViewer'    THEN 'web_viewer_url'
                 WHEN cand.Calc_Kind_Raw = 'TabPanel'     THEN 'panel_title'
@@ -2526,6 +2593,7 @@ SELECT
                WHEN 'placeholder'              THEN 'Placeholder Text'
                WHEN 'button_label'             THEN 'Calculated Label'
                WHEN 'button_action'            THEN 'Button Action'
+               WHEN 'step_sql_text'            THEN 'SQL Text'
                WHEN 'portal_filter'            THEN 'Portal Filter'
                WHEN 'web_viewer_url'           THEN 'Web Viewer URL'
                WHEN 'panel_title'              THEN 'Tab Title'
@@ -2660,11 +2728,11 @@ INSERT INTO ScriptStepRoleMap VALUES
     -- Mehrere Feld-Optionen mit GEGENLÄUFIGER Semantik (Quelle UND Ziel im selben
     -- Step, z. B. 216: source_field + target_field). Diese Tabelle vergibt EINE
     -- Rolle je Step_ID, und XMLStepReferences extrahiert Feldreferenzen flach über
-    -- '//FieldReference' ohne Herkunftspfad — welche Option eine Referenz gespeist
-    -- hat, ist im Datenmodell derzeit nicht vorhanden. Deshalb bewusst der neutrale
-    -- Eimer statt einer erfundenen Hauptrolle: 'references_field' zählt für
-    -- Where-used und behauptet keine Richtung. Eine Verfeinerung braucht einen
-    -- P2-Umbau (Elternpfad je FieldReference) und ist ein eigener Vorgang.
+    -- '//FieldReference' ohne Herkunftspfad. Die Rolle JE PARAMETER vergibt seit
+    -- Schema 1.41.0 ScriptStepParamRoleMap (unten) → StepFieldParamRoles; der
+    -- Eintrag hier bleibt der neutrale Rückfall 'references_field' für Feld-
+    -- Referenzen, die keinem kuratierten Parameter zugeordnet werden (z. B. ein
+    -- Feld in einer Wiederholungs-Formel ohne DDR-Info).
     (213, 'Fine-Tune Model',               'references_field'),
     (216, 'Insert Embedding in Found Set', 'references_field'),
     (218, 'Perform Semantic Find',         'references_field'),
@@ -2674,6 +2742,94 @@ INSERT INTO ScriptStepRoleMap VALUES
     (240, 'Insert Image Captions in Found Set', 'references_field'),  -- LLMBulkEmbeddingField (Quelle) + Target
     (242, 'Print PDF',                     'references_field'),  -- Source/Target (PDF-Quelle) + SavePrintOptionsTo/UsePrintOptionsFrom
     (244, 'Append PDF',                    'references_field');  -- Ziel-Container + Quell-PDF, beide als Target
+
+-- ========================================
+-- ScriptStepParamRoleMap — Link-Rolle je Script-Step-PARAMETER (Schema 1.41.0)
+-- ========================================
+-- Für die Steps mit gegenläufigen Feld-Optionen (Quelle UND Ziel im selben Step)
+-- reicht eine Rolle je Step_ID nicht. Param_Path = Kette der Parameter/@type von
+-- ParameterValues bis zur FieldReference ('SaveResult/Target' = Parameter
+-- type="SaveResult" › Parameter type="Target" › FieldReference); nur direkte
+-- Kinder, d. h. eine Referenz in einer Wiederholungs-Formel fällt auf die Rolle
+-- des Step-Typs zurück. Action_Value: nur Configure Regression Model (222) —
+-- „Save Model To" schreibt bei Save (1) und liest bei Load (2); bei Train/Unload
+-- bleibt das Feld neutral. Richtungen belegt mit der Claris-Hilfe (Optionen der
+-- Steps) und den Fixtures (ingestion/fixtures/saxml/, FM 22 + 26):
+--   213 Response Target schreibt, Completion Field (Trainingsdaten) liest
+--   216/240 Source Field liest, Target Field schreibt
+--   218 Target field (Suchfeld der Embeddings) = Suchkriterium, Save result schreibt
+--   220 Response schreibt, Messages (Verlauf als Eingabe) liest, Tool Calls from Model schreibt
+--   222 Training Vectors/Target Field lesen (FileMaker behält die Option auch bei
+--       anderer Aktion im XML — konservativ lesend)
+--   242 Source (PDF) und Use print options from lesen, Save print options to schreibt
+--   244 Source (PDF, das angehängt wird) liest — das Ziel ist die offene PDF-Datei
+-- Keine Laufzeit-Abhängigkeit zur Referenz-DB; volatil wie ScriptStepRoleMap.
+CREATE OR REPLACE TABLE ScriptStepParamRoleMap (
+    Step_ID INTEGER NOT NULL,
+    Canonical_Name VARCHAR NOT NULL,
+    Param_Path VARCHAR NOT NULL,
+    Action_Value VARCHAR,
+    Link_Role VARCHAR NOT NULL
+);
+INSERT INTO ScriptStepParamRoleMap VALUES
+    (213, 'Fine-Tune Model',                    'Target',                        NULL, 'sets_field'),
+    (213, 'Fine-Tune Model',                    'FineTuneDataCompleteField',     NULL, 'reads_field'),
+    (216, 'Insert Embedding in Found Set',      'LLMBulkEmbeddingField',         NULL, 'reads_field'),
+    (216, 'Insert Embedding in Found Set',      'Target',                        NULL, 'sets_field'),
+    (218, 'Perform Semantic Find',              'FieldReference',                NULL, 'finds_in_field'),
+    (218, 'Perform Semantic Find',              'SaveResult/Target',             NULL, 'sets_field'),
+    (220, 'Generate Response from Model',       'Target',                        NULL, 'sets_field'),
+    (220, 'Generate Response from Model',       'LLMMessages/Target',            NULL, 'reads_field'),
+    (220, 'Generate Response from Model',       'LLMToolCallsFromModel/Target',  NULL, 'sets_field'),
+    (222, 'Configure Regression Model',         'LLMTrainVectorsField',          NULL, 'reads_field'),
+    (222, 'Configure Regression Model',         'LLMTrainLabelsField',           NULL, 'reads_field'),
+    (222, 'Configure Regression Model',         'Target',                        '1',  'sets_field'),
+    (222, 'Configure Regression Model',         'Target',                        '2',  'reads_field'),
+    (240, 'Insert Image Captions in Found Set', 'LLMBulkEmbeddingField',         NULL, 'reads_field'),
+    (240, 'Insert Image Captions in Found Set', 'Target',                        NULL, 'sets_field'),
+    (242, 'Print PDF',                          'Source/Target',                 NULL, 'reads_field'),
+    (242, 'Print PDF',                          'UsePrintOptionsFrom/Target',    NULL, 'reads_field'),
+    (242, 'Print PDF',                          'SavePrintOptionsTo/Target',     NULL, 'sets_field'),
+    (244, 'Append PDF',                         'Target',                        NULL, 'reads_field');
+
+-- StepFieldParamRoles — die Rolle je Feld-Referenz dieser Steps, eine Zeile je
+-- Vorkommen (Occurrence = laufende Nummer gleicher Referenzen im Step, damit ein
+-- Feld, das Quelle UND Ziel ist, je eine Zeile pro Rolle ergibt und nicht 2×2).
+-- Schlüssel wie XMLStepReferences: (Step_UUID, File_Name, Ref_ID, TO_Ref_ID).
+-- Persistent, damit die Analyse-Sicht v_script_step_links dieselbe Rolle vergibt.
+CREATE OR REPLACE TABLE StepFieldParamRoles AS
+WITH s AS (
+    SELECT DISTINCT st.Step_UUID, st.File_Name, st.Step_ID, st.Parameters_XML
+    FROM StepsForScripts st
+    WHERE st.Step_ID IN (SELECT Step_ID FROM ScriptStepParamRoleMap)
+      AND st.Parameters_XML LIKE '%FieldReference%'
+),
+p AS (SELECT DISTINCT Step_ID, Param_Path FROM ScriptStepParamRoleMap),
+x AS (
+    SELECT s.Step_UUID, s.File_Name, s.Step_ID, p.Param_Path,
+           xml_extract_text(s.Parameters_XML, xp.path || '/@id')                         AS ids,
+           xml_extract_text(s.Parameters_XML, xp.path || '/TableOccurrenceReference/@id') AS to_ids,
+           xml_extract_text(s.Parameters_XML,
+               '/ParameterValues/Parameter[@type=''LLMTrainActions'']/List/@value')[1]   AS action_value
+    FROM s
+    JOIN p ON p.Step_ID = s.Step_ID,
+    LATERAL (SELECT '/ParameterValues/Parameter[@type='''
+                    || replace(p.Param_Path, '/', ''']/Parameter[@type=''')
+                    || ''']/FieldReference' AS path) xp
+),
+refs AS (
+    SELECT x.Step_UUID, x.File_Name, x.Step_ID, x.Param_Path, x.action_value,
+           TRY_CAST(x.ids[i] AS BIGINT) AS Ref_ID,
+           CASE WHEN len(x.to_ids) = len(x.ids) THEN TRY_CAST(x.to_ids[i] AS BIGINT) END AS TO_Ref_ID
+    FROM x, LATERAL (SELECT unnest(range(1, len(x.ids) + 1)) AS i) k
+)
+SELECT r.Step_UUID, r.File_Name, r.Step_ID, r.Param_Path, r.Ref_ID, r.TO_Ref_ID, m.Link_Role,
+       row_number() OVER (PARTITION BY r.Step_UUID, r.File_Name, r.Ref_ID, r.TO_Ref_ID
+                          ORDER BY r.Param_Path, m.Link_Role) AS Occurrence
+FROM refs r
+JOIN ScriptStepParamRoleMap m
+  ON m.Step_ID = r.Step_ID AND m.Param_Path = r.Param_Path
+ AND (m.Action_Value IS NULL OR m.Action_Value = r.action_value);
 
 -- ========================================
 -- DataSourceFileMap — deklarierte Datenquelle → importierte Datei
@@ -2715,6 +2871,709 @@ SELECT c.File_Name, c.DS_UUID,
 FROM candidates c
 JOIN FilesCatalog fc ON lower(fc.File_Name) = lower(c.cand)
 GROUP BY c.File_Name, c.DS_UUID;
+
+
+-- ========================================
+-- CalculationSqlRefs — Bezüge in ExecuteSQL-Anweisungen (Schema 1.42.0)
+-- ========================================
+-- ExecuteSQL/ExecuteSQLe erhalten die Abfrage als TEXT. Tabellen- und Feldnamen
+-- darin sind als Formel-Referenz (Namens-Wrapper wie GetFieldName) oder als
+-- Name im SQL-Literal geschrieben. Diese Tabelle führt JEDEN Bezug einer
+-- SQL-Anweisung als Zeile: Klausel, Position, aufgelöstes Ziel.
+--   Resolution = reference  Formel-Referenz (Kante existiert bereits, Block 30)
+--              = name       Name im SQL-Text (eigene Kante, Block 30b)
+--              = dynamic    kein auflösbares Katalogziel (Variable, Ausdruck,
+--                           Konstante als Parameter, dynamischer Tabellenname)
+-- Wrapper werden über ihre POSITION erkannt (FROM/JOIN → TO, sonst Feld),
+-- nicht über eine Namensliste.
+--
+-- Zwei Quellen je Berechnung:
+--   Bausteinpfad (DDR_Calculations): UUIDs der Referenzen, Kommentare getrennt.
+--     FileMaker lässt im DDR-Export den NoRef-Baustein vor einem Schluss-
+--     Kommentar weg (bekannt aus P3.5) — der Aufruf schließt dann nicht oder
+--     das erste Argument fehlt.
+--   Textpfad (CalculationsCatalog.Formula_Text): vollständig, auch ohne
+--     DDR-Info; Referenzen nur als Name (TO::Feld). Layout-Formeln
+--     (bedingte Formatierung, Buttons, Platzhalter, Portalfilter) haben
+--     keinen Formula_Text — dort trägt nur der Bausteinpfad.
+-- Je Berechnung gewinnt der Bausteinpfad, wenn alle Aufrufe schließen, die
+-- Aufrufzahl gleich ist und die SQL-Literale beider Pfade übereinstimmen;
+-- sonst der Textpfad.
+--
+-- Let-Variablen: besteht das erste Argument (oder ein Operand davon) aus einer
+-- Variable, die in derselben Formel per Let belegt wird (`¢sql = "SELECT …"`),
+-- wird deren Ausdruck eingesetzt (eine Ebene). Let_Var nennt die Variable.
+
+-- Lexer für FileMaker-Formeltext: Kommentare, Zeichenketten (mit \-Escape),
+-- Klammern, Trenner, Let-Klammern, Zuweisung, Leerraum, sonstige Wörter.
+CREATE OR REPLACE TEMP MACRO _sq_fm_lex(s) AS
+    regexp_extract_all(COALESCE(s, ''),
+        '(?s)/\*.*?\*/|//[^\r\n]*|"(?:[^"\\]|\\.)*"|<=|>=|<>|[()\[\];&=]|\s+|[^"()\[\];&=\s/<>]+|.');
+
+CREATE OR REPLACE TEMP MACRO _sq_fm_kind(v) AS
+    CASE WHEN v[1:2] IN ('/*', '//')                         THEN 'comment'
+         WHEN v[1] = '"' AND length(v) > 1 AND v[-1] = '"'   THEN 'str'
+         WHEN v IN ('(', ')', ';', '&', '[', ']', '=')       THEN v
+         WHEN regexp_matches(v, '^\s+$')                     THEN 'ws'
+         WHEN lower(v) IN ('executesql', 'executesqle')      THEN 'fn'
+         WHEN v[1] = '$'                                     THEN 'var'
+         ELSE 'other' END;
+
+-- Leerraum (inkl. Zeilenumbruch/Tab) an beiden Enden entfernen — trim() nimmt nur Leerzeichen
+CREATE OR REPLACE TEMP MACRO _sq_wtrim(x) AS regexp_replace(x, '^\s+|\s+$', '', 'g');
+
+-- FileMaker-Zeichenkette → Inhalt (Escapes \" \\ \¶ aufgelöst, ¶ als Leerraum)
+CREATE OR REPLACE TEMP MACRO _sq_fm_unquote(v) AS
+    replace(regexp_replace(v[2:-2], '\\(.)', '\1', 'g'), '¶', ' ');
+
+-- (1) Kandidaten: Funktions-Baustein ExecuteSQL/ExecuteSQLe oder Aufruf im Text
+CREATE OR REPLACE TEMP TABLE _sq_calc AS
+WITH ddr_hit AS (
+    SELECT DISTINCT Calc_UUID, File_Name
+    FROM DDR_Calculations
+    WHERE Chunk_Type = 'FunctionRef'
+      AND Chunk_Content LIKE '%ExecuteSQL%'
+      AND xml_extract_text(Chunk_Content, '/Chunk')[1] IN ('ExecuteSQL', 'ExecuteSQLe')
+)
+SELECT c.Calculation_UUID, c.File_Name, c.Owner_UUID, c.Owner_Type,
+       c.DDR_Calc_UUID, c.Formula_Text, c.Context_TO_UUID, c.Edge_Subrole,
+       COALESCE(c.Is_Enabled, TRUE) AS Is_Enabled,
+       (h.Calc_UUID IS NOT NULL)    AS Has_DDR
+FROM CalculationsCatalog c
+LEFT JOIN ddr_hit h ON h.Calc_UUID = c.DDR_Calc_UUID AND h.File_Name = c.File_Name
+WHERE (h.Calc_UUID IS NOT NULL
+       OR regexp_matches(c.Formula_Text, '(?i)\bExecuteSQLe?\s*\('))
+  -- SQL-Text-Eingabe von Execute SQL: keine Formel, FileMaker wertet sie nicht aus
+  AND c.Calc_Role <> 'step_sql_text';
+
+-- (2) Token-Strom beider Pfade (Src = 'ddr' | 'text'), Kommentare entfernt
+CREATE OR REPLACE TEMP TABLE _sq_tok0 AS
+WITH ddr_chunks AS (
+    SELECT q.Calculation_UUID, q.File_Name, d.Chunk_Index, d.Chunk_Type, d.Chunk_Content
+    FROM _sq_calc q
+    JOIN DDR_Calculations d ON d.Calc_UUID = q.DDR_Calc_UUID AND d.File_Name = q.File_Name
+    WHERE q.Has_DDR AND d.Chunk_Type <> 'Comment'
+),
+ddr_lex AS (
+    SELECT Calculation_UUID, File_Name, Chunk_Index, Chunk_Type,
+           CASE WHEN Chunk_Type = 'NoRef'
+                THEN _sq_fm_lex(xml_extract_text(Chunk_Content, '/Chunk')[1])
+                -- Referenz als lesbarer Text (TO::Feld) — für Raw_Name von Parametern
+                -- und dynamischen Ausdrücken; Auflösung läuft über die Ref_*-Spalten
+                WHEN Chunk_Type = 'FieldRef'
+                THEN [COALESCE(xml_extract_text(Chunk_Content, '/Chunk/FieldReference/TableOccurrenceReference/@name')[1] || '::', '')
+                      || COALESCE(xml_extract_text(Chunk_Content, '/Chunk/FieldReference/@name')[1], '')]
+                ELSE [COALESCE(xml_extract_text(Chunk_Content, '/Chunk')[1], '')] END AS toks,
+           CASE WHEN Chunk_Type = 'FieldRef' THEN Chunk_Content END AS Ref_XML
+    FROM ddr_chunks
+),
+ddr_tok AS (
+    SELECT Calculation_UUID, File_Name, 'ddr' AS Src, Chunk_Index AS O1, t.i AS O2,
+           CASE Chunk_Type
+               WHEN 'NoRef'             THEN _sq_fm_kind(t.v)
+               WHEN 'FieldRef'          THEN 'ref'
+               WHEN 'VariableReference' THEN 'var'
+               WHEN 'FunctionRef'       THEN CASE WHEN t.v IN ('ExecuteSQL', 'ExecuteSQLe') THEN 'fn' ELSE 'func' END
+               ELSE 'func' END AS Kind,
+           t.v AS Val,
+           TRY_CAST(xml_extract_text(Ref_XML, '/Chunk/FieldReference/@id')[1] AS BIGINT)           AS Ref_Field_ID,
+           xml_extract_text(Ref_XML, '/Chunk/FieldReference/@name')[1]                              AS Ref_Field_Name,
+           upper(xml_extract_text(Ref_XML, '/Chunk/FieldReference/@UUID')[1])                       AS Ref_Field_UUID,
+           upper(xml_extract_text(Ref_XML, '/Chunk/FieldReference/TableOccurrenceReference/@UUID')[1]) AS Ref_TO_UUID,
+           xml_extract_text(Ref_XML, '/Chunk/FieldReference/TableOccurrenceReference/@name')[1]     AS Ref_TO_Name
+    FROM ddr_lex, LATERAL (SELECT unnest(toks) AS v, generate_subscripts(toks, 1) AS i) t
+),
+text_tok AS (
+    SELECT Calculation_UUID, File_Name, 'text' AS Src, 0 AS O1, t.i AS O2,
+           _sq_fm_kind(t.v) AS Kind, t.v AS Val,
+           NULL::BIGINT AS Ref_Field_ID, NULL::VARCHAR AS Ref_Field_Name, NULL::VARCHAR AS Ref_Field_UUID,
+           NULL::VARCHAR AS Ref_TO_UUID, NULL::VARCHAR AS Ref_TO_Name
+    FROM (SELECT Calculation_UUID, File_Name, _sq_fm_lex(Formula_Text) AS toks
+          FROM _sq_calc WHERE Formula_Text IS NOT NULL) l,
+         LATERAL (SELECT unnest(toks) AS v, generate_subscripts(toks, 1) AS i) t
+)
+SELECT * FROM ddr_tok
+UNION ALL
+SELECT * FROM text_tok WHERE Kind <> 'comment';
+
+CREATE OR REPLACE TEMP TABLE _sq_tok AS
+SELECT *,
+       ROW_NUMBER() OVER w AS Pos,
+       COALESCE(SUM(CASE Kind WHEN '(' THEN 1 WHEN ')' THEN -1 ELSE 0 END)
+                OVER (w ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING), 0) AS Depth
+FROM _sq_tok0
+WINDOW w AS (PARTITION BY Calculation_UUID, File_Name, Src ORDER BY O1, O2);
+
+-- signifikante Tokens (ohne Leerraum) mit Nachbarn
+CREATE OR REPLACE TEMP TABLE _sq_sig AS
+SELECT Calculation_UUID, File_Name, Src, Pos, Kind, Val, Depth,
+       lag(Kind)  OVER w AS Prev_Kind,
+       lead(Kind) OVER w AS Next_Kind,
+       lead(Pos)  OVER w AS Next_Pos
+FROM _sq_tok
+WHERE Kind <> 'ws'
+WINDOW w AS (PARTITION BY Calculation_UUID, File_Name, Src ORDER BY Pos);
+
+-- (3) Aufrufe: Funktionsname, öffnende Klammer, schließende Klammer
+CREATE OR REPLACE TEMP TABLE _sq_call AS
+WITH o AS (
+    SELECT Calculation_UUID, File_Name, Src, Pos AS Fn_Pos,
+           CASE WHEN lower(Val) = 'executesqle' THEN 'ExecuteSQLe' ELSE 'ExecuteSQL' END AS Sql_Function,
+           Next_Pos AS Open_Pos
+    FROM _sq_sig
+    WHERE Kind = 'fn' AND Next_Kind = '('
+),
+od AS (
+    SELECT o.*, t.Depth AS D FROM o
+    JOIN _sq_tok t ON t.Calculation_UUID = o.Calculation_UUID AND t.File_Name = o.File_Name
+                  AND t.Src = o.Src AND t.Pos = o.Open_Pos
+)
+SELECT od.*,
+       (SELECT MIN(c.Pos) FROM _sq_tok c
+        WHERE c.Calculation_UUID = od.Calculation_UUID AND c.File_Name = od.File_Name
+          AND c.Src = od.Src AND c.Pos > od.Open_Pos AND c.Kind = ')' AND c.Depth = od.D + 1) AS Close_Pos,
+       ROW_NUMBER() OVER (PARTITION BY Calculation_UUID, File_Name, Src ORDER BY Fn_Pos) AS Sql_Index
+FROM od;
+
+-- (4) Argument-Tokens (Arg_No 1-basiert; Trenner selbst ausgenommen)
+CREATE OR REPLACE TEMP TABLE _sq_arg AS
+SELECT c.Calculation_UUID, c.File_Name, c.Src, c.Sql_Index, t.Pos, t.Kind, t.Val,
+       t.Depth - c.D - 1 AS Rel_Depth,
+       t.Ref_Field_ID, t.Ref_Field_Name, t.Ref_Field_UUID, t.Ref_TO_UUID, t.Ref_TO_Name,
+       1 + COUNT(*) FILTER (WHERE t.Kind = ';' AND t.Depth = c.D + 1)
+             OVER (PARTITION BY c.Calculation_UUID, c.File_Name, c.Src, c.Sql_Index ORDER BY t.Pos
+                   ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS Arg_No,
+       t.Depth = c.D + 1 AND t.Kind = ';' AS Is_Sep
+FROM _sq_call c
+JOIN _sq_tok t ON t.Calculation_UUID = c.Calculation_UUID AND t.File_Name = c.File_Name
+              AND t.Src = c.Src AND t.Pos > c.Open_Pos
+              AND t.Pos < COALESCE(c.Close_Pos, 2147483647);
+DELETE FROM _sq_arg WHERE Is_Sep;
+
+-- (5) Let-Zuweisungen: Name, davor '[' oder ';', danach '='; Ausdruck bis zum
+-- nächsten ';' bzw. ']' auf derselben Klammerebene
+CREATE OR REPLACE TEMP TABLE _sq_let AS
+WITH a AS (
+    SELECT s.Calculation_UUID, s.File_Name, s.Src, s.Pos AS Name_Pos, lower(s.Val) AS Name_Key,
+           s.Next_Pos AS Eq_Pos, s.Depth
+    FROM _sq_sig s
+    WHERE s.Kind IN ('var', 'other') AND s.Prev_Kind IN ('[', ';') AND s.Next_Kind = '='
+)
+SELECT a.*,
+       COALESCE((SELECT MIN(e.Pos) FROM _sq_sig e
+                 WHERE e.Calculation_UUID = a.Calculation_UUID AND e.File_Name = a.File_Name
+                   AND e.Src = a.Src AND e.Pos > a.Eq_Pos AND e.Kind IN (';', ']') AND e.Depth = a.Depth),
+                2147483647) AS End_Pos
+FROM a;
+
+-- (6) Operanden des ersten Arguments (Split an '&' der Argument-Ebene)
+CREATE OR REPLACE TEMP TABLE _sq_op1 AS
+WITH a AS (
+    SELECT *, 1 + COUNT(*) FILTER (WHERE Kind = '&' AND Rel_Depth = 0)
+                    OVER (PARTITION BY Calculation_UUID, File_Name, Src, Sql_Index ORDER BY Pos
+                          ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS Op_No
+    FROM _sq_arg WHERE Arg_No = 1
+)
+SELECT * FROM a WHERE NOT (Kind = '&' AND Rel_Depth = 0);
+
+-- Operanden aus genau einer Variable → Let-Ausdruck derselben Formel (letzte
+-- Zuweisung vor dem Aufruf)
+CREATE OR REPLACE TEMP TABLE _sq_letuse AS
+WITH g AS (
+    SELECT Calculation_UUID, File_Name, Src, Sql_Index, Op_No,
+           COUNT(*) FILTER (WHERE Kind <> 'ws') AS n_sig,
+           any_value(CASE WHEN Kind <> 'ws' THEN Kind END) AS k,
+           any_value(CASE WHEN Kind <> 'ws' THEN Val END)  AS v
+    FROM _sq_op1 GROUP BY ALL
+)
+SELECT g.Calculation_UUID, g.File_Name, g.Src, g.Sql_Index, g.Op_No, g.v AS Let_Var,
+       l.Eq_Pos, l.End_Pos, l.Depth AS Let_Depth
+FROM g
+JOIN _sq_call c USING (Calculation_UUID, File_Name, Src, Sql_Index)
+JOIN _sq_let l ON l.Calculation_UUID = g.Calculation_UUID AND l.File_Name = g.File_Name
+              AND l.Src = g.Src AND l.Name_Key = lower(g.v) AND l.Name_Pos < c.Fn_Pos
+WHERE g.n_sig = 1 AND g.k IN ('var', 'other')
+QUALIFY ROW_NUMBER() OVER (PARTITION BY g.Calculation_UUID, g.File_Name, g.Src, g.Sql_Index, g.Op_No
+                           ORDER BY l.Name_Pos DESC) = 1;
+
+-- Segment-Tokens: unveränderte Operanden (Sub_No = 0) + eingesetzte Let-Ausdrücke
+CREATE OR REPLACE TEMP TABLE _sq_segtok AS
+SELECT o.Calculation_UUID, o.File_Name, o.Src, o.Sql_Index, o.Op_No, 0 AS Sub_No,
+       o.Pos, o.Kind, o.Val, o.Ref_Field_ID, o.Ref_Field_Name, o.Ref_Field_UUID, o.Ref_TO_UUID, o.Ref_TO_Name
+FROM _sq_op1 o
+ANTI JOIN _sq_letuse u USING (Calculation_UUID, File_Name, Src, Sql_Index, Op_No)
+UNION ALL
+SELECT * EXCLUDE (Amp)
+FROM (
+    SELECT u.Calculation_UUID, u.File_Name, u.Src, u.Sql_Index, u.Op_No,
+           1 + COUNT(*) FILTER (WHERE t.Kind = '&' AND t.Depth = u.Let_Depth)
+                 OVER (PARTITION BY u.Calculation_UUID, u.File_Name, u.Src, u.Sql_Index, u.Op_No ORDER BY t.Pos
+                       ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS Sub_No,
+           t.Pos, t.Kind, t.Val, t.Ref_Field_ID, t.Ref_Field_Name, t.Ref_Field_UUID, t.Ref_TO_UUID, t.Ref_TO_Name,
+           (t.Kind = '&' AND t.Depth = u.Let_Depth) AS Amp
+    FROM _sq_letuse u
+    JOIN _sq_tok t ON t.Calculation_UUID = u.Calculation_UUID AND t.File_Name = u.File_Name
+                  AND t.Src = u.Src AND t.Pos > u.Eq_Pos AND t.Pos < u.End_Pos
+) WHERE NOT Amp;
+
+-- (7) Segmente klassifizieren: lit | ref | dyn
+CREATE OR REPLACE TEMP TABLE _sq_seg AS
+WITH g AS (
+    SELECT Calculation_UUID, File_Name, Src, Sql_Index, Op_No, Sub_No,
+           COUNT(*) FILTER (WHERE Kind <> 'ws')  AS n_sig,
+           COUNT(*) FILTER (WHERE Kind = 'str')  AS n_str,
+           COUNT(*) FILTER (WHERE Kind = 'ref')  AS n_ref,
+           any_value(CASE WHEN Kind = 'str' THEN Val END) AS Str_Val,
+           any_value(CASE WHEN Kind = 'ref' THEN Ref_Field_ID END)   AS Ref_Field_ID,
+           any_value(CASE WHEN Kind = 'ref' THEN Ref_Field_Name END) AS Ref_Field_Name,
+           any_value(CASE WHEN Kind = 'ref' THEN Ref_Field_UUID END) AS Ref_Field_UUID,
+           any_value(CASE WHEN Kind = 'ref' THEN Ref_TO_UUID END)    AS Ref_TO_UUID,
+           any_value(CASE WHEN Kind = 'ref' THEN Ref_TO_Name END)    AS Ref_TO_Name,
+           string_agg(Val, '' ORDER BY Pos) AS Raw
+    FROM _sq_segtok GROUP BY ALL
+),
+k AS (
+    SELECT g.*,
+           -- Textpfad: Referenz als TO::Feld (innerste Klammer bzw. ganzer Operand)
+           CASE WHEN Src = 'text' AND n_str = 0 AND len(regexp_extract_all(Raw, '::')) = 1
+                THEN regexp_extract(Raw, '([^()";&\[\]]+?)::(<Field Missing>|[^()";&\[\]+*/<>=≠≤≥^]+)', 1) END AS Txt_TO,
+           CASE WHEN Src = 'text' AND n_str = 0 AND len(regexp_extract_all(Raw, '::')) = 1
+                THEN regexp_extract(Raw, '([^()";&\[\]]+?)::(<Field Missing>|[^()";&\[\]+*/<>=≠≤≥^]+)', 2) END AS Txt_Field,
+           -- Textpfad, Feldformel: blanker Feldname in der innersten Klammer
+           CASE WHEN Src = 'text' AND n_str = 0 AND NOT contains(Raw, '::')
+                THEN regexp_extract(Raw, '\(\s*([^()";&\[\]$]+?)\s*\)', 1) END AS Txt_Bare
+    FROM g
+)
+SELECT k.Calculation_UUID, k.File_Name, k.Src, k.Sql_Index, k.Op_No, k.Sub_No,
+       ROW_NUMBER() OVER (PARTITION BY k.Calculation_UUID, k.File_Name, k.Src, k.Sql_Index
+                          ORDER BY k.Op_No, k.Sub_No) AS Seg_No,
+       CASE WHEN n_sig = 1 AND n_str = 1                       THEN 'lit'
+            WHEN Src = 'ddr' AND n_ref = 1                     THEN 'ref'
+            WHEN Src = 'text' AND NULLIF(_sq_wtrim(Txt_TO), '') IS NOT NULL
+                                  AND NULLIF(_sq_wtrim(Txt_Field), '') IS NOT NULL THEN 'ref'
+            WHEN Src = 'text' AND bf.Field_UUID IS NOT NULL    THEN 'ref'
+            ELSE 'dyn' END AS Seg_Kind,
+       CASE WHEN n_sig = 1 AND n_str = 1 THEN _sq_fm_unquote(Str_Val) END AS Lit,
+       k.Ref_Field_ID, k.Ref_Field_UUID, k.Ref_TO_UUID,
+       COALESCE(k.Ref_Field_Name, NULLIF(_sq_wtrim(Txt_Field), ''), bf.Field_Name) AS Ref_Field_Name,
+       COALESCE(k.Ref_TO_Name, NULLIF(_sq_wtrim(Txt_TO), ''), bf.TO_Name)         AS Ref_TO_Name,
+       _sq_wtrim(k.Raw) AS Raw
+FROM k
+LEFT JOIN _sq_calc q ON q.Calculation_UUID = k.Calculation_UUID AND q.File_Name = k.File_Name
+LEFT JOIN (
+    SELECT toc.TO_UUID, toc.File_Name, toc.TO_Name, f.Field_UUID, f.Field_Name
+    FROM TableOccurrenceCatalog toc
+    LEFT JOIN DataSourceFileMap dsm ON dsm.File_Name = toc.File_Name AND dsm.DS_UUID = toc.DS_UUID
+    JOIN FieldsForTables f
+      ON f.Table_Name = toc.BT_Name
+     AND f.File_Name = COALESCE(dsm.Resolved_File,
+             regexp_replace(COALESCE(NULLIF(toc.DS_Name, ''), toc.File_Name), '\.fmp12$', ''))
+) bf ON k.Txt_Bare IS NOT NULL AND q.Owner_Type = 'Field'
+    AND bf.TO_UUID = q.Context_TO_UUID AND bf.File_Name = k.File_Name
+    AND lower(bf.Field_Name) = lower(_sq_wtrim(k.Txt_Bare));
+
+-- Skelett je Aufruf: Literale verkettet, Referenz → ⟨R<Seg_No>⟩, sonst ⟨X<Seg_No>⟩
+-- (die Nummer verbindet den dynamischen Teil mit seinem Ausdruck in _sq_seg)
+CREATE OR REPLACE TEMP TABLE _sq_skel AS
+SELECT Calculation_UUID, File_Name, Src, Sql_Index,
+       string_agg(CASE Seg_Kind WHEN 'lit' THEN Lit
+                                WHEN 'ref' THEN '⟨R' || Seg_No || '⟩'
+                                ELSE '⟨X' || Seg_No || '⟩' END, '' ORDER BY Seg_No) AS Skeleton,
+       string_agg(CASE WHEN Seg_Kind = 'lit' THEN regexp_replace(trim(Lit), '\s+', ' ', 'g') END, '|'
+                  ORDER BY Seg_No) AS Lit_Seq,
+       COUNT(*) FILTER (WHERE Seg_Kind = 'lit') AS n_lit
+FROM _sq_seg GROUP BY ALL;
+
+-- (8) Quellwahl je Berechnung
+CREATE OR REPLACE TEMP TABLE _sq_src AS
+WITH s AS (
+    SELECT c.Calculation_UUID, c.File_Name, c.Src,
+           COUNT(*) AS n_call,
+           COUNT(*) FILTER (WHERE c.Close_Pos IS NULL) AS n_open,
+           string_agg(COALESCE(k.Lit_Seq, ''), '#' ORDER BY c.Sql_Index) AS Lits
+    FROM _sq_call c
+    LEFT JOIN _sq_skel k USING (Calculation_UUID, File_Name, Src, Sql_Index)
+    GROUP BY ALL
+),
+p AS (
+    SELECT q.Calculation_UUID, q.File_Name,
+           d.n_call AS d_n, d.n_open AS d_open, d.Lits AS d_lits,
+           t.n_call AS t_n, t.Lits AS t_lits
+    FROM _sq_calc q
+    LEFT JOIN s d ON d.Calculation_UUID = q.Calculation_UUID AND d.File_Name = q.File_Name AND d.Src = 'ddr'
+    LEFT JOIN s t ON t.Calculation_UUID = q.Calculation_UUID AND t.File_Name = q.File_Name AND t.Src = 'text'
+)
+SELECT Calculation_UUID, File_Name,
+       CASE WHEN d_n IS NULL THEN 'text'
+            WHEN t_n IS NULL THEN 'ddr'
+            WHEN d_open = 0 AND d_n = t_n AND d_lits = t_lits THEN 'ddr'
+            ELSE 'text' END AS Src,
+       (d_n IS NOT NULL AND t_n IS NULL AND d_open > 0) AS Incomplete
+FROM p
+WHERE COALESCE(d_n, t_n) IS NOT NULL;
+
+-- (9) SQL-Tokens des gewählten Skeletts
+CREATE OR REPLACE TEMP TABLE _sq_stok AS
+WITH t AS (
+    SELECT k.Calculation_UUID, k.File_Name, k.Src, k.Sql_Index,
+           regexp_extract_all(k.Skeleton,
+               '⟨R[0-9]+⟩|⟨X[0-9]+⟩|"(?:[^"]|"")*"|''(?:[^'']|'''')*''|[\p{L}_][\p{L}\p{N}_]*|[0-9]+(?:\.[0-9]+)?|\?|[(),.*]|<=|>=|<>|!=|\|\||[=<>+\-/]|\S') AS toks
+    FROM _sq_skel k
+    JOIN _sq_src s ON s.Calculation_UUID = k.Calculation_UUID AND s.File_Name = k.File_Name AND s.Src = k.Src
+),
+u AS (
+    SELECT Calculation_UUID, File_Name, Src, Sql_Index, x.i AS P, x.v AS T
+    FROM t, LATERAL (SELECT unnest(toks) AS v, generate_subscripts(toks, 1) AS i) x
+)
+SELECT *,
+       CASE WHEN T LIKE '⟨R%' THEN 'ref'
+            WHEN T LIKE '⟨X%' THEN 'dyn'
+            -- gequoteter Platzhalter ("\"" & GFN(…) & "\"" bzw. & $tabelle &)
+            WHEN regexp_matches(T, '^"⟨R[0-9]+⟩"$') THEN 'ref'
+            WHEN T[1] = '"' AND contains(T, '⟨') THEN 'dyn'
+            WHEN T[1] = '"' THEN 'qid'
+            WHEN T[1] = '''' THEN 'lit'
+            WHEN regexp_matches(T, '^[\p{L}_]') THEN
+                 CASE WHEN upper(T) IN ('SELECT', 'FROM', 'JOIN', 'ON', 'WHERE', 'GROUP', 'HAVING', 'ORDER',
+                                        'UNION', 'FETCH', 'OFFSET') THEN 'kw'
+                      WHEN upper(T) IN ('AND', 'OR', 'NOT', 'IS', 'NULL', 'IN', 'LIKE', 'BETWEEN', 'AS',
+                                        'DISTINCT', 'ASC', 'DESC', 'CASE', 'WHEN', 'THEN', 'ELSE', 'END',
+                                        'BY', 'INNER', 'LEFT', 'RIGHT', 'OUTER', 'CROSS', 'FULL', 'FIRST',
+                                        'NEXT', 'ROWS', 'ROW', 'ONLY', 'ALL', 'EXISTS', 'TRUE', 'FALSE',
+                                        'UNKNOWN', 'ESCAPE', 'PERCENT', 'WITH', 'TIES', 'ANY', 'SOME',
+                                        'CURRENT_DATE', 'CURRENT_TIME', 'CURRENT_TIMESTAMP', 'CURRENT_USER',
+                                        'USER', 'ROWID', 'ROWMODID', 'DATE', 'TIME', 'TIMESTAMP', 'INTERVAL')
+                      THEN 'kw2' ELSE 'id' END
+            WHEN regexp_matches(T, '^[0-9]') THEN 'num'
+            ELSE 'sym' END AS K,
+       TRY_CAST(regexp_extract(T, '⟨[RX]([0-9]+)⟩', 1) AS BIGINT) AS Seg_No
+FROM u;
+
+-- Klammertiefe, Unterabfrage-Bereiche, Nachbarn
+CREATE OR REPLACE TEMP TABLE _sq_stok2 AS
+SELECT *,
+       COALESCE(SUM(CASE T WHEN '(' THEN 1 WHEN ')' THEN -1 ELSE 0 END)
+                OVER (w ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING), 0) AS SD,
+       lag(T) OVER w AS Prev_T, lag(K) OVER w AS Prev_K, lag(T, 2) OVER w AS Prev2_T,
+       lead(T) OVER w AS Next_T, lead(K) OVER w AS Next_K, lead(T, 2) OVER w AS Next2_T, lead(K, 2) OVER w AS Next2_K
+FROM _sq_stok
+WINDOW w AS (PARTITION BY Calculation_UUID, File_Name, Sql_Index ORDER BY P);
+
+CREATE OR REPLACE TEMP TABLE _sq_scope AS
+SELECT o.Calculation_UUID, o.File_Name, o.Sql_Index, o.P AS Open_P, o.SD + 1 AS Base_SD,
+       COALESCE((SELECT MIN(c.P) FROM _sq_stok2 c
+                 WHERE c.Calculation_UUID = o.Calculation_UUID AND c.File_Name = o.File_Name
+                   AND c.Sql_Index = o.Sql_Index AND c.P > o.P AND c.T = ')' AND c.SD = o.SD + 1),
+                2147483647) AS Close_P
+FROM _sq_stok2 o
+WHERE o.T = '(' AND upper(o.Next_T) = 'SELECT';
+
+CREATE OR REPLACE TEMP TABLE _sq_stok3 AS
+WITH sc AS (
+    SELECT t.*,
+           COALESCE((SELECT MAX(s.Open_P) FROM _sq_scope s
+                     WHERE s.Calculation_UUID = t.Calculation_UUID AND s.File_Name = t.File_Name
+                       AND s.Sql_Index = t.Sql_Index AND t.P > s.Open_P AND t.P < s.Close_P), 0) AS Scope
+    FROM _sq_stok2 t
+)
+SELECT sc.*,
+       COALESCE(s.Base_SD, 0) AS Base_SD,
+       last_value(CASE WHEN sc.K = 'kw' THEN lower(sc.T) END IGNORE NULLS)
+           OVER (PARTITION BY sc.Calculation_UUID, sc.File_Name, sc.Sql_Index, sc.Scope ORDER BY sc.P) AS Clause,
+       last_value(CASE WHEN sc.K = 'kw' THEN sc.P END IGNORE NULLS)
+           OVER (PARTITION BY sc.Calculation_UUID, sc.File_Name, sc.Sql_Index, sc.Scope ORDER BY sc.P) AS Clause_P
+FROM sc
+LEFT JOIN _sq_scope s ON s.Calculation_UUID = sc.Calculation_UUID AND s.File_Name = sc.File_Name
+                     AND s.Sql_Index = sc.Sql_Index AND s.Open_P = sc.Scope;
+
+-- (10) Tabellen-Bezüge (FROM/JOIN): Bezeichner direkt nach FROM, JOIN oder Komma
+CREATE OR REPLACE TEMP TABLE _sq_tab AS
+SELECT t.Calculation_UUID, t.File_Name, t.Src, t.Sql_Index, t.Scope, t.P, t.Clause, t.K,
+       t.Seg_No,
+       CASE WHEN t.K = 'qid' THEN replace(t.T[2:-2], '""', '"') WHEN t.K = 'id' THEN t.T END AS Raw_Name,
+       CASE WHEN upper(t.Next_T) = 'AS' AND t.Next2_K IN ('id', 'qid') THEN replace(trim(t.Next2_T, '"'), '""', '"')
+            WHEN t.Next_K IN ('id', 'qid') THEN replace(trim(t.Next_T, '"'), '""', '"') END AS Alias
+FROM _sq_stok3 t
+WHERE t.Clause IN ('from', 'join') AND t.SD = t.Base_SD
+  AND t.K IN ('qid', 'id', 'ref', 'dyn')
+  AND (upper(t.Prev_T) IN ('FROM', 'JOIN') OR t.Prev_T = ',');
+
+-- TO → Basistabelle + Heimatdatei (wie Block 6: DataSourceFileMap, sonst DS_Name/Datei)
+CREATE OR REPLACE TEMP TABLE _sq_to AS
+SELECT toc.TO_UUID, toc.File_Name, toc.TO_Name, toc.BT_Name,
+       COALESCE(dsm.Resolved_File,
+                regexp_replace(COALESCE(NULLIF(toc.DS_Name, ''), toc.File_Name), '\.fmp12$', '')) AS Home_File
+FROM TableOccurrenceCatalog toc
+LEFT JOIN DataSourceFileMap dsm ON dsm.File_Name = toc.File_Name AND dsm.DS_UUID = toc.DS_UUID;
+
+CREATE OR REPLACE TEMP TABLE _sq_tabres AS
+SELECT t.*,
+       CASE WHEN t.K = 'dyn' THEN 'dynamic' WHEN t.K = 'ref' THEN 'reference' ELSE 'name' END AS Resolution,
+       CASE WHEN t.K IN ('qid', 'id')
+             AND lower(t.Raw_Name) IN ('filemaker_tables', 'filemaker_fields',
+                                       'filemaker_basetables', 'filemaker_basetablefields')
+            THEN 'SystemTable'
+            WHEN tor.TO_UUID IS NOT NULL THEN 'TableOccurrence' END AS Target_Type,
+       tor.TO_UUID, tor.TO_Name, tor.BT_Name, tor.Home_File,
+       COALESCE(t.Raw_Name, sg.Ref_TO_Name) AS Match_Name,
+       -- Formel-Referenz als lesbarer Text (TO::Feld) wie bei Spalten: das Feld der
+       -- Referenz (GetTableName ( TO::Feld )) liefert nur den Tabellennamen, bleibt
+       -- aber erkennbar (Datenspur: Feld ist keine Datenquelle der Abfrage)
+       CASE WHEN t.K = 'ref' THEN sg.Ref_TO_Name || '::' || sg.Ref_Field_Name END AS Ref_Raw,
+       CASE WHEN t.K = 'dyn' THEN sg.Raw END AS Dyn_Raw
+FROM _sq_tab t
+LEFT JOIN _sq_seg sg ON sg.Calculation_UUID = t.Calculation_UUID AND sg.File_Name = t.File_Name
+                    AND sg.Src = t.Src AND sg.Sql_Index = t.Sql_Index AND sg.Seg_No = t.Seg_No
+LEFT JOIN _sq_to tor
+       ON tor.File_Name = t.File_Name
+      AND ( (t.K = 'ref' AND sg.Ref_TO_UUID IS NOT NULL AND tor.TO_UUID = sg.Ref_TO_UUID)
+         OR (t.K = 'ref' AND sg.Ref_TO_UUID IS NULL AND lower(tor.TO_Name) = lower(sg.Ref_TO_Name))
+         OR (t.K IN ('qid', 'id') AND lower(tor.TO_Name) = lower(t.Raw_Name)) )
+QUALIFY ROW_NUMBER() OVER (PARTITION BY t.Calculation_UUID, t.File_Name, t.Sql_Index, t.P ORDER BY tor.TO_UUID) = 1;
+
+-- (11) Spalten-Bezüge: Bezeichner außerhalb FROM/JOIN, keine Funktion, kein
+-- Qualifizierer, kein Spalten-Alias (nach AS). Dynamische Teile (Variable,
+-- Ausdruck) außerhalb FROM/JOIN — Spaltenname, Wert oder Anweisungsteil vor der
+-- ersten Klausel — als eigene Zeile (Resolution dynamic, kein Ziel); eine
+-- Anweisung ganz ohne Literal bleibt die eine Zeile aus whole_dyn.
+CREATE OR REPLACE TEMP TABLE _sq_col AS
+SELECT t.Calculation_UUID, t.File_Name, t.Src, t.Sql_Index, t.Scope, t.P, t.Clause, t.Clause_P, t.K, t.Seg_No,
+       CASE WHEN t.K = 'qid' THEN replace(t.T[2:-2], '""', '"') WHEN t.K = 'id' THEN t.T END AS Raw_Name,
+       CASE WHEN t.Prev_T = '.' THEN replace(trim(t.Prev2_T, '"'), '""', '"') END AS Qual
+FROM _sq_stok3 t
+WHERE ( (t.K IN ('qid', 'id', 'ref') AND t.Clause IS NOT NULL)
+     OR (t.K = 'dyn' AND EXISTS (SELECT 1 FROM _sq_skel k
+                                 WHERE k.Calculation_UUID = t.Calculation_UUID AND k.File_Name = t.File_Name
+                                   AND k.Src = t.Src AND k.Sql_Index = t.Sql_Index AND k.n_lit > 0)) )
+  AND COALESCE(t.Clause, '') NOT IN ('from', 'join')
+  AND COALESCE(t.Next_T, '') NOT IN ('.', '(')
+  AND upper(COALESCE(t.Prev_T, '')) <> 'AS';
+
+-- Column_Pos: Komma-Zähler der Auswahlliste auf Ebene der Anweisung
+CREATE OR REPLACE TEMP TABLE _sq_colpos AS
+SELECT t.Calculation_UUID, t.File_Name, t.Sql_Index, t.P,
+       1 + COUNT(*) FILTER (WHERE t.T = ',' AND t.SD = t.Base_SD)
+             OVER (PARTITION BY t.Calculation_UUID, t.File_Name, t.Sql_Index, t.Scope, t.Clause_P ORDER BY t.P
+                   ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS Column_Pos
+FROM _sq_stok3 t
+WHERE t.Clause = 'select';
+
+-- Feld-Kandidaten je Spalte: Formel-Referenz direkt, Namen über die Tabellen
+-- der Anweisung (qualifiziert über Alias/Name, sonst gleiche Ebene, sonst alle)
+CREATE OR REPLACE TEMP TABLE _sq_colres AS
+WITH ref_field AS (
+    -- Formel-Referenz → Katalog-Feld: TO-Referenz + Feld-ID (die rohe UUID im
+    -- Baustein ist TO-spezifisch); Textpfad: TO-Name + Feldname
+    SELECT c.Calculation_UUID, c.File_Name, c.Sql_Index, c.P,
+           COALESCE(f_id.Field_UUID, f_raw.Field_UUID, f_nm.Field_UUID) AS Field_UUID,
+           COALESCE(f_id.File_Name, f_raw.File_Name, f_nm.File_Name)    AS Field_File,
+           tor.TO_UUID
+    FROM _sq_col c
+    JOIN _sq_seg sg ON sg.Calculation_UUID = c.Calculation_UUID AND sg.File_Name = c.File_Name
+                   AND sg.Src = c.Src AND sg.Sql_Index = c.Sql_Index AND sg.Seg_No = c.Seg_No
+    LEFT JOIN _sq_calc q ON q.Calculation_UUID = c.Calculation_UUID AND q.File_Name = c.File_Name
+    LEFT JOIN _sq_to tor
+           ON tor.File_Name = c.File_Name
+          AND ( (sg.Ref_TO_UUID IS NOT NULL AND tor.TO_UUID = sg.Ref_TO_UUID)
+             OR (sg.Ref_TO_UUID IS NULL AND sg.Ref_TO_Name IS NOT NULL AND lower(tor.TO_Name) = lower(sg.Ref_TO_Name))
+             OR (sg.Ref_TO_UUID IS NULL AND sg.Ref_TO_Name IS NULL AND tor.TO_UUID = q.Context_TO_UUID) )
+    LEFT JOIN FieldsForTables f_id
+           ON f_id.Table_Name = tor.BT_Name AND f_id.File_Name = tor.Home_File
+          AND f_id.Field_ID = sg.Ref_Field_ID
+    LEFT JOIN FieldsForTables f_raw
+           ON f_id.Field_UUID IS NULL AND upper(f_raw.Field_UUID) = sg.Ref_Field_UUID AND f_raw.File_Name = c.File_Name
+    LEFT JOIN FieldsForTables f_nm
+           ON sg.Ref_Field_ID IS NULL AND f_nm.Table_Name = tor.BT_Name AND f_nm.File_Name = tor.Home_File
+          AND lower(f_nm.Field_Name) = lower(sg.Ref_Field_Name)
+    WHERE c.K = 'ref'
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY c.Calculation_UUID, c.File_Name, c.Sql_Index, c.P
+                               ORDER BY f_id.Field_UUID NULLS LAST, f_raw.Field_UUID NULLS LAST) = 1
+),
+cand AS (
+    -- Namens-Spalten: Tabellen-Kandidaten mit Rang (1 = qualifiziert oder gleiche Ebene)
+    SELECT c.Calculation_UUID, c.File_Name, c.Sql_Index, c.P,
+           tr.Target_Type AS Tab_Type, tr.TO_UUID, tr.BT_Name, tr.Home_File, tr.P AS Tab_P,
+           CASE WHEN c.Qual IS NOT NULL THEN 1 WHEN tr.Scope = c.Scope THEN 1 ELSE 2 END AS Rnk
+    FROM _sq_col c
+    JOIN _sq_tabres tr ON tr.Calculation_UUID = c.Calculation_UUID AND tr.File_Name = c.File_Name
+                      AND tr.Sql_Index = c.Sql_Index
+    WHERE c.K IN ('qid', 'id')
+      AND (c.Qual IS NULL OR lower(c.Qual) IN (lower(tr.Match_Name), lower(COALESCE(tr.Alias, ''))))
+),
+best AS (
+    SELECT * FROM cand
+    QUALIFY Rnk = MIN(Rnk) OVER (PARTITION BY Calculation_UUID, File_Name, Sql_Index, P)
+),
+hits AS (
+    SELECT b.Calculation_UUID, b.File_Name, b.Sql_Index, b.P,
+           COUNT(*) FILTER (WHERE b.Tab_Type = 'SystemTable')     AS n_sys,
+           COUNT(*) FILTER (WHERE b.Tab_Type IS NULL)             AS n_open,
+           COUNT(DISTINCT f.Field_UUID)                           AS n_hit,
+           arg_min(f.Field_UUID, b.Tab_P) FILTER (WHERE f.Field_UUID IS NOT NULL) AS Field_UUID,
+           arg_min(f.File_Name,  b.Tab_P) FILTER (WHERE f.Field_UUID IS NOT NULL) AS Field_File,
+           arg_min(b.TO_UUID,    b.Tab_P) FILTER (WHERE f.Field_UUID IS NOT NULL) AS TO_UUID
+    FROM best b
+    JOIN _sq_col c ON c.Calculation_UUID = b.Calculation_UUID AND c.File_Name = b.File_Name
+                  AND c.Sql_Index = b.Sql_Index AND c.P = b.P
+    LEFT JOIN FieldsForTables f
+           ON b.Tab_Type = 'TableOccurrence' AND f.Table_Name = b.BT_Name AND f.File_Name = b.Home_File
+          AND lower(f.Field_Name) = lower(c.Raw_Name)
+    GROUP BY ALL
+)
+SELECT c.*,
+       CASE WHEN c.K = 'ref' THEN 'reference' WHEN c.K = 'dyn' THEN 'dynamic' ELSE 'name' END AS Resolution,
+       CASE WHEN c.K = 'ref' AND rf.Field_UUID IS NOT NULL THEN 'Field'
+            WHEN c.K IN ('ref', 'dyn') THEN NULL
+            WHEN h.n_hit >= 1 THEN 'Field'
+            WHEN h.n_sys > 0 THEN 'SystemTable' END AS Target_Type,
+       COALESCE(rf.Field_UUID, CASE WHEN c.K IN ('qid', 'id') THEN h.Field_UUID END) AS Target_UUID,
+       COALESCE(rf.Field_File, CASE WHEN c.K IN ('qid', 'id') THEN h.Field_File END) AS Target_File,
+       COALESCE(rf.TO_UUID,    CASE WHEN c.K IN ('qid', 'id') THEN h.TO_UUID END)    AS TO_UUID,
+       -- Mehrdeutig (mehrere Felder) oder ungelöst bei unbekannter Tabelle
+       (c.K IN ('qid', 'id') AND (COALESCE(h.n_hit, 0) > 1
+                          OR (COALESCE(h.n_hit, 0) = 0 AND COALESCE(h.n_sys, 0) = 0
+                              AND (h.P IS NULL OR h.n_open > 0)))) AS Low_Confidence
+FROM _sq_col c
+LEFT JOIN ref_field rf ON rf.Calculation_UUID = c.Calculation_UUID AND rf.File_Name = c.File_Name
+                      AND rf.Sql_Index = c.Sql_Index AND rf.P = c.P
+LEFT JOIN hits h ON h.Calculation_UUID = c.Calculation_UUID AND h.File_Name = c.File_Name
+                AND h.Sql_Index = c.Sql_Index AND h.P = c.P;
+
+-- (12) Parameter (Argumente ab Position 4, gebunden an das k-te '?')
+CREATE OR REPLACE TEMP TABLE _sq_par AS
+WITH g AS (
+    SELECT a.Calculation_UUID, a.File_Name, a.Src, a.Sql_Index, a.Arg_No,
+           COUNT(*) FILTER (WHERE a.Kind = 'ref') AS n_ref,
+           COUNT(*) FILTER (WHERE a.Kind <> 'ws') AS n_sig,
+           any_value(CASE WHEN a.Kind = 'ref' THEN a.Ref_Field_ID END)   AS Ref_Field_ID,
+           any_value(CASE WHEN a.Kind = 'ref' THEN a.Ref_Field_UUID END) AS Ref_Field_UUID,
+           any_value(CASE WHEN a.Kind = 'ref' THEN a.Ref_TO_UUID END)    AS Ref_TO_UUID,
+           _sq_wtrim(string_agg(a.Val, '' ORDER BY a.Pos)) AS Raw
+    FROM _sq_arg a
+    JOIN _sq_src s ON s.Calculation_UUID = a.Calculation_UUID AND s.File_Name = a.File_Name AND s.Src = a.Src
+    WHERE a.Arg_No >= 4
+    GROUP BY ALL
+),
+k AS (
+    SELECT g.*,
+           CASE WHEN Src = 'text' AND len(regexp_extract_all(Raw, '::')) = 1 AND NOT contains(Raw, '"')
+                THEN _sq_wtrim(regexp_extract(Raw, '([^()";&\[\]]+?)::(<Field Missing>|[^()";&\[\]+*/<>=≠≤≥^]+)', 1)) END AS Txt_TO,
+           CASE WHEN Src = 'text' AND len(regexp_extract_all(Raw, '::')) = 1 AND NOT contains(Raw, '"')
+                THEN _sq_wtrim(regexp_extract(Raw, '([^()";&\[\]]+?)::(<Field Missing>|[^()";&\[\]+*/<>=≠≤≥^]+)', 2)) END AS Txt_Field
+    FROM g
+)
+SELECT k.Calculation_UUID, k.File_Name, k.Src, k.Sql_Index, k.Arg_No - 3 AS Arg_Pos, k.Raw,
+       (k.n_ref = 1 OR k.Txt_Field IS NOT NULL) AS Is_Ref,
+       COALESCE(f_id.Field_UUID, f_raw.Field_UUID, f_nm.Field_UUID) AS Field_UUID,
+       COALESCE(f_id.File_Name, f_raw.File_Name, f_nm.File_Name)    AS Field_File,
+       tor.TO_UUID
+FROM k
+LEFT JOIN _sq_to tor
+       ON tor.File_Name = k.File_Name
+      AND ( (k.n_ref = 1 AND tor.TO_UUID = k.Ref_TO_UUID)
+         OR (k.Txt_TO IS NOT NULL AND lower(tor.TO_Name) = lower(k.Txt_TO)) )
+LEFT JOIN FieldsForTables f_id
+       ON k.n_ref = 1 AND f_id.Table_Name = tor.BT_Name AND f_id.File_Name = tor.Home_File
+      AND f_id.Field_ID = k.Ref_Field_ID
+LEFT JOIN FieldsForTables f_raw
+       ON k.n_ref = 1 AND f_id.Field_UUID IS NULL AND upper(f_raw.Field_UUID) = k.Ref_Field_UUID
+      AND f_raw.File_Name = k.File_Name
+LEFT JOIN FieldsForTables f_nm
+       ON k.Txt_Field IS NOT NULL AND f_nm.Table_Name = tor.BT_Name AND f_nm.File_Name = tor.Home_File
+      AND lower(f_nm.Field_Name) = lower(k.Txt_Field)
+QUALIFY ROW_NUMBER() OVER (PARTITION BY k.Calculation_UUID, k.File_Name, k.Sql_Index, k.Arg_No
+                           ORDER BY f_id.Field_UUID NULLS LAST, f_raw.Field_UUID NULLS LAST, f_nm.Field_UUID NULLS LAST) = 1;
+
+-- (13) Ergebnis
+CREATE OR REPLACE TABLE CalculationSqlRefs AS
+WITH calls AS (
+    SELECT c.Calculation_UUID, c.File_Name, c.Src, c.Sql_Index, c.Sql_Function,
+           s.Incomplete
+    FROM _sq_call c
+    JOIN _sq_src s ON s.Calculation_UUID = c.Calculation_UUID AND s.File_Name = c.File_Name AND s.Src = c.Src
+),
+stmt AS (
+    SELECT Calculation_UUID, File_Name, Sql_Index,
+           CASE WHEN upper(arg_min(T, P) FILTER (WHERE K = 'kw')) = 'SELECT'
+                THEN 'select' ELSE 'other' END AS Statement_Kind
+    FROM _sq_stok3 WHERE Scope = 0 GROUP BY ALL
+),
+letv AS (
+    SELECT Calculation_UUID, File_Name, Src, Sql_Index, string_agg(DISTINCT Let_Var, ',') AS Let_Var
+    FROM _sq_letuse GROUP BY ALL
+),
+whole_dyn AS (
+    -- SQL-Text ohne jedes Literal (Variable aus anderem Schritt, Ausdruck)
+    SELECT k.Calculation_UUID, k.File_Name, k.Src, k.Sql_Index
+    FROM _sq_skel k WHERE k.n_lit = 0
+),
+r_all AS (
+    SELECT Calculation_UUID, File_Name, Sql_Index, P AS Token_Pos, Clause,
+           NULL::BIGINT AS Column_Pos, NULL::BIGINT AS Arg_Pos, Alias,
+           Target_Type,
+           CASE WHEN Target_Type = 'TableOccurrence' THEN TO_UUID END AS Target_UUID,
+           CASE WHEN Target_Type = 'TableOccurrence' THEN File_Name END AS Target_File,
+           TO_UUID, Resolution,
+           COALESCE(Raw_Name, Ref_Raw, Match_Name, left(Dyn_Raw, 200)) AS Raw_Name,
+           FALSE AS Low_Confidence
+    FROM _sq_tabres
+    UNION ALL
+    SELECT c.Calculation_UUID, c.File_Name, c.Sql_Index, c.P, c.Clause,
+           cp.Column_Pos, NULL, NULL,
+           c.Target_Type, c.Target_UUID, c.Target_File, c.TO_UUID, c.Resolution,
+           CASE WHEN c.K = 'dyn' THEN left(sg.Raw, 200)
+                ELSE COALESCE(c.Raw_Name, sg.Ref_TO_Name || '::' || sg.Ref_Field_Name) END,
+           c.Low_Confidence
+    FROM _sq_colres c
+    LEFT JOIN _sq_colpos cp ON cp.Calculation_UUID = c.Calculation_UUID AND cp.File_Name = c.File_Name
+                           AND cp.Sql_Index = c.Sql_Index AND cp.P = c.P
+    LEFT JOIN _sq_seg sg ON sg.Calculation_UUID = c.Calculation_UUID AND sg.File_Name = c.File_Name
+                        AND sg.Src = c.Src AND sg.Sql_Index = c.Sql_Index AND sg.Seg_No = c.Seg_No
+    UNION ALL
+    SELECT Calculation_UUID, File_Name, Sql_Index, NULL, 'parameter', NULL, Arg_Pos, NULL,
+           CASE WHEN Field_UUID IS NOT NULL THEN 'Field' END,
+           Field_UUID, Field_File, TO_UUID,
+           CASE WHEN Is_Ref THEN 'reference' ELSE 'dynamic' END,
+           left(Raw, 200), FALSE
+    FROM _sq_par
+    UNION ALL
+    SELECT w.Calculation_UUID, w.File_Name, w.Sql_Index, NULL, NULL, NULL, NULL, NULL,
+           NULL, NULL, NULL, NULL, 'dynamic',
+           left((SELECT _sq_wtrim(string_agg(a.Val, '' ORDER BY a.Pos)) FROM _sq_arg a
+                 WHERE a.Calculation_UUID = w.Calculation_UUID AND a.File_Name = w.File_Name
+                   AND a.Src = w.Src AND a.Sql_Index = w.Sql_Index AND a.Arg_No = 1), 200),
+           FALSE
+    FROM whole_dyn w
+    JOIN _sq_src s ON s.Calculation_UUID = w.Calculation_UUID AND s.File_Name = w.File_Name AND s.Src = w.Src
+)
+SELECT r.Calculation_UUID, r.File_Name, r.Sql_Index,
+       ca.Sql_Function,
+       COALESCE(st.Statement_Kind, 'other')  AS Statement_Kind,
+       r.Clause, r.Column_Pos, r.Arg_Pos, r.Alias,
+       r.Target_Type, r.Target_UUID, r.Target_File, r.TO_UUID,
+       r.Resolution, r.Raw_Name,
+       (r.Low_Confidence OR ca.Incomplete)   AS Low_Confidence,
+       r.Token_Pos,
+       lv.Let_Var,
+       ca.Src                                AS Parse_Source
+FROM r_all r
+JOIN calls ca ON ca.Calculation_UUID = r.Calculation_UUID AND ca.File_Name = r.File_Name
+             AND ca.Sql_Index = r.Sql_Index
+LEFT JOIN stmt st ON st.Calculation_UUID = r.Calculation_UUID AND st.File_Name = r.File_Name
+                 AND st.Sql_Index = r.Sql_Index
+LEFT JOIN letv lv ON lv.Calculation_UUID = r.Calculation_UUID AND lv.File_Name = r.File_Name
+                 AND lv.Src = ca.Src AND lv.Sql_Index = r.Sql_Index
+ORDER BY r.File_Name, r.Calculation_UUID, r.Sql_Index, r.Arg_Pos NULLS FIRST, r.Token_Pos;
+
+-- Arbeitstabellen freigeben
+DROP TABLE IF EXISTS _sq_calc;   DROP TABLE IF EXISTS _sq_tok0;  DROP TABLE IF EXISTS _sq_tok;
+DROP TABLE IF EXISTS _sq_sig;    DROP TABLE IF EXISTS _sq_call;  DROP TABLE IF EXISTS _sq_arg;
+DROP TABLE IF EXISTS _sq_let;    DROP TABLE IF EXISTS _sq_op1;   DROP TABLE IF EXISTS _sq_letuse;
+DROP TABLE IF EXISTS _sq_segtok; DROP TABLE IF EXISTS _sq_seg;   DROP TABLE IF EXISTS _sq_skel;
+DROP TABLE IF EXISTS _sq_src;    DROP TABLE IF EXISTS _sq_stok;  DROP TABLE IF EXISTS _sq_stok2;
+DROP TABLE IF EXISTS _sq_scope;  DROP TABLE IF EXISTS _sq_stok3; DROP TABLE IF EXISTS _sq_tab;
+DROP TABLE IF EXISTS _sq_to;     DROP TABLE IF EXISTS _sq_tabres; DROP TABLE IF EXISTS _sq_col;
+DROP TABLE IF EXISTS _sq_colpos; DROP TABLE IF EXISTS _sq_colres; DROP TABLE IF EXISTS _sq_par;
 
 
 -- ========================================
@@ -3254,26 +4113,39 @@ UNION ALL
 -- Script_UUID, File_Name) löst im Korpus 100 % auf. DISTINCT-Projektion als
 -- Fan-out-Schutz gegen Merge-Artefakt-Dubletten (BrojDva-Klasse).
 --   references_field — Fallback für nicht gemappte Step-Typen (P6-Wächter)
+-- Steps mit gegenläufigen Feld-Optionen (Schema 1.41.0): die Rolle des PARAMETERS
+-- aus StepFieldParamRoles gewinnt vor der Rolle des Step-Typs. Gepaart über die
+-- laufende Nummer gleicher Referenzen im Step (Occurrence), damit ein Feld, das
+-- Quelle UND Ziel ist, je eine Kante pro Rolle ergibt.
 SELECT
     xsr.Script_UUID as Source_UUID,
     'Script' as Source_Type,
     xsr.Ref_UUID as Target_UUID,
     'Field' as Target_Type,
     'operational' as Link_Type,
-    COALESCE(rm.Link_Role, 'references_field') as Link_Role,
+    COALESCE(pr.Link_Role, rm.Link_Role, 'references_field') as Link_Role,
     NULL as Link_Subrole,
     xsr.File_Name as Source_File,
     oc_target.File_Name as Target_File,
     (xsr.File_Name != oc_target.File_Name) as Is_Cross_File
-FROM XMLStepReferences xsr
+FROM (
+    SELECT x.*,
+           row_number() OVER (PARTITION BY x.Step_UUID, x.File_Name, x.Ref_ID, x.TO_Ref_ID
+                              ORDER BY x.Ref_UUID) AS Occurrence
+    FROM XMLStepReferences x
+    WHERE x.Ref_Type = 'field'
+) xsr
 LEFT JOIN (SELECT DISTINCT Step_UUID, Script_UUID, File_Name, Step_ID
            FROM StepsForScripts) sfs
        ON sfs.Step_UUID = xsr.Step_UUID
       AND sfs.Script_UUID = xsr.Script_UUID
       AND sfs.File_Name = xsr.File_Name
 LEFT JOIN ScriptStepRoleMap rm ON rm.Step_ID = sfs.Step_ID
+LEFT JOIN StepFieldParamRoles pr
+       ON pr.Step_UUID = xsr.Step_UUID AND pr.File_Name = xsr.File_Name
+      AND pr.Ref_ID = xsr.Ref_ID AND pr.TO_Ref_ID IS NOT DISTINCT FROM xsr.TO_Ref_ID
+      AND pr.Occurrence = xsr.Occurrence
 LEFT JOIN ObjectCatalog oc_target ON xsr.Ref_UUID = oc_target.Object_UUID AND oc_target.Object_Type = 'Field'
-WHERE xsr.Ref_Type = 'field'
 
 UNION ALL
 
@@ -4044,6 +4916,52 @@ JOIN ObjectCatalog oc_target
  AND oc_target.Object_Type = 'Field'
 WHERE xcr.Ref_Type = 'field'
   AND xcr.Ref_UUID IS NOT NULL
+
+UNION ALL
+
+-- 30b. Calc-Source → Field aus SQL-Namen (reads_field, Schema 1.42.0)
+-- Feldnamen, die als NAME im SQL-Text einer ExecuteSQL-Anweisung stehen
+-- (CalculationSqlRefs, Resolution = 'name'). Quelle wie Block 30: Eigentümer der
+-- Berechnung, bei Script-Schritten das Script; Link_Subrole = Edge_Subrole der
+-- Instanz (Join-Schlüssel von v_calculation_links). Die Herkunft „aus SQL-Text“
+-- steht nur in CalculationSqlRefs. Was Block 30 für dieselbe Quelle, Subrolle
+-- und dasselbe Ziel schon anlegt, entsteht hier nicht doppelt. Abgeschaltete
+-- Definitionen (Is_Enabled = FALSE) erzeugen keine Kante.
+SELECT DISTINCT
+    sq.Source_UUID,
+    sq.Source_Type,
+    sq.Target_UUID,
+    'Field' as Target_Type,
+    'operational' as Link_Type,
+    CASE WHEN sq.Edge_Subrole IN ('validation', 'validation_message') AND sq.Source_Type = 'Field'
+         THEN 'validates_by_calc' ELSE 'reads_field' END as Link_Role,
+    sq.Edge_Subrole as Link_Subrole,
+    sq.File_Name as Source_File,
+    oc_target.File_Name as Target_File,
+    (sq.File_Name != oc_target.File_Name) as Is_Cross_File
+FROM (
+    SELECT CASE WHEN c.Owner_Type = 'ScriptStep' THEN s.Script_UUID ELSE c.Owner_UUID END AS Source_UUID,
+           CASE WHEN c.Owner_Type = 'ScriptStep' THEN 'Script' ELSE c.Owner_Type END AS Source_Type,
+           r.Target_UUID, r.Target_File, c.Edge_Subrole, c.File_Name, c.Owner_Type
+    FROM CalculationSqlRefs r
+    JOIN CalculationsCatalog c
+      ON c.Calculation_UUID = r.Calculation_UUID AND c.File_Name = r.File_Name
+    LEFT JOIN StepsForScripts s
+      ON s.Step_UUID = c.Owner_UUID AND s.File_Name = c.File_Name
+    WHERE r.Resolution = 'name' AND r.Target_Type = 'Field' AND r.Target_UUID IS NOT NULL
+      AND COALESCE(c.Is_Enabled, TRUE)
+      AND c.Owner_Type <> 'unresolved'
+) sq
+JOIN ObjectCatalog oc_target
+  ON oc_target.Object_UUID = sq.Target_UUID
+ AND oc_target.Object_Type = 'Field'
+ AND oc_target.File_Name = sq.Target_File
+WHERE sq.Source_UUID IS NOT NULL
+  AND NOT EXISTS (
+      SELECT 1 FROM XMLCalcReferences x
+      WHERE x.Source_UUID = sq.Source_UUID AND x.File_Name = sq.File_Name
+        AND x.Subrole IS NOT DISTINCT FROM sq.Edge_Subrole
+        AND x.Ref_Type = 'field' AND x.Ref_UUID = sq.Target_UUID)
 
 UNION ALL
 
@@ -5562,6 +6480,8 @@ ORDER BY ol.Source_Type, oc_source.Object_Name;
 --       über XMLCalcReferences/PluginFunctionUsages (tragen Source_Subkey =
 --       Step_Index); die Ziel-Auflösung spiegelt die Blöcke 30/31/33/34
 --       (XMLCalcReferences.Ref_UUID ist zu diesem Zeitpunkt bereits geheilt).
+--       Feldnamen im SQL-Text einer ExecuteSQL-Anweisung (Block 30b) kommen
+--       für Steps aus CalculationSqlRefs (2a-sql), für alle anderen über (1).
 --
 -- Bekannte Grenzen (dokumentiert, Stufe 1): Variablen-Ziele fehlen (laufen über
 -- VariableUsages, nicht slot-attribuierbar); calls_script via MBS:FM.RunScript
@@ -5611,6 +6531,42 @@ JOIN XMLCalcReferences x
 JOIN ObjectCatalog oc
   ON oc.Object_UUID = x.Ref_UUID AND oc.Object_Type = 'Field'
 WHERE c.Owner_Type = 'ScriptStep'
+  -- Zieldatei wie die Kante: geklonte Dateien teilen Feld-UUIDs, die Referenz
+  -- trägt nur die UUID. ObjectLinks hat die Datei bereits aufgelöst (Scoping,
+  -- prefer-local, keep); ohne diese Bedingung entsteht je Klon eine Zeile.
+  AND EXISTS (SELECT 1 FROM ObjectLinks ol
+              WHERE ol.Source_UUID = s.Script_UUID AND ol.Source_File = c.File_Name
+                AND ol.Target_UUID = oc.Object_UUID AND ol.Target_File = oc.File_Name
+                AND ol.Link_Role = 'reads_field')
+
+UNION ALL
+
+-- (2a-sql) ScriptStep → Field aus SQL-Namen (Spiegel Block 30b; Schema 1.42.0):
+-- Feldnamen im SQL-Text haben keine XMLCalcReferences-Zeile — Ziel direkt aus
+-- CalculationSqlRefs. Was (2a) für dieselbe Instanz schon liefert, fällt weg.
+SELECT DISTINCT
+    c.Calculation_UUID,
+    'reads_field'         AS Link_Role,
+    oc.Object_UUID        AS Target_UUID,
+    'Field'               AS Target_Type,
+    oc.File_Name          AS Target_File,
+    (c.File_Name != oc.File_Name) AS Is_Cross_File
+FROM CalculationsCatalog c
+JOIN CalculationSqlRefs r
+  ON r.Calculation_UUID = c.Calculation_UUID AND r.File_Name = c.File_Name
+ AND r.Resolution = 'name' AND r.Target_Type = 'Field'
+JOIN ObjectCatalog oc
+  ON oc.Object_UUID = r.Target_UUID AND oc.File_Name = r.Target_File AND oc.Object_Type = 'Field'
+JOIN StepsForScripts s
+  ON s.Step_UUID = c.Owner_UUID AND s.File_Name = c.File_Name
+WHERE c.Owner_Type = 'ScriptStep'
+  AND COALESCE(c.Is_Enabled, TRUE)
+  AND NOT EXISTS (
+      SELECT 1 FROM XMLCalcReferences x
+      WHERE x.Source_Type = 'Script' AND x.Source_UUID = s.Script_UUID
+        AND x.File_Name = c.File_Name AND x.Source_Subkey = s.Step_Index::VARCHAR
+        AND x.Subrole IS NOT DISTINCT FROM c.Edge_Subrole
+        AND x.Ref_Type = 'field' AND x.Ref_UUID = r.Target_UUID)
 
 UNION ALL
 

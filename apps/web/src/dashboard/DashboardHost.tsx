@@ -12,6 +12,8 @@ import { registerStickyDashboardParams } from './actions';
 import { TitleBox } from '../components/TitleBox';
 import { FavoriteStar } from './FavoriteStar';
 import { NoDataYet } from '../components/NoDataYet';
+import { ErrorMessage } from '../components/ErrorMessage';
+import { isSchemaDriftError } from '../lib/errors';
 import { ScopeNoticeBar } from './primitives/ScopeNotice';
 import { layoutBindsParam, layoutHasScopeNotice, scopeSupport } from './primitives/_scopeNotice';
 import './dashboard.css';
@@ -240,6 +242,25 @@ export function DashboardHost({ id, params, showManifestTitle, onEnvelopeLoaded 
     );
   }
 
+  // Veralteter Katalog: Die Lösung wurde mit einem älteren Katalog-Schema
+  // importiert, als die Datasets dieses Bundles brauchen (Backend-Marker
+  // `SCHEMA_DRIFT:` — nur bei nachgewiesen älterem Schema, nie bei einem echten
+  // Template-Fehler). Statt einer roten Rohmeldung je Karte zeigt die Seite EINEN
+  // Hinweis mit dem Weg zur Konvertierung; der Titel bleibt stehen.
+  const driftError = Object.values(datasets)
+    .map(d => d?.error)
+    .find((e): e is string => isSchemaDriftError(e));
+  if (driftError) {
+    return (
+      <div className={`dash-host dash-host--${envelope.manifest.id}`}>
+        {showManifestTitle && envelope.manifest.title && (
+          <TitleBox title={envelope.manifest.title} subtitle={envelope.manifest.description} />
+        )}
+        <ErrorMessage message={driftError} />
+      </div>
+    );
+  }
+
   return (
     <div className={`dash-host dash-host--${envelope.manifest.id}`}>
       {showManifestTitle && envelope.manifest.title && (
@@ -248,7 +269,15 @@ export function DashboardHost({ id, params, showManifestTitle, onEnvelopeLoaded 
           subtitle={envelope.manifest.description}
           // Favorite star, right-aligned — content-area bundles only, system/module pages carry none.
           actions={envelope.nav?.favoritable ? <FavoriteStar id={envelope.manifest.id} /> : undefined}
-        />
+        >
+          {/* Optional author line (manifest `byline`) as the box footer. */}
+          {envelope.manifest.byline && (
+            <div className="title-box__footer">
+              <span className="title-box__footer-label">{t('dashboard.bylineLabel')}</span>{' '}
+              {envelope.manifest.byline}
+            </div>
+          )}
+        </TitleBox>
       )}
       {/* Scope hint of content dashboards (Analysis Test deep links carry file /
           scope_uuids): automatic unless the layout places the ScopeNotice itself.

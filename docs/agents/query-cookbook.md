@@ -78,6 +78,167 @@ authoritative flag: `LinkRoleRegistry.Counts_For_Where_Used` (e.g. `restricts_fi
 granular twin of the `triggers_script·<event>` owner mirror since converter 2.17.0 —
 counting both double-counts every script trigger). See `analysis-workflows.md`.
 
+### Which step sets / calls / reads X? — `v_script_step_links`
+
+`ObjectLinks` attributes a script's references to the **script**; the step is lost.
+`v_script_step_links` (schema 1.41.0) projects the same edges onto the step, with the
+same roles — query it for every "which step …" question instead of regexing
+`Parameters_XML` / `Step_XML`.
+
+**Which step writes field F?**
+```sql
+SELECT sl.File_Name, sc.Script_Name, sl.Step_Index + 1 AS Step_No, sl.Step_Name,
+       sl.Link_Role, sl.Via, sl.Is_Enabled, f.Object_Name AS Field
+FROM v_script_step_links sl
+JOIN ObjectCatalog f  ON f.Object_UUID = sl.Target_UUID AND f.File_Name = sl.Target_File
+JOIN ScriptCatalog sc ON sc.Script_UUID = sl.Script_UUID AND sc.File_Name = sl.File_Name
+WHERE sl.Target_Type = 'Field'
+  AND f.Object_Name = '<Table>::<Field>'
+  AND sl.Link_Role IN ('sets_field', 'imports_to_field', 'inputs_to_field')
+ORDER BY sl.File_Name, sc.Script_Name, sl.Step_Index;
+```
+
+- Other questions only swap the filter: callers of a script → `Link_Role = 'calls_script'`
+  (`Link_Subrole` `on_server` / `on_server_callback`), navigation → `navigates_to_layout`,
+  readers of a field → `reads_field` (with `Via = 'calculation'` for formula reads).
+- `Via = 'parameter'`: the reference is the step's own target/option; `Via = 'calculation'`:
+  it sits in one of the step's formulas (`Calculation_UUID` names it).
+- Join a step on `(Step_UUID, File_Name)` — cloned files share step UUIDs.
+- Variables are in the view since converter 2.50.0: `Target_Type = 'Variable'`,
+  `Link_Role` `sets_variable` / `reads_variable` (`Via = 'parameter'` = the step's target
+  variable, e.g. *Set Variable*; `Via = 'calculation'` = inside a formula — read, or set in a
+  `Let` header, `Link_Subrole = 'let_assign'`). Which step sets `$$X`: filter `Target_Type =
+  'Variable'`, `Link_Role = 'sets_variable'` and join `VariablesCatalog`/`ObjectCatalog` on
+  the variable UUID (or match the name via `VariableUsages`). Script calls from formulas via
+  `MBS("FM.RunScript")` are the one known gap (edge `Link_Subrole` `MBS:FM.RunScript` on the
+  script only).
+
+### Call sites with their condition — `v_script_step_links` + `v_step_guards`
+
+Who calls script S, from which step, under which If / Else If / Else, in a loop? The step
+view gives the call site, `v_step_guards` the enclosing branch, `v_script_block_tree` the
+loop depth.
+
+```sql
+SELECT l.File_Name, bt.Script_Name AS Caller, l.Step_Index + 1 AS Step_No, l.Step_ID,
+       l.Link_Subrole, l.Is_Enabled,
+       g.Guard_Kind, g.Guard_Step_Index + 1 AS Guard_Step_No,
+       c.Formula_Text AS Condition,
+       bt.loop_depth_before > 0 AS In_Loop
+FROM ObjectCatalog tgt
+JOIN v_script_step_links l
+  ON l.Target_UUID = tgt.Object_UUID AND l.Target_File = tgt.File_Name
+ AND l.Link_Role = 'calls_script'
+JOIN v_script_block_tree bt
+  ON bt.Step_UUID = l.Step_UUID AND bt.File_Name = l.File_Name
+LEFT JOIN v_step_guards g
+  ON g.Step_UUID = l.Step_UUID AND g.File_Name = l.File_Name
+ AND g.Guard_Kind IN ('if', 'elseif', 'else')
+LEFT JOIN CalculationsCatalog c
+  ON c.Calculation_UUID = g.Guard_Calculation_UUID AND c.File_Name = g.File_Name
+WHERE tgt.Object_Type = 'Script' AND tgt.Object_Name = '<Script>'
+QUALIFY row_number() OVER (PARTITION BY l.Step_UUID, l.File_Name
+                           ORDER BY g.Guard_Level DESC NULLS LAST) = 1  -- innermost branch
+ORDER BY l.File_Name, Caller, l.Step_Index;
+```
+
+- `Guard_Level` 1 = outermost; the `QUALIFY` keeps the innermost branch. Drop it (and add
+  `g.Guard_Level` to the select list) to see every enclosing branch. `Guard_Kind = 'else'`
+  has no formula — the condition is "all earlier branches of the chain are false"
+  (`Chain_Open_Index` names the chain's If). `Condition` NULL with `Guard_Kind` NULL = the call
+  runs unconditionally within its script.
+- `Is_Enabled = false`: the call step is disabled and never runs. `v_step_guards` has no row
+  for it, so filter `l.Is_Enabled` when the question is about what actually runs.
+- Other step kinds swap the role: the step that enters layout L (and fires its
+  `OnLayoutEnter` cascade) → `Link_Role = 'navigates_to_layout'`, `Target_Type = 'Layout'`.
+  `v_step_guards` covers every enabled call and navigation step since converter 2.51.3.
+- Not in the view: calls without a static callee (by name — `v_script_block_tree` with
+  `Step_ID IN (1, 164, 210)` and no `calls_script` row) and `MBS("FM.RunScript")` calls (edge
+  only). Unreachable call sites after *Exit Script* / *Halt Script*: rule
+  `dead_code_after_exit`.
+- Parameter of the call: `StepCalculations` with `Step_ID IN (1, 164, 210)` and
+  `Slot = 'Parameter:'`; which later step reads the result: `v_dataflow_edges`
+  `Flow_Kind = 'result_to_step'` with `Pair_Step_UUID` = the call step.
+- The flow trace returns the same per edge for a whole chain (`GET /api/graph/trace?mode=flow`
+  → `edges[].callSites[]`, ways with the conditions on the path; `/fm-trace` prints them).
+
+### Where does the value of field F come from? — `v_dataflow_edges`
+
+The dataflow view (schema 1.43.0) follows the value, not the object edge: which steps,
+formulas, entries write the field, and how those steps are started. Level 1 = direct writers
+with their triggers (the whole chain over variables, parameters and callers is the data trace
+endpoint's job). `Writer_Kind = 'reset'` (only `""` written) is no origin; an auto-enter
+option without formula (serial number, creation/modification value, constant data) appears as
+`entry_auto_enter` with the option in `Link_Subrole`; the table exists in every catalog
+from schema 1.43.0 on (absent only after a failed dataflow phase — re-import).
+
+```sql
+WITH f AS (SELECT Object_UUID, File_Name FROM ObjectCatalog
+           WHERE Object_Type = 'Field' AND Object_Name = 'MyTable::MyField'),
+w AS (SELECT e.* FROM v_dataflow_edges e JOIN f ON e.To_UUID = f.Object_UUID AND e.To_File = f.File_Name
+      WHERE e.Flow_Class IN ('data', 'entry') AND COALESCE(e.Writer_Kind, '') <> 'reset'
+        AND COALESCE(e.Is_Enabled, TRUE))
+SELECT w.Flow_Kind, w.Writer_Kind, sc.Object_Name AS Script, w.Step_Index + 1 AS Step_No,
+       count(t.From_UUID) AS Entries,
+       string_agg(DISTINCT t.From_Kind || ':' || coalesce(t.Link_Subrole, ''), ', ') AS Entry_Kinds
+FROM w
+LEFT JOIN ObjectCatalog sc ON sc.Object_UUID = w.Script_UUID AND sc.File_Name = w.File_Name
+LEFT JOIN v_dataflow_edges t ON t.Flow_Kind = 'triggers_script'
+                            AND t.To_UUID = w.Script_UUID AND t.To_File = w.File_Name
+GROUP BY ALL ORDER BY Entries DESC;
+```
+
+- One level further: the data edges INTO a writing step (`To_Kind = 'ScriptStep' AND To_UUID =
+  <Step_UUID>`, `Flow_Class = 'data'`) — fields, `local_def_use` setters, global variables,
+  `param_to_step`, `result_to_step`.
+- Where the value goes (usage): start at `From_UUID = <field>` and follow `Flow_Class = 'data'`;
+  `sink` rows are counters (display, sort, export, relationship, value list).
+
+**Where does an import take its data from?** (`ImportStepSources`, one row per
+*Import Records* step; target fields stay `imports_to_field` rows)
+```sql
+SELECT i.File_Name, sc.Script_Name, i.Step_Index + 1 AS Step_No, i.Source_Kind,
+       coalesce(i.Source_File, i.Source_Location, i.Source_Formula) AS Source,
+       count(DISTINCT sl.Target_UUID) AS Target_Fields
+FROM ImportStepSources i
+JOIN ScriptCatalog sc ON sc.Script_UUID = i.Script_UUID AND sc.File_Name = i.File_Name
+LEFT JOIN v_script_step_links sl ON sl.Step_UUID = i.Step_UUID AND sl.File_Name = i.File_Name
+                                AND sl.Link_Role = 'imports_to_field'
+GROUP BY ALL
+ORDER BY 1, 2, 3;
+```
+`Source_File` is set only for FileMaker sources that resolve to a file **of the solution**
+(the cross-file data path); `$variable` paths and outside files stay NULL.
+
+**Where is field F (or TO T) used in SQL?** (`CalculationSqlRefs`, schema ≥ 1.42.0 — one
+row per table, column and parameter of an `ExecuteSQL`/`ExecuteSQLe` statement; never regex
+`Formula_Text` for SQL)
+```sql
+SELECT r.File_Name, c.Owner_Type,
+       coalesce(s.Script_Name, c.Owner_Name) AS Object, s.Step_Index + 1 AS Step_No,
+       r.Clause, r.Column_Pos, r.Resolution, r.Raw_Name
+FROM CalculationSqlRefs r
+JOIN CalculationsCatalog c ON c.Calculation_UUID = r.Calculation_UUID AND c.File_Name = r.File_Name
+JOIN FieldsForTables f     ON f.Field_UUID = r.Target_UUID AND f.File_Name = r.Target_File
+LEFT JOIN StepsForScripts s ON c.Owner_Type = 'ScriptStep'
+                           AND s.Step_UUID = c.Owner_UUID AND s.File_Name = c.File_Name
+WHERE r.Target_Type = 'Field' AND f.Field_Name = 'MyField'
+ORDER BY 1, 3, 4;
+```
+- TO instead of field: `r.Target_Type = 'TableOccurrence'` and join `TableOccurrenceCatalog`
+  on `(Target_UUID, Target_File)` — the rows of `FROM`/`JOIN`.
+- `Resolution = 'name'`: the name is plain text in the SQL — **a rename breaks the query
+  silently** (FileMaker does not track it). `reference`: built from a field reference
+  (`GetFieldName`, a name wrapper), safe on rename.
+- Broken references: `Target_Type IS NULL AND NOT Low_Confidence AND Clause <> 'parameter'`
+  (missing TO or field, `<Field Missing>`). Both checks are the Analysis Test
+  `sql-reference-integrity` (`/fm-test sql-reference-integrity`).
+- `Clause = 'parameter'` rows bind the k-th argument (`Arg_Pos`) to the k-th `?`;
+  `Let_Var` names the Let variable the SQL text came from. Statements whose text comes
+  from another step are one `dynamic` row without clause.
+- The field links themselves are ordinary `reads_field` edges (also for plain names), so
+  where-used and `v_object_usage` already include them — this table adds clause and origin.
+
 ### Where-used for Table Occurrences
 
 The generic pattern above is **not enough for a TO**. A `TO::Field` reference — in a
@@ -131,8 +292,9 @@ ORDER BY c.File_Name, c.Dead_Group_ID, c.TO_Name;
   relationship with cascade delete is needed. `dead_*` means "no statically visible path"
   — a review candidate, not a delete recommendation; `Dead_Group_ID` groups a dead
   subtree that is cleaned up together.
-- **Dynamic references are invisible** (`GetField`, `Evaluate`, TO names inside
-  `ExecuteSQL` strings).
+- **Dynamic references are invisible** (`GetField`, `Evaluate`, SQL text assembled in
+  another step). TO names in `ExecuteSQL` statements count since schema 1.42.0 —
+  category `sql`, also as a plain name in the SQL text.
 - Don't add `ObjectLinks` rows on top of the table — the edges are already in it
   (`Is_Edge`). Sum `Ref_Count` instead of counting rows when the question is "how often".
 - **"Can I delete TO X?" / "which TOs are dead?" is a test run:** `/fm-test unused-code`
@@ -148,7 +310,9 @@ ORDER BY c.File_Name, c.Dead_Group_ID, c.TO_Name;
 (schema 1.40.0) — one row per Field, Script, Layout, CustomFunction, ValueList,
 BaseTable, ExternalDataSource, PrivilegeSet, TableOccurrence, Relationship. It is the
 definition the `unused_*` rules use, so a hand-written `NOT EXISTS` over `ObjectLinks`
-can only drift from it.
+can only drift from it. Calls by name (`Perform Script` by name, `Go to Layout` by
+calculation, …) are invisible to it — see § Objects addressed by name (indirections)
+before reporting a script or layout as unused.
 
 ```sql
 -- Rarely used custom functions (1–2 using containers), with the roles behind the count
@@ -254,6 +418,42 @@ WHERE ol.Is_Cross_File = TRUE
 ORDER BY oc_source.File_Name, oc_source.Object_Type;
 ```
 
+### Objects addressed by name (indirections)
+
+`Perform Script` by name, `Go to Layout` by name/number, `Set Field By Name`,
+`Go to Object` by name, `Evaluate`, `GetField`, `ExecuteSQL` with names in the SQL
+text … carry **no** edge — `ObjectLinks`, `v_object_usage` and the `unused_*` rules
+cannot see them, a string literal included. Before calling an object unused, or
+when renaming one, check this inventory too.
+
+The full population (one row per site: mechanism, carrier, expression, resolution
+class, presumed target for a literal) is the shared core of the dashboard
+`modularization/indirections` —
+`rest-api/templates/dashboards/modularization/indirections/data/shared/sites.sql`
+(a CTE fragment; it reads `ref.function_name_lookup`, so attach
+`reference/fm_spec.duckdb AS ref` when running it in the CLI). Through the API:
+`GET /api/dashboards/indirections/data?kind=script&q=<name>` → dataset `findings`.
+
+The most frequent single question needs no fragment:
+
+```sql
+-- Is script X called by name? (slot List = the by-name formula; FileMaker's
+-- by-name form for another file is "<data source>::<script>")
+SELECT c.File_Name, c.Script_Name AS caller, c.Step_Index + 1 AS step, c.Calc_Text
+FROM StepCalculations c
+WHERE c.Step_ID IN (1, 164, 210)   -- Perform Script, … on Server, … with Callback
+  AND c.Slot = 'List'
+  AND contains(lower(c.Calc_Text), lower('MyScript'));
+```
+
+⚠️ The mode of `Go to Layout` / `Go to List of Records` (3 = name, 4 = number by
+calculation) lives only in `StepsForScripts.Parameters_XML`
+(`<Parameter type="LayoutReferenceContainer"><LayoutReferenceContainer value="…">`);
+`StepCalculations` carries the formula in slot `LayoutReferenceContainer` with the
+same position for both modes. Without DDR info, formula functions have no
+`calls_function` edge — the dashboard matches them in `Formula_Text` and marks them
+low confidence.
+
 ## Layout queries
 
 **All objects of a layout, with nesting depth:**
@@ -305,6 +505,134 @@ WHERE oc_layout.Object_Type = 'Layout'
   AND oc_layout.Object_Name = 'YourLayoutName'
 ORDER BY oc_field.Object_Name;
 ```
+
+### Which font does an object show / where is font F used? — `v_layout_object_font`
+
+Fonts are CSS (theme + local) plus rich-text runs and chart elements; the cascade is
+resolved at import (schema 1.44.0). Never regex `Object_XML` / `Theme_XML` for fonts.
+`Family_Source` = `local` · `local_redundant` (local, but the inherited family — e.g.
+written by "bold", no deliberate choice) · `style` · `part_theme` (rank assumed →
+`Low_Confidence`) · `theme` · `group` (`field` rule) · `default` (theme declares no
+family — Classic, Minimalist: a per-file default that is NOT in the export, so
+`Font_Family` is NULL; never name a font for it). Group by `Font_Key`, not by
+`Font_Family` (same family appears as `arial` and `Arial`).
+
+```sql
+-- Fonts per layout (base font of every text-bearing object)
+SELECT File_Name, Layout_Name, coalesce(Font_Family, '(file default)') AS font,
+       Family_Source, count(*) AS objects
+FROM v_layout_object_font
+GROUP BY ALL
+ORDER BY File_Name, Layout_Name, objects DESC;
+
+-- Where is a font used — base font, rich-text runs and chart text areas
+SELECT 'base' AS kind, File_Name, Layout_Name, Object_Type, Object_Name, Family_Source AS source
+FROM v_layout_object_font WHERE Font_Key = 'courier new'
+UNION ALL
+SELECT r.Source, r.File_Name, l.L_Name, r.Object_Type, lo.Object_Name, coalesce(r.Slot, 'run')
+FROM LayoutObjectFontRuns r
+JOIN Layouts l        ON l.L_ID = r.Layout_ID AND l.File_Name = r.File_Name
+JOIN LayoutObjects lo ON lo.Object_UUID = r.Object_UUID AND lo.File_Name = r.File_Name
+WHERE lower(r.Font_Family) = 'courier new';
+```
+
+Rich-text runs are always partial (FileMaker stores a whole-text format as local CSS):
+`Rich_Font_Families` adds to the base font, never replaces it. `CF_Font_Families` = font of
+an enabled conditional-formatting rule with the font bit. Charts are not in the view —
+their fonts are per text area in `LayoutObjectFontRuns` (`Source = 'chart'`).
+
+### Which styles are used / where is style S applied? — `v_layout_object_style`
+
+One row per layout object of every type (also shapes, lines, groups; also objects
+without a style — `Style_Name` NULL), resolved to the layout's theme (schema 1.45.0).
+Style usage is a grouping of this view; only **used** styles exist — the full style
+list of a theme is not imported. `Style_Name` is the class (`FM-<UUID>` for a custom
+style), `Style_Display` the Inspector name at export time (in the theme's language);
+group by `Style_Name`, show `Style_Display`. `Style_Rule_Missing` = the layout's theme
+has no rule for the style (left behind by a theme change). Never regex `Object_XML`
+for `LocalCSS`.
+
+```sql
+-- Styles per theme: how many layouts and objects use each
+SELECT File_Name, coalesce(Theme_Display, Theme_Name, '(no theme)') AS theme,
+       coalesce(Style_Display, Style_Name) AS style, Style_Is_Custom,
+       count(DISTINCT Layout_UUID) AS layouts, count(*) AS objects
+FROM v_layout_object_style
+WHERE Style_Name IS NOT NULL
+GROUP BY ALL
+ORDER BY File_Name, theme, objects DESC;
+
+-- Styles of one layout, incl. objects without a style, with the object types per style
+SELECT coalesce(Style_Display, Style_Name, '(default, no style)') AS style,
+       Style_Is_Custom, Style_Rule_Missing,
+       string_agg(DISTINCT Object_Type, ', ' ORDER BY Object_Type) AS object_types,
+       count(*) AS objects
+FROM v_layout_object_style
+WHERE Layout_Name = 'YourLayoutName'
+GROUP BY Style_Name, Style_Display, Style_Is_Custom, Style_Rule_Missing
+ORDER BY Style_Name IS NULL DESC, objects DESC;
+
+-- Styles without a rule in the layout's theme
+SELECT File_Name, Layout_Name, Object_Type, Style_Name, Style_Display
+FROM v_layout_object_style
+WHERE Style_Rule_Missing
+ORDER BY ALL;
+```
+
+The font a style produces is in `v_layout_object_font` (`Family_Source = 'style'`, text
+objects only); the CSS a style declares is in `ThemeStyleRules` (`Style_Class = Style_Name`).
+
+### Which custom styles does a theme have and which are unused? — `ThemeNamedStyles`
+
+`v_layout_object_style` knows only **applied** styles. Every style a theme defines —
+used or not, with its Inspector name — is in `ThemeNamedStyles` (schema 1.46.0;
+`Is_Custom` = `FM-<UUID>` class). Count usage per file of the theme (a theme cloned
+into several files has its own usage per file); the object type comes from the
+`Type_Token`s of the style's rules in `ThemeStyleRules` (one style can have several).
+
+```sql
+-- Custom styles of one theme with object type tokens and usage (0 = unused)
+WITH usage AS (
+    SELECT File_Name, Theme_UUID, Style_Name,
+           count(*) AS objects, count(DISTINCT Layout_UUID) AS layouts
+    FROM v_layout_object_style
+    WHERE Style_Name IS NOT NULL
+    GROUP BY ALL
+),
+tokens AS (
+    SELECT File_Name, Theme_UUID, Style_Class,
+           string_agg(DISTINCT Type_Token, ', ' ORDER BY Type_Token) AS type_tokens
+    FROM ThemeStyleRules
+    WHERE Style_Class IS NOT NULL
+    GROUP BY ALL
+)
+SELECT n.Style_Display, t.type_tokens,
+       coalesce(u.objects, 0) AS objects, coalesce(u.layouts, 0) AS layouts
+FROM ThemeNamedStyles n
+JOIN ThemeCatalog tc ON tc.Theme_UUID = n.Theme_UUID AND tc.File_Name = n.File_Name
+LEFT JOIN tokens t ON t.File_Name = n.File_Name AND t.Theme_UUID = n.Theme_UUID
+                  AND t.Style_Class = n.Style_Class
+LEFT JOIN usage u  ON u.File_Name = n.File_Name AND u.Theme_UUID = n.Theme_UUID
+                  AND u.Style_Name = n.Style_Class
+WHERE tc.Theme_Display = 'YourThemeName'
+  AND n.Is_Custom
+ORDER BY objects = 0, n.Style_Display;
+
+-- Unused custom styles across the solution, per theme and file
+SELECT n.File_Name, tc.Theme_Display, count(*) AS unused_custom_styles
+FROM ThemeNamedStyles n
+JOIN ThemeCatalog tc ON tc.Theme_UUID = n.Theme_UUID AND tc.File_Name = n.File_Name
+WHERE n.Is_Custom
+  AND NOT EXISTS (SELECT 1 FROM v_layout_object_style s
+                  WHERE s.File_Name = n.File_Name AND s.Theme_UUID = n.Theme_UUID
+                    AND s.Style_Name = n.Style_Class)
+GROUP BY ALL
+ORDER BY unused_custom_styles DESC;
+```
+
+Themes without `namedstyles` (Classic, Minimalist) return no rows. Theme header
+(custom vs. built-in, base theme, default theme of the file) → `ThemeCatalog`
+`Theme_Group`, `Base_Name`, `Is_Default`.
 
 ## Statistics
 

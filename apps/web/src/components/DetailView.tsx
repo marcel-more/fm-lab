@@ -7,6 +7,7 @@ import { useRefContext } from '../hooks/useRefContext';
 import { ObjectHeader } from './ObjectHeader';
 import { PluginPlatformBadge } from './PluginPlatformBadge';
 import { ScriptOsBadge } from './ScriptOsBadge';
+import { NoDdrBadge } from './NoDdrBadge';
 import { HierarchyTree, type HierarchyTreeHandle } from './HierarchyTree';
 import { TypeDetail } from './TypeDetail';
 import { ObjectGraphPanel, type ObjectGraphPanelHandle } from './ObjectGraphPanel';
@@ -387,6 +388,11 @@ export const DetailView: React.FC = () => {
           platform-os-binding test runs (neutral inventory, no defect). */}
       {object.Object_Type === 'Script' && object.Object_UUID && (
         <ScriptOsBadge objectUuid={object.Object_UUID} />
+      )}
+
+      {/* File exported without DDR info — formula references missing (Field, Script) */}
+      {(object.Object_Type === 'Field' || object.Object_Type === 'Script') && object.File_Name && (
+        <NoDdrBadge fileName={object.File_Name} />
       )}
 
       {/* Sub-navigation tabs (left) + object actions like "Open in FileMaker" (right) */}

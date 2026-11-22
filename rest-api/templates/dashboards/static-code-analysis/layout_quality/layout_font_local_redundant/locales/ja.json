@@ -1,0 +1,20 @@
+{
+  "manifest": {
+    "title": "継承と同じローカルフォント",
+    "description": "レイアウト品質ルール — オブジェクトが、スタイルやテーマからいずれにせよ受け取るフォントをローカルに設定しています。独自の太字書体を持つフォントに太字を適用すると FileMaker がこの設定を書き込みます（ファミリーは太字の PostScript 名で保存されます）。今は何も変わりませんが、フォントが固定されるため、後でテーマを変更してもこのオブジェクトには反映されません。",
+    "messages.redundant": "ローカルフォント {font} はオブジェクトがいずれにせよ継承するフォントです"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "検出数",
+    "summary_kpi.props.items[1].label": "影響を受けるレイアウト",
+    "findings_card.props.title": "継承と同じローカルフォント",
+    "findings_table.props.searchPlaceholder": "ファイル、レイアウト、オブジェクト、フォントを検索…",
+    "findings_table.props.empty.message": "継承したフォントをローカルに繰り返すオブジェクトはありません。",
+    "findings_table.props.columns[0].label": "ファイル",
+    "findings_table.props.columns[1].label": "レイアウト",
+    "findings_table.props.columns[2].label": "オブジェクトの種類",
+    "findings_table.props.columns[3].label": "オブジェクト",
+    "findings_table.props.columns[4].label": "フォント",
+    "findings_table.props.columns[5].label": "PostScript 名"
+  }
+}

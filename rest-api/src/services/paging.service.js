@@ -154,7 +154,8 @@ async function describeColumns(ctx, cacheKeySource, interpolatedSql) {
   const key = crypto.createHash('sha1').update(cacheKeySource).digest('hex');
   const hit = columnCache.get(key);
   if (hit) return hit;
-  const res = await db.executeQuery(ctx, `DESCRIBE ${stripTrailingSemicolon(interpolatedSql)}`);
+  // The described text is template SQL: it passes the statement gate too.
+  const res = await db.executeFileQuery(ctx, `DESCRIBE ${stripTrailingSemicolon(interpolatedSql)}`);
   const columns = new Map(res.rows.map(r => [String(r.column_name), String(r.column_type)]));
   columnCache.set(key, columns);
   return columns;

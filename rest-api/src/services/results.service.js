@@ -1,6 +1,4 @@
 const fsSync = require('fs');
-const fs = require('fs').promises;
-const path = require('path');
 const { createError } = require('../middleware/error-handler');
 const solutions = require('../config/solutions');
 const dashboardService = require('./dashboard.service');
@@ -150,7 +148,8 @@ async function resolveDashboardDeclaration(bundle) {
   const m = /^bundle:(.+)$/.exec(String(spec.source));
   if (!m) return null;
   try {
-    const sql = await fs.readFile(path.join(bundle.dir, path.normalize(m[1])), 'utf-8');
+    // Composed SQL: the column may come from an included fragment.
+    const sql = await dashboardService.loadBundleSql(bundle, m[1]);
     if (!/finding_count/i.test(sql)) return null;
   } catch {
     return null;

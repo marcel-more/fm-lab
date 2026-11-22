@@ -1,0 +1,20 @@
+{
+  "manifest": {
+    "title": "Police laissée à la valeur par défaut du fichier",
+    "description": "Règle de qualité des modèles — des objets texte d'un modèle affichent la police par défaut du fichier, car ni l'objet, ni son style, ni le thème ne nomment de police (Classique et Minimaliste n'en nomment aucune). Cette police ne figure pas dans l'export XML et diffère d'un fichier à l'autre : le même thème affiche Helvetica Neue dans un fichier et Arial dans un autre. Un résultat par modèle.",
+    "messages.file_default": "{count} objets texte sur {total} affichent la police par défaut du fichier — le thème ne nomme aucune police"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Résultats",
+    "summary_kpi.props.items[1].label": "Objets avec la police par défaut du fichier",
+    "summary_kpi.props.items[2].label": "Fichiers concernés",
+    "findings_card.props.title": "Police laissée à la valeur par défaut du fichier",
+    "findings_table.props.searchPlaceholder": "Rechercher fichier, modèle ou thème…",
+    "findings_table.props.empty.message": "Aucun modèle ne laisse sa police à la valeur par défaut du fichier.",
+    "findings_table.props.columns[0].label": "Fichier",
+    "findings_table.props.columns[1].label": "Modèle",
+    "findings_table.props.columns[2].label": "Thème",
+    "findings_table.props.columns[3].label": "Objets avec la police par défaut du fichier",
+    "findings_table.props.columns[4].label": "Objets texte"
+  }
+}

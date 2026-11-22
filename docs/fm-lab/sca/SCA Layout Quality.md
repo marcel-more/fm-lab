@@ -7,6 +7,7 @@ Layout-quality rules inspect what the Layout mode inspector won't tell you at sc
 ## When to use it
 
 - UI modernization projects — the Classic-theme, local-CSS and geometry findings together size the real restyling effort.
+- Font consistency — the font rules (test *Layout Fonts*) build on the resolved font of every object (catalog schema 1.44.0); the dashboards in *Layouts › Fonts* (overview, per layout, per object) show the same data as an inventory.
 - "The button does nothing" / "the field is empty" symptom reports: broken references, out-of-range repetitions and occluded objects are the usual suspects.
 - After bulk layout edits or copy/paste sessions — lost objects, stacked duplicates and copy-suffix names are classic paste fallout.
 
@@ -33,10 +34,14 @@ The `error` tier is reference-level breakage: broken field and value-list refere
 | Object name wrapped in quotes | warning | Quoted names that break `GetLayoutObjectAttribute` / Go to Object | fmCheckMate |
 | Invalid layout symbol | warning | `{{Symbols}}` in a text object that name no Get parameter — they render literally | fm-lab |
 | Unresolved merge anchor | warning | `<<Field>>` anchors in a text object or button label that resolve to no field — they render literally. An anchor on an external table occurrence is checked against the file that holds the base table; if that file is not part of the import, the anchor is not reported | fm-lab |
+| Style missing from the theme | warning | Objects naming a style their layout's theme no longer contains — typically a custom style deleted from the theme; the Inspector still shows the name, the theme holds no rule for it | fm-lab |
 | Button without action | info | Buttons with neither a script call nor a single-step action — review by context | fmCheckMate |
 | Symbol in button label | info | `{{Symbols}}` in a button or popover-button label — FileMaker evaluates merge fields, merge variables and layout calculations there, but never a symbol | fm-lab |
 | Group with a single object | info | Groups grouping nothing — leftovers after deleting the other members | fmCheckMate |
 | Degenerate layout object | info | Empty texts, zero-extent objects, objects below minimum size (sliders; lines excluded) | fm-lab |
+| Layout with many fonts | info | Layouts whose text objects show more fonts than the threshold (slider, default 3) — base fonts, formatted text runs and chart texts; the file default is no font and does not count | fm-lab |
+| Font left to the file default | info | Text objects whose font no level names (Classic, Minimalist) — the default of the file is not in the export and differs between files; one finding per layout | fm-lab |
+| Local font equals the inherited font | info | Objects setting locally the font they inherit anyway — written by FileMaker when bold is applied to a font with its own bold face; a later theme change no longer reaches them | fm-lab |
 | Local CSS overrides | info | The share of objects styled past the theme — a ratio dashboard per layout, not per object | fmCheckMate |
 | Layout geometry explorer | — | Inventory: every object with sortable geometry and a coordinate-window filter | fm-lab |
 

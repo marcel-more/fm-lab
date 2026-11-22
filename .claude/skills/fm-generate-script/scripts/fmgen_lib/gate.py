@@ -3,7 +3,11 @@
 Layer 1 (paste validity): real XML parse; Step ids exist in the reference
   (legacy/reserved ids rejected); children/order per step_xml_map; name
   attribute matches canonical name or a known xml_emission alias; Set Variable
-  Name element present; Calculation content in CDATA.
+  Name element present; Calculation content in CDATA; no unescaped
+  typographic double quote inside a text constant (G111 — FileMaker reads
+  „ “ ” ‟ as text-constant delimiters and comments the formula out on paste);
+  line breaks of a calculation as CR, not LF (G112 — FileMaker ignores an LF
+  on paste; runs on the raw text, an XML parser turns every CR into LF).
 Layer 2 (save validity): step_constraints catalog — save_invalid_bare,
   save_invalid_nesting (flat transactions), requires_pair balance on the XML;
   plus G202, the known-FM-bug registry (clipboard_loss & co) as a pure
@@ -12,7 +16,8 @@ Layer 3 (runtime validity): resolution report free of errors; version gate
   (origin_version of every step <= target file version, from step_compat data);
   calc findings (a reference that exists but is used wrongly, e.g. a custom
   function called with the wrong argument count); the opt-in variable-init
-  convention.
+  convention; the PDF page settings of Save Records as PDF with stored
+  options (G309 — incomplete ones fail at runtime with error 5).
 
 Status values: 'pass' | 'fail' | 'skipped' | 'warning'. Only 'fail' makes the
 gate fail — a 'warning' is a finding the deliverer must report but that does not
@@ -32,6 +37,7 @@ from .read_tolerance import read_boolean_state
 
 IF_OPEN, IF_CLOSE, LOOP_OPEN, LOOP_CLOSE = 68, 70, 71, 73
 SET_VARIABLE = 141
+SAVE_RECORDS_AS_PDF = 144
 
 # Bug-registry kinds in step_constraints (since fm_spec 1.14.4) — a warning
 # class, never a validity rule (G202).
@@ -64,6 +70,18 @@ class GateResult:
 
     def as_dict(self) -> dict:
         return {"passed": self.passed, "checks": [c.as_dict() for c in self.checks]}
+
+
+def _version_key3(v: str | None) -> int | None:
+    """Three-part canon of fm_spec (major*1000000 + minor*1000 + patch) — the
+    rename gate needs the patch level (19.6.0 < 19.6.1 = renamed_in_version);
+    a bare major ('22') reads as 22.0.0."""
+    if not v:
+        return None
+    m = re.match(r"(\d+)(?:\.(\d+))?(?:\.(\d+))?", v.strip())
+    if not m:
+        return None
+    return int(m.group(1)) * 1000000 + int(m.group(2) or 0) * 1000 + int(m.group(3) or 0)
 
 
 def _version_num(v: str | None) -> float | None:
@@ -251,6 +269,9 @@ def run_gate(xml_text: str, ref: Reference, resolution: dict | None = None,
                 or "all boolean state attributes carry their reference domain "
                    "(True/False, or the option's xml_true/xml_false)")
 
+    _calc_quotes(res, steps)
+    _calc_line_breaks(res, xml_text)
+
     # ---- Layer 2: save validity --------------------------------------------
     constraints = ref.constraints() if ref.grammar_available() else []
     if_depth, problems2 = 0, []
@@ -378,7 +399,54 @@ def run_gate(xml_text: str, ref: Reference, resolution: dict | None = None,
     _options_preserved(res, steps, ir_steps, ref)
     _value_forms(res, steps, ir_steps, ref)
     _var_init_check(res, ir_steps, check_var_init)
+    _pdf_page_settings(res, steps)
     return res
+
+
+def _pdf_page_settings(res: GateResult, steps: list[ET.Element]) -> None:
+    """G309: Save Records as PDF with stored options (Restore = 'Specify
+    options') needs complete page settings — NumberFrom with a value AND
+    either AllPages="True" or a PageRange. Every other form fails at runtime
+    with error 5, and confirming the options dialog with OK does not heal it
+    (it shows the start number empty and keeps the step as is). Without
+    Restore every Pages form runs: FileMaker ignores the stored options.
+    Runtime probe FileMaker 26.0.3, 13 variants.
+
+    The generator cannot emit an incomplete form (reference implications
+    restore / all_pages / page_range_from => number_pages_from, fm_spec
+    2.9.2); the check covers hand-built, edited or older snippets. A warning,
+    not a fail: the snippet pastes and saves, the step fails when it runs.
+    Create PDF (243) is not affected — it runs without NumberFrom."""
+    problems, seen = [], 0
+    for pos, st in enumerate(steps, 1):
+        if st.get("id") != str(SAVE_RECORDS_AS_PDF):
+            continue
+        seen += 1
+        restore = st.find("Restore")
+        pages = st.find("PDFOptions/Document/Pages")
+        if restore is None or restore.get("state") != "True" or pages is None:
+            continue
+        calc = pages.find("NumberFrom/Calculation")
+        missing = []
+        if calc is None or not (calc.text or "").strip():
+            missing.append("NumberFrom")
+        if pages.get("AllPages") != "True" and pages.find("PageRange") is None:
+            missing.append('AllPages="True" or a PageRange')
+        if missing:
+            problems.append(f"step {pos} (id=144): Restore is on, Pages lacks "
+                            + " and ".join(missing))
+    if not seen:
+        res.add("G309-pdf-page-settings", 3, "pass",
+                "no Save Records as PDF step in the snippet")
+    elif problems:
+        res.add("G309-pdf-page-settings", 3, "warning",
+                "; ".join(problems) + " — FileMaker fails the step with error 5 at "
+                "runtime; add 'Number pages from: 1' plus 'all_pages: On' or a "
+                "page range, or drop Restore")
+    else:
+        res.add("G309-pdf-page-settings", 3, "pass",
+                "page settings of every Save Records as PDF step are complete "
+                "(or its options are not stored)")
 
 
 def _function_version_gate(res: GateResult, root: ET.Element, ref: Reference,
@@ -389,7 +457,12 @@ def _function_version_gate(res: GateResult, root: ET.Element, ref: Reference,
     (functions.origin_version, F-8). Retired: `SetPersistentData ( … )` pasted
     into a 26 file arrives as `<function missing>` — FileMaker 26 no longer
     resolves it (functions.removed_in_version, fm_spec 2.2.0; on an older
-    reference that direction stands down and the message says so)."""
+    reference that direction stands down and the message says so).
+    Renamed names (function_renames, fm_spec 2.10.0): the current name on a
+    target older than the rename fails (`Get ( LastErrorDetail )` in a 19.6.0
+    file — the name does not exist there yet); the legacy name on a target at
+    or past the rename warns, or fails where the reference records that
+    FileMaker no longer parses it (legacy_accepted = false)."""
     tv = _version_num(target_version)
     if tv is None:
         res.add("G303b-function-versions", 3, "skipped",
@@ -401,6 +474,24 @@ def _function_version_gate(res: GateResult, root: ET.Element, ref: Reference,
     versions = ref.function_versions()
     too_new: dict[str, str] = {}
     retired: dict[str, str] = {}
+    tv3 = _version_key3(target_version)
+    get_heads = ref.get_heads()
+    renames = ref.function_renames() or []
+    by_legacy = {(r["name_kind"], r["legacy_name"].casefold()): r for r in renames}
+    by_current = {(r["name_kind"], r["current_name"].casefold()): r for r in renames}
+    name_too_new: dict[str, dict] = {}
+    stale_warn: dict[str, dict] = {}
+    stale_fail: dict[str, dict] = {}
+
+    def judge_name(kind: str, shown: str, name: str) -> None:
+        if tv3 is None:
+            return
+        old = by_legacy.get((kind, name.casefold()))
+        if old is not None and tv3 >= old["renamed_in_version_num"]:
+            (stale_fail if old.get("legacy_accepted") is False else stale_warn)[shown] = old
+        new = by_current.get((kind, name.casefold()))
+        if new is not None and tv3 < new["renamed_in_version_num"]:
+            name_too_new[shown] = new
 
     def judge(fid: int, fallback_name: str) -> None:
         v = versions.get(fid)
@@ -424,8 +515,11 @@ def _function_version_gate(res: GateResult, root: ET.Element, ref: Reference,
                 or lookup.get(f"{m.group(1)} ( {m.group(2)} )".casefold())
             if hit:
                 judge(hit["function_id"], m.group(0))
+            if m.group(1).casefold() in get_heads:
+                judge_name("getparameter", f"{m.group(1)} ( {m.group(2)} )", m.group(2))
         for m in CALL_RE.finditer(scanned):
             for cand in call_name_candidates(m.group(1)):
+                judge_name("function", cand, cand)
                 hit = lookup.get(cand.casefold())
                 if not hit:
                     continue
@@ -436,13 +530,118 @@ def _function_version_gate(res: GateResult, root: ET.Element, ref: Reference,
     problems += [f"'{n}' was removed in FM {v} — FileMaker {target_version} no longer "
                  "resolves it (functions.removed_in_version)"
                  for n, v in sorted(retired.items())]
+    problems += [f"'{n}' exists only since FM {r['renamed_in_version']} — FileMaker "
+                 f"{target_version} knows it as '{n.replace(r['current_name'], r['legacy_name'])}' "
+                 "(function_renames)"
+                 for n, r in sorted(name_too_new.items())]
+    problems += [f"'{n}' is the name before FM {r['renamed_in_version']} — FileMaker "
+                 f"{r.get('legacy_accepted_version') or target_version} rejects it on paste and "
+                 f"comments the formula out; write '{n.replace(r['legacy_name'], r['current_name'])}' "
+                 "(function_renames)"
+                 for n, r in sorted(stale_fail.items())]
+    stale = [f"'{n}' is the name before FM {r['renamed_in_version']} — write "
+             f"'{n.replace(r['legacy_name'], r['current_name'])}' for FileMaker {target_version}"
+             + ("" if r.get("legacy_accepted") else " (whether FileMaker still parses the old name is unverified)")
+             for n, r in sorted(stale_warn.items())]
     if problems:
-        res.add("G303b-function-versions", 3, "fail", "; ".join(problems))
+        res.add("G303b-function-versions", 3, "fail", "; ".join(problems + stale))
+    elif stale:
+        res.add("G303b-function-versions", 3, "warning", "; ".join(stale))
     else:
         res.add("G303b-function-versions", 3, "pass",
                 f"all built-in functions available in FM {target_version}"
                 + (" and none retired by it" if ref.function_retirement_available()
                    else " (retired-function direction: no retirement data in the reference)"))
+
+
+def _calc_quotes(res: GateResult, steps: list[ET.Element]) -> None:
+    """G111: no text constant in a calculation of the snippet carries an
+    unescaped typographic double quote („ “ ” ‟). FileMaker reads each of them
+    as a delimiter, so the constant ends there; on paste FileMaker comments
+    the whole formula out (/* … */) — the step stays, its value is empty
+    (paste probe, FileMaker 26.0.3). Same scanner as lint L012
+    (textform.typographic_quote_hits), run on the finished XML so
+    hand-authored or edited snippets that never saw the lint are covered too.
+
+    A typographic quote used as the delimiter itself (“abc”) is NOT a gate
+    finding: FileMaker accepts any pairing of " “ ” „ and stores a straight
+    quote. The lint still refuses it in a draft, where fmgen's own checks
+    would misread it. Comments are exempt."""
+    from .textform import typographic_quote_hits
+    problems = []
+    for idx, st in enumerate(steps, start=1):
+        for calc in st.iter("Calculation"):
+            text = calc.text or ""
+            for h in typographic_quote_hits(text):
+                if h.context != "string":
+                    continue
+                lo, hi = max(0, h.offset - 20), min(len(text), h.offset + 21)
+                snippet = text[lo:hi].replace("\n", " ")
+                problems.append(f"step {idx} ('{st.get('name', '?')}'): {h.char} "
+                                f"(U+{ord(h.char):04X}) unescaped in a text constant — "
+                                f"…{snippet}…")
+    if problems:
+        res.add("G111-calc-quotes", 1, "fail",
+                "typographic quote(s) inside a text constant — FileMaker ends the "
+                "constant there and comments the formula out on paste; escape them "
+                "(\\„ \\“ \\” \\‟): " + "; ".join(problems))
+    else:
+        res.add("G111-calc-quotes", 1, "pass",
+                "no unescaped typographic double quotes inside text constants")
+
+
+_CALC_CDATA = re.compile(r"<Calculation\b[^>]*>\s*((?:<!\[CDATA\[.*?\]\]>)+)", re.S)
+_CDATA_BODY = re.compile(r"<!\[CDATA\[(.*?)\]\]>", re.S)
+_STEP_TAG = re.compile(r"<Step\b[^>]*>")
+_NAME_ATTR = re.compile(r'\bname="([^"]*)"')
+
+
+def _calc_line_breaks(res: GateResult, xml_text: str) -> None:
+    """G112: the line breaks of every calculation are CR. FileMaker writes a
+    raw CR into a calculation's CDATA and ignores an LF on paste — the
+    formula arrives on one line. Runs on the RAW text: an XML parser
+    normalizes every CR to LF, so the parsed tree cannot tell them apart
+    (read the file with newline='' — universal-newline reading does the same).
+
+    Between tokens an LF costs only the layout (warning). Inside a text
+    constant it removes the line break from the text, and an LF that ends a
+    '//' comment lets the comment run over the rest of the formula — both
+    change what the formula does (fail)."""
+    from .textform import line_feed_hits
+    steps = [(m.start(), _NAME_ATTR.search(m.group(0))) for m in _STEP_TAG.finditer(xml_text)]
+    fails, layout = [], []
+    for m in _CALC_CDATA.finditer(xml_text):
+        body = "".join(_CDATA_BODY.findall(m.group(1)))
+        if "\n" not in body:
+            continue
+        idx = sum(1 for pos, _ in steps if pos < m.start())
+        name = steps[idx - 1][1].group(1) if idx and steps[idx - 1][1] else "?"
+        where = f"step {idx} ('{name}')"
+        hits = line_feed_hits(body)
+        for h in hits:
+            if h.context == "code":
+                continue
+            lo, hi = max(0, h.offset - 20), min(len(body), h.offset + 21)
+            snippet = body[lo:hi].replace("\r", " ").replace("\n", "⏎")
+            what = ("inside a text constant" if h.context == "string"
+                    else "at the end of a // comment")
+            fails.append(f"{where}: LF {what} — …{snippet}…")
+        n_code = sum(1 for h in hits if h.context == "code")
+        if n_code:
+            layout.append(f"{where}: {n_code} LF")
+    if fails:
+        res.add("G112-calc-line-breaks", 1, "fail",
+                "LF line break(s) in a calculation that change the formula — FileMaker "
+                "ignores an LF on paste, so a text constant loses its line break and a "
+                "// comment swallows the rest of the formula; write CR: "
+                + "; ".join(fails + layout))
+    elif layout:
+        res.add("G112-calc-line-breaks", 1, "warning",
+                "LF line break(s) in a calculation — FileMaker ignores an LF on paste, "
+                "the formula arrives on one line; write CR: " + "; ".join(layout))
+    else:
+        res.add("G112-calc-line-breaks", 1, "pass",
+                "calculation line breaks are CR (or none)")
 
 
 def _tolerated_elements(ref: Reference) -> set[str]:

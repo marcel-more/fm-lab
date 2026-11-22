@@ -1,0 +1,88 @@
+{
+  "id": "layout-fonts",
+  "version": "1.0.0",
+  "title": "Layout Fonts",
+  "description": "Checks of the fonts and styles on layouts: layouts with more fonts than the threshold, text objects whose font is left to the default of the file (which the export does not contain), local fonts that equal the inherited one, and applied styles missing from the layout's theme. Built on the resolved font of every object (catalog schema 1.44.0).",
+  "keywords": [
+    "layout",
+    "fonts",
+    "styles",
+    "theme",
+    "styling"
+  ],
+  "testType": "code-quality",
+  "objectTypes": [
+    "Layout"
+  ],
+  "scopes": [
+    "solution",
+    "file",
+    "object",
+    "object-list",
+    "cluster"
+  ],
+  "outputs": [
+    "count",
+    "findings-table"
+  ],
+  "members": [
+    {
+      "kind": "dashboard",
+      "ref": "layout_style_missing"
+    },
+    {
+      "kind": "dashboard",
+      "ref": "layout_many_fonts"
+    },
+    {
+      "kind": "dashboard",
+      "ref": "layout_font_local_redundant"
+    },
+    {
+      "kind": "dashboard",
+      "ref": "layout_font_file_default"
+    }
+  ],
+  "locales": {
+    "de": {
+      "title": "Layout-Schriften",
+      "description": "Prüfungen der Schriften und Stile auf Layouts: Layouts mit mehr Schriften als der Schwellwert, Textobjekte, deren Schrift dem nicht exportierten Standard der Datei überlassen bleibt, lokal gesetzte Schriften, die der geerbten gleichen, und angewandte Stile, die im Design des Layouts fehlen. Grundlage ist die aufgelöste Schrift je Objekt (Katalog-Schema 1.44.0)."
+    },
+    "es": {
+      "title": "Fuentes de formatos",
+      "description": "Comprobaciones de fuentes y estilos en formatos: formatos con más fuentes que el umbral, objetos de texto cuya fuente queda a la predeterminada del archivo (no exportada), fuentes locales iguales a la heredada y estilos aplicados que faltan en el tema del formato. Se basa en la fuente resuelta por objeto (esquema del catálogo 1.44.0)."
+    },
+    "fr": {
+      "title": "Polices des modèles",
+      "description": "Vérifications des polices et des styles des modèles : modèles avec plus de polices que le seuil, objets texte dont la police est laissée à la valeur par défaut du fichier (non exportée), polices locales identiques à l'héritée et styles appliqués absents du thème du modèle. Repose sur la police résolue de chaque objet (schéma du catalogue 1.44.0)."
+    },
+    "it": {
+      "title": "Font dei formati",
+      "description": "Controlli dei font e degli stili nei formati: formati con più font della soglia, oggetti di testo il cui font resta al predefinito del file (non esportato), font locali uguali all'ereditato e stili applicati assenti dal tema del formato. Si basa sul font risolto per oggetto (schema del catalogo 1.44.0)."
+    },
+    "nl": {
+      "title": "Lettertypen in lay-outs",
+      "description": "Controles van lettertypen en stijlen op lay-outs: lay-outs met meer lettertypen dan de drempel, tekstobjecten waarvan het lettertype aan de (niet geëxporteerde) bestandsstandaard wordt overgelaten, lokale lettertypen gelijk aan het geërfde en toegepaste stijlen die in het thema van de lay-out ontbreken. Gebaseerd op het opgeloste lettertype per object (catalogusschema 1.44.0)."
+    },
+    "pt": {
+      "title": "Fontes dos layouts",
+      "description": "Verificações de fontes e estilos em layouts: layouts com mais fontes que o limite, objetos de texto cuja fonte fica no padrão do arquivo (não exportado), fontes locais iguais à herdada e estilos aplicados ausentes do tema do layout. Baseia-se na fonte resolvida por objeto (esquema do catálogo 1.44.0)."
+    },
+    "sv": {
+      "title": "Typsnitt i layouter",
+      "description": "Kontroller av typsnitt och stilar i layouter: layouter med fler typsnitt än gränsvärdet, textobjekt vars typsnitt lämnas åt filens (ej exporterade) standard, lokala typsnitt som är samma som det ärvda och använda stilar som saknas i layoutens tema. Bygger på det upplösta typsnittet per objekt (katalogschema 1.44.0)."
+    },
+    "ja": {
+      "title": "レイアウトのフォント",
+      "description": "レイアウトのフォントとスタイルの検査：しきい値より多くのフォントを持つレイアウト、フォントが（書き出されない）ファイルの既定値に任されたテキストオブジェクト、継承と同じローカルフォント、レイアウトのテーマにない適用スタイル。オブジェクトごとに解決されたフォント（カタログスキーマ 1.44.0）に基づきます。"
+    },
+    "ko": {
+      "title": "레이아웃 글꼴",
+      "description": "레이아웃의 글꼴과 스타일 검사: 임계값보다 글꼴이 많은 레이아웃, 글꼴이 (내보내지 않는) 파일 기본값에 맡겨진 텍스트 개체, 상속과 같은 로컬 글꼴, 레이아웃 테마에 없는 적용 스타일. 개체별로 확인된 글꼴(카탈로그 스키마 1.44.0)을 기반으로 합니다."
+    },
+    "zh-Hans": {
+      "title": "布局字体",
+      "description": "布局中字体与样式的检查：字体多于阈值的布局、字体交由（未导出的）文件默认值的文本对象、与继承字体相同的本地字体，以及布局主题中缺失的已应用样式。基于每个对象解析出的字体（目录架构 1.44.0）。"
+    }
+  }
+}

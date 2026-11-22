@@ -1,0 +1,35 @@
+{
+  "manifest": {
+    "title": "Panoramica dei font",
+    "description": "Quali font mostrano i formati: una riga per font con usi, oggetti, formati, file, dimensioni e provenienza — impostato sull'oggetto, da uno stile o dal tema. Gli oggetti il cui font è lasciato al predefinito del file (il tema non ne nomina nessuno: Classico, Minimalista) formano una riga a sé. Un clic su un font apre i formati che lo mostrano; file, tema, dimensione e ricerca vengono mantenuti."
+  },
+  "layout": {
+    "summary_kpistrip.props.items[0].label": "Font",
+    "summary_kpistrip.props.items[1].label": "Usi con nome del font",
+    "summary_kpistrip.props.items[2].label": "Formati con nome del font",
+    "summary_kpistrip.props.items[3].label": "File con nome del font",
+    "summary_kpistrip.props.items[4].label": "Oggetti senza font con nome",
+    "search_input.props.placeholder": "Cerca font, formato, oggetto o campo…",
+    "file_select.props.label": "File",
+    "file_select.props.emptyOptionLabel": "Tutti i file",
+    "theme_select.props.label": "Tema",
+    "theme_select.props.emptyOptionLabel": "Tutti i temi",
+    "size_select.props.label": "Dimensione",
+    "size_select.props.emptyOptionLabel": "Tutte le dimensioni",
+    "fonts_card.props.title": "Font",
+    "fonts_table.props.columns[0].label": "Font",
+    "fonts_table.props.columns[0].valueLabels.#default": "Predefinito del file (font non presente nell'esportazione)",
+    "fonts_table.props.columns[1].label": "Usi",
+    "fonts_table.props.columns[2].label": "Oggetti",
+    "fonts_table.props.columns[3].label": "Formati",
+    "fonts_table.props.columns[4].label": "File",
+    "fonts_table.props.columns[5].label": "Dimensioni",
+    "fonts_table.props.columns[6].label": "Impostato localmente",
+    "fonts_table.props.columns[7].label": "Da uno stile",
+    "fonts_table.props.columns[8].label": "Dal tema",
+    "fonts_table.props.columns[9].label": "Testo formattato e grafici",
+    "fonts_table.props.empty.message": "Nessun uso di font in questa selezione.",
+    "notes_card.props.title": "Da dove proviene un font",
+    "notes_md.props.content": "**Origine del font di base.** FileMaker prende il primo valore impostato:\n- *locale* — impostato sull'oggetto stesso.\n- *locale, uguale all'ereditato* — impostato sull'oggetto, ma è lo stesso font che riceverebbe comunque. FileMaker lo scrive quando si applica il *grassetto* a un font con una propria variante grassetto; non è una scelta voluta.\n- *stile* — lo stile applicato all'oggetto. Uno stile contiene solo ciò che cambia; il resto viene dal tema.\n- *tema* — il valore predefinito del tema per il tipo di oggetto, la parte del formato o tutti i campi.\n- *predefinito del file* — il tema non nomina alcun font (Classico, Minimalista). FileMaker usa allora un valore predefinito del file che l'esportazione XML non contiene: lo stesso tema mostra Helvetica Neue in un file e Arial in un altro. Per questi oggetti l'elenco quindi non nomina alcun font; controllare un oggetto per file in FileMaker.\n\n**Altri usi di font.** *Testo formattato* è una parte di un testo formattata con il cursore; si aggiunge al font di base dell'oggetto, il resto del testo lo mantiene. *Grafico* è il font di un'area di testo di un grafico (titolo, legenda, assi, etichette dati); i titoli delle serie sono esclusi, mantengono il font del tema.\n\n**Conteggio.** *Font* raggruppa le grafie di uno stesso font (`arial`, `Arial`). Il predefinito del file non è un font: non conta né nel numero di font né in *molti font*. *Incerto*: il valore proviene da una regola della parte del formato (priorità non verificata) oppure lo stile applicato non esiste più nel tema.\n\n**Limiti.** I font della formattazione condizionale non sono elencati. Il nome di un font non dice se il font è installato sui client."
+  }
+}

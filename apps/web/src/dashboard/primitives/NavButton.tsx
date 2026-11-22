@@ -1,5 +1,6 @@
 import type { PrimitiveProps } from '../types';
 import { dispatchAction } from '../actions';
+import { useSelection } from '../selectionContext';
 import type { ActionSpec } from '../actions';
 
 /**
@@ -9,8 +10,13 @@ import type { ActionSpec } from '../actions';
  *
  * `variant: "link"` rendert stattdessen einen dezenten Textlink mit Pfeil (CSS)
  * — für Quer-/Fußverweise, die eine volle Kachel optisch überbetonen würde.
+ * `variant: "button"` rendert einen kompakten Aktions-Button (gefüllt, wie
+ * „XML konvertieren“), `"button-outline"` dieselbe Form zurückhaltend umrandet.
  */
-export function NavButton({ node, dataset, navigate }: PrimitiveProps) {
+export function NavButton({ node, dataset, datasets, navigate }: PrimitiveProps) {
+  // Datasets and selection channels travel with the click: `downloadFile`
+  // exports loaded rows, `ask` options can require a selection.
+  const { selection } = useSelection();
   const props = node.props ?? {};
   const label = (props.label as string) ?? '';
   const subtitle = props.subtitle as string | undefined;
@@ -25,7 +31,7 @@ export function NavButton({ node, dataset, navigate }: PrimitiveProps) {
     <button
       type="button"
       className={`dash-navbutton${variant ? ` dash-navbutton--${variant}` : ''}${clickable ? '' : ' dash-navbutton--disabled'}`}
-      onClick={clickable ? () => dispatchAction(onClick, undefined, { navigate }) : undefined}
+      onClick={clickable ? () => dispatchAction(onClick, undefined, { navigate, datasets, selection }) : undefined}
       disabled={!clickable}
     >
       <span className="dash-navbutton__label">

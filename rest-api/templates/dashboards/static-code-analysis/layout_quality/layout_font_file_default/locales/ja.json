@@ -1,0 +1,20 @@
+{
+  "manifest": {
+    "title": "ファイルの既定値に任されたフォント",
+    "description": "レイアウト品質ルール — オブジェクト、そのスタイル、テーマのいずれもフォントを指定していない（クラシックとミニマリストは指定なし）ため、レイアウトのテキストオブジェクトがファイルの既定フォントを表示しています。このフォントは XML 書き出しに含まれず、ファイルによって異なります。同じテーマでもあるファイルでは Helvetica Neue、別のファイルでは Arial です。レイアウトごとに 1 件。",
+    "messages.file_default": "テキストオブジェクト {total} 個中 {count} 個がファイルの既定フォントを表示 — テーマはフォントを指定していません"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "検出数",
+    "summary_kpi.props.items[1].label": "ファイルの既定値のオブジェクト",
+    "summary_kpi.props.items[2].label": "影響を受けるファイル",
+    "findings_card.props.title": "ファイルの既定値に任されたフォント",
+    "findings_table.props.searchPlaceholder": "ファイル、レイアウト、テーマを検索…",
+    "findings_table.props.empty.message": "ファイルの既定値にフォントを任せているレイアウトはありません。",
+    "findings_table.props.columns[0].label": "ファイル",
+    "findings_table.props.columns[1].label": "レイアウト",
+    "findings_table.props.columns[2].label": "テーマ",
+    "findings_table.props.columns[3].label": "ファイルの既定値のオブジェクト",
+    "findings_table.props.columns[4].label": "テキストオブジェクト"
+  }
+}

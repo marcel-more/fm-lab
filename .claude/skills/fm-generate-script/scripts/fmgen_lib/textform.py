@@ -111,6 +111,136 @@ def strip_comments(text: str) -> str:
     return "".join(out)
 
 
+# Typographic double quotes FileMaker reads as text-constant delimiters, next
+# to the straight '"'. The tokenizers above deliberately stay on U+0022 — they
+# model what the AUTHOR means by a text constant; typographic_quote_hits()
+# reports exactly the places where FileMaker's reading departs from that.
+# Evidence: a FileMaker 26.0.3 paste probe — "a„b“c" and "a‟b" arrive with the
+# formula commented out (/* … */, the step stays active and sets nothing);
+# “abc”, „abc“, “abc" and "abc” are all valid constants in any pairing and are
+# shown with straight quotes afterwards; "a\„b\“c\”d" yields a„b“c”d (the mask
+# is valid and disappears). The real-solution corpus agrees: inside constants
+# these quotes are always escaped, and no stored formula uses one as a
+# delimiter (FileMaker normalizes them). ‘ ’ ‚ « » are no delimiters — the
+# probe and the corpus show them unescaped in valid formulas — never reported.
+TYPOGRAPHIC_DELIMITERS = frozenset("\u201c\u201d\u201e\u201f")   # “ ” „ ‟
+
+
+@dataclass
+class QuoteHit:
+    offset: int          # index of the character in the scanned calc
+    char: str
+    context: str         # 'string' (inside a "…" constant) | 'code'
+    literal: tuple[int, int] | None = None  # [start, end) of the enclosing "…"
+
+
+def typographic_quote_hits(calc: str) -> list[QuoteHit]:
+    """Unescaped typographic double quotes in a calculation, outside comments.
+
+    Same scanner core as strip_comments(): '"' delimits text constants, '\\'
+    escapes inside them, '//' and '/* */' are comments outside them.
+    A 'string' hit sits inside a "…" constant: FileMaker ends the constant
+    there, so the formula means something else than written — in practice it
+    turns invalid and FileMaker comments it out on paste. A 'code' hit is a
+    typographic quote used as the delimiter itself: FileMaker accepts that
+    (and stores a straight quote), but every fmgen tokenizer reads only '"'.
+    An escaped one (\\„) is valid in both readings and not a hit."""
+    hits: list[QuoteHit] = []
+    i, n, start = 0, len(calc), None   # start = offset of the open '"'
+    pending: list[QuoteHit] = []       # string hits waiting for their literal end
+    while i < n:
+        ch = calc[i]
+        if start is not None:
+            if ch == "\\" and i + 1 < n:
+                i += 2; continue
+            if ch == '"':
+                for h in pending:
+                    h.literal = (start, i + 1)
+                hits += pending
+                pending, start = [], None
+            elif ch in TYPOGRAPHIC_DELIMITERS:
+                pending.append(QuoteHit(i, ch, "string"))
+            i += 1; continue
+        if ch == '"':
+            start = i; i += 1; continue
+        if calc.startswith("//", i):
+            nl = calc.find("\n", i)
+            i = n if nl < 0 else nl
+            continue
+        if calc.startswith("/*", i):
+            end = calc.find("*/", i + 2)
+            i = n if end < 0 else end + 2
+            continue
+        if ch in TYPOGRAPHIC_DELIMITERS:
+            hits.append(QuoteHit(i, ch, "code"))
+        i += 1
+    if pending:  # unterminated constant — the hits stand, without a span
+        for h in pending:
+            h.literal = (start, n)
+        hits += pending
+    return sorted(hits, key=lambda h: h.offset)
+
+
+@dataclass
+class LineFeedHit:
+    offset: int          # index of the LF in the scanned calc
+    context: str         # 'string' | 'line_comment' (ends a // comment) | 'code'
+
+
+def line_feed_hits(calc: str) -> list[LineFeedHit]:
+    """Every LF in a calculation, with the context it breaks.
+
+    FileMaker keeps a calculation's line breaks as CR and ignores an LF on
+    paste. Between tokens that only costs the layout; inside a "…" constant
+    the text loses its line break, and an LF that ends a '//' comment is
+    gone, so the comment runs over the rest of the formula. Same scanner core
+    as typographic_quote_hits(); a '/* */' comment is closed by '*/', not by
+    the line end — an LF inside it counts as 'code'."""
+    hits: list[LineFeedHit] = []
+    i, n, in_str = 0, len(calc), False
+    while i < n:
+        ch = calc[i]
+        if in_str:
+            if ch == "\\" and i + 1 < n:
+                i += 2; continue
+            if ch == '"':
+                in_str = False
+            elif ch == "\n":
+                hits.append(LineFeedHit(i, "string"))
+            i += 1; continue
+        if ch == '"':
+            in_str = True; i += 1; continue
+        if calc.startswith("//", i):
+            nl = calc.find("\n", i)
+            if nl < 0:
+                break
+            hits.append(LineFeedHit(nl, "line_comment"))
+            i = nl + 1; continue
+        if calc.startswith("/*", i):
+            end = calc.find("*/", i + 2)
+            stop = n if end < 0 else end + 2
+            hits += [LineFeedHit(k, "code") for k in range(i, stop) if calc[k] == "\n"]
+            i = stop; continue
+        if ch == "\n":
+            hits.append(LineFeedHit(i, "code"))
+        i += 1
+    return hits
+
+
+def escape_typographic_quotes(literal: str) -> str:
+    """The corrected form of a "…" constant: every unescaped typographic
+    double quote inside it gets its '\\' mask (\\„ \\“ \\” \\‟)."""
+    out, i, n = [], 0, len(literal)
+    while i < n:
+        ch = literal[i]
+        if ch == "\\" and i + 1 < n:
+            out.append(literal[i:i + 2]); i += 2; continue
+        if ch in TYPOGRAPHIC_DELIMITERS:
+            out.append("\\")
+        out.append(ch); i += 1
+    return "".join(out)
+
+
 # Function-call anchor for calc scanning: an identifier (optionally a multi-word
 # name) immediately before an opening paren. Shared by the lint (arity/locale
 # checks) and the resolver (custom-function / unknown-function detection) so both
@@ -232,6 +362,11 @@ class RawStep:
     raw: str = ""                   # full (possibly multi-line) source text
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    # lines inside an open text constant that read like a step: quiet here (a
+    # genuine multi-line text may say anything), surfaced by the lint only
+    # when the constant itself is suspect (L012 — a typographic quote that
+    # FileMaker reads as its end means the "continuation" was a real step)
+    string_step_lines: list[int] = field(default_factory=list)
 
 
 def _scan_state(text: str, depth: int, in_str: bool,
@@ -304,12 +439,17 @@ def segment(text: str, ref: Reference) -> list[RawStep]:
             # almost always a swallowed step — the line above left a bracket or
             # a comment open. Silent merges produce no other finding (the gate
             # only ever sees the steps that survived), so say it here. Inside a
-            # string literal the same text is just text, so that case is quiet.
-            if not in_str and stripped and _match_head(stripped, lookup) is not None:
-                steps[-1].warnings.append(
-                    f"line {lineno}: '{_ellipsis(stripped, 40)}' reads like a step "
-                    f"but continues line {steps[-1].line} — check that line for an "
-                    "unclosed bracket, quote or comment")
+            # string literal the same text is just text, so that case is quiet
+            # here — the line is only recorded; the lint names it when L012
+            # finds a typographic quote that ends the constant in FileMaker.
+            if stripped and _match_head(stripped, lookup) is not None:
+                if not in_str:
+                    steps[-1].warnings.append(
+                        f"line {lineno}: '{_ellipsis(stripped, 40)}' reads like a step "
+                        f"but continues line {steps[-1].line} — check that line for an "
+                        "unclosed bracket, quote or comment")
+                else:
+                    steps[-1].string_step_lines.append(lineno)
         elif stripped:
             steps.append(RawStep(
                 line=lineno, head=stripped.split("[")[0].strip(), step_id=None,
@@ -600,6 +740,7 @@ class ParsedStep:
     canonical_text: str = ""
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    string_step_lines: list[int] = field(default_factory=list)
 
 
 _BOOL_STATES = {"on", "off", "true", "false", "yes", "no"}
@@ -609,7 +750,8 @@ def parse_step(st: RawStep, ref: Reference) -> ParsedStep:
     canonical = ref.steps().get(st.step_id, {}).get("canonical_name", st.head)
     ps = ParsedStep(line=st.line, step_id=st.step_id, canonical_name=canonical,
                     enabled=st.enabled, raw=st.raw.strip(), errors=list(st.errors),
-                    warnings=list(st.warnings))
+                    warnings=list(st.warnings),
+                    string_step_lines=list(st.string_step_lines))
 
     if st.step_id == 89:  # comment: single positional text
         # Keep the payload verbatim — a whitespace-only body is an intentional

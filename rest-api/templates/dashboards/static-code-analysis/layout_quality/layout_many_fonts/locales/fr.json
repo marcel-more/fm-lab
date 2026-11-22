@@ -1,0 +1,21 @@
+{
+  "manifest": {
+    "title": "Modèle avec beaucoup de polices",
+    "description": "Règle de qualité des modèles — les objets texte d'un modèle affichent plus de polices que le seuil (3 par défaut). Chaque police compte : la police de base de chaque objet, les parties de texte avec leur propre police et les zones de texte des graphiques ; la police par défaut du fichier (le thème n'en nomme aucune) ne compte pas comme une police. Beaucoup de polices sur un modèle signifient en général une mise en forme objet par objet plutôt que par le thème.",
+    "messages.many": "Le modèle affiche {count} polices : {fonts}"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Résultats",
+    "summary_kpi.props.items[1].label": "Fichiers concernés",
+    "threshold_slider.props.label": "Plus de polices que",
+    "threshold_slider.props.valueSuffix": " polices",
+    "findings_card.props.title": "Modèle avec beaucoup de polices",
+    "findings_table.props.searchPlaceholder": "Rechercher fichier, modèle ou police…",
+    "findings_table.props.empty.message": "Aucun modèle avec plus de polices que le seuil.",
+    "findings_table.props.columns[0].label": "Fichier",
+    "findings_table.props.columns[1].label": "Modèle",
+    "findings_table.props.columns[2].label": "Polices",
+    "findings_table.props.columns[3].label": "Polices nommées",
+    "findings_table.props.columns[4].label": "Objets avec la police par défaut du fichier"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "manifest": {
+    "title": "테마에 없는 스타일",
+    "description": "레이아웃 품질 규칙 — 개체가 레이아웃 테마에 없는 스타일을 지정합니다. 테마의 어떤 규칙도 어떤 상태에서도 이 스타일을 갖고 있지 않습니다. 대개 테마에서 삭제된 사용자 정의 스타일이거나, 레이아웃을 다른 테마로 바꿀 때 따라오지 않은 스타일입니다. 인스펙터에는 스타일 이름이 계속 표시되지만 테마에는 해당 규칙이 없습니다.",
+    "messages.missing": "스타일 {style}이(가) 테마 {theme}에 없습니다"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "발견 항목",
+    "summary_kpi.props.items[1].label": "없는 스타일",
+    "summary_kpi.props.items[2].label": "영향받는 레이아웃",
+    "findings_card.props.title": "테마에 없는 스타일",
+    "findings_table.props.searchPlaceholder": "파일, 레이아웃, 개체, 스타일 또는 테마 검색…",
+    "findings_table.props.empty.message": "적용된 모든 스타일이 테마에 있습니다.",
+    "findings_table.props.columns[0].label": "파일",
+    "findings_table.props.columns[1].label": "레이아웃",
+    "findings_table.props.columns[2].label": "개체 유형",
+    "findings_table.props.columns[3].label": "개체",
+    "findings_table.props.columns[4].label": "스타일",
+    "findings_table.props.columns[5].label": "테마"
+  }
+}

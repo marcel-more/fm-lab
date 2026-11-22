@@ -71,12 +71,15 @@ The node `type` of both remains `LayoutObject`: the specific type is a column of
 
 Selective flow graph (trace mode of the Graph Explorer). Instead of expanding every neighborhood breadth-first, the trace collects only what a flow starting at the object actually touches: the call chain up/down (`calls_script`), the fields/variables/layouts/functions the chain scripts touch, and — for layouts the flow enters — their script triggers (object-level triggers only when the object displays a field the trace already touched). Response shape matches `/graph/subgraph` plus trace-specific fields, so Explorer clients render both with one pipeline.
 
-v1 start objects: **Script** and **Layout**. A layout start maps onto a seed-script set via an entry preset (see `/graph/trace/entries`).
+Start objects of the flow trace (`mode=flow`, the default): **Script** and **Layout**. A layout start maps onto a seed-script set via an entry preset (see `/graph/trace/entries`). The Explorer side is described in [Graph Explorer Trace Mode](../../Wiki/Graph%20Explorer%20Trace%20Mode.md). Fields and variables have the experimental data trace (`mode=data`, see [below](#data-trace-modedata-experimental) and [Graph Explorer Data Trace](../../Wiki/Graph%20Explorer%20Data%20Trace.md)).
+
+The flow trace is **step-exact**: calls, touches and navigation come from the script steps (`v_script_step_links`), so every call carries its call sites with their condition, and disabled steps are left out by default. Besides the graph the response carries the **ways** of both directions — one per reached script (`down`, "calls") and one per entry script (`up`, "reached from") — and every way is available as a Mermaid diagram. The flow trace needs catalog schema 1.43.0 or later (see errors and `/graph/trace/capability`).
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `start` | string | — | **Required.** Start object UUID |
 | `start_file` | string | — | Clone disambiguation of the start object |
+| `mode` | enum | `flow` | `flow` = flow trace (this section) · `data` = data-flow trace of a field or variable, with its own parameter set |
 | `entry` | enum | type-dependent | Entry preset for layout starts: `layout_runtime` (triggers of the layout and its objects + button scripts) · `layout_inbound` (scripts navigating onto the layout) · `layout_full` (both). Script starts ignore it |
 | `up_depth` | integer | `3` | Chain budget upward (caller levels, 0–16) |
 | `down_depth` | integer | `6` | Chain budget downward (subscript levels, 0–16) |
@@ -85,7 +88,12 @@ v1 start objects: **Script** and **Layout**. A layout start maps onto a seed-scr
 | `include_local_vars` | boolean | `false` | Include local `$` variables of the chain scripts (`$$` globals are always included) |
 | `include_buttons` | boolean | `false` | Include `button_action` triggers of entered layouts in the cascade |
 | `include_interaction_triggers` | boolean | `false` | Include interaction-class events in the cascade. By default the cascade skips events that only user interaction can fire (`OnLayoutKeystroke`, `OnObjectKeystroke`, `OnGestureTap`, `OnObjectModify`, `OnExternalCommandReceived`) — a running script presses no keys, so these triggers cannot fire during the traced flow. Script-reachable events (`OnLayoutEnter`/`Exit`, `OnRecordLoad`/`Commit`/`Revert`, `OnModeEnter`/`Exit`, `OnObjectEnter`/`Exit`/`Save`/`Validate`, `OnPanelSwitch`, `OnViewChange`, `OnLayoutSizeChange`, the AVPlayer events) always stay in. Entry presets of a layout start are unaffected — there, interaction triggers are legitimate entry paths |
+| `include_disabled` | boolean | `false` | Also follow disabled script steps — calls, touches and `Go to Layout` (and with it the trigger cascade). With `true` the node and edge set equals the script-level trace |
 | `include_builtins` | boolean | `false` | Include builtin-function targets |
+| `ways_limit` | integer | `300` | Ways per direction (1–2000); `trace.stats.truncatedBy` names `ways_limit` when it cut |
+| `ways_mermaid` | boolean | `false` | Add the Mermaid source to every way and both overviews (see below) |
+| `expand_way` | string | — | "Follow source" on up-ways: comma-separated way IDs (12 hex, max. 20) from `trace.ways[].wayId`. A button or trigger entry adds the scripts that enter the owner layout via `Go to Layout` and their callers up to `up_depth`; a `budget` entry adds the callers beyond `up_depth`. Unknown IDs change nothing |
+| `way` / `way_dir` | integer / enum | — / `down` | Only with `format=mermaid-raw\|svg\|mermaid`: way number in direction `way_dir` (`down` · `up`), `0` = overview |
 | `node_limit` | integer | `1000` | Node cap; ranked by trace role (start > chain > triggered > touched > cascade-touched > context), then depth, then degree — `truncated: true` signals clipping |
 | `hub_degree` | integer | `100` | Degree threshold for the `isHub` flag |
 | `exclude` | string | — | Boundary exclusions: comma-separated composite node IDs (`<uuid>::<file>`; an item without `::` addresses an object whose `File_Name` is NULL). Excluded nodes stay visible in the result but are not expanded: the walk stops at them (call chain and cascade), they contribute no touch edges, and an excluded layout fires no trigger cascade. Excluding the start object is a no-op. An excluded **field** stays a visible touch target but no longer arms the selective object-level triggers of stage 3 — object triggers that would fire only because an object displays that field stay silent. Malformed items answer `400`; unknown UUIDs are inert |
@@ -98,7 +106,86 @@ v1 start objects: **Script** and **Layout**. A layout start maps onto a seed-scr
 - `trace.suggestions[]`: server-computed exclusion candidates among the traced scripts — shared utilities whose global metrics mark them as hubs (trigger fan-in ≥ 25, callers ≥ 50, or field touches ≥ 100), each as `{ id, uuid, file, label, type, trigIn, fanIn, touchOut, score, reason }` with `reason` ∈ `trigger_hub` · `call_hub` · `touch_hub`, score-descending, capped at 10. The start object, already excluded nodes, and chain nodes of the start's file or at chain depth ≤ 1 are never suggested. Suggestions are never applied automatically — clients offer them and pass accepted ones back via `exclude`
 - `stats.dynamicCalls`: number of call steps of the traced scripts that resolve their target by name at runtime (Perform Script "by name" and its on-server variants) — these have no static edge, so the trace is a static approximation
 
-Errors: `404 OBJECT_NOT_FOUND`, `409 AMBIGUOUS_UUID`, `422 TRACE_UNSUPPORTED_START` (start type without v1 trace semantics; details name the supported types), `422 TRACE_EMPTY_ENTRY` (the chosen entry preset yields no seed scripts; details carry the available presets with seed counters).
+**Step-exact parts** (`mode=flow`):
+
+- per edge: `precision` (`exact` = backed by script steps · `approx` = call without a step anchor, e.g. `MBS("FM.RunScript")`) and, on `calls_script` edges, `callSites[]` sorted by step — `{ stepUuid, stepIndex, stepId, guard, conditions, ifDepth, inLoop, passesParam, resultReadAt[], unreachable, enabled }`. `guard` is the innermost enclosing branch `{ kind: if|elseif|else, level, stepIndex, calcUuid, text, textFull }` (`text` cut to 80 characters, `textFull` only when cut); `conditions` counts the enclosing If branches; `resultReadAt[]` are the step indexes that read the script result; `unreachable` marks a call after *Exit Script* / *Halt Script* in the same block; `enabled` appears only on disabled steps. Empty fields (null, false, 0, `[]`) are left out
+- per script node: `effects` — touch counters per role (`{ "sets_field": 4, "reads_field": 12, "navigates_to_layout": 2, … }`); `trace.effectsTotal` counts the distinct touch targets per role in the graph
+- `trace.blindSpots`: `{ dynamicCalls, unresolvedCalls, sites[] }` — every active call step without a static target, anchored at its script (`kind` `by_name` · `unresolved`, step, name formula, condition)
+- `trace.blindSpots.noDdr` (both modes): `{ files[], missingKinds[], reducedKinds[] }` — the touched files exported without DDR info (*Include details for analysis tools* off). Formula references are missing there: fields read in formulas, script parameters and results (`missingKinds`: `field_value_to_step`, `param_to_step`, `result_to_step`, `param_ctl_to_step`, `param_guards_step`, `variable_ctl_to_step`; `reducedKinds`: `field_to_calc`, `field_sql_select_to_step`, `field_sql_filter_to_step`, `field_guards_step`, `sink_display`), so `effects` undercount reads and data ways can end early. Empty arrays when no such file is touched. In `mode=data` every way through such a file carries `noDdr: true`
+- `trace.stats`: additionally `unresolvedCalls`, `disabledSteps` (left out, or followed with `include_disabled`), `conditionalCalls`, `ways` / `waysTotal` per direction and `truncatedBy` (`node_limit`, `ways_limit`)
+
+**Ways** — `trace.ways[]`, numbered per direction (`wayNo` from 1):
+
+```json
+{ "wayNo": 3, "wayId": "687437be92f8", "dir": "down", "kind": "cascade", "level": 1,
+  "target": "uuid::File", "parentWayId": null, "nDesc": 0, "precision": "exact",
+  "flags": { "conditions": 1, "cascade": true },
+  "event": "OnLayoutEnter", "eventOwner": "uuid::File",
+  "pathNodes": ["start::File", "step::File", "layout::File", "target::File"] }
+```
+
+- `dir: down` — one way per reached script and per call without a static target, as a breadth-first call tree: `parentWayId` is the way to the calling script, `nDesc` counts the subtree. `kind` describes the last hop: `call`, `cascade` (script trigger of an entered layout, `event` + `eventOwner`), `trigger` (script trigger of the start layout), `dynamic`. `pathNodes` holds only the section after the parent way (`pathPrefix` = `parentWayId`); the full path is the parent's path plus this section.
+- `dir: up` — one way per entry script, `kind: entry`, `pathNodes` from the entry script over the call steps to the start. `entryGroups[]` = `{ kind, event, n, nLayouts, layouts[], sample[] }` with `kind` `button` · `trigger` · `menu` · `file` · `root` (no caller) · `budget` (callers beyond `up_depth`) · `excluded`; `nEntries` sums them. Ways added by `expand_way` hang below the followed way (`parentWayId`); their section ends before the parent's entry script, which follows via `pathSuffix`, and `event` names the hop from the entered layout to the parent's entry script (`button_action`, `OnLayoutEnter`, …).
+- Path nodes are graph node IDs, call steps (`<stepUuid>::<file>`) and calls without a target (`<stepUuid>#dyncall::<file>`). Hops follow from the node types: script → step, step → script (call), step → layout (`Go to Layout`), layout → script (event). Labels of nodes outside the graph — steps (`#n Name`, `stepIndex`, `stepId`, call context `site`, owning `script`), capped scripts and layouts, entry objects and the `eventOwner` of trigger ways (the layout object, field or layout whose trigger starts the way; a layout object carries `open` = its layout) — are under `trace.refs`.
+- `flags` over the full path: `conditions` (hops whose call sites all sit under a condition — always present), and only when true `loop`, `server`, `param`, `crossFile`, `unreachable`, `cascade`. `precision` is the weakest hop (`dynamic` < `approx` < `exact`).
+- `trace.overview = { down: { byLevel, byKind }, up: { byLevel, byEntry } }` — head counts per level and kind.
+- `wayId` is stable across calls: the first 12 hex digits of `md5("flow|<dir>|<target>")` — a way keeps its ID when budgets or other ways change, its number may not.
+
+**Diagram formats.** `format=mermaid-raw` returns the Mermaid source of one way, `format=svg` the rendered SVG, `format=mermaid` an HTML page with the diagram; `way` picks the way in direction `way_dir`, `way=0` the overview (downward the script tree, upward entries → entry scripts → start). The diagram runs left to right: call steps are nodes, the edge to a call step carries the condition (`If …` / `Else If …` / `Else`), `↻` (loop), `×n` (several call sites) or `unreachable`; server calls are thick (`Server`), events and approximate calls dotted. A way number outside the trace answers `400` with `details = { way, way_dir, ways }`. `ways_mermaid=true` adds `trace.ways[].mermaid` + `mermaidIds` (Mermaid node ID → graph node ID or entry-group key) and `trace.overviewMermaid` / `overviewMermaidIds` (`{ down, up }`) to the JSON.
+
+### Data trace (`mode=data`, experimental)
+
+The data trace follows the **value** of a field or variable instead of a process: `dir=up` (origin) walks back to the write sites and their entries, `dir=down` (usage) forward to the readers, the fields written from them and the sinks. It walks the data-flow view `v_dataflow_edges` and is a static approximation — noise, boundaries and the solution profile are described in [Graph Explorer Data Trace](../../Wiki/Graph%20Explorer%20Data%20Trace.md). Parameters and response shape may still change.
+
+Start objects: **Field** and **Variable** (not Let variables). Parameters that only apply to `mode=data`:
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `dir` | enum | `up` | `up` = origin · `down` = usage |
+| `field_levels` | integer | `1` | Field-to-field transitions (1–10) |
+| `var_levels` | integer | `5` | Transitions over variables, parameters and results (1–10); an accumulating chain (`$x = $x & …`) counts once |
+| `step_limit` | integer | `150` | Steps per path (10–300) |
+| `call_context` | `0` · `1` | `1` | `1` pairs a script result with the calling step that passed the parameter; `0` connects every call site |
+| `include_control` | boolean | `false` | Control and guard edges (conditions, SQL filters, repetition) as leaves |
+| `include_sinks` | boolean | `true` | Usage only: display, sort, export, find, relationship and value list as sinks |
+| `include_reset` | boolean | `false` | Write steps with an empty value as ways of their own instead of `trace.resetGroup` |
+| `expand_way` | string | — | "Follow source": comma-separated way IDs whose source fields go one field level further |
+| `profile` | `on` · `off` | `on` | Apply the confirmed rules of the solution profile; `off` = generic view |
+| `start_step` | string | — | Variable start: step UUID of the anchor step |
+| `start_role` | `read` · `set` | derived | Variable start: the anchor step reads (origin at this reader) or sets the variable (sources resp. readers of this setter) |
+
+`node_limit`, `ways_limit`, `ways_mermaid`, `way` and `exclude` work as in the flow trace; `exclude` takes fields, scripts, steps and variables. The flow-trace budgets and switches (`up_depth`, `entry`, `include_disabled`, …) have no effect.
+
+**Response `data`** — subgraph shape plus:
+
+- per node: `flowRole` (`start` · `field` · `step` · `variable` · `param` · `calc` · `entry` · `sink` · `control`), `fieldLevel`, `varLevel`, `isLeaf`, `isPseudo` (blind-spot nodes such as a dynamic target), `profileStop` (the walk ended here because of a profile rule)
+- per edge: `flowKind` (the `Flow_Kind` of `v_dataflow_edges`, e.g. `step_writes_field`, `field_value_to_step`, `step_sets_variable`, `entry_input`), `flowClass` (`data` · `control` · `entry` · `sink`), `precision` (`exact` · `approx`)
+- `trace`: `{ mode, dir, start: { uuid, file, type, step }, excluded[], stats, blindSpots, ways[], resetGroup, usageGroups, overview, profile }`
+- `trace.stats`: `ways` / `waysTotal`, `resetWays`, `entries`, `reachedFields`, `maxFieldLevel`, `maxVarLevel`, `disabledSteps`, `contextOpen` (transitions without a known call site), the cut counters `cutFieldLevels`, `cutVarLevels`, `cutStepLimit` and `truncatedBy[]` (`field_levels` · `var_levels` · `step_limit` · `state_limit` · `node_limit` · `ways_limit`)
+- `trace.blindSpots`: `uninitialized` (local readers without a reaching setter), `dynamicWrites` (`Set Field By Name`, active field), `dynamicCalls`, `dynamicSql`, `approxEdges`, and `noDdr` as in the flow trace
+- `trace.ways[]`: `{ wayNo, wayId, level, field, writer, writerFlowKind, writerKind, isReset, parentWayId, precision, nEntries, entryGroups[], fields[], pathNodes[], pathEdges[] }` — one way per write site (origin) or read site (usage) of a field level; `writerKind` is `value` · `constant` · `reset` · `input` · `import`; `entryGroups[]` = `{ kind, event, n, nLayouts, layouts[], sample[] }` with `kind` `button` · `trigger` · `input` · `import` · `auto_enter` · `file` · `menu`; `fields[]` are the source fields (origin) or reached fields (usage) with the edge `via`; ways through a file without DDR info carry `noDdr: true`
+- `trace.resetGroup`: `{ n, ways[] }` — the reset write sites when `include_reset` is off
+- `trace.usageGroups[]` (usage): `{ kind, n, nSources, sample[] }` with `kind` `display` · `sort` · `export` · `find` · `navigate` · `relationship` · `valuelist` · `calc` · `writes` · `infrastructure`
+- `trace.overview`: `{ fields[], links[] }` — the field-to-field overview (way 0)
+- `trace.profile`: `{ enabled, hash, confirmed, orphaned, applied, candidates[] }` — `applied` counts what the profile changed on this trace (`technicalLayout`, `boundaryScript`, `uiStateVariable`, `hubVariable`, `hubReaders`); `candidates[]` are open profile candidates on this trace
+
+`format=mermaid-raw|svg|mermaid` with `way=<n>` returns one way as a diagram (`way=0` = overview); `way_dir` does not apply.
+
+Errors: `404 OBJECT_NOT_FOUND`, `409 AMBIGUOUS_UUID`, `409 SCHEMA_DRIFT` (the catalog is older than schema 1.43.0 — re-import the solution; details carry `db_schema_version`, `current_schema_version`, `missing`), `422 DATAFLOW_NOT_BUILT` (current schema, but the data-flow phase of the import failed), `422 TRACE_UNSUPPORTED_START` (start type without trace semantics in this mode; details name the supported types), `422 TRACE_EMPTY_ENTRY` (the chosen entry preset yields no seed scripts; details carry the available presets with seed counters).
+
+## GET /api/graph/trace/capability
+
+Whether the solution can serve the step-exact trace — clients ask once per solution and hide the trace instead of running into an error. Response `data`: `{ dataflow: "available" | "not_built" | "schema_drift", ddr: "all" | "partial" | "none" | "unknown", noDdrFiles: [] }` (`not_built` and `schema_drift` correspond to the errors `DATAFLOW_NOT_BUILT` and `SCHEMA_DRIFT` of `/graph/trace`). `ddr` is the DDR coverage of the solution — `partial`/`none` when files were exported without *Include details for analysis tools*, listed in `noDdrFiles`; traces through those files miss formula references (see `trace.blindSpots.noDdr`).
+
+## GET /api/graph/trace/profile
+
+The **solution profile** of the data trace (experimental, see [Graph Explorer Data Trace](../../Wiki/Graph%20Explorer%20Data%20Trace.md#solution-profile)): declarative rules the walk applies — `technical_layout`, `boundary_script`, `ui_state_variable`, `hub_variable` (`table_naming` is stored but has no effect yet) — and the candidates of the heuristics H1–H4. Stored per solution in `solutions/<id>/state/dataflow_profile.json`.
+
+Response `data`: `solution`, `file`, `exists`, `updatedAt`, `hash` (part of the trace cache key), `summary: { rules, confirmed, rejected, orphaned }`, `rules[]` (`kind`, `uuid` + `file` or `pattern`, `name`, `status` `confirmed` · `rejected`, `source` `H1`–`H4` · `manual`, `confirmed_at`, `key`, `acts`, `matches`, `orphaned`) and `heuristics: { H1…H4: { kind, open, confirmed, rejected, candidates[] } }` — each candidate with `key`, `name` or `pattern`, `metrics`, `sample[]`, `uncertain` and its `status`.
+
+## PUT /api/graph/trace/profile
+
+Confirms, rejects or removes rules. Body: `rules[]` (`kind`, `uuid` + `file` or `pattern`, `status` `confirmed` · `rejected` · `none` — `none` removes the rule and reopens the candidate; optional `name`, `source`, `note`) and/or `heuristic: { id: "H1"…"H4", status, except[], include_uncertain }` — a bulk decision over every open candidate of one heuristic except the listed keys. Only confirmed rules act in the walk; a rejected candidate does not come back. Response: the profile as in `GET` plus `changed`. Errors: `400 VALIDATION_ERROR` (unknown rule kind, pattern or UUID where the kind does not take it), `422 DATAFLOW_NOT_BUILT`.
 
 ## GET /api/graph/trace/entries
 

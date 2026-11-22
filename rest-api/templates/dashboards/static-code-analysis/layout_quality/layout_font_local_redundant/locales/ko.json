@@ -1,0 +1,20 @@
+{
+  "manifest": {
+    "title": "상속과 같은 로컬 글꼴",
+    "description": "레이아웃 품질 규칙 — 개체가 스타일이나 테마에서 어차피 받을 글꼴을 로컬로 설정합니다. 고유한 굵은 서체가 있는 글꼴에 굵게를 적용하면 FileMaker가 이 설정을 기록합니다(글꼴 패밀리가 굵은 서체의 PostScript 이름으로 저장됨). 지금은 아무것도 바꾸지 않지만 글꼴을 고정하므로 나중에 테마를 바꿔도 이 개체에는 적용되지 않습니다.",
+    "messages.redundant": "로컬 글꼴 {font}은(는) 개체가 어차피 상속하는 글꼴입니다"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "발견 항목",
+    "summary_kpi.props.items[1].label": "영향받는 레이아웃",
+    "findings_card.props.title": "상속과 같은 로컬 글꼴",
+    "findings_table.props.searchPlaceholder": "파일, 레이아웃, 개체 또는 글꼴 검색…",
+    "findings_table.props.empty.message": "상속 글꼴을 로컬로 반복하는 개체가 없습니다.",
+    "findings_table.props.columns[0].label": "파일",
+    "findings_table.props.columns[1].label": "레이아웃",
+    "findings_table.props.columns[2].label": "개체 유형",
+    "findings_table.props.columns[3].label": "개체",
+    "findings_table.props.columns[4].label": "글꼴",
+    "findings_table.props.columns[5].label": "PostScript 이름"
+  }
+}

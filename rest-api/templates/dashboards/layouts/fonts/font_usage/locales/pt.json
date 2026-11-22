@@ -1,0 +1,35 @@
+{
+  "manifest": {
+    "title": "Visão geral das fontes",
+    "description": "Quais fontes os layouts mostram: uma linha por fonte com seus usos, objetos, layouts, arquivos, tamanhos e origem — definida no objeto, por um estilo ou pelo tema. Os objetos cuja fonte fica a cargo do padrão do arquivo (o tema não nomeia nenhuma: Clássico, Minimalista) formam uma linha própria. Um clique em uma fonte abre os layouts que a mostram; arquivo, tema, tamanho e busca são mantidos."
+  },
+  "layout": {
+    "summary_kpistrip.props.items[0].label": "Fontes",
+    "summary_kpistrip.props.items[1].label": "Usos com nome de fonte",
+    "summary_kpistrip.props.items[2].label": "Layouts com nome de fonte",
+    "summary_kpistrip.props.items[3].label": "Arquivos com nome de fonte",
+    "summary_kpistrip.props.items[4].label": "Objetos sem fonte nomeada",
+    "search_input.props.placeholder": "Buscar fonte, layout, objeto ou campo…",
+    "file_select.props.label": "Arquivo",
+    "file_select.props.emptyOptionLabel": "Todos os arquivos",
+    "theme_select.props.label": "Tema",
+    "theme_select.props.emptyOptionLabel": "Todos os temas",
+    "size_select.props.label": "Tamanho",
+    "size_select.props.emptyOptionLabel": "Todos os tamanhos",
+    "fonts_card.props.title": "Fontes",
+    "fonts_table.props.columns[0].label": "Fonte",
+    "fonts_table.props.columns[0].valueLabels.#default": "Padrão do arquivo (fonte não incluída na exportação)",
+    "fonts_table.props.columns[1].label": "Usos",
+    "fonts_table.props.columns[2].label": "Objetos",
+    "fonts_table.props.columns[3].label": "Layouts",
+    "fonts_table.props.columns[4].label": "Arquivos",
+    "fonts_table.props.columns[5].label": "Tamanhos",
+    "fonts_table.props.columns[6].label": "Definida localmente",
+    "fonts_table.props.columns[7].label": "De um estilo",
+    "fonts_table.props.columns[8].label": "Do tema",
+    "fonts_table.props.columns[9].label": "Texto formatado e gráficos",
+    "fonts_table.props.empty.message": "Nenhum uso de fonte nesta seleção.",
+    "notes_card.props.title": "De onde vem uma fonte",
+    "notes_md.props.content": "**Origem da fonte base.** O FileMaker usa o primeiro valor definido:\n- *local* — definida no próprio objeto.\n- *local, igual à herdada* — definida no objeto, mas é a mesma fonte que ele receberia de qualquer forma. O FileMaker a grava quando *negrito* é aplicado a uma fonte com variante negrito própria; não é uma escolha deliberada.\n- *estilo* — o estilo aplicado ao objeto. Um estilo contém apenas o que altera; o resto vem do tema.\n- *tema* — o padrão do tema para o tipo de objeto, a parte do layout ou todos os campos.\n- *padrão do arquivo* — o tema não nomeia nenhuma fonte (Clássico, Minimalista). O FileMaker usa então um padrão do arquivo que a exportação XML não contém — o mesmo tema mostra Helvetica Neue em um arquivo e Arial em outro. Por isso a lista não nomeia fonte para esses objetos; verifique um objeto por arquivo no FileMaker.\n\n**Outros usos de fonte.** *Texto formatado* é uma parte de um texto formatada com o cursor; ela se soma à fonte base do objeto, o resto do texto a mantém. *Gráfico* é a fonte de uma área de texto de um gráfico (título, legenda, eixos, rótulos de dados); títulos de séries ficam de fora, mantêm a fonte do tema.\n\n**Contagem.** *Fontes* agrupa as grafias de uma fonte (`arial`, `Arial`). O padrão do arquivo não é uma fonte: não conta no número de fontes nem em *muitas fontes*. *Incerto*: o valor vem de uma regra da parte do layout (prioridade não verificada) ou o estilo aplicado não existe mais no tema.\n\n**Limites.** As fontes da formatação condicional não são listadas. O nome de uma fonte não diz se ela está instalada nos clientes."
+  }
+}

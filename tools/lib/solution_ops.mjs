@@ -228,16 +228,32 @@ class ZipWriter {
 
 const SKIP_SUFFIXES = ['.tmp', '.lock', '.wal'];
 
+// Files of state/ that belong to the solution, not to a run: they travel with
+// the package (the rest of state/ — locks, run records, logs — stays behind).
+const PORTABLE_STATE = new Set(['dataflow_profile.json']);
+
 /**
- * Package = manifest + catalog DB + annotations DB. Excludes the volatile state/
- * and (unless includeXml) the xml/ sources at the bundle top level, plus
- * temp/lock/WAL files anywhere. Symlinked directories are not followed.
+ * Package = manifest + catalog DB + annotations DB + the portable state files
+ * (PORTABLE_STATE, e.g. the data trace profile). Excludes the rest of the
+ * volatile state/ and (unless includeXml) the xml/ sources at the bundle top
+ * level, plus temp/lock/WAL files anywhere. Symlinked directories are not followed.
  */
 function collectFiles(solDir, includeXml) {
   const files = [];
   const walk = (dir, rel) => {
     const top = rel.length ? rel[0] : null;
-    if (top === 'state' || (top === 'xml' && !includeXml)) return;
+    if (top === 'xml' && !includeXml) return;
+    if (top === 'state') {
+      // only the portable files directly in state/, never its subfolders
+      if (rel.length > 1) return;
+      for (const name of [...PORTABLE_STATE].sort()) {
+        const full = path.join(dir, name);
+        try {
+          if (fs.lstatSync(full).isFile()) files.push({ full, arc: path.join(path.basename(solDir), 'state', name) });
+        } catch { /* not present */ }
+      }
+      return;
+    }
     const entries = fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1));
     const subdirs = [];
     for (const ent of entries) {

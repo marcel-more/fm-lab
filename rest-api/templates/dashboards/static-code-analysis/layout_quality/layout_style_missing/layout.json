@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "type": "Grid",
+    "props": {
+      "columns": 12,
+      "gap": 16
+    },
+    "children": [
+      {
+        "type": "Card",
+        "id": "summary_card",
+        "props": {
+          "span": 12,
+          "variant": "hero"
+        },
+        "data": {
+          "dataset": "summary"
+        },
+        "children": [
+          {
+            "type": "KPIStrip",
+            "id": "summary_kpi",
+            "props": {
+              "items": [
+                {
+                  "label": "Findings",
+                  "field": "finding_count",
+                  "format": "number"
+                },
+                {
+                  "label": "Missing styles",
+                  "field": "missing_styles",
+                  "format": "number"
+                },
+                {
+                  "label": "Affected layouts",
+                  "field": "affected_layouts",
+                  "format": "number"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "id": "findings_card",
+        "props": {
+          "span": 12,
+          "title": "Style missing from the theme",
+          "keepChildrenOnEmpty": true
+        },
+        "data": {
+          "dataset": "findings"
+        },
+        "children": [
+          {
+            "type": "Table",
+            "id": "findings_table",
+            "props": {
+              "rowKey": "row_key",
+              "density": "comfortable",
+              "sortable": true,
+              "searchable": true,
+              "pageParam": "page",
+              "searchParam": "q",
+              "sortParam": "sort",
+              "clientMode": true,
+              "searchPlaceholder": "Search file, layout, object, style or theme…",
+              "columns": [
+                {
+                  "field": "file_name",
+                  "label": "File"
+                },
+                {
+                  "field": "layout_name",
+                  "label": "Layout",
+                  "breakAt": "separators"
+                },
+                {
+                  "field": "object_type",
+                  "label": "Object type",
+                  "nowrap": true
+                },
+                {
+                  "field": "object_name",
+                  "label": "Object",
+                  "breakAt": "separators"
+                },
+                {
+                  "field": "style",
+                  "label": "Style"
+                },
+                {
+                  "field": "theme",
+                  "label": "Theme"
+                }
+              ],
+              "onRowClick": {
+                "action": "openObject",
+                "args": {
+                  "uuid": "{{nav_uuid}}",
+                  "type": "Layout",
+                  "file": "{{file_name}}",
+                  "ref": "{{object_uuid}}",
+                  "ref_src": "layout_style_missing",
+                  "ref_msgid": "missing",
+                  "ref_arg_style": "{{style}}",
+                  "ref_arg_theme": "{{theme}}"
+                }
+              },
+              "empty": {
+                "message": "Every applied style exists in its theme."
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

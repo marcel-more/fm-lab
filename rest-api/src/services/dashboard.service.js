@@ -10,6 +10,9 @@ const templateService = require('./template.service');
 const queryDiscovery = require('./query-discovery');
 const dashboardInventory = require('./dashboard-inventory');
 const paging = require('./paging.service');
+const systemParams = require('./system-params');
+const bundleSql = require('./bundle-sql');
+const markdownColumns = require('./markdown-columns');
 const dashboardI18nService = require('./dashboard-i18n.service');
 const { schemas: dashboardSchemas } = require('./dashboard-schemas');
 const { SCOPES, OUTPUT_TYPES, schemas: testsSchemas } = require('./tests-schemas');
@@ -729,17 +732,22 @@ function parseSourceUri(source) {
   };
 }
 
-async function loadBundleSql(bundle, relPath) {
+/**
+ * SQL of a bundle file with its `--#include` lines resolved (bundle-sql.js).
+ * The one loader for dataset execution and for the text checks of
+ * results.service / tests.service.
+ */
+async function composeBundleQuery(bundle, relPath) {
   // Absicherung gegen Traversal
   const normalized = path.normalize(relPath);
   if (normalized.startsWith('..') || path.isAbsolute(normalized)) {
     throw new Error(`Invalid bundle SQL path: ${relPath}`);
   }
-  const fullPath = path.join(bundle.dir, normalized);
-  if (!fullPath.startsWith(bundle.dir + path.sep)) {
-    throw new Error(`Bundle SQL path escapes bundle dir: ${relPath}`);
-  }
-  return fs.readFile(fullPath, 'utf-8');
+  return bundleSql.composeBundleSql(bundle.dir, normalized);
+}
+
+async function loadBundleSql(bundle, relPath) {
+  return (await composeBundleQuery(bundle, relPath)).sql;
 }
 
 // 1-Level BigInt-Konversion auf flachen Result-Rows. Timestamps/Date-Objekte aus
@@ -817,7 +825,8 @@ async function resolveApiSet(bundle, setId) {
 }
 
 async function runBundleQuery(ctx, bundle, relPath, params, datasetSpec = {}) {
-  const sqlTemplate = await loadBundleSql(bundle, relPath);
+  const composed = await composeBundleQuery(bundle, relPath);
+  const sqlTemplate = composed.sql;
   // Server paging (see paging.service): the page window comes from the request,
   // then the manifest (`pageSize`, `pageParam`, `searchParam`), then the generic
   // default. Datasets without the paging tail run unchanged.
@@ -842,7 +851,15 @@ async function runBundleQuery(ctx, bundle, relPath, params, datasetSpec = {}) {
     sortParam: datasetSpec.sortParam,
     sortColumns: datasetSpec.sortColumns,
   });
-  const result = await db.executeQuery(ctx, sql);
+  // Dataset SQL comes from a file: statement gate (config/database.js).
+  let result;
+  try {
+    result = await db.executeFileQuery(ctx, sql);
+  } catch (err) {
+    // `LINE n:` → file and line of the included fragment. The API-set CASE
+    // spans several lines and would shift the numbers — no mapping there.
+    throw sqlTemplate.includes(API_SET_PLACEHOLDER) ? err : bundleSql.annotateError(err, composed);
+  }
   return {
     data: convertBigInts(result.rows),
     meta: { source: `bundle:${relPath}`, ...result.meta },
@@ -2163,7 +2180,8 @@ async function runBuiltin(ctx, key, params) {
  * - requestParams (dashboard-weite Params aus der HTTP-Query) überschreiben
  */
 async function executeDataset(ctx, bundle, datasetSpec, requestParams = {}) {
-  const params = { ...(datasetSpec.params || {}), ...requestParams };
+  // System parameters (fmlab_*) last: reserved, a request cannot override them.
+  const params = systemParams.withSystemParams(ctx, { ...(datasetSpec.params || {}), ...requestParams });
   // Token-Substitution in der Source-URI: erlaubt z.B. "custom:{{query}}" im Manifest,
   // damit das `_generic`-Bundle das eigentliche Template per Param wählt.
   const resolvedSource = String(datasetSpec.source).replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (m, key) => {
@@ -2174,18 +2192,29 @@ async function executeDataset(ctx, bundle, datasetSpec, requestParams = {}) {
     throw createError('VALIDATION_ERROR', `Dataset source '${datasetSpec.source}' has empty reference after substitution`);
   }
 
+  let result;
   switch (scheme) {
     case 'bundle':
-      return runBundleQuery(ctx, bundle, ref, params, datasetSpec);
+      result = await runBundleQuery(ctx, bundle, ref, params, datasetSpec);
+      break;
     case 'custom':
-      return runCustomTemplate(ctx, ref, params);
+      result = await runCustomTemplate(ctx, ref, params);
+      break;
     case 'report':
-      return runReportTemplate(ctx, ref, params);
+      result = await runReportTemplate(ctx, ref, params);
+      break;
     case 'builtin':
-      return runBuiltin(ctx, ref, params);
+      result = await runBuiltin(ctx, ref, params);
+      break;
     default:
       throw createError('VALIDATION_ERROR', `Unknown dataset scheme: ${scheme}`);
   }
+  // Markdown columns → `<column>_html` (manifest `render`, markdown-columns.js).
+  if (datasetSpec.render) {
+    const rendered = markdownColumns.renderColumns(result.data, datasetSpec.render, undefined, datasetSpec.renderMaxRows);
+    result = { ...result, data: rendered.rows, meta: { ...result.meta, render: rendered.meta } };
+  }
+  return result;
 }
 
 /**
@@ -2282,5 +2311,6 @@ module.exports = {
   resolveFolderLabel,
   executeAllDatasets,
   executeSingleDataset,
+  loadBundleSql,
   clearCache,
 };

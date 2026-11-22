@@ -8,6 +8,7 @@ import { useCurrentFile } from '../lib/currentFileContext';
 import { buildObjectPath } from '../lib/navigation';
 import { FIELD_NAV_TYPES, SCRIPT_NAV_TYPES } from '../lib/layoutObjectNav';
 import { partLabel } from '../lib/layoutParts';
+import { STYLE_NONE } from '../lib/layoutFonts';
 import { ScriptViewer } from './ScriptViewer';
 import { CalcTokenList, normalizeCalcWhitespace } from './CalcTokenSpan';
 import { LayoutFormulaLine } from './LayoutFormulaLine';
@@ -890,6 +891,7 @@ const LayoutObjectPropsPanel: React.FC<{
 
   const b = loCtx.bounds ?? null;
   const parent = loCtx.parent ?? null;
+  const style = loCtx.style ?? null;
 
   return (
     <div
@@ -952,6 +954,38 @@ const LayoutObjectPropsPanel: React.FC<{
                 {t(`types:objectTypes.${parent.type}`, { defaultValue: parent.type ?? '' })}
                 {parent.name ? `: ${parent.name}` : ''}
               </Link>
+            </dd>
+          </>
+        )}
+        {style && (
+          <>
+            <dt>{t('detail:layoutObjectDetail.propStyle', { defaultValue: 'Style' })}</dt>
+            <dd title={[
+              style.name ? `${t('detail:layoutObjectDetail.styleClass', { defaultValue: 'Style class' })}: ${style.name}` : null,
+              style.theme ? `${t('detail:layoutObjectDetail.styleTheme', { defaultValue: 'Theme' })}: ${style.theme}` : null,
+            ].filter(Boolean).join(' · ') || undefined}>
+              {(() => {
+                const label = style.name
+                  ? (style.display || style.name)
+                  : (t('detail:layoutFontFilter.noStyle') as string);
+                // Link into the canvas filtered by this style — only where the
+                // canvas filter works (schema 1.45.0: ruleMissing is known).
+                return style.ruleMissing != null && loCtx.layoutUuid ? (
+                  <Link
+                    className="fm-field-link"
+                    to={buildObjectPath(loCtx.layoutUuid, null, file, { style: style.name ?? STYLE_NONE })}
+                    title={t('detail:layoutObjectDetail.styleShowInLayout', { defaultValue: 'Show all objects with this style in the layout' }) as string}
+                  >
+                    {label}
+                  </Link>
+                ) : label;
+              })()}
+              {style.isCustom && (
+                <span className="layoutobject-style-badge">{t('detail:layoutFontFilter.customStyle')}</span>
+              )}
+              {style.ruleMissing && (
+                <span className="layoutobject-style-warn" title={t('detail:layoutFontFilter.styleMissing') as string}> ⚠</span>
+              )}
             </dd>
           </>
         )}

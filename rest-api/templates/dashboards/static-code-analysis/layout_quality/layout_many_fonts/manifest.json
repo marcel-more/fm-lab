@@ -1,0 +1,99 @@
+{
+  "id": "layout_many_fonts",
+  "version": "1.1.0",
+  "title": "Layout with many fonts",
+  "description": "Layout-quality rule — the text objects of a layout show more fonts than the threshold (default 3). Every font counts: the base font of each object, formatted text runs with a font of their own and the text areas of charts; the default font of the file (theme names no font) does not count as a font. Many fonts on one layout usually mean styling object by object instead of through the theme.",
+  "author": "fm-lab rules",
+  "icon": "type",
+  "category": "layout_quality",
+  "tags": [
+    "rule",
+    "layout_quality",
+    "fonts"
+  ],
+  "entry": "layout.json",
+  "rule": {
+    "severity": "info",
+    "category": "layout_quality",
+    "rationale": "A layout reads calm with one or two fonts. Each further font is mostly a local override that a theme change does not touch, and on platforms without the font FileMaker substitutes another one.",
+    "remediation": "Move the fonts into the theme or into named styles and remove the local font settings; keep a second font only where it carries meaning (headings, monospace values).",
+    "meta": {
+      "name": "Layout with many fonts",
+      "author": "fm-lab rules",
+      "source": "fm-lab",
+      "url": null,
+      "description": "Layout-quality rule — the text objects of a layout show more fonts than the threshold (default 3).",
+      "created": "2026-11-21",
+      "references": [
+        {
+          "project": "fm-lab",
+          "rule": "Font and style analysis (schema 1.44.0)",
+          "url": null
+        }
+      ]
+    }
+  },
+  "analysis": {
+    "objectTypes": [
+      "Layout"
+    ],
+    "outputTypes": [
+      "count",
+      "findings-table"
+    ],
+    "scope": {
+      "supported": [
+        "solution",
+        "file",
+        "object",
+        "object-list",
+        "cluster"
+      ],
+      "anchor": "nav_uuid",
+      "mode": {
+        "findings": "native",
+        "summary": "native"
+      }
+    },
+    "defaultResult": {
+      "dataset": "summary",
+      "column": "finding_count",
+      "type": "number",
+      "name": "finding_count",
+      "meaning": "Number of findings — Layout with many fonts"
+    }
+  },
+  "datasets": [
+    {
+      "id": "summary",
+      "source": "bundle:data/summary.sql"
+    },
+    {
+      "id": "findings",
+      "source": "bundle:data/findings.sql",
+      "pageSize": 500
+    }
+  ],
+  "params": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": false,
+      "description": "Optional file filter (from the app-level filter)."
+    },
+    {
+      "name": "font_max",
+      "type": "number",
+      "required": false,
+      "sticky": true,
+      "description": "Threshold: a layout is reported when it shows more fonts than this (default 3). The file default is no font."
+    }
+  ],
+  "permissions": {
+    "read_only": true,
+    "allow_navigation": true
+  },
+  "messages": {
+    "many": "Layout shows {count} fonts: {fonts}"
+  }
+}

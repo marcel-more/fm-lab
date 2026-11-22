@@ -3,6 +3,7 @@ const dashboardI18nService = require('../services/dashboard-i18n.service');
 const environment = require('../config/environment');
 const solutionsConfig = require('../config/solutions');
 const { SUPPORTED_LANGUAGE_CODES, DEFAULT_LANGUAGE, resolveLanguage } = require('../config/languages');
+const { RESERVED_PREFIX } = require('../services/system-params');
 
 /**
  * Dashboard Controller
@@ -14,14 +15,15 @@ const { SUPPORTED_LANGUAGE_CODES, DEFAULT_LANGUAGE, resolveLanguage } = require(
  */
 
 /**
- * Query keys that are not forwarded to SQL templates as parameters.
+ * Query keys that are not forwarded to SQL templates as parameters. Keys with
+ * the system prefix `fmlab_` are set by the server (services/system-params.js).
  */
 const RESERVED_QUERY_PARAMS = new Set(['format', 'meta', 'debug', 'lang']);
 
 function extractDashboardParams(query) {
   const out = {};
   for (const [k, v] of Object.entries(query || {})) {
-    if (!RESERVED_QUERY_PARAMS.has(k)) {
+    if (!RESERVED_QUERY_PARAMS.has(k) && !k.startsWith(RESERVED_PREFIX)) {
       out[k] = v;
     }
   }

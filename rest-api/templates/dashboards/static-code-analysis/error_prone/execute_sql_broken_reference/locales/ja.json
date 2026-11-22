@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "参照先のない ExecuteSQL 参照",
+    "description": "エラーを招きやすいルール — ExecuteSQL 文で名前を指定したテーブルやフィールドがソリューションに存在しません：FROM/JOIN の名前がファイルのどのテーブルオカレンスとも一致しない、列がそのテーブルのどのフィールドとも一致しない、または SQL 内の計算式参照が削除されたフィールド（<Field Missing>）を指しています。FileMaker はエラーを報告しません。ExecuteSQL は ? を返し、呼び出し側のロジックは空または誤った値で処理を続けます。"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "検出数",
+    "summary_kpi.props.items[1].label": "対象ファイル数",
+    "summary_kpi.props.items[2].label": "スコープ内の SQL 参照",
+    "summary_kpi.props.items[3].label": "検証不可（動的）",
+    "findings_card.props.title": "参照先のない ExecuteSQL 参照",
+    "findings_table.props.searchPlaceholder": "ファイル、オブジェクト、名前を検索…",
+    "findings_table.props.empty.message": "参照先のない ExecuteSQL 参照は見つかりませんでした。",
+    "findings_table.props.columns[0].label": "ファイル",
+    "findings_table.props.columns[1].label": "オブジェクト",
+    "findings_table.props.columns[2].label": "種類",
+    "findings_table.props.columns[3].label": "ステップ",
+    "findings_table.props.columns[4].label": "関数",
+    "findings_table.props.columns[5].label": "句",
+    "findings_table.props.columns[6].label": "SQL 内の名前",
+    "findings_table.props.columns[7].label": "不具合"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "ExecuteSQL mit fest geschriebenem Namen",
+    "description": "Best-Practice-Regel — eine ExecuteSQL-Anweisung nennt ein Tabellenauftreten oder Feld als reinen Text im SQL-String, statt den Namen aus einer Feldreferenz zu bilden (GetFieldName oder ein Namens-Wrapper). Der Bezug funktioniert heute, aber FileMaker verfolgt ihn nicht: wer das Tabellenauftreten oder Feld umbenennt, bricht die Abfrage ohne jede Warnung — ExecuteSQL liefert dann ?."
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Treffer",
+    "summary_kpi.props.items[1].label": "Betroffene Dateien",
+    "summary_kpi.props.items[2].label": "Genannte Felder",
+    "summary_kpi.props.items[3].label": "Genannte Tabellenauftreten",
+    "findings_card.props.title": "ExecuteSQL mit fest geschriebenem Namen",
+    "findings_table.props.searchPlaceholder": "Datei, Objekt oder Name suchen…",
+    "findings_table.props.empty.message": "Kein fest geschriebener Name in ExecuteSQL gefunden.",
+    "findings_table.props.columns[0].label": "Datei",
+    "findings_table.props.columns[1].label": "Objekt",
+    "findings_table.props.columns[2].label": "Typ",
+    "findings_table.props.columns[3].label": "Schritt",
+    "findings_table.props.columns[4].label": "Funktion",
+    "findings_table.props.columns[5].label": "Klausel",
+    "findings_table.props.columns[6].label": "Name im SQL",
+    "findings_table.props.columns[7].label": "Ziel"
+  }
+}

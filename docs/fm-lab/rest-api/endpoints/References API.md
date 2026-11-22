@@ -62,7 +62,7 @@ This distinguishes e.g. a field that *hides* 52 layout objects (`reads_field` + 
 
 Both respect `limit` and `file` like the edge rows; graph, reference counts and candidates do not see them.
 
-`format=mermaid` / `mermaid-raw` render the reference set as a diagram — see [mermaid](../REST%20API%20Output%20Formats.md#mermaid-mermaid-raw).
+The reference rows carry no `source_uuid`/`target_uuid` columns, so `format=mermaid`, `mermaid-raw` and `svg` answer `422 DIAGRAM_ERROR` here — see [mermaid](../REST%20API%20Output%20Formats.md#mermaid-mermaid-raw-svg).
 
 ## GET /api/references/candidates
 

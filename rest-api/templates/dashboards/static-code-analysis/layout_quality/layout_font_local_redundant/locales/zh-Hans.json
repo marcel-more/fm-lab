@@ -1,0 +1,20 @@
+{
+  "manifest": {
+    "title": "本地字体与继承字体相同",
+    "description": "布局质量规则——对象在本地设置了一种它本来就会从样式或主题继承的字体。对带有独立粗体字形的字体应用粗体时，FileMaker 会写入这一设置（字体系列以粗体的 PostScript 名称保存）。目前它不改变任何东西，但会锁定字体：以后更换主题时，该对象不再随之改变。",
+    "messages.redundant": "本地字体 {font} 本来就是对象继承的字体"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "发现项",
+    "summary_kpi.props.items[1].label": "受影响的布局",
+    "findings_card.props.title": "本地字体与继承字体相同",
+    "findings_table.props.searchPlaceholder": "搜索文件、布局、对象或字体…",
+    "findings_table.props.empty.message": "没有对象在本地重复其继承的字体。",
+    "findings_table.props.columns[0].label": "文件",
+    "findings_table.props.columns[1].label": "布局",
+    "findings_table.props.columns[2].label": "对象类型",
+    "findings_table.props.columns[3].label": "对象",
+    "findings_table.props.columns[4].label": "字体",
+    "findings_table.props.columns[5].label": "PostScript 名称"
+  }
+}

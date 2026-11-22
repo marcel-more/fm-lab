@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "ExecuteSQL con nombre fijo",
+    "description": "Regla de buenas prácticas — una sentencia ExecuteSQL nombra una ocurrencia de tabla o un campo como texto plano en la cadena SQL, en lugar de construir el nombre a partir de una referencia de campo (GetFieldName o un envoltorio de nombres). La referencia funciona hoy, pero FileMaker no la rastrea: al renombrar la ocurrencia de tabla o el campo, la consulta se rompe sin aviso — ExecuteSQL devuelve entonces ?."
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Hallazgos",
+    "summary_kpi.props.items[1].label": "Archivos afectados",
+    "summary_kpi.props.items[2].label": "Campos nombrados",
+    "summary_kpi.props.items[3].label": "Ocurrencias de tabla nombradas",
+    "findings_card.props.title": "ExecuteSQL con nombre fijo",
+    "findings_table.props.searchPlaceholder": "Buscar archivo, objeto o nombre…",
+    "findings_table.props.empty.message": "No se encontró ningún nombre fijo en ExecuteSQL.",
+    "findings_table.props.columns[0].label": "Archivo",
+    "findings_table.props.columns[1].label": "Objeto",
+    "findings_table.props.columns[2].label": "Tipo",
+    "findings_table.props.columns[3].label": "Paso",
+    "findings_table.props.columns[4].label": "Función",
+    "findings_table.props.columns[5].label": "Cláusula",
+    "findings_table.props.columns[6].label": "Nombre en SQL",
+    "findings_table.props.columns[7].label": "Destino"
+  }
+}

@@ -17,6 +17,7 @@ import { CustomFunctionDetail } from './CustomFunctionDetail';
 import { GenericObjectDetail } from './GenericObjectDetail';
 import { LayoutObjectDetail } from './LayoutObjectDetail';
 import { LayoutPartDetail } from './LayoutPartDetail';
+import { ThemeDetail } from './ThemeDetail';
 import { ScriptTriggerDetail } from './ScriptTriggerDetail';
 import './CustomFunctionViewer.css';
 import './FieldViewer.css';
@@ -245,6 +246,9 @@ export const ObjectDetail: React.FC<ObjectDetailProps> = ({
   }
   if (objectType === 'LayoutPart') {
     return <LayoutPartDetail uuid={uuid} />;
+  }
+  if (objectType === 'Theme') {
+    return <ThemeDetail uuid={uuid} />;
   }
   if (objectType === 'Calculation') {
     return <CalculationDetail uuid={uuid} highlightRefUuids={highlightUuids} onLiveMatchCount={onLiveMatchCount} />;

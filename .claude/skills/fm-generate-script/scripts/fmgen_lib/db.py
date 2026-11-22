@@ -614,6 +614,40 @@ class Reference:
         return {r["lookup_name"].casefold(): r["canonical_name"] for r in rows}
 
     @lru_cache(maxsize=1)
+    def get_heads(self) -> set[str]:
+        """Casefolded heads of the Get family (`get`, `hole`, `obtenir`), taken
+        from the display_* whole forms of the getfunction rows — the engine
+        labels (`Last Error Detail`) carry no parenthesis and stay out."""
+        rows = self.db.query(
+            "SELECT DISTINCT lookup_name FROM function_name_lookup "
+            "WHERE chunk_role = 'getfunction' AND starts_with(match_source, 'display_')")
+        heads = {"get"}
+        for r in rows:
+            name = r["lookup_name"]
+            if "(" in name:
+                head = name.split("(", 1)[0].strip()
+                if head:
+                    heads.add(head.casefold())
+        return heads
+
+    @lru_cache(maxsize=1)
+    def function_renames(self) -> list[dict] | None:
+        """Legacy names of renamed functions / Get selectors (fm_spec 2.10.0):
+        rows {function_id, name_kind, language, legacy_name, current_name,
+        renamed_in_version, renamed_in_version_num, legacy_accepted,
+        legacy_accepted_version}. legacy_accepted: None = paste behaviour
+        untested, True = FileMaker still parses the legacy name, False =
+        FileMaker rejects it on paste (import log 1215, formula commented out;
+        paste probe in legacy_accepted_version).
+        None on older references — the callers stand down with a note."""
+        if not self.db.has_table("function_renames"):
+            return None
+        return self.db.query(
+            "SELECT function_id, name_kind, language, legacy_name, current_name, "
+            "renamed_in_version, renamed_in_version_num, legacy_accepted, legacy_accepted_version "
+            "FROM function_renames ORDER BY function_id, language")
+
+    @lru_cache(maxsize=1)
     def function_retirement_available(self) -> bool:
         """functions.removed_in_version exists since fm_spec 2.2.0 (361/367
         SetPersistentData/FindPersistentData = 26.0). Without the column the

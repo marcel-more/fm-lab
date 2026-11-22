@@ -5,7 +5,7 @@ The FM-Lab REST API provides programmatic access to the FileMaker object catalog
 - **Base URL:** `http://localhost:3003/api`
 - **Authentication:** none (local development server)
 - **Default response format:** JSON envelope (see [REST API Conventions](REST%20API%20Conventions.md))
-- **Alternative output formats:** 11 formats from `raw` to `mermaid` and `tokens` — see [REST API Output Formats](REST%20API%20Output%20Formats.md)
+- **Alternative output formats:** 12 formats from `raw` to `mermaid`, `svg` and `tokens` — see [REST API Output Formats](REST%20API%20Output%20Formats.md)
 - [Component location](../Wiki/Components.md#rest-api) inside the repo's [Folder structure](../Wiki/Folder%20structure.md)
 
 ## Quick start

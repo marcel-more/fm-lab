@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { LayoutObject } from '../hooks/useLayoutData';
@@ -27,6 +27,12 @@ type Props = {
   calcInventoryUrls?: Partial<Record<CalcCategoryKey, string>>;
   /** Appended to the inventory link title while a section filter is active. */
   inventoryScopeHint?: string;
+  /** Font and style row (details stage, own line before the actions). */
+  fontRow?: ReactNode;
+  /** Short pills of the active font and style filters (groups stage). */
+  fontPills?: ReactNode;
+  /** A filter outside types/calculations is active (font, style) — shows "reset filters". */
+  extraActive?: boolean;
 };
 
 type Category = {
@@ -75,6 +81,9 @@ export function LayoutTypeFilter({
   onToggleCalc,
   calcInventoryUrls,
   inventoryScopeHint,
+  fontRow,
+  fontPills,
+  extraActive = false,
 }: Props) {
   const { t } = useTranslation(['detail']);
   const palette = useLayoutObjectPalette();
@@ -103,7 +112,7 @@ export function LayoutTypeFilter({
     return { catCounts, eventNames: Array.from(events).sort() };
   }, [objects, fmtEvent]);
 
-  const hasAnyActive = activeTypes.size > 0 || activeCalc.size > 0;
+  const hasAnyActive = activeTypes.size > 0 || activeCalc.size > 0 || extraActive;
   const visibleCalcKeys = CALC_CATEGORY_KEYS.filter(k => (calcStats.catCounts.get(k) ?? 0) > 0);
 
   return (
@@ -214,6 +223,13 @@ export function LayoutTypeFilter({
           })}
         </div>
       )}
+      {detailsMode && fontRow && (
+        <>
+          <span className="layout-type-filter-break" aria-hidden="true" />
+          {fontRow}
+        </>
+      )}
+      {!detailsMode && fontPills}
       <div className="layout-type-filter-actions">
         <button
           type="button"

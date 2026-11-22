@@ -1,0 +1,35 @@
+{
+  "manifest": {
+    "title": "字体概览",
+    "description": "布局显示哪些字体：每种字体一行，列出使用次数、对象、布局、文件、大小及来源——在对象上设置、来自样式或来自主题。字体交由文件默认值决定的对象（主题未指定字体：经典、极简）单独成一行。点击字体会打开显示该字体的布局；文件、主题、大小和搜索会保留。"
+  },
+  "layout": {
+    "summary_kpistrip.props.items[0].label": "字体",
+    "summary_kpistrip.props.items[1].label": "有字体名称的使用",
+    "summary_kpistrip.props.items[2].label": "有字体名称的布局",
+    "summary_kpistrip.props.items[3].label": "有字体名称的文件",
+    "summary_kpistrip.props.items[4].label": "没有已命名字体的对象",
+    "search_input.props.placeholder": "搜索字体、布局、对象或字段…",
+    "file_select.props.label": "文件",
+    "file_select.props.emptyOptionLabel": "所有文件",
+    "theme_select.props.label": "主题",
+    "theme_select.props.emptyOptionLabel": "所有主题",
+    "size_select.props.label": "大小",
+    "size_select.props.emptyOptionLabel": "所有大小",
+    "fonts_card.props.title": "字体",
+    "fonts_table.props.columns[0].label": "字体",
+    "fonts_table.props.columns[0].valueLabels.#default": "文件默认值（导出中不含字体）",
+    "fonts_table.props.columns[1].label": "使用次数",
+    "fonts_table.props.columns[2].label": "对象",
+    "fonts_table.props.columns[3].label": "布局",
+    "fonts_table.props.columns[4].label": "文件",
+    "fonts_table.props.columns[5].label": "大小",
+    "fonts_table.props.columns[6].label": "本地设置",
+    "fonts_table.props.columns[7].label": "来自样式",
+    "fonts_table.props.columns[8].label": "来自主题",
+    "fonts_table.props.columns[9].label": "富文本和图表",
+    "fonts_table.props.empty.message": "此选择中没有字体使用。",
+    "notes_card.props.title": "字体的来源",
+    "notes_md.props.content": "**基础字体的来源。** FileMaker 采用第一个已设置的值：\n- *本地*——在对象本身上设置。\n- *本地，与继承相同*——在对象上设置，但与本来就会继承的字体相同。对带有独立粗体字形的字体应用*粗体*时，FileMaker 会写入它；这不是有意的选择。\n- *样式*——应用于对象的样式。样式只包含它更改的内容，其余来自主题。\n- *主题*——主题为对象类型、布局部件或所有字段设定的默认值。\n- *文件默认值*——主题根本未指定字体（经典、极简）。此时 FileMaker 使用文件的默认值，而 XML 导出中不包含该值——同一主题在一个文件中显示 Helvetica Neue，在另一个文件中显示 Arial。因此列表不为这些对象给出字体名称；请在 FileMaker 中每个文件检查一个对象。\n\n**其他字体使用。** *富文本*是用文本光标设置了格式的文本片段；它附加在对象的基础字体之上，其余文本保持基础字体。*图表*是图表文本区域（标题、图例、坐标轴、数据标签）的字体；系列标题已省略，它们保持主题字体。\n\n**计数。** *字体*将同一字体的不同写法（`arial`、`Arial`）合并。文件默认值不是字体：既不计入字体数，也不计入*字体较多*。*不确定*：该值来自布局部件规则（优先级未经验证），或所应用的样式在主题中已不存在。\n\n**限制。** 条件格式的字体未列出。字体名称不能说明该字体是否已安装在客户端上。"
+  }
+}

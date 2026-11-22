@@ -1,0 +1,21 @@
+{
+  "manifest": {
+    "title": "Lay-out met veel lettertypen",
+    "description": "Lay-outkwaliteitsregel — de tekstobjecten van een lay-out tonen meer lettertypen dan de drempel (standaard 3). Elk lettertype telt: het basislettertype van elk object, opgemaakte tekstdelen met een eigen lettertype en de tekstgebieden van grafieken; de standaard van het bestand (thema noemt geen lettertype) telt niet als lettertype. Veel lettertypen op één lay-out betekenen meestal opmaak per object in plaats van via het thema.",
+    "messages.many": "De lay-out toont {count} lettertypen: {fonts}"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Bevindingen",
+    "summary_kpi.props.items[1].label": "Betrokken bestanden",
+    "threshold_slider.props.label": "Meer lettertypen dan",
+    "threshold_slider.props.valueSuffix": " lettertypen",
+    "findings_card.props.title": "Lay-out met veel lettertypen",
+    "findings_table.props.searchPlaceholder": "Zoek bestand, lay-out of lettertype…",
+    "findings_table.props.empty.message": "Geen lay-out met meer lettertypen dan de drempel.",
+    "findings_table.props.columns[0].label": "Bestand",
+    "findings_table.props.columns[1].label": "Lay-out",
+    "findings_table.props.columns[2].label": "Lettertypen",
+    "findings_table.props.columns[3].label": "Benoemde lettertypen",
+    "findings_table.props.columns[4].label": "Objecten met bestandsstandaard"
+  }
+}

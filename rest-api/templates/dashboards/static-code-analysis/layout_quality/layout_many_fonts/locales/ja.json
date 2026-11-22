@@ -1,0 +1,21 @@
+{
+  "manifest": {
+    "title": "フォントの多いレイアウト",
+    "description": "レイアウト品質ルール — レイアウトのテキストオブジェクトが、しきい値（既定 3）より多くのフォントを表示しています。各オブジェクトの基本フォント、独自のフォントを持つ書式設定済みテキスト部分、グラフのテキスト領域がそれぞれ数えられます。ファイルの既定値（テーマがフォントを指定しない）はフォントとして数えません。フォントが多いのは、多くの場合テーマではなくオブジェクトごとに書式設定した結果です。",
+    "messages.many": "レイアウトに {count} 個のフォント: {fonts}"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "検出数",
+    "summary_kpi.props.items[1].label": "影響を受けるファイル",
+    "threshold_slider.props.label": "フォント数がこれより多い",
+    "threshold_slider.props.valueSuffix": " フォント",
+    "findings_card.props.title": "フォントの多いレイアウト",
+    "findings_table.props.searchPlaceholder": "ファイル、レイアウト、フォントを検索…",
+    "findings_table.props.empty.message": "しきい値より多いフォントを持つレイアウトはありません。",
+    "findings_table.props.columns[0].label": "ファイル",
+    "findings_table.props.columns[1].label": "レイアウト",
+    "findings_table.props.columns[2].label": "フォント数",
+    "findings_table.props.columns[3].label": "名前のあるフォント",
+    "findings_table.props.columns[4].label": "ファイルの既定値のオブジェクト"
+  }
+}

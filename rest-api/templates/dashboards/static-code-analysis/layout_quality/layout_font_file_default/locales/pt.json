@@ -1,0 +1,20 @@
+{
+  "manifest": {
+    "title": "Fonte deixada ao padrão do arquivo",
+    "description": "Regra de qualidade de layouts — objetos de texto de um layout mostram a fonte padrão do arquivo porque nem o objeto, nem seu estilo, nem o tema nomeiam uma fonte (Clássico e Minimalista não nomeiam nenhuma). Essa fonte não faz parte da exportação XML e difere entre arquivos: o mesmo tema mostra Helvetica Neue num arquivo e Arial em outro. Uma ocorrência por layout.",
+    "messages.file_default": "{count} de {total} objetos de texto mostram a fonte padrão do arquivo — o tema não nomeia fonte"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Ocorrências",
+    "summary_kpi.props.items[1].label": "Objetos com o padrão do arquivo",
+    "summary_kpi.props.items[2].label": "Arquivos afetados",
+    "findings_card.props.title": "Fonte deixada ao padrão do arquivo",
+    "findings_table.props.searchPlaceholder": "Buscar arquivo, layout ou tema…",
+    "findings_table.props.empty.message": "Nenhum layout deixa a fonte ao padrão do arquivo.",
+    "findings_table.props.columns[0].label": "Arquivo",
+    "findings_table.props.columns[1].label": "Layout",
+    "findings_table.props.columns[2].label": "Tema",
+    "findings_table.props.columns[3].label": "Objetos com o padrão do arquivo",
+    "findings_table.props.columns[4].label": "Objetos de texto"
+  }
+}

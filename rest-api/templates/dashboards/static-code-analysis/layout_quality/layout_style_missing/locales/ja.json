@@ -1,0 +1,21 @@
+{
+  "manifest": {
+    "title": "テーマにないスタイル",
+    "description": "レイアウト品質ルール — オブジェクトが、レイアウトのテーマに含まれないスタイルを指定しています。テーマのどのルールも、どの状態でもこのスタイルを持っていません。多くはテーマから削除されたカスタムスタイルか、レイアウトを別のテーマに切り替えたときに引き継がれなかったスタイルです。インスペクタにはスタイル名が表示されたままですが、テーマにはそのルールがありません。",
+    "messages.missing": "スタイル {style} はテーマ {theme} に存在しません"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "検出数",
+    "summary_kpi.props.items[1].label": "存在しないスタイル",
+    "summary_kpi.props.items[2].label": "影響を受けるレイアウト",
+    "findings_card.props.title": "テーマにないスタイル",
+    "findings_table.props.searchPlaceholder": "ファイル、レイアウト、オブジェクト、スタイル、テーマを検索…",
+    "findings_table.props.empty.message": "適用されたスタイルはすべてテーマに存在します。",
+    "findings_table.props.columns[0].label": "ファイル",
+    "findings_table.props.columns[1].label": "レイアウト",
+    "findings_table.props.columns[2].label": "オブジェクトの種類",
+    "findings_table.props.columns[3].label": "オブジェクト",
+    "findings_table.props.columns[4].label": "スタイル",
+    "findings_table.props.columns[5].label": "テーマ"
+  }
+}

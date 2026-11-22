@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "Référence ExecuteSQL sans cible",
+    "description": "Règle sujette aux erreurs — une table ou une rubrique nommée dans une instruction ExecuteSQL qui n'existe pas dans la solution : le nom dans FROM/JOIN ne correspond à aucune occurrence de table du fichier, une colonne à aucune rubrique de sa table, ou une référence de formule dans le SQL pointe vers une rubrique supprimée (<Field Missing>). FileMaker ne signale aucune erreur : ExecuteSQL renvoie simplement ? et la logique appelante travaille avec une valeur vide ou erronée."
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Résultats",
+    "summary_kpi.props.items[1].label": "Fichiers concernés",
+    "summary_kpi.props.items[2].label": "Références SQL dans le périmètre",
+    "summary_kpi.props.items[3].label": "Non vérifiables (dynamiques)",
+    "findings_card.props.title": "Référence ExecuteSQL sans cible",
+    "findings_table.props.searchPlaceholder": "Rechercher un fichier, un objet ou un nom…",
+    "findings_table.props.empty.message": "Aucune référence ExecuteSQL sans cible trouvée.",
+    "findings_table.props.columns[0].label": "Fichier",
+    "findings_table.props.columns[1].label": "Objet",
+    "findings_table.props.columns[2].label": "Type",
+    "findings_table.props.columns[3].label": "Étape",
+    "findings_table.props.columns[4].label": "Fonction",
+    "findings_table.props.columns[5].label": "Clause",
+    "findings_table.props.columns[6].label": "Nom dans le SQL",
+    "findings_table.props.columns[7].label": "Défaut"
+  }
+}

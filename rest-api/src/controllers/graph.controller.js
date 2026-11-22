@@ -30,6 +30,43 @@ async function assertFocusResolvable(ctx, focus, focusFile) {
   }
 }
 
+/** Formats drawn as a diagram (mermaid formatter family). */
+const DIAGRAM_FORMATS = new Set(['mermaid', 'mermaid-raw', 'svg']);
+
+/**
+ * One way of a trace as Mermaid source, SVG or HTML page — data trace (one
+ * direction) or flow trace (ways numbered per direction, `wayDir`).
+ * @param {Object} payload - trace payload (data trace built with labelsAll)
+ * @param {number} wayNo - 0 = overview
+ * @param {string} format - mermaid | mermaid-raw | svg
+ * @param {string} [wayDir] - flow trace: 'down' (calls) | 'up' (reached from)
+ */
+async function renderTraceWay(payload, wayNo, format, wayDir = 'down') {
+  const { buildTraceWayMermaid } = require('../services/graph-trace-mermaid');
+  const flow = payload.trace.mode === 'flow';
+  const built = buildTraceWayMermaid(payload, wayNo, { dir: wayDir });
+  if (!built) {
+    const n = flow
+      ? payload.trace.ways.filter((w) => w.dir === wayDir).length
+      : payload.trace.ways.length;
+    throw createError(
+      'VALIDATION_ERROR',
+      `Way ${wayNo} is not part of this trace (ways 1..${n}${flow ? ` in direction ${wayDir}` : ''}, 0 = overview)`,
+      flow ? { way: wayNo, way_dir: wayDir, ways: n } : { way: wayNo, ways: n }
+    );
+  }
+  if (format === 'mermaid-raw') return built.text;
+  if (format === 'svg') return require('../formatters/mermaid/svg').renderSvg(built.text);
+  const { buildHtmlPage } = require('../formatters/mermaid/html');
+  const focus = payload.nodes.find((n) => n.isFocus);
+  const dirText = flow
+    ? (wayDir === 'up' ? 'reached from' : 'calls')
+    : (payload.trace.dir === 'down' ? 'usage' : 'origin');
+  const title = `${focus ? focus.label : payload.start} · ${dirText}`
+    + (wayNo === 0 ? ' · overview' : ` · way ${wayNo}`);
+  return buildHtmlPage(built.text, { title, theme: 'default' });
+}
+
 /** GET /api/graph/subgraph */
 async function getSubgraph(req, res, next) {
   try {
@@ -79,11 +116,41 @@ async function getTrace(req, res, next) {
     const startType = await graphService.objectTypeOf(
       req.solutionContext, req.query.start, req.query.start_file
     );
+
+    // Datenfluss-Trace (mode=data): Startobjekt Feld oder Variable (ohne
+    // Schritt-Anker); 422 DATAFLOW_NOT_BUILT bzw. 409 SCHEMA_DRIFT kommen aus dem
+    // Service, wenn die Datenfluss-Tabellen fehlen.
+    if (req.query.mode === 'data') {
+      if (startType !== 'Field' && startType !== 'Variable') {
+        throw createError(
+          'TRACE_UNSUPPORTED_START',
+          `Trace mode 'data' supports Field and Variable starts; '${req.query.start}' is a ${startType}`,
+          { start: req.query.start, type: startType, mode: 'data', supported: ['Field', 'Variable'] }
+        );
+      }
+      const diagram = DIAGRAM_FORMATS.has(format);
+      const { payload, sql } = await graphService.getDataTrace(
+        req.solutionContext, req.query, { labelsAll: diagram, startType }
+      );
+      const metaInfo = meta
+        ? { start: payload.start, mode: 'data', dir: payload.trace.dir, ...payload.stats, truncated: payload.truncated }
+        : null;
+      if (diagram) {
+        const body = await renderTraceWay(payload, req.query.way ?? 0, format);
+        return sendFormatted(res, body, format, metaInfo, debug ? sql : null);
+      }
+      return sendFormatted(res, payload, format, metaInfo, debug ? sql : null);
+    }
+
     if (startType !== 'Script' && startType !== 'Layout') {
       throw createError(
         'TRACE_UNSUPPORTED_START',
-        `Trace v1 supports Script and Layout starts; '${req.query.start}' is a ${startType}`,
-        { start: req.query.start, type: startType, supported: ['Script', 'Layout'] }
+        startType === 'Field'
+          ? `Trace mode 'flow' supports Script and Layout starts; use mode=data for a Field`
+          : startType === 'Variable'
+          ? `Trace mode 'flow' supports Script and Layout starts; use mode=data for a Variable`
+          : `Trace mode 'flow' supports Script and Layout starts; '${req.query.start}' is a ${startType}`,
+        { start: req.query.start, type: startType, mode: 'flow', supported: ['Script', 'Layout'] }
       );
     }
 
@@ -106,6 +173,11 @@ async function getTrace(req, res, next) {
     const metaInfo = meta
       ? { start: payload.start, entry: payload.trace.entry, ...payload.stats, truncated: payload.truncated }
       : null;
+    // Diagrammformate je Weg: way = Nummer in Richtung way_dir, 0 = Übersicht
+    if (DIAGRAM_FORMATS.has(format)) {
+      const body = await renderTraceWay(payload, req.query.way ?? 0, format, req.query.way_dir ?? 'down');
+      return sendFormatted(res, body, format, metaInfo, debug ? sql : null);
+    }
     return sendFormatted(res, payload, format, metaInfo, debug ? sql : null);
   } catch (error) {
     next(error);
@@ -126,7 +198,7 @@ async function getTraceEntries(req, res, next) {
       );
       throw createError(
         'TRACE_UNSUPPORTED_START',
-        `Trace v1 supports Script and Layout starts; '${req.query.start}' is a ${startType}`,
+        `The trace entry presets support Script and Layout starts; '${req.query.start}' is a ${startType}`,
         { start: req.query.start, type: startType, supported: ['Script', 'Layout'] }
       );
     }
@@ -260,7 +332,59 @@ async function recluster(req, res, next) {
   }
 }
 
+/** GET /api/graph/trace/profile — Lösungsprofil (Regeln, Kandidaten H1–H4) */
+async function getTraceProfile(req, res, next) {
+  try {
+    await graphService.assertDataflowAvailable(req.solutionContext);
+    const profile = require('../services/dataflow-profile.service');
+    return sendFormatted(res, await profile.describeProfile(req.solutionContext), 'json');
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * GET /api/graph/trace/capability — Fähigkeit der Lösung für den Datenfluss-Trace.
+ * Fehlende Tabellen sind hier kein Fehler, sondern ein Zustand: `not_built`
+ * (Phase beim Import fehlgeschlagen, sonst 422 DATAFLOW_NOT_BUILT) bzw.
+ * `schema_drift` (älteres Schema, sonst 409 SCHEMA_DRIFT). `ddr`: all · partial ·
+ * none · unknown, dazu `noDdrFiles` (Dateien ohne DDR-Info).
+ */
+async function getTraceCapability(req, res, next) {
+  try {
+    let dataflow = 'available';
+    try {
+      await graphService.assertDataflowAvailable(req.solutionContext);
+    } catch (err) {
+      if (err.code === 'DATAFLOW_NOT_BUILT') dataflow = 'not_built';
+      else if (err.code === 'SCHEMA_DRIFT') dataflow = 'schema_drift';
+      else throw err;
+    }
+    // DDR coverage (all / partial / none): without DDR info formula references
+    // are missing, so data-trace ways through those files can end early.
+    const { state: ddr, noDdr } = await require('../services/ddr-coverage').loadDdrCoverage(req.solutionContext);
+    return sendFormatted(res, { dataflow, ddr, noDdrFiles: noDdr }, 'json');
+  } catch (error) {
+    next(error);
+  }
+}
+
+/** PUT /api/graph/trace/profile — Regeln setzen / Sammelbestätigung je Heuristik */
+async function putTraceProfile(req, res, next) {
+  try {
+    await graphService.assertDataflowAvailable(req.solutionContext);
+    const profile = require('../services/dataflow-profile.service');
+    const result = await profile.updateProfile(req.solutionContext, req.body);
+    return sendFormatted(res, result, 'json');
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
+  getTraceProfile,
+  putTraceProfile,
+  getTraceCapability,
   getSubgraph,
   getNeighbors,
   getTrace,

@@ -1,0 +1,20 @@
+{
+  "manifest": {
+    "title": "Lokale Schrift gleich der geerbten",
+    "description": "Layout-Qualitätsregel — ein Objekt setzt lokal eine Schrift, die es aus Stil oder Design ohnehin bekäme. FileMaker schreibt eine solche Einstellung, wenn fett auf eine Schrift mit eigenem Fett-Schnitt angewendet wird (die Familie wird mit dem PostScript-Namen des Fett-Schnitts gespeichert). Heute ändert sie nichts, aber sie hält die Schrift fest: Ein späterer Design-Wechsel erreicht das Objekt nicht mehr.",
+    "messages.redundant": "Die lokale Schrift {font} erbt das Objekt ohnehin"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Treffer",
+    "summary_kpi.props.items[1].label": "Betroffene Layouts",
+    "findings_card.props.title": "Lokale Schrift gleich der geerbten",
+    "findings_table.props.searchPlaceholder": "Datei, Layout, Objekt oder Schrift suchen…",
+    "findings_table.props.empty.message": "Kein Objekt wiederholt seine geerbte Schrift lokal.",
+    "findings_table.props.columns[0].label": "Datei",
+    "findings_table.props.columns[1].label": "Layout",
+    "findings_table.props.columns[2].label": "Objekttyp",
+    "findings_table.props.columns[3].label": "Objekt",
+    "findings_table.props.columns[4].label": "Schrift",
+    "findings_table.props.columns[5].label": "PostScript-Name"
+  }
+}

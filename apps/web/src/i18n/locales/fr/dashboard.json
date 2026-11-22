@@ -394,5 +394,25 @@
     "clear": "Afficher toute la solution",
     "clearTitle": "Retirer la portée et afficher toute la solution",
     "hint": "Les chiffres et les listes ne montrent que cette portée"
+  },
+  "mermaid": {
+    "error": "Le diagramme n’a pas pu être dessiné",
+    "tooLarge": "Le diagramme est trop grand pour être dessiné",
+    "position": "ligne {{line}}, colonne {{column}}"
+  },
+  "ask": {
+    "title": "Choisir",
+    "cancel": "Annuler",
+    "needsSelection": "Sélectionnez d’abord une ligne",
+    "notForChoice": "Indisponible avec ce choix."
+  },
+  "download": {
+    "empty": "Rien à exporter.",
+    "noDataset": "Les données « {{detail}} » ne sont pas chargées sur cette page.",
+    "noSelection": "Sélectionnez d’abord une ligne.",
+    "tooLarge": "Le fichier est trop volumineux pour être téléchargé (plus de 20 Mo).",
+    "svgOneRow": "Un SVG contient exactement un diagramme : choisissez d’abord une entrée.",
+    "renderFailed": "Le diagramme n’a pas pu être dessiné : {{detail}}",
+    "diagramError": "Diagramme impossible à dessiner : {{detail}}"
   }
 }

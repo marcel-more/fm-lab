@@ -1,0 +1,20 @@
+{
+  "manifest": {
+    "title": "Font locale uguale all'ereditato",
+    "description": "Regola di qualità dei formati — un oggetto imposta localmente un font che riceverebbe comunque dal suo stile o dal tema. FileMaker scrive questa impostazione quando si applica il grassetto a un font con una propria variante grassetto (la famiglia viene salvata con il nome PostScript del grassetto). Oggi non cambia nulla, ma fissa il font: un successivo cambio di tema non raggiunge più l'oggetto.",
+    "messages.redundant": "L'oggetto eredita comunque il font locale {font}"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Risultati",
+    "summary_kpi.props.items[1].label": "Formati interessati",
+    "findings_card.props.title": "Font locale uguale all'ereditato",
+    "findings_table.props.searchPlaceholder": "Cerca file, formato, oggetto o font…",
+    "findings_table.props.empty.message": "Nessun oggetto ripete localmente il font ereditato.",
+    "findings_table.props.columns[0].label": "File",
+    "findings_table.props.columns[1].label": "Formato",
+    "findings_table.props.columns[2].label": "Tipo di oggetto",
+    "findings_table.props.columns[3].label": "Oggetto",
+    "findings_table.props.columns[4].label": "Font",
+    "findings_table.props.columns[5].label": "Nome PostScript"
+  }
+}

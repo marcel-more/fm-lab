@@ -25,34 +25,47 @@ const solutions = require('../config/solutions');
 // ── Aktuell erwartete Schema-Version (aus dem Extract-Template-Header) ─────────
 // Autoritative Quelle: `-- @SCHEMA_VERSION x.y.z` in convert_xml_01_extract.sql.
 // (version.json ist ein generiertes Manifest und kann veralten — daher NICHT als
-// Quelle genutzt.) Einmal gelesen und gecacht; der Header ändert sich nur mit
-// einem Deploy, der ohnehin einen API-Neustart bedeutet.
+// Quelle genutzt.) Gecacht je Datei und Änderungszeit: ein Schema-Wechsel im
+// Template (Update, Entwicklung) gilt ohne API-Neustart. Gelesen wird nur bei
+// einem Binder-/Catalog-Fehler, der stat-Aufruf kostet dort nichts.
 let cachedCurrentVersion; // undefined = noch nicht versucht, null = nicht lesbar
+let cachedStamp = null;   // "<pfad>|<mtimeMs>" des Headers, aus dem gelesen wurde
 const REST_API_ROOT = path.resolve(__dirname, '../../');
 
-function currentSchemaVersion() {
-  if (cachedCurrentVersion !== undefined) return cachedCurrentVersion;
-  cachedCurrentVersion = null;
+function schemaHeaderCandidates() {
   // Kandidatenpfade in Vorrang-Reihenfolge: der kanonische Extract-Header zuerst
   // (env-Override CONVERT_XML_SCRIPT kann in Dev-Setups auf einen veralteten Pfad
   // zeigen und wird daher nur als Fallback herangezogen).
   const projectRoot = path.resolve(REST_API_ROOT, '..');
-  const candidates = [
+  return [
     path.join(projectRoot, 'ingestion', 'sql', 'convert_xml_01_extract.sql'),
     path.resolve(REST_API_ROOT, environment.xml.convertScript),
   ];
-  for (const sqlPath of candidates) {
+}
+
+function currentSchemaVersion() {
+  for (const sqlPath of schemaHeaderCandidates()) {
+    let stamp;
+    try {
+      stamp = `${sqlPath}|${fs.statSync(sqlPath).mtimeMs}`;
+    } catch {
+      continue; // nächsten Kandidaten versuchen
+    }
+    if (stamp === cachedStamp && cachedCurrentVersion !== undefined) return cachedCurrentVersion;
     try {
       const header = fs.readFileSync(sqlPath, 'utf-8').slice(0, 4096);
       const m = header.match(/^--\s*@SCHEMA_VERSION\s+([\d.]+)/m);
       if (m) {
+        cachedStamp = stamp;
         cachedCurrentVersion = m[1];
-        break;
+        return cachedCurrentVersion;
       }
     } catch {
       // nächsten Kandidaten versuchen; scheitern alle → „unbekannt" (siehe classify).
     }
   }
+  cachedStamp = null;
+  cachedCurrentVersion = null;
   return cachedCurrentVersion;
 }
 

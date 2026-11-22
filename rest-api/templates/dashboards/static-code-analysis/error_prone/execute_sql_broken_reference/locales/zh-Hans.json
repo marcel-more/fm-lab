@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "title": "无目标的 ExecuteSQL 引用",
+    "description": "易错规则 — ExecuteSQL 语句中命名的表或字段在解决方案中不存在：FROM/JOIN 中的名称与文件中的任何表实例都不匹配，某列与其表中的任何字段都不匹配，或 SQL 中的公式引用指向已删除的字段（<Field Missing>）。FileMaker 不会报告任何错误：ExecuteSQL 只返回 ?，调用逻辑会继续使用空值或错误的值。"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "发现数",
+    "summary_kpi.props.items[1].label": "受影响文件",
+    "summary_kpi.props.items[2].label": "范围内的 SQL 引用",
+    "summary_kpi.props.items[3].label": "无法验证（动态）",
+    "findings_card.props.title": "无目标的 ExecuteSQL 引用",
+    "findings_table.props.searchPlaceholder": "搜索文件、对象或名称…",
+    "findings_table.props.empty.message": "未发现无目标的 ExecuteSQL 引用。",
+    "findings_table.props.columns[0].label": "文件",
+    "findings_table.props.columns[1].label": "对象",
+    "findings_table.props.columns[2].label": "类型",
+    "findings_table.props.columns[3].label": "步骤",
+    "findings_table.props.columns[4].label": "函数",
+    "findings_table.props.columns[5].label": "子句",
+    "findings_table.props.columns[6].label": "SQL 中的名称",
+    "findings_table.props.columns[7].label": "缺陷"
+  }
+}

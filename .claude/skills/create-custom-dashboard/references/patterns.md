@@ -169,6 +169,48 @@ KPI semantics, filter behaviour, classification rules there), `KPIStrip` /
 `DefinitionList` without clicks.
 **Reference:** the closing Notes card in `external_apis`.
 
+## P7 — Master-detail (select a row, see its details)
+
+**Intent signals:** "pick one of these and show its diagram / explanation",
+a list of items whose details are too large for table columns, several views
+of the same item (simple / technical).
+**Building blocks:**
+- one dataset with one row per item and **all** detail columns, every view
+  included (`mermaid_simple`, `mermaid_tech`, `text_html`, …);
+- master: `Table` with `selectionKey`, `selectField`, `selectionDefault: "first"`,
+  `selectionToggle: false`;
+- detail: `Card` with `data.selection` → children (`Mermaid`, `HtmlContent`,
+  `DefinitionList`) read the selected row;
+- optional view switch: `FilterChips` with `channel` + `default`, the variants as
+  sibling nodes with `visibleWhen: { "selection": "<channel>", "equals": … }`.
+Row clicks and view switches fetch nothing. Keep the payload in check (measure
+the dataset; tens of KB per row are fine, many MB are not).
+
+**Export (optional):** a `NavButton` (`variant: "button"`, in a `Row` with
+`justify: "space-between"` next to the KPI strip or the view chips) with
+`onClick: downloadFile` + `ask` ("all" / "only the selected one") exports the
+same columns the page shows — e.g. the Markdown column and the Mermaid text
+inside a ```` ```mermaid ```` fence. Add `ask.choice` for the format: Markdown
+(the base `args`), HTML (`document: true`, `{{ mermaid | svg }}` and the
+`*_html` column) and SVG (`{{ mermaid | svg }}`, `onlyWith: ["one"]`) — see
+`primitives.md` → `ask.choice`. One export button per view, each with `visibleWhen` on the view channel,
+keeps the content of the current view.
+
+```json
+{ "type": "Card", "id": "ways_card", "props": { "span": 4 }, "data": { "dataset": "ways" },
+  "children": [ { "type": "Table", "id": "ways_table", "props": {
+    "selectionKey": "way", "selectField": "way_no",
+    "selectionDefault": "first", "selectionToggle": false,
+    "columns": [ { "field": "title", "label": "Way" } ] } } ] },
+{ "type": "Card", "id": "detail_card", "props": { "span": 8 },
+  "data": { "dataset": "ways", "selection": { "channel": "way", "key": "way_no" } },
+  "children": [
+    { "type": "Mermaid", "id": "detail_simple", "props": { "field": "mermaid_simple" },
+      "visibleWhen": { "selection": "view", "equals": "simple" } },
+    { "type": "Mermaid", "id": "detail_tech", "props": { "field": "mermaid_tech" },
+      "visibleWhen": { "selection": "view", "equals": "tech" } } ] }
+```
+
 ---
 
 ## Intent → pattern matrix (step 3, stage 1 — bundle form)
@@ -181,6 +223,7 @@ KPI semantics, filter behaviour, classification rules there), `KPIStrip` /
 | to toggle classifications / hide noise / thresholds | P4 on top of P1–P3 |
 | many independent checks at once | P5 (each facet P1) |
 | numbers/explanation only, no navigation | P6 (justify skipping I1) |
+| pick an item and see its diagram / long explanation | P7 |
 
 ## Shape → primitive (step 3, stage 2)
 

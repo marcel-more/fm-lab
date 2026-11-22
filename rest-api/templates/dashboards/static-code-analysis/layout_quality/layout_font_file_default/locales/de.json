@@ -1,0 +1,20 @@
+{
+  "manifest": {
+    "title": "Schrift dem Datei-Standard überlassen",
+    "description": "Layout-Qualitätsregel — Textobjekte eines Layouts zeigen den Standard der Datei, weil weder das Objekt noch sein Stil noch das Design eine Schrift nennt (Klassisch und Minimalistisch nennen keine). Diese Schrift steht nicht im XML-Export und unterscheidet sich zwischen Dateien: dasselbe Design zeigt in einer Datei Helvetica Neue, in einer anderen Arial. Ein Treffer je Layout.",
+    "messages.file_default": "{count} von {total} Textobjekten zeigen den Standard der Datei — das Design nennt keine Schrift"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Treffer",
+    "summary_kpi.props.items[1].label": "Objekte mit Datei-Standard",
+    "summary_kpi.props.items[2].label": "Betroffene Dateien",
+    "findings_card.props.title": "Schrift dem Datei-Standard überlassen",
+    "findings_table.props.searchPlaceholder": "Datei, Layout oder Design suchen…",
+    "findings_table.props.empty.message": "Kein Layout überlässt seine Schrift dem Datei-Standard.",
+    "findings_table.props.columns[0].label": "Datei",
+    "findings_table.props.columns[1].label": "Layout",
+    "findings_table.props.columns[2].label": "Design",
+    "findings_table.props.columns[3].label": "Objekte mit Datei-Standard",
+    "findings_table.props.columns[4].label": "Textobjekte"
+  }
+}

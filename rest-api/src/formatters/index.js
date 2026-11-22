@@ -34,23 +34,27 @@ const formatters = {
 /**
  * Format data using the specified formatter
  * @param {Array|Object} data - Data to format
- * @param {string} format - Format type (json, raw, text, short, detailed, html, markdown, mermaid, mermaid-raw)
+ * @param {string} format - Format type (json, raw, text, short, detailed, html, markdown, mermaid, mermaid-raw, svg)
  * @param {Object} options - Formatter options (for formatters that support options)
- * @returns {*} Formatted data
+ * @returns {*} Formatted data — a Promise for `svg`
  */
 function format(data, formatType = 'json', options = {}) {
   // Normalize format to lowercase for case-insensitive lookup
   const normalizedFormat = formatType.toLowerCase();
 
-  // Special handling for mermaid-raw: use mermaid formatter with raw: true option
+  // Variants of the mermaid formatter: source only, or SVG drawn on the server.
+  // `svg` returns a Promise — callers await the result of format().
   if (normalizedFormat === 'mermaid-raw') {
     return formatters.mermaid.format(data, { ...options, raw: true });
+  }
+  if (normalizedFormat === 'svg') {
+    return formatters.mermaid.format(data, { ...options, svg: true });
   }
 
   const formatter = formatters[normalizedFormat];
 
   if (!formatter) {
-    throw new Error(`Unknown format: ${formatType}. Supported formats: ${Object.keys(formatters).join(', ')}, mermaid-raw`);
+    throw new Error(`Unknown format: ${formatType}. Supported formats: ${Object.keys(formatters).join(', ')}, mermaid-raw, svg`);
   }
 
   // Pass options to formatters that support them (mermaid, html, etc.)
@@ -64,7 +68,8 @@ function format(data, formatType = 'json', options = {}) {
  * @returns {boolean} True if supported
  */
 function isSupported(formatType) {
-  return !!formatters[formatType.toLowerCase()];
+  const normalized = formatType.toLowerCase();
+  return !!formatters[normalized] || normalized === 'mermaid-raw' || normalized === 'svg';
 }
 
 module.exports = {

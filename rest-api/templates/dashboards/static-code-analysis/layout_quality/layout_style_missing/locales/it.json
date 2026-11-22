@@ -1,0 +1,21 @@
+{
+  "manifest": {
+    "title": "Stile assente dal tema",
+    "description": "Regola di qualità dei formati — un oggetto nomina uno stile che il tema del suo formato non contiene: nessuna regola del tema riporta lo stile, in nessuno stato. Di solito uno stile personalizzato eliminato dal tema, o uno stile non trasferito quando il formato è passato a un altro tema. L'inspector mostra ancora il nome dello stile, ma il tema non ha alcuna regola per esso.",
+    "messages.missing": "Lo stile {style} non esiste nel tema {theme}"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Risultati",
+    "summary_kpi.props.items[1].label": "Stili mancanti",
+    "summary_kpi.props.items[2].label": "Formati interessati",
+    "findings_card.props.title": "Stile assente dal tema",
+    "findings_table.props.searchPlaceholder": "Cerca file, formato, oggetto, stile o tema…",
+    "findings_table.props.empty.message": "Ogni stile applicato esiste nel suo tema.",
+    "findings_table.props.columns[0].label": "File",
+    "findings_table.props.columns[1].label": "Formato",
+    "findings_table.props.columns[2].label": "Tipo di oggetto",
+    "findings_table.props.columns[3].label": "Oggetto",
+    "findings_table.props.columns[4].label": "Stile",
+    "findings_table.props.columns[5].label": "Tema"
+  }
+}

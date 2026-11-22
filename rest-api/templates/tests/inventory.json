@@ -6,6 +6,10 @@
       "path": "layout/layout-error-checks"
     },
     {
+      "id": "layout-fonts",
+      "path": "layout/layout-fonts"
+    },
+    {
       "id": "layout-hygiene",
       "path": "layout/layout-hygiene"
     },
@@ -96,6 +100,10 @@
     {
       "id": "sql-performance-checks",
       "path": "solution/sql-performance-checks"
+    },
+    {
+      "id": "sql-reference-integrity",
+      "path": "solution/sql-reference-integrity"
     },
     {
       "id": "unfinished-work",

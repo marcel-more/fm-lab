@@ -32,6 +32,11 @@ Path: `rest-api/templates/dashboards-custom/[<folder>/]<id>/locales/<lang>.json`
 }
 ```
 
+An optional manifest `byline` (author line, e.g. design credit and license) is
+shown as the footer of the title box with the label "Author:"; localize it like
+title and description with `"manifest": { "byline": "…" }`. `author` stays an
+internal provenance tag and is never displayed.
+
 ## Override key forms
 
 1. **ID form (use this):** `"<node-id>.<relative.path>"` — the part before the

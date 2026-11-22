@@ -1,0 +1,20 @@
+{
+  "manifest": {
+    "title": "Fuente dejada a la predeterminada del archivo",
+    "description": "Regla de calidad de formatos: objetos de texto de un formato muestran la fuente predeterminada del archivo porque ni el objeto, ni su estilo, ni el tema nombran una fuente (Clásico y Minimalista no nombran ninguna). Esa fuente no forma parte de la exportación XML y difiere entre archivos: el mismo tema muestra Helvetica Neue en un archivo y Arial en otro. Un hallazgo por formato.",
+    "messages.file_default": "{count} de {total} objetos de texto muestran la fuente predeterminada del archivo: el tema no nombra fuente"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "Hallazgos",
+    "summary_kpi.props.items[1].label": "Objetos con la predeterminada del archivo",
+    "summary_kpi.props.items[2].label": "Archivos afectados",
+    "findings_card.props.title": "Fuente dejada a la predeterminada del archivo",
+    "findings_table.props.searchPlaceholder": "Buscar archivo, formato o tema…",
+    "findings_table.props.empty.message": "Ningún formato deja su fuente a la predeterminada del archivo.",
+    "findings_table.props.columns[0].label": "Archivo",
+    "findings_table.props.columns[1].label": "Formato",
+    "findings_table.props.columns[2].label": "Tema",
+    "findings_table.props.columns[3].label": "Objetos con la predeterminada del archivo",
+    "findings_table.props.columns[4].label": "Objetos de texto"
+  }
+}

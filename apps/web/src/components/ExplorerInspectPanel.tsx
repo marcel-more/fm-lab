@@ -4,7 +4,9 @@ import { formatObjectDisplayName } from '../lib/objectName';
 import { useTriggerEventFormat } from '../lib/triggerEvents';
 import { triggerSubroleLabel } from '../lib/graphEdgeLabels';
 import type { GraphNode } from '../hooks/useSubgraph';
-import { EXCLUDABLE_TYPES } from '../hooks/useTrace';
+import { dataflowUsable, useDataflowCapability } from '../hooks/useDataTrace';
+import type { CallSite } from '../hooks/useTrace';
+import { callSiteText } from '../lib/traceWays';
 
 /**
  * Inspect panel for the selected graph node.
@@ -22,6 +24,9 @@ export type InspectNeighbor = {
   direction: 'out' | 'in';
   /** Distinct Subroles der gefalteten Parallel-Kanten (z. B. Trigger-Events). */
   subroles: string[];
+  /** Ablauf-Trace: Aufrufstellen der Kante (nach Schritt sortiert) und ihr aufrufendes Script. */
+  callSites?: CallSite[];
+  caller?: { uuid: string; file: string | null };
 };
 
 interface ExplorerInspectPanelProps {
@@ -51,13 +56,25 @@ interface ExplorerInspectPanelProps {
   onToggleExclude?: (graphId: string) => void;
   /** true = der Knoten steht aktuell auf der Exclude-Liste (URL-Wahrheit). */
   nodeExcluded?: boolean;
+  /**
+   * Datenfluss-Trace ab einem Feld oder einer Variable (Button „Trace", öffnet
+   * mit Herkunft). Nur, wenn die Lösung die Datenfluss-Tabellen hat.
+   */
+  onDataTrace?: (uuid: string, file: string | null | undefined, dir: 'up' | 'down') => void;
+  /** Ablauf-Trace: Script am Aufrufschritt öffnen (Aufrufstelle einer Nachbar-Kante). */
+  onOpenCallSite?: (caller: { uuid: string; file: string | null }, stepUuid: string) => void;
 }
 
 /** v1-Startobjekte des Trace (Feld/Variable/CF folgen in v2). */
 const TRACEABLE_TYPES = new Set(['Script', 'Layout']);
 
 export function ExplorerInspectPanel(props: ExplorerInspectPanelProps) {
-  const { width, node, neighbors, expanding, onClose, onOpenDetails, onSetFocus, onExpand, onCollapse, onSelectNeighbor, onTrace, onToggleExclude, nodeExcluded = false } = props;
+  const { width, node, neighbors, expanding, onClose, onOpenDetails, onSetFocus, onExpand, onCollapse, onSelectNeighbor, onTrace, onToggleExclude, nodeExcluded = false, onDataTrace, onOpenCallSite } = props;
+  const dataflowCap = useDataflowCapability();
+  // Variablen nur als Katalogobjekt (let_local hat keins und erscheint nie als Knoten)
+  const canDataTrace = !!onDataTrace && (node.type === 'Field' || node.type === 'Variable') && dataflowUsable(dataflowCap);
+  // Ablauf-Trace braucht Schema >= 1.43.0 (SD16) — dieselbe Fähigkeit wie der Datenfluss-Trace.
+  const canTrace = !!onTrace && TRACEABLE_TYPES.has(node.type) && dataflowUsable(dataflowCap);
   const { t } = useTranslation(['explorer', 'common', 'types']);
   const formatTriggerEvent = useTriggerEventFormat();
 
@@ -111,18 +128,21 @@ export function ExplorerInspectPanel(props: ExplorerInspectPanelProps) {
             {t('inspect.collapseHub')}
           </button>
         )}
-        {onTrace && TRACEABLE_TYPES.has(node.type) && (
+        {/* Ein Einstieg „Trace" je Starttyp: Script/Layout → Ablauf-Trace,
+            Feld/Variable → Datenfluss-Trace; die Richtung wählen die Tabs der Wege-Liste. */}
+        {(canTrace || canDataTrace) && (
           <button
             type="button"
             className="explorer-inspect-action"
-            onClick={() => onTrace(node.uuid, node.file ?? null)}
-            title={t('trace.actionHint') as string}
+            onClick={() => (canDataTrace ? onDataTrace?.(node.uuid, node.file ?? null, 'up') : onTrace?.(node.uuid, node.file ?? null))}
+            title={t(canDataTrace ? `trace.data.actionHint${node.type === 'Variable' ? 'Variable' : ''}` : 'trace.actionHint') as string}
           >
             {/* Eigenname „Trace" bewusst unübersetzt. */}
             Trace
           </button>
         )}
-        {onToggleExclude && EXCLUDABLE_TYPES.has(node.type) && !node.isFocus && (
+        {/* Typ-Gate liegt beim Host (Ablauf: Script/Layout/Feld · Datenfluss: Feld/Script/Schritt/Variable). */}
+        {onToggleExclude && !node.isFocus && (
           <button
             type="button"
             className="explorer-inspect-action"
@@ -143,7 +163,7 @@ export function ExplorerInspectPanel(props: ExplorerInspectPanelProps) {
           <p className="explorer-inspect-empty">{t('inspect.noNeighbors')}</p>
         ) : (
           <ul>
-            {neighbors.map(({ node: n, role, direction, subroles }) => (
+            {neighbors.map(({ node: n, role, direction, subroles, callSites, caller }) => (
               <li key={`${direction}-${n.id}-${role}`}>
                 <button type="button" className="explorer-neighbor" onClick={() => onSelectNeighbor(n)}>
                   <span className="explorer-neighbor-dir" title={direction === 'out' ? t('inspect.uses') as string : t('inspect.usedBy') as string}>
@@ -153,6 +173,26 @@ export function ExplorerInspectPanel(props: ExplorerInspectPanelProps) {
                   <span className="explorer-neighbor-label" title={n.label}>{formatObjectDisplayName(n.type, n.label)}</span>
                   <span className="explorer-neighbor-role" title={roleDisplay(role, subroles)}>{roleDisplay(role, subroles)}</span>
                 </button>
+                {callSites && callSites.length > 0 && caller && (
+                  <ul className="explorer-inspect-callsites" aria-label={t('trace.flow.callSites', { count: callSites.length }) as string}>
+                    {callSites.map((c) => {
+                      const text = callSiteText(c, { unreachable: t('trace.flow.flags.unreachable'), disabled: t('trace.flow.disabled') });
+                      return (
+                        <li key={c.stepUuid}>
+                          <button
+                            type="button"
+                            className="explorer-inspect-callsite"
+                            onClick={() => onOpenCallSite?.(caller, c.stepUuid)}
+                            disabled={!onOpenCallSite}
+                            title={`${text} — ${t('trace.flow.openStepHint')}`}
+                          >
+                            {text}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </li>
             ))}
           </ul>

@@ -1,0 +1,21 @@
+{
+  "manifest": {
+    "title": "글꼴이 많은 레이아웃",
+    "description": "레이아웃 품질 규칙 — 레이아웃의 텍스트 개체가 임계값(기본 3)보다 많은 글꼴을 표시합니다. 각 개체의 기본 글꼴, 자체 글꼴이 있는 서식 텍스트 부분, 차트의 텍스트 영역이 모두 셉니다. 파일 기본값(테마가 글꼴을 지정하지 않음)은 글꼴로 세지 않습니다. 글꼴이 많으면 대개 테마 대신 개체마다 서식을 지정한 것입니다.",
+    "messages.many": "레이아웃에 글꼴 {count}개: {fonts}"
+  },
+  "layout": {
+    "summary_kpi.props.items[0].label": "발견 항목",
+    "summary_kpi.props.items[1].label": "영향받는 파일",
+    "threshold_slider.props.label": "글꼴이 이보다 많음",
+    "threshold_slider.props.valueSuffix": "개 글꼴",
+    "findings_card.props.title": "글꼴이 많은 레이아웃",
+    "findings_table.props.searchPlaceholder": "파일, 레이아웃 또는 글꼴 검색…",
+    "findings_table.props.empty.message": "임계값보다 글꼴이 많은 레이아웃이 없습니다.",
+    "findings_table.props.columns[0].label": "파일",
+    "findings_table.props.columns[1].label": "레이아웃",
+    "findings_table.props.columns[2].label": "글꼴 수",
+    "findings_table.props.columns[3].label": "이름 있는 글꼴",
+    "findings_table.props.columns[4].label": "파일 기본값 개체"
+  }
+}

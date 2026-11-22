@@ -1,0 +1,35 @@
+{
+  "manifest": {
+    "title": "Översikt över typsnitt",
+    "description": "Vilka typsnitt layouterna visar: en rad per typsnitt med användningar, objekt, layouter, filer, storlekar och ursprung — satt på objektet, av en stil eller av temat. Objekt vars typsnitt lämnas åt filens standard (temat anger inget: Klassisk, Minimalistisk) bildar en egen rad. Ett klick på ett typsnitt öppnar layouterna som visar det; fil, tema, storlek och sökning följer med."
+  },
+  "layout": {
+    "summary_kpistrip.props.items[0].label": "Typsnitt",
+    "summary_kpistrip.props.items[1].label": "Användningar med typsnittsnamn",
+    "summary_kpistrip.props.items[2].label": "Layouter med typsnittsnamn",
+    "summary_kpistrip.props.items[3].label": "Filer med typsnittsnamn",
+    "summary_kpistrip.props.items[4].label": "Objekt utan namngivet typsnitt",
+    "search_input.props.placeholder": "Sök typsnitt, layout, objekt eller fält…",
+    "file_select.props.label": "Fil",
+    "file_select.props.emptyOptionLabel": "Alla filer",
+    "theme_select.props.label": "Tema",
+    "theme_select.props.emptyOptionLabel": "Alla teman",
+    "size_select.props.label": "Storlek",
+    "size_select.props.emptyOptionLabel": "Alla storlekar",
+    "fonts_card.props.title": "Typsnitt",
+    "fonts_table.props.columns[0].label": "Typsnitt",
+    "fonts_table.props.columns[0].valueLabels.#default": "Filens standard (typsnittet finns inte i exporten)",
+    "fonts_table.props.columns[1].label": "Användningar",
+    "fonts_table.props.columns[2].label": "Objekt",
+    "fonts_table.props.columns[3].label": "Layouter",
+    "fonts_table.props.columns[4].label": "Filer",
+    "fonts_table.props.columns[5].label": "Storlekar",
+    "fonts_table.props.columns[6].label": "Lokalt satt",
+    "fonts_table.props.columns[7].label": "Från en stil",
+    "fonts_table.props.columns[8].label": "Från temat",
+    "fonts_table.props.columns[9].label": "Formaterad text och diagram",
+    "fonts_table.props.empty.message": "Ingen typsnittsanvändning i detta urval.",
+    "notes_card.props.title": "Var ett typsnitt kommer ifrån",
+    "notes_md.props.content": "**Grundtypsnittets ursprung.** FileMaker tar det första värdet som är satt:\n- *lokalt* — satt på själva objektet.\n- *lokalt, samma som ärvt* — satt på objektet, men samma typsnitt som det ändå skulle få. FileMaker skriver det när *fet* används på ett typsnitt med en egen fet variant; inget medvetet val.\n- *stil* — stilen på objektet. En stil innehåller bara det den ändrar; resten kommer från temat.\n- *tema* — temats standard för objekttypen, layoutdelen eller alla fält.\n- *filens standard* — temat anger inget typsnitt alls (Klassisk, Minimalistisk). FileMaker använder då en standard för filen som XML-exporten inte innehåller — samma tema visar Helvetica Neue i en fil och Arial i en annan. Listan anger därför inget typsnitt för dessa objekt; kontrollera ett objekt per fil i FileMaker.\n\n**Annan typsnittsanvändning.** *Formaterad text* är en del av en text som formaterats med textmarkören; den läggs till objektets grundtypsnitt, resten av texten behåller det. *Diagram* är typsnittet för ett textområde i ett diagram (rubrik, förklaring, axlar, dataetiketter); serierubriker är utelämnade, de behåller temats typsnitt.\n\n**Räkning.** *Typsnitt* grupperar stavningar av ett typsnitt (`arial`, `Arial`). Filens standard är inget typsnitt: den räknas varken i antalet typsnitt eller i *många typsnitt*. *Osäker*: värdet kommer från en regel för layoutdelen (rangordning inte verifierad), eller så finns den använda stilen inte längre i temat.\n\n**Gränser.** Typsnitt från villkorsstyrd formatering listas inte. Ett typsnittsnamn säger inget om huruvida typsnittet är installerat på klienterna."
+  }
+}

@@ -36,6 +36,8 @@ export interface DashboardManifest {
   title: string;
   description?: string;
   author?: string;
+  /** Optional author line, rendered as the title-box footer ("Author: …"). */
+  byline?: string;
   icon?: string;
   category?: string;
   tags: string[];
@@ -71,17 +73,36 @@ export interface DashboardManifest {
  * Used e.g. to hide the data cards on the home dashboard while the catalog is empty
  * (`db_empty` truthy) so only the "convert your XML" card remains.
  */
-export interface VisibleWhen {
+interface VisibleWhenCondition {
+  /** Show only when the value strictly equals this value. */
+  equals?: unknown;
+  /** Show only when the value does NOT strictly equal this value. */
+  notEquals?: unknown;
+  /** Show only when the value is truthy (`true`) / falsy (`false`). */
+  truthy?: boolean;
+}
+
+/** Guard on the first row of a dataset. */
+export interface VisibleWhenDataset extends VisibleWhenCondition {
   /** Dataset id whose first row is tested. */
   dataset: string;
   /** Field on that row to read. */
   field: string;
-  /** Show only when the field strictly equals this value. */
-  equals?: unknown;
-  /** Show only when the field does NOT strictly equal this value. */
-  notEquals?: unknown;
-  /** Show only when the field is truthy (`true`) / falsy (`false`). */
-  truthy?: boolean;
+}
+
+/** Guard on the value of a selection channel (selectionContext.tsx). */
+export interface VisibleWhenSelection extends VisibleWhenCondition {
+  selection: string;
+}
+
+export type VisibleWhen = VisibleWhenDataset | VisibleWhenSelection;
+
+/** Master-detail binding of a node (`data.selection`). */
+export interface DataSelection {
+  /** Selection channel whose value picks the row. */
+  channel: string;
+  /** Column of the dataset compared with the channel value. */
+  key: string;
 }
 
 export interface LayoutNode {
@@ -89,7 +110,13 @@ export interface LayoutNode {
   /** Stable anchor for server-side i18n overrides (see dashboard-i18n.service). */
   id?: string;
   props?: Record<string, unknown>;
-  data?: { dataset?: string } & Record<string, unknown>;
+  data?: {
+    dataset?: string;
+    /** Show the row whose `key` equals the channel value (master-detail). */
+    selection?: DataSelection;
+    /** Without a selection: the first row (default) or none. */
+    fallback?: 'first' | 'none';
+  } & Record<string, unknown>;
   children?: LayoutNode[];
   /** Optional declarative visibility guard (absent = always visible). */
   visibleWhen?: VisibleWhen;

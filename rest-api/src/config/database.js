@@ -1,4 +1,5 @@
 const { DuckDBInstance } = require('@duckdb/node-api');
+const fileSqlGate = require('./file-sql-gate');
 const fs = require('fs');
 const path = require('path');
 const environment = require('./environment');
@@ -89,19 +90,23 @@ async function createEntry(solutionId) {
   // File-Sharing-Schicht (Docker-„injecting event blocked"-Crash-Risiko) und
   // umgeht das eigens angelegte /duckdb_spill-Volume. Guarded: nur wenn die Env
   // gesetzt UND das Verzeichnis vorhanden ist (Nicht-Container → DuckDB-Default).
+  const esc = (s) => s.replace(/'/g, "''");
   const tempDir = process.env.DUCKDB_TEMP_DIR;
   if (tempDir && fs.existsSync(tempDir)) {
     try {
-      const esc = (s) => s.replace(/'/g, "''");
       await (await connection.prepare(`SET temp_directory = '${esc(tempDir)}'`)).run();
       console.log(`  - temp_directory: ${tempDir} (spill off the bind mount)`);
-      if (process.env.DUCKDB_MAX_TEMP) {
-        await (await connection.prepare(`SET max_temp_directory_size = '${esc(process.env.DUCKDB_MAX_TEMP)}'`)).run();
-        console.log(`  - max_temp_directory_size: ${process.env.DUCKDB_MAX_TEMP}`);
-      }
     } catch (err) {
       console.warn(`  - temp_directory tuning skipped: ${err.message}`);
     }
+  }
+  // Spill cap always (DuckDB's default is 90 % of the free disk): a runaway
+  // query fails with "Out of Memory" instead of filling the disk.
+  try {
+    await (await connection.prepare(`SET max_temp_directory_size = '${esc(environment.duckdb.maxTemp)}'`)).run();
+    console.log(`  - max_temp_directory_size: ${environment.duckdb.maxTemp}`);
+  } catch (err) {
+    console.warn(`  - max_temp_directory_size skipped: ${err.message}`);
   }
 
   console.log(`DuckDB connection established (READ_ONLY, solution: ${solutionId})`);
@@ -123,6 +128,11 @@ async function createEntry(solutionId) {
  * exceptions CSV, see services/aggregations.js), no further ATTACH, COPY,
  * INSTALL or read_* on any other path. The settings are instance-wide (every
  * connection of this instance) and cannot be reverted at runtime.
+ *
+ * Opening a path also opens writing to it: `COPY … TO` could overwrite the
+ * MBS component exceptions CSV, the only path listed here. SQL from template
+ * files therefore runs through the statement gate (executeFileQuery →
+ * config/file-sql-gate.js) — it may only query.
  *
  * `lock_configuration` freezes every other setting; `threads` stays
  * changeable because graph.service lowers it around the overview query.
@@ -233,6 +243,11 @@ async function closeSlot(slot) {
     entry = await slot.promise;
   } catch { /* Factory war schon gescheitert — nichts zu schließen */ }
   if (!entry) return;
+  entry.closed = true;
+  for (const fc of entry.fileConnections || []) {
+    try { fc.connection.disconnectSync(); } catch { /* schon zu */ }
+  }
+  entry.fileConnections = [];
   try { entry.connection.disconnectSync(); } catch { /* schon zu */ }
   try { entry.instance.closeSync(); } catch { /* schon zu */ }
   console.log(`Database connection closed (solution: ${slot.solutionId})`);
@@ -379,6 +394,30 @@ const CORE_STUB_DDL = {
      Usage_Files BIGINT, Cross_File BOOLEAN, Entry_Point BOOLEAN, Key_Field BOOLEAN,
      Low_Confidence BOOLEAN, Usage_Class VARCHAR
    )`,
+  // Script-Kanten je Schritt (Schema 1.41.0) — Abfragen „welcher Schritt setzt Feld F?"
+  // liefern auf Alt-/Leer-DBs 0 Zeilen statt „Table … does not exist".
+  v_script_step_links: `CREATE TEMP TABLE v_script_step_links (
+     Script_UUID VARCHAR, File_Name VARCHAR, Step_UUID VARCHAR, Step_Index INTEGER,
+     Step_ID INTEGER, Step_Name VARCHAR, Is_Enabled BOOLEAN, Via VARCHAR,
+     Calculation_UUID VARCHAR, Link_Role VARCHAR, Link_Subrole VARCHAR, Target_Type VARCHAR,
+     Target_UUID VARCHAR, Target_File VARCHAR, Is_Cross_File BOOLEAN, TO_UUID VARCHAR,
+     Data_Source_UUID VARCHAR, In_Graph BOOLEAN
+   )`,
+  // Quelle je Import-Schritt (Schema 1.41.0) — leer auf Alt-/Leer-DBs.
+  ImportStepSources: `CREATE TEMP TABLE ImportStepSources (
+     Step_UUID VARCHAR, File_Name VARCHAR, Script_UUID VARCHAR, Step_Index INTEGER,
+     Source_Kind VARCHAR, File_Type_Code VARCHAR, Source_Value VARCHAR,
+     Source_Location VARCHAR, Source_Formula VARCHAR, XSL_Location VARCHAR,
+     XSL_Formula VARCHAR, Source_File VARCHAR
+   )`,
+  // Bezüge in ExecuteSQL-Anweisungen (Schema 1.42.0) — leer auf Alt-/Leer-DBs.
+  CalculationSqlRefs: `CREATE TEMP TABLE CalculationSqlRefs (
+     Calculation_UUID VARCHAR, File_Name VARCHAR, Sql_Index BIGINT, Sql_Function VARCHAR,
+     Statement_Kind VARCHAR, Clause VARCHAR, Column_Pos BIGINT, Arg_Pos BIGINT, Alias VARCHAR,
+     Target_Type VARCHAR, Target_UUID VARCHAR, Target_File VARCHAR, TO_UUID VARCHAR,
+     Resolution VARCHAR, Raw_Name VARCHAR, Low_Confidence BOOLEAN, Token_Pos BIGINT,
+     Let_Var VARCHAR, Parse_Source VARCHAR
+   )`,
   // Such-UNION (Wertelisten-Werte, Script-Step-Texte) und Ordnerbaum
   // (list_with_folders) — eine leere Lösung liefert leere Treffer statt HTTP 500.
   // FolderHierarchy ist in konvertierten DBs eine View; der Stub deckt die leere DB.
@@ -411,11 +450,12 @@ const CORE_STUB_DDL = {
 
 // Läuft INNERHALB der Pool-Factory → direkt auf der Entry-Verbindung
 // (kein executeQuery: das würde acquireSlot re-entrant aufrufen).
-async function ensureCoreStubs(entry) {
+async function ensureCoreStubs(entry, connection = entry.connection) {
+  const main = connection === entry.connection;
   try {
     const names = Object.keys(CORE_STUB_DDL);
     const inList = names.map((n) => `'${n}'`).join(', ');
-    const stmt = await entry.connection.prepare(
+    const stmt = await connection.prepare(
       `SELECT table_name FROM information_schema.tables
         WHERE table_name IN (${inList})`
     );
@@ -425,8 +465,8 @@ async function ensureCoreStubs(entry) {
     const present = new Set(rows.map((r) => r.table_name));
     for (const [name, ddl] of Object.entries(CORE_STUB_DDL)) {
       if (present.has(name)) continue;
-      await (await entry.connection.prepare(ddl)).run();
-      console.log(`  - core stub created (TEMP, empty): ${name} — not present yet`);
+      await (await connection.prepare(ddl)).run();
+      if (main) console.log(`  - core stub created (TEMP, empty): ${name} — not present yet`);
     }
   } catch (err) {
     // Nie fatal: ohne Stub crasht nur die betroffene Ansicht (wie bisher), der Rest läuft.
@@ -671,18 +711,98 @@ async function executeQuery(ctx, sql, params = []) {
     sql = ctx;
     ctx = null;
   }
-  const { solution } = normalizeContext(ctx, 'executeQuery');
+  return runQuery(normalizeContext(ctx, 'executeQuery'), sql, params, false);
+}
+
+// ---------------------------------------------------------------------------
+// Connections for SQL from files
+// ---------------------------------------------------------------------------
+//
+// SQL from files runs on connections of its own, not on the shared one: one
+// DuckDB connection executes one query at a time, so a long dashboard query
+// would block every other query of the solution, and interrupt() at the time
+// limit could hit whichever query happens to run. A connection of the same
+// instance inherits every setting, attachment and lock, but not the TEMP
+// objects of the shared connection (core stubs, change author overlay) — they
+// are installed on it once. Up to FILE_CONN_IDLE_MAX prepared connections per
+// solution are kept; an overlay refresh (overlayVersion) retires them.
+
+const FILE_CONN_IDLE_MAX = 2;
+
+async function takeFileConnection(entry) {
+  const idle = entry.fileConnections || (entry.fileConnections = []);
+  const version = entry.overlayVersion || 0;
+  while (idle.length > 0) {
+    const fc = idle.pop();
+    if (fc.version === version) return fc;
+    try { fc.connection.disconnectSync(); } catch { /* closed */ }
+  }
+  const connection = await entry.instance.connect();
+  try {
+    await ensureCoreStubs(entry, connection);
+    await require('./change-author-overlay').installOverlay(connection, entry.aliasRows || []);
+  } catch (err) {
+    try { connection.disconnectSync(); } catch { /* closed */ }
+    throw err;
+  }
+  return { connection, version };
+}
+
+function returnFileConnection(entry, fc, reusable) {
+  const idle = entry.fileConnections || (entry.fileConnections = []);
+  if (reusable && !entry.closed && fc.version === (entry.overlayVersion || 0) && idle.length < FILE_CONN_IDLE_MAX) {
+    idle.push(fc);
+    return;
+  }
+  try { fc.connection.disconnectSync(); } catch { /* closed */ }
+}
+
+/**
+ * executeQuery() for SQL that comes from a file (template, dashboard dataset,
+ * the DESCRIBE of server paging): passes the statement gate
+ * (config/file-sql-gate.js) — only queries run; anything else is answered with
+ * VALIDATION_ERROR (400) and never executed.
+ */
+async function executeFileQuery(ctx, sql, params = []) {
+  return runQuery(normalizeContext(ctx, 'executeFileQuery'), sql, params, true);
+}
+
+async function runQuery({ solution }, sql, params, gated) {
   const slot = await acquireSlot(solution);
 
   const startTime = Date.now();
   let stmt = null;
+  // SQL from a file runs on a connection of its own: it inherits every setting,
+  // attachment and lock of the instance, and interrupt() at the time limit
+  // stops only this query, never a parallel one on the shared connection.
+  let fileConn = null;
+  let ownConnection = null;
+  let timer = null;
+  let timedOut = false;
+  let ok = false;
+  const timeoutMs = environment.duckdb.fileQueryTimeoutMs;
   try {
-    stmt = await slot.entry.connection.prepare(sql);
+    let connection = slot.entry.connection;
+    if (gated) {
+      fileConn = await takeFileConnection(slot.entry);
+      ownConnection = fileConn.connection;
+      connection = ownConnection;
+    }
+    stmt = gated
+      ? await fileSqlGate.prepareFileSql(connection, sql)
+      : await connection.prepare(sql);
     if (params.length > 0) {
       stmt.bind(params);
     }
+    if (gated && timeoutMs > 0) {
+      timer = setTimeout(() => {
+        timedOut = true;
+        try { ownConnection.interrupt(); } catch { /* already done */ }
+      }, timeoutMs);
+    }
     const result = await stmt.run();
     const rows = await result.getRowObjectsJS();
+    ok = true;
 
     return {
       rows,
@@ -692,6 +812,20 @@ async function executeQuery(ctx, sql, params = []) {
       },
     };
   } catch (err) {
+    if (err && err.statementGate) {
+      console.warn(`[db] statement gate: ${err.message} (solution: ${solution})`);
+      throw err;
+    }
+    if (timedOut) {
+      console.warn(`[db] file query stopped after ${timeoutMs} ms (solution: ${solution})`);
+      const { createError } = require('../middleware/error-handler');
+      throw createError(
+        'QUERY_TIMEOUT',
+        `Query stopped after ${Math.round(timeoutMs / 1000)} s — it is too expensive for this solution`
+          + ' (limit DUCKDB_FILE_QUERY_TIMEOUT_MS)',
+        { timeout_ms: timeoutMs }
+      );
+    }
     console.error('Query execution failed:', err.message);
     console.error('SQL:', sql);
     console.error('Params:', params);
@@ -706,6 +840,19 @@ async function executeQuery(ctx, sql, params = []) {
     const drift = require('../utils/schema-drift').classifySchemaDrift({ solution }, err);
     throw drift || err;
   } finally {
+    if (timer) clearTimeout(timer);
+    // Statement and own connection before the slot is released: a reload waits
+    // for idle slots and then closes the instance.
+    if (stmt && ownConnection) {
+      try { stmt.destroySync(); } catch { /* released */ }
+      stmt = null;
+    }
+    if (fileConn) {
+      // An interrupted or failed connection is not reused.
+      returnFileConnection(slot.entry, fileConn, ok && !timedOut);
+      fileConn = null;
+      ownConnection = null;
+    }
     releaseSlot(slot);
     // Prepared Statement explizit freigeben. @duckdb/node-api hält die native
     // DuckDB-Ressource sonst bis zum GC — unter dem konservativen max_memory
@@ -842,6 +989,8 @@ module.exports = {
   initialize,
   getConnection,
   executeQuery,
+  executeFileQuery,
+  FILE_SQL_STATEMENT_TYPES: fileSqlGate.FILE_SQL_STATEMENT_TYPES,
   refreshChangeAuthorOverlay,
   probeMemory,
   close,

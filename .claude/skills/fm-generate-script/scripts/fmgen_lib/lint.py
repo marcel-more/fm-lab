@@ -20,6 +20,22 @@ Rule catalog:
        error-code table does not list (warning; web-only codes as info) —
        reference-driven (error_codes, fm_spec >= 2.8.0), skipped with a note
        on older references
+  L012 typographic double quote („ “ ” ‟) unescaped in a calculation —
+       FileMaker reads it as a text-constant delimiter (paste probe, FM
+       26.0.3): inside a "…" constant it ends the constant and FileMaker
+       comments the formula out on paste; used as the delimiter itself it is
+       accepted by FileMaker but misread by every fmgen check (error in both
+       cases). Comments and comment steps are prose and exempt; ‘ ’ ‚ « » are
+       no delimiters and never reported
+  L013 unknown Get selector — `Get ( X )` where X is no selector the
+       reference knows in any language (function_name_lookup, chunk_role
+       getparameter); a typo or an invented selector evaluates to an error
+  L014 legacy name of a renamed function / Get selector
+       (`Get ( LastExternalErrorDetail )` → `Get ( LastErrorDetail )`, renamed
+       in FileMaker 19.6.1) with the replacement — warning, error once the
+       reference records that FileMaker no longer parses the old name
+       (function_renames.legacy_accepted = false, fm_spec >= 2.10.0); the
+       target version is the gate's business (G303b)
 
 Block-step IDs (68/69/70/125, 71/72/73) are universal, locale-independent
 FileMaker constants; the reference DB's step_constraints carries the same
@@ -34,7 +50,8 @@ from dataclasses import dataclass, field
 
 from .db import Reference
 from .textform import (CALL_RE, ParsedStep, RawStep, call_name_candidates,
-                       matching_paren, split_args, strip_comments, strip_strings)
+                       escape_typographic_quotes, matching_paren, split_args,
+                       strip_comments, strip_strings, typographic_quote_hits)
 
 IF_OPEN, IF_BRANCH, IF_CLOSE = {68}, {69, 125}, {70}
 LOOP_OPEN, LOOP_EXIT, LOOP_CLOSE = {71}, {72}, {73}
@@ -92,6 +109,8 @@ def lint(raw_steps: list[RawStep], parsed: list[ParsedStep], ref: Reference) -> 
     _option_coupling(parsed, ref, res)
     _slot_form(parsed, ref, res)
     _error_code_literals(parsed, ref, res)
+    _typographic_quotes(parsed, ref, res)
+    _get_selectors_and_renames(parsed, ref, res)
     for ps in parsed:
         for e in ps.errors:
             res.add("PARSE", "error", ps.line, e)
@@ -322,9 +341,11 @@ def _implied_requirements(ps: ParsedStep, ref: Reference, res: LintResult) -> No
     trigger_kind 'requires_option', direction 'lint'): a set flag or a mode
     value that is worthless without its counterpart — FileMaker drops it
     silently on paste (242 print-options flags => their targets, 244/246
-    From=Target => source container, 245 Save to=Target => target container).
+    From=Target => source container, 245 Save to=Target => target container)
+    or fails the step at runtime (144 'all_pages: False' => a page range).
     The trigger is 'option_key' (set, and not a switched-off flag) or
-    'option_key: xml_value' (the enum holds exactly that value). Reported as
+    'option_key: xml_value' (the enum holds exactly that value, or the boolean
+    that state). Reported as
     L009 error so the pipeline stops before emission; never restored."""
     rows = [r for r in ref.option_implications(ps.step_id)
             if r["trigger_kind"] == "requires_option"]
@@ -350,8 +371,9 @@ def _implied_requirements(ps: ParsedStep, ref: Reference, res: LintResult) -> No
             continue
         res.add("L009", "error", ps.line,
                 f"{what} requires '{need}' — add '{labels.get(need, need)}: …';"
-                " FileMaker drops the flag or mode without its counterpart"
-                " silently on paste (reference implication)")
+                " without its counterpart FileMaker drops the flag or mode"
+                " silently on paste or fails the step at runtime (reference"
+                " implication)")
 
 
 def _calc_options(ps: ParsedStep, ref: Reference) -> list[str]:
@@ -419,6 +441,70 @@ def _calc_rules(parsed: list[ParsedStep], ref: Reference, res: LintResult) -> No
                             f"got {len(args)}")
 
 
+def _get_selectors_and_renames(parsed: list[ParsedStep], ref: Reference, res: LintResult) -> None:
+    """L013 — every Get selector must be one the reference knows (any
+    language; FileMaker matches selectors case-insensitively). L014 — a legacy
+    name of a renamed selector or function gets its replacement. One finding
+    per (rule, step, name)."""
+    getparams = ref.get_parameter_lookup()           # token -> canonical EN
+    heads = ref.get_heads()
+    renames = ref.function_renames() or []
+    legacy = {(r["name_kind"], r["legacy_name"].casefold()): r for r in renames}
+    canon_names = sorted(set(getparams.values()))
+    for ps in parsed:
+        seen: set[tuple[str, str]] = set()
+        for calc in _calc_options(ps, ref):
+            stripped = strip_strings(strip_comments(calc))
+            for m in CALL_RE.finditer(stripped):
+                cands = call_name_candidates(m.group(1))
+                head = next((c for c in cands if c.casefold() in heads), None)
+                if head is None:
+                    for cand in cands:
+                        hit = legacy.get(("function", cand.casefold()))
+                        if hit and ("L014", cand.casefold()) not in seen:
+                            seen.add(("L014", cand.casefold()))
+                            _report_rename(res, ps.line, cand, hit, None)
+                    continue
+                close = matching_paren(stripped, m.end() - 1)
+                if close < 0:
+                    continue
+                # stripping is length-preserving: slice the original text
+                selector = " ".join(calc[m.end():close].split())
+                key = selector.casefold()
+                hit = legacy.get(("getparameter", key))
+                if hit is not None:
+                    if ("L014", key) not in seen:
+                        seen.add(("L014", key))
+                        _report_rename(res, ps.line, selector, hit, head)
+                    continue
+                if key in getparams or ("L013", key) in seen:
+                    continue
+                seen.add(("L013", key))
+                close_match = difflib.get_close_matches(selector, canon_names, n=1, cutoff=0.75)
+                hint = f" — did you mean 'Get ( {close_match[0]} )'?" if close_match else ""
+                res.add("L013", "error", ps.line,
+                        f"unknown Get selector '{head} ( {selector} )' — the reference knows no "
+                        f"such selector in any language; FileMaker evaluates it as an error{hint}")
+
+
+def _report_rename(res: LintResult, line: int, name: str, row: dict, head: str | None) -> None:
+    old = f"{head} ( {name} )" if head else name
+    new = f"{head} ( {row['current_name']} )" if head else row["current_name"]
+    accepted = row.get("legacy_accepted")
+    if accepted is False:
+        ver = row.get("legacy_accepted_version") or row["renamed_in_version"]
+        sev, tail = "error", (f"FileMaker {ver} rejects the old name on paste and "
+                              "comments the formula out")
+    elif accepted is True:
+        sev, tail = "warning", "FileMaker still parses the old name, but shows the new one"
+    else:
+        sev, tail = "warning", "whether FileMaker still parses the old name is unverified"
+    res.add("L014", sev, line,
+            f"'{old}' is the name before FileMaker {row['renamed_in_version']} — write "
+            f"'{new}' (renamed in FileMaker {row['renamed_in_version']}; {tail}); "
+            "only a target file older than that needs the old name")
+
+
 # Get ( LastError ) compared with a numeric literal. Calc text reaches the lint
 # canonicalized (EN function names, `Get` keyword) — the EN form is enough; the
 # resolver's localized-name pass (L007) handles the rest. Reversed comparisons
@@ -464,6 +550,75 @@ def _error_code_literals(parsed: list[ParsedStep], ref: Reference, res: LintResu
                             f"Get ( LastError ) is compared with {n} ({row['message_en']}) — "
                             "a code returned only by the web publishing engine or a FileMaker "
                             "REST API; unreachable in a client-side script")
+
+
+def _typographic_quotes(parsed: list[ParsedStep], ref: Reference, res: LintResult) -> None:
+    """L012 — a typographic double quote FileMaker reads as a delimiter.
+
+    The draft's tokenizers see only '"' and therefore call the formula fine;
+    FileMaker ends the constant at the „ and comments the formula out on
+    paste (the step stays, its value is empty). A typographic quote used as
+    the delimiter itself is valid for FileMaker, but the lint, the resolver
+    and the gate read only '"' — the arguments and calls inside it would be
+    judged as code — so it is an error too, with the straight '"' as fix. One
+    finding per text constant (with its corrected form) and per code
+    position, at the draft line of the character — a multi-line calculation
+    points at the line inside it. When the constant runs on over a line that
+    reads like a step, that step was swallowed (the segmenter recorded the
+    line and stayed quiet, because a genuine multi-line text may say
+    anything) — the finding says so."""
+    for ps in parsed:
+        swallowed_named = False
+        for calc in _calc_options(ps, ref):
+            hits = typographic_quote_hits(calc)
+            if not hits:
+                continue
+            # draft line of an offset: the calc's own line inside the step
+            # text, plus the newlines in front of the offset
+            at = ps.raw.find(calc)
+            base = ps.line + (ps.raw[:at].count("\n") if at >= 0 else 0)
+
+            def line_of(offset: int) -> int:
+                return base + calc[:offset].count("\n")
+
+            findings: list[tuple[str, int, str]] = []
+            by_literal: dict[tuple[int, int], list] = {}
+            in_code: dict[int, list] = {}   # draft line -> code hits on it
+            for h in hits:
+                if h.context == "string":
+                    by_literal.setdefault(h.literal, []).append(h)
+                else:
+                    in_code.setdefault(line_of(h.offset), []).append(h)
+            for ln, group in in_code.items():
+                chars = " ".join(dict.fromkeys(h.char for h in group))
+                findings.append((
+                    "error", ln,
+                    f"typographic quote(s) {chars} used as text-constant delimiter — "
+                    "FileMaker accepts it and stores a straight quote, but fmgen's "
+                    "checks read only the straight one; write \" instead"))
+            for (lo, hi), group in by_literal.items():
+                literal = calc[lo:hi]
+                chars = " ".join(dict.fromkeys(h.char for h in group))
+                lead = (f"typographic quote(s) {chars} in a text constant — FileMaker ends "
+                        "the constant there and comments the formula out on paste; "
+                        "escape them")
+                if "\n" not in literal and len(literal) <= 120:
+                    lead += f": {escape_typographic_quotes(literal)}"
+                else:
+                    lead += " (\\„ \\“ \\” \\‟ inside the constant)"
+                findings.append(("error", line_of(group[0].offset), lead))
+            if ps.string_step_lines and not swallowed_named and \
+                    any(sev == "error" for sev, _, _ in findings):
+                lines = ", ".join(str(n) for n in ps.string_step_lines)
+                sev, ln, msg = min((f for f in findings if f[0] == "error"),
+                                   key=lambda f: f[1])
+                findings.remove((sev, ln, msg))
+                findings.append((sev, ln, msg + f" — the constant runs on over line(s) "
+                                 f"{lines}, which read like a step: the following "
+                                 "step(s) were probably swallowed into this one"))
+                swallowed_named = True
+            for sev, ln, msg in sorted(findings, key=lambda f: f[1]):
+                res.add("L012", sev, ln, msg)
 
 
 def _repetition_arity(fn: dict, args: list[str], ps: ParsedStep, res: LintResult) -> bool:

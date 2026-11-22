@@ -21,13 +21,17 @@ The design separates what the *vendor* states from what FM-Lab *concludes*:
 | Table | Content |
 |---|---|
 | `plugins` | Registered plug-ins: id, name, detection prefix, doc-mirror version stamp |
-| `plugin_functions` | One row per function: component, introduced-in version, status (`active` / `deprecated` / `removed`) |
+| `plugin_functions` | One row per function: component, introduced-in version, status (`active` / `deprecated` / `removed`), replacement, removed-in version; `documented` / `last_documented_in` (since schema 1.3.0) mark functions the vendor documentation no longer lists |
 | `plugin_function_platforms` | Verbatim per-axis support flags (`macos`, `windows`, `linux`, `server`, `ios_sdk`; binary) plus the vendor's qualifier text where one exists |
 | `plugin_function_aliases` | Historical names ("old name: …") → canonical function name |
 | `plugin_runtime_map` | Curated: flag predicate → affected FileMaker runtime, with effect and provenance |
 | `plugin_generic_rules` | Curated vendor-independent rules (the Go rule) |
 | `plugin_os_map` | Curated: vendor platform axis → OS vocabulary (`ios_sdk` → `ios`, qualifier `sdk-only`; no row for `server`) |
 | `reference_meta` | Schema version, deriver version, source doc version, attribution |
+
+## Functions that leave the documentation
+
+The vendor occasionally drops the page of a long-deprecated function from its documentation. Without a page the function would vanish from the map, and a solution that still calls it would report it as *unresolved* instead of *deprecated — use X instead*. Since schema 1.3.0 such a function stays in `plugin_functions` with the status, note, replacement and platform flags the vendor last stated, `documented = false` and `last_documented_in` = the date of the last documentation mirror that still had the page. A function whose page returns is documented again and loses that mark. Old names that the documentation lists as renames are not affected — they resolve through `plugin_function_aliases`.
 
 ## Consumers
 
